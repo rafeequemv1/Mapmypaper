@@ -105,8 +105,10 @@ const PdfUpload = () => {
         const arrayBuffer = e.target?.result as ArrayBuffer;
         
         if (arrayBuffer) {
-          // Fixed: Pass the Uint8Array directly to PdfToText without wrapping it in an object
-          PdfToText(new Uint8Array(arrayBuffer))
+          // Create a Blob from the Uint8Array before passing to PdfToText
+          const blob = new Blob([new Uint8Array(arrayBuffer)]);
+          
+          PdfToText(blob)
             .then((text: string) => {
               setExtractedText(text);
               resolve(text);
