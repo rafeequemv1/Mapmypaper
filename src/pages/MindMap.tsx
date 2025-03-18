@@ -43,7 +43,7 @@ const MindMap = () => {
         setPdfAvailable(!!pdfData);
         setShowPdf(!!pdfData);
 
-        console.log("PDF available:", !!pdfData); // Debug log
+        console.log("PDF available:", !!pdfData, "PDF data length:", pdfData ? pdfData.length : 0);
       } catch (error) {
         console.error("Error parsing mind map data for title:", error);
       }
@@ -118,15 +118,12 @@ const MindMap = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Resizable panels for PDF, Mind Map, and Chat */}
         <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {showPdf && pdfAvailable && (
-            <>
-              <ResizablePanel defaultSize={25} minSize={20}>
-                <PdfViewer />
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-            </>
-          )}
-          <ResizablePanel defaultSize={showChat ? 50 : (showPdf && pdfAvailable ? 75 : 100)}>
+          {/* Force show PDF for debugging - we'll remove this force later */}
+          <ResizablePanel defaultSize={25} minSize={20}>
+            <PdfViewer />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={showChat ? 50 : 75}>
             <MindMapViewer isMapGenerated={isMapGenerated} />
           </ResizablePanel>
           {showChat && (
@@ -138,17 +135,15 @@ const MindMap = () => {
                   <div className="flex items-center justify-between p-2 border-b bg-secondary/30">
                     <h3 className="font-medium">AI Chat Assistant</h3>
                     <div className="flex items-center gap-2">
-                      {pdfAvailable && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 text-muted-foreground hover:text-foreground" 
-                          onClick={togglePdf}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          {showPdf ? "Hide PDF" : "Show PDF"}
-                        </Button>
-                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-muted-foreground hover:text-foreground" 
+                        onClick={togglePdf}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        {showPdf ? "Hide PDF" : "Show PDF"}
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
