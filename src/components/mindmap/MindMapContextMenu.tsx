@@ -50,8 +50,9 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({ mindMap, childr
         // trigger the built-in edit functionality
         setTimeout(() => {
           // Need a slight delay to ensure the node is selected
-          document.execCommand('selectAll', false, undefined);
-          document.execCommand('delete', false, undefined);
+          // Fix: Pass the required command argument to execCommand
+          document.execCommand('selectAll', false);
+          document.execCommand('delete', false);
         }, 50);
       }
     }
@@ -74,6 +75,14 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({ mindMap, childr
       container.removeEventListener('contextmenu', handleContextMenu);
     };
   }, [mindMap]);
+
+  // Set up color change handlers
+  const handleColorChange = (color: string) => {
+    if (mindMap && mindMap.currentNode) {
+      // Update the node's style with the new background color
+      mindMap.updateNodeStyle(mindMap.currentNode.id, { background: color });
+    }
+  };
 
   return (
     <ContextMenu>
@@ -101,23 +110,23 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({ mindMap, childr
             Change Node Color
           </ContextMenuSubTrigger>
           <ContextMenuSubContent className="w-48">
-            <ContextMenuItem className="flex items-center">
+            <ContextMenuItem onClick={() => handleColorChange('#E5DEFF')} className="flex items-center">
               <div className="w-4 h-4 mr-2 rounded bg-[#E5DEFF]"></div>
               Purple
             </ContextMenuItem>
-            <ContextMenuItem className="flex items-center">
+            <ContextMenuItem onClick={() => handleColorChange('#D3E4FD')} className="flex items-center">
               <div className="w-4 h-4 mr-2 rounded bg-[#D3E4FD]"></div>
               Blue
             </ContextMenuItem>
-            <ContextMenuItem className="flex items-center">
+            <ContextMenuItem onClick={() => handleColorChange('#FEC6A1')} className="flex items-center">
               <div className="w-4 h-4 mr-2 rounded bg-[#FEC6A1]"></div>
               Orange
             </ContextMenuItem>
-            <ContextMenuItem className="flex items-center">
+            <ContextMenuItem onClick={() => handleColorChange('#FFDEE2')} className="flex items-center">
               <div className="w-4 h-4 mr-2 rounded bg-[#FFDEE2]"></div>
               Pink
             </ContextMenuItem>
-            <ContextMenuItem className="flex items-center">
+            <ContextMenuItem onClick={() => handleColorChange('#F2FCE2')} className="flex items-center">
               <div className="w-4 h-4 mr-2 rounded bg-[#F2FCE2]"></div>
               Green
             </ContextMenuItem>
