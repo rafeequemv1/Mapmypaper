@@ -91,13 +91,12 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       mind.init(data);
       mindMapRef.current = mind;
 
-      // Fix: Use 'node_click' event which is a valid event in the MindElixir EventMap
-      mind.bus.addListener('node_click', (node) => {
-        console.log('Node clicked:', node);
-      });
+      // Instead of using specific event listeners that might not be in the EventMap,
+      // let's just log the mind map instance for debugging
+      console.log("Mind Elixir initialized with options:", options);
 
       // Add mind elixir instance to window for debugging
-      console.log("Mind Elixir initialized with options:", options);
+      console.log("Mind Elixir instance:", mind);
     }
 
     // Cleanup function to remove the mind map when component unmounts
