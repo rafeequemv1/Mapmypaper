@@ -318,10 +318,6 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             </TooltipProvider>
           </div>
         )}
-        
-        <div className="text-center p-1 text-xs text-muted-foreground absolute bottom-0 left-0 right-0 bg-background/80">
-          Right-click on a node to open the context menu with options. You can also drag to pan, use mouse wheel to zoom.
-        </div>
       </div>
     </div>
   );
