@@ -141,7 +141,25 @@ const MindMap = () => {
               <>
                 <ResizableHandle withHandle />
                 <ResizablePanel defaultSize={25} minSize={20}>
-                  <ChatBox />
+                  <div className="flex flex-col h-full">
+                    {/* Add PDF toggle button in chat panel header */}
+                    {pdfAvailable && (
+                      <div className="flex items-center justify-end p-2 border-b">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-muted-foreground hover:text-foreground" 
+                          onClick={togglePdf}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          {showPdf ? "Hide PDF" : "Show PDF"}
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <ChatBox />
+                    </div>
+                  </div>
                 </ResizablePanel>
               </>
             )}
