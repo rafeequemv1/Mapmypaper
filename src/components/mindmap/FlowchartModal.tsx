@@ -72,7 +72,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     // Fix common syntax errors
     cleaned = cleaned
       // Fix arrows if needed
-      .replace(/->/g, "-->")
+      .replace(/-+>/g, "-->")
       // Replace any hyphens in node IDs with underscores
       .replace(/(\w+)-(\w+)/g, "$1_$2")
       // Replace year ranges with underscores
@@ -319,8 +319,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               <ul className="mt-1 pl-4 list-disc">
                 <li>Start with <code className="bg-gray-100 px-1">flowchart TD</code> for top-down layout</li>
                 <li>Node syntax: <code className="bg-gray-100 px-1">nodeId[Text]</code> or <code className="bg-gray-100 px-1">nodeId(Text)</code> or <code className="bg-gray-100 px-1">nodeId{'{'+'Text'+'}'}</code></li>
-                <li>Connection: <code className="bg-gray-100 px-1">A --{'>'}  B</code></li>
-                <li>Labeled edge: <code className="bg-gray-100 px-1">A --{'>'}|Label| B</code></li>
+                <li>Connection: <code className="bg-gray-100 px-1">A {'-->'} B</code></li>
+                <li>Labeled edge: <code className="bg-gray-100 px-1">A {'-->'}|Label| B</code></li>
+                <li>Subgraph: <code className="bg-gray-100 px-1">subgraph title</code> and <code className="bg-gray-100 px-1">end</code></li>
                 <li>Use alphanumeric IDs without hyphens</li>
               </ul>
             </div>
