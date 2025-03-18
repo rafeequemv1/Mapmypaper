@@ -8,20 +8,24 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     let pdfText = "";
     let textSource = "unknown";
     
+    // First, directly check if PDF data exists in any storage location
+    const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+    
+    // Validate PDF data exists before attempting text extraction
+    if (!pdfData) {
+      console.error("No PDF data available in any storage location");
+      throw new Error("No PDF content available. Please upload a PDF first.");
+    }
+    
+    console.log("Found PDF data in session storage, length:", pdfData.length);
+    
     try {
-      // First try the normal method of getting PDF text
+      // Try to get PDF text from session storage
       pdfText = getPdfText();
       textSource = "sessionStorage";
+      console.log("Successfully retrieved PDF text from session storage, length:", pdfText.length);
     } catch (error) {
       console.log("Could not get PDF text from session storage, trying alternative sources");
-      
-      // If that fails, try getting PDF data directly
-      const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-      
-      if (!pdfData) {
-        console.error("No PDF data available in any storage location");
-        throw new Error("No PDF content available. Please upload a PDF first.");
-      }
       
       // Check length of PDF data to make sure it's not empty
       if (pdfData.length < 100) {
@@ -29,15 +33,20 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
         throw new Error("The PDF data appears to be invalid. Please try uploading the PDF again.");
       }
       
-      // Set a simple fallback text if we have PDF data but no text
-      pdfText = "PDF text extraction was incomplete. Using simplified analysis.";
-      textSource = "fallback";
-      
       // Try to retrieve any text that might be associated with the PDF
       const possibleText = sessionStorage.getItem('pdfText');
       if (possibleText && possibleText.length > 100) {
         pdfText = possibleText;
         textSource = "recovered";
+        console.log("Recovered PDF text from sessionStorage.pdfText, length:", pdfText.length);
+      } else {
+        // Set a fallback text if we have PDF data but no text
+        pdfText = "PDF text extraction was incomplete. Using simplified analysis.";
+        textSource = "fallback";
+        console.log("Using fallback text for analysis");
+        
+        // Store this fallback text for future use
+        sessionStorage.setItem('pdfText', pdfText);
       }
     }
     
@@ -97,6 +106,18 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
         const parsedData = parseJsonResponse(text);
         console.log("Successfully parsed JSON response");
         return parsedData;
+      })
+      .catch(error => {
+        console.error("API call or parsing error:", error);
+        // Return a fallback summary if the API call fails
+        return {
+          "Overview": "We couldn't generate a detailed summary due to technical issues.",
+          "Key Findings": "- Could not extract key findings\n- The document appears to be a research paper or academic text",
+          "Objectives": "- The specific objectives could not be determined due to processing limitations",
+          "Methods": "- The methodology section could not be analyzed properly",
+          "Results": "- Result details could not be extracted due to technical limitations",
+          "Conclusions": "Please try regenerating the summary or upload the document again if this issue persists."
+        };
       });
     
     // Race the API call against the timeout

@@ -55,7 +55,19 @@ export const parseJsonResponse = (text: string): any => {
         .replace(/,\s*}/g, '}') // Remove trailing commas
         .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
       
-      return JSON.parse(cleanedJsonString);
+      try {
+        return JSON.parse(cleanedJsonString);
+      } catch (finalError) {
+        console.error("Failed to parse JSON even after cleaning:", finalError);
+        // Return a fallback object if parsing fails completely
+        return {
+          "Overview": "The AI generated a response, but it couldn't be formatted properly.",
+          "Key Findings": "- We were unable to extract structured data from the AI response\n- The original text is available but not in the expected format",
+          "Methods": "- The response format was invalid and could not be processed",
+          "Results": "- No results could be extracted from the malformed response",
+          "Conclusions": "Please try regenerating the summary to get a proper structured response."
+        };
+      }
     }
   } catch (parseError) {
     console.error("Failed to parse Gemini response as JSON:", parseError, "Response text:", text.substring(0, 500));
@@ -88,22 +100,27 @@ export const storePdfText = (pdfText: string) => {
 
 export const getPdfText = (): string => {
   try {
-    const pdfText = sessionStorage.getItem('pdfText');
-    
-    if (pdfText && pdfText.trim() !== '') {
-      return pdfText;
-    }
-    
-    // Try alternative sources
+    // First check if the PDF data exists in any storage location
     const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
     
-    if (!pdfData || pdfData.trim() === '') {
-      console.error("No PDF data found in session storage");
+    if (!pdfData || pdfData.length < 100) {
+      console.error("No valid PDF data found in session storage");
       throw new Error("No PDF content available. Please upload a PDF first.");
     }
     
-    // If we have PDF data but no extracted text, return a placeholder
-    return "PDF text extraction incomplete. Limited analysis available.";
+    // Next, try to get the extracted text
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (pdfText && pdfText.trim() !== '') {
+      console.log("Found PDF text in session storage, length:", pdfText.length);
+      return pdfText;
+    } else {
+      console.log("No PDF text found, but PDF data exists. Creating fallback text.");
+      // If we have PDF data but no extracted text, create and store a fallback
+      const fallbackText = "PDF text extraction incomplete. Limited analysis available.";
+      sessionStorage.setItem('pdfText', fallbackText);
+      return fallbackText;
+    }
   } catch (error) {
     console.error("Error retrieving PDF text:", error);
     throw new Error("No PDF content available. Please upload a PDF first.");
@@ -113,5 +130,16 @@ export const getPdfText = (): string => {
 // Safely truncate PDF text to avoid exceeding token limits
 export const truncatePdfText = (pdfText: string, maxLength: number = 15000): string => {
   if (!pdfText) return "";
-  return pdfText.length <= maxLength ? pdfText : pdfText.slice(0, maxLength);
+  
+  // Log before truncation
+  console.log(`Original PDF text length: ${pdfText.length}, max allowed: ${maxLength}`);
+  
+  const truncatedText = pdfText.length <= maxLength ? pdfText : pdfText.slice(0, maxLength);
+  
+  // Log after truncation
+  if (pdfText.length > maxLength) {
+    console.log(`Text was truncated from ${pdfText.length} to ${truncatedText.length} characters`);
+  }
+  
+  return truncatedText;
 };

@@ -4,11 +4,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, Check, RefreshCw } from "lucide-react";
+import { Loader2, Copy, Check, RefreshCw, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateStructuredSummary } from "@/services/gemini/summaryService";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface SummaryModalProps {
   open: boolean;
@@ -24,24 +25,51 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [pdfAvailable, setPdfAvailable] = useState(false);
   const { toast } = useToast();
   const [progress, setProgress] = useState(20);
+
+  // Check for PDF data when modal is opened
+  useEffect(() => {
+    if (open) {
+      checkPdfAvailability();
+    }
+  }, [open]);
+
+  // Check if PDF data is available
+  const checkPdfAvailability = () => {
+    try {
+      // Check both possible storage keys for PDF data
+      const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+      const hasPdf = !!pdfData && pdfData.length > 100;
+      
+      console.log("PDF availability check:", hasPdf, "PDF data length:", pdfData ? pdfData.length : 0);
+      
+      // Update state based on PDF availability
+      setPdfAvailable(hasPdf);
+      
+      // If PDF is available and we don't have summary data or an error, generate summary
+      if (hasPdf && !summaryData && !loading && !error) {
+        generateSummary();
+      } else if (!hasPdf) {
+        setError("No PDF data found. Please upload a PDF document first.");
+      }
+    } catch (e) {
+      console.error("Error checking PDF availability:", e);
+      setPdfAvailable(false);
+      setError("Error checking PDF availability. Please try again.");
+    }
+  };
 
   // Reset state when modal is closed
   useEffect(() => {
     if (!open) {
       // Don't reset summaryData so it persists between modal opens
       setError(null);
+      setProgress(20);
     }
   }, [open]);
-
-  // Generate summary when modal is opened
-  useEffect(() => {
-    if (open && !summaryData && !loading && !error) {
-      generateSummary();
-    }
-  }, [open]);
-
+  
   // Simulate progress during loading
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -73,7 +101,8 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         description: "Generating a comprehensive summary...",
       });
       
-      console.log("Checking for PDF text");
+      console.log("Beginning summary generation process");
+      
       // Check if PDF data exists
       const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
       if (!pdfData) {
@@ -236,6 +265,102 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     </div>
   );
 
+  // Render different content based on PDF availability and loading state
+  const renderContent = () => {
+    if (!pdfAvailable) {
+      return (
+        <div className="flex flex-col items-center justify-center flex-1 p-6 gap-4">
+          <Alert variant="destructive">
+            <FileText className="h-4 w-4" />
+            <AlertTitle>No PDF Document Found</AlertTitle>
+            <AlertDescription>
+              Please upload a PDF document on the home page before generating a summary.
+            </AlertDescription>
+          </Alert>
+          <Button onClick={() => window.location.href = "/"} className="mt-4">
+            Go to Upload Page
+          </Button>
+        </div>
+      );
+    }
+    
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center flex-1 p-6">
+          <Progress value={progress} className="w-full max-w-md mb-4" />
+          <p className="text-sm text-muted-foreground mb-10">Analyzing document and generating summary...</p>
+          {renderLoadingSkeletons()}
+        </div>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center flex-1 p-4">
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Summary Generation Failed</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button onClick={generateSummary} className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Try Again
+          </Button>
+        </div>
+      );
+    }
+    
+    if (summaryData) {
+      return (
+        <Tabs defaultValue="all" className="flex-1 flex flex-col">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-4">
+            <TabsTrigger value="all">All Sections</TabsTrigger>
+            <TabsTrigger value="key-points">Key Points</TabsTrigger>
+            <TabsTrigger value="methods-results">Methods & Results</TabsTrigger>
+            <TabsTrigger value="conclusions">Conclusions</TabsTrigger>
+          </TabsList>
+          
+          <ScrollArea className="flex-1">
+            <div className="p-4">
+              <TabsContent value="all" className="mt-0">
+                {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
+                {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
+                {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
+                {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
+                {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
+                {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
+              </TabsContent>
+              
+              <TabsContent value="key-points" className="mt-0">
+                {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
+                {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
+                {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
+              </TabsContent>
+              
+              <TabsContent value="methods-results" className="mt-0">
+                {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
+                {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
+              </TabsContent>
+              
+              <TabsContent value="conclusions" className="mt-0">
+                {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
+              </TabsContent>
+            </div>
+          </ScrollArea>
+        </Tabs>
+      );
+    }
+    
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 p-4">
+        <p className="text-muted-foreground mb-4">No summary generated yet.</p>
+        <Button onClick={generateSummary} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Generate Summary
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
@@ -246,66 +371,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           </DialogDescription>
         </DialogHeader>
         
-        {loading ? (
-          <div className="flex flex-col items-center justify-center flex-1 p-6">
-            <Progress value={progress} className="w-full max-w-md mb-4" />
-            <p className="text-sm text-muted-foreground mb-10">Analyzing document and generating summary...</p>
-            {renderLoadingSkeletons()}
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center flex-1 p-4">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={generateSummary} className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Try Again
-            </Button>
-          </div>
-        ) : summaryData ? (
-          <Tabs defaultValue="all" className="flex-1 flex flex-col">
-            <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-4">
-              <TabsTrigger value="all">All Sections</TabsTrigger>
-              <TabsTrigger value="key-points">Key Points</TabsTrigger>
-              <TabsTrigger value="methods-results">Methods & Results</TabsTrigger>
-              <TabsTrigger value="conclusions">Conclusions</TabsTrigger>
-            </TabsList>
-            
-            <ScrollArea className="flex-1">
-              <div className="p-4">
-                <TabsContent value="all" className="mt-0">
-                  {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
-                  {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
-                  {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
-                  {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
-                  {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
-                  {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
-                </TabsContent>
-                
-                <TabsContent value="key-points" className="mt-0">
-                  {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
-                  {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
-                  {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
-                </TabsContent>
-                
-                <TabsContent value="methods-results" className="mt-0">
-                  {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
-                  {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
-                </TabsContent>
-                
-                <TabsContent value="conclusions" className="mt-0">
-                  {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
-                </TabsContent>
-              </div>
-            </ScrollArea>
-          </Tabs>
-        ) : (
-          <div className="flex flex-col items-center justify-center flex-1 p-4">
-            <p className="text-muted-foreground mb-4">No summary generated yet.</p>
-            <Button onClick={generateSummary} className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Generate Summary
-            </Button>
-          </div>
-        )}
+        {renderContent()}
       </DialogContent>
     </Dialog>
   );
