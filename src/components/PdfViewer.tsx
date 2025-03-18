@@ -26,46 +26,64 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempts, setLoadAttempts] = useState<number>(0);
   const navigate = useNavigate();
 
-  // Load PDF data from sessionStorage
+  // Load PDF data from sessionStorage with retry logic
   useEffect(() => {
-    try {
-      setIsLoading(true);
-      setLoadError(null);
-      
-      // Try to get PDF data
-      const storedPdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-      
-      if (!storedPdfData || storedPdfData.length < 100) {
-        console.error("No valid PDF data found in sessionStorage");
-        setLoadError("No PDF data found or data is invalid");
-        setIsLoading(false);
-        return;
-      }
-      
-      // Validate that it's a base64 PDF
-      if (!storedPdfData.startsWith('data:application/pdf;base64,')) {
-        // Check if it's another valid data URL
-        if (storedPdfData.startsWith('data:')) {
-          console.error("Found data URL but not a PDF");
-          setLoadError("The stored data is not a valid PDF");
-        } else {
-          console.error("Invalid data format for PDF");
-          setLoadError("The stored data format is invalid");
+    const loadPdf = () => {
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        
+        // Try to get PDF data from either storage key
+        const storedPdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+        
+        if (!storedPdfData || storedPdfData.length < 100) {
+          console.error("No valid PDF data found in sessionStorage");
+          setLoadError("No PDF data found or data is invalid");
+          setIsLoading(false);
+          return;
         }
+        
+        // Validate that it's a base64 PDF
+        if (!storedPdfData.startsWith('data:application/pdf;base64,')) {
+          // Check if it's another valid data URL
+          if (storedPdfData.startsWith('data:')) {
+            console.error("Found data URL but not a PDF");
+            setLoadError("The stored data is not a valid PDF");
+          } else {
+            console.error("Invalid data format for PDF");
+            setLoadError("The stored data format is invalid");
+          }
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log("PDF data loaded, length:", storedPdfData.length);
+        setPdfData(storedPdfData);
+      } catch (error) {
+        console.error("Error loading PDF data:", error);
+        setLoadError("Error loading PDF data from storage");
         setIsLoading(false);
-        return;
+        
+        // Increment load attempts for retry logic
+        setLoadAttempts(prev => prev + 1);
       }
+    };
+
+    loadPdf();
+    
+    // Set up a retry mechanism for loading the PDF data
+    if (loadAttempts < 3 && !pdfData && loadError) {
+      const retryTimer = setTimeout(() => {
+        console.log(`Retrying PDF load, attempt ${loadAttempts + 1} of 3`);
+        loadPdf();
+      }, 2000); // Retry after 2 seconds
       
-      console.log("PDF data loaded, length:", storedPdfData.length);
-      setPdfData(storedPdfData);
-    } catch (error) {
-      console.error("Error loading PDF data:", error);
-      setLoadError("Error loading PDF data from storage");
-      setIsLoading(false);
+      return () => clearTimeout(retryTimer);
     }
-  }, []);
+  }, [loadAttempts]);
 
   // Handle successful document load
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {

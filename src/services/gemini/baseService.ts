@@ -86,7 +86,7 @@ const safeSessionStorage = (key: string, data: string): boolean => {
   }
 };
 
-// Store/retrieve PDF text from session storage with enhanced validation
+// Improved storage with multiple fallbacks and size checks
 export const storePdfText = (pdfText: string) => {
   if (!pdfText || pdfText.trim() === '') {
     console.warn("Attempted to store empty PDF text");
@@ -95,7 +95,7 @@ export const storePdfText = (pdfText: string) => {
   
   try {
     // First validate that we have PDF data
-    const pdfData = sessionStorage.getItem('pdfData');
+    const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
     if (!pdfData || pdfData.length < 100) {
       console.warn("Storing PDF text but no PDF data found in session storage");
     }
@@ -134,10 +134,11 @@ export const storePdfText = (pdfText: string) => {
   }
 };
 
+// Improved PDF text retrieval with better fallbacks
 export const getPdfText = (): string => {
   try {
     // First validate that we have PDF data before attempting to get text
-    const pdfData = sessionStorage.getItem('pdfData');
+    const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
     
     if (!pdfData || pdfData.length < 100) {
       console.error("No valid PDF data found in session storage when getting PDF text");

@@ -173,25 +173,6 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     });
   };
 
-  const renderSummarySection = (title: string, content: string) => {
-    return (
-      <div className="relative group mb-5 p-4 bg-muted/10 rounded-lg">
-        <div className="flex items-start justify-between">
-          <h3 className="text-xl font-semibold text-primary mb-3">{title}</h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => copyToClipboard(content, title)}
-          >
-            {copiedSection === title ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </Button>
-        </div>
-        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
-      </div>
-    );
-  };
-
   // Enhanced helper function to format text with bullet points, paragraphs and headings
   const formatText = (text: string): string => {
     if (!text) return "";
@@ -241,6 +222,25 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     formatted = formatted.replace(/\n/g, '<br>');
     
     return formatted;
+  };
+
+  const renderSummarySection = (title: string, content: string) => {
+    return (
+      <div className="relative group mb-5 p-4 bg-muted/10 rounded-lg">
+        <div className="flex items-start justify-between">
+          <h3 className="text-xl font-semibold text-primary mb-3">{title}</h3>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => copyToClipboard(content, title)}
+          >
+            {copiedSection === title ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          </Button>
+        </div>
+        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
+      </div>
+    );
   };
 
   // Function to render loading skeletons
