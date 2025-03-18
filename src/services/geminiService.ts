@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -104,6 +105,57 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
   }
 };
 
+// New function to generate structured summaries from PDF content
+export const generateStructuredSummary = async (): Promise<Record<string, string>> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      throw new Error("No PDF content available. Please upload a PDF first.");
+    }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+    Analyze this academic document and create a structured summary with the following sections:
+    
+    1. Overview: A brief snapshot of the entire document (2-3 sentences)
+    2. Key Findings: The main discoveries or conclusions (3-5 bullet points)
+    3. Objectives: The stated goals of the research (2-3 bullet points)
+    4. Methods: How the research was conducted (2-4 bullet points)
+    5. Results: Significant outcomes and data (3-5 bullet points)
+    6. Conclusions: Final interpretations and implications (2-3 bullet points)
+    
+    Format your response as a JSON object with these section names as keys and the content as values.
+    Keep each section concise and focused on the most important information.
+    If the document doesn't contain information for a specific section, provide a brief note explaining this.
+    
+    Document text:
+    ${pdfText.slice(0, 15000)}
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Try to parse the JSON response
+    try {
+      // Find and extract JSON if it's surrounded by markdown code blocks or other text
+      const jsonMatch = text.match(/```(?:json)?([\s\S]*?)```/) || text.match(/({[\s\S]*})/);
+      const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
+      return JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error("Failed to parse Gemini summary response as JSON:", parseError);
+      throw new Error("Failed to generate summary. The AI response format was invalid.");
+    }
+  } catch (error) {
+    console.error("Gemini API summary generation error:", error);
+    throw error;
+  }
+};
+
 // New function to generate flowchart from PDF content
 export const generateFlowchartFromPdf = async (): Promise<string> => {
   try {
@@ -159,7 +211,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
       .replace(/```\s?/g, "")
       .trim();
     
-    return mermaidCode;
+    return cleanMermaidSyntax(mermaidCode);
   } catch (error) {
     console.error("Gemini API flowchart generation error:", error);
     return `flowchart TD

@@ -1,7 +1,9 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 
@@ -10,6 +12,7 @@ const MindMap = () => {
   const [pdfAvailable, setPdfAvailable] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const { toast } = useToast();
   
@@ -53,6 +56,10 @@ const MindMap = () => {
 
   const toggleFlowchart = () => {
     setShowFlowchart(prev => !prev);
+  };
+  
+  const toggleSummary = () => {
+    setShowSummary(prev => !prev);
   };
 
   const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
@@ -113,6 +120,7 @@ const MindMap = () => {
         toggleChat={toggleChat}
         onExportMindMap={handleExportMindMap}
         onOpenFlowchart={toggleFlowchart}
+        onOpenSummary={toggleSummary}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -130,6 +138,12 @@ const MindMap = () => {
       <FlowchartModal 
         open={showFlowchart} 
         onOpenChange={setShowFlowchart} 
+      />
+      
+      {/* Summary Modal */}
+      <SummaryModal
+        open={showSummary}
+        onOpenChange={setShowSummary}
       />
     </div>
   );

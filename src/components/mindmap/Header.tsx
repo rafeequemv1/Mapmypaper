@@ -1,5 +1,5 @@
 
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Network } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Network, FileDigit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -25,6 +25,7 @@ interface HeaderProps {
   toggleChat: () => void;
   onExportMindMap?: (type: 'svg') => void;
   onOpenFlowchart?: () => void;
+  onOpenSummary?: () => void;
 }
 
 const Header = ({ 
@@ -34,7 +35,8 @@ const Header = ({
   showChat, 
   toggleChat,
   onExportMindMap,
-  onOpenFlowchart
+  onOpenFlowchart,
+  onOpenSummary
 }: HeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -92,6 +94,18 @@ const Header = ({
           >
             <Network className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">Create Flowchart</span>
+          </Button>
+        )}
+        
+        {onOpenSummary && pdfAvailable && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onOpenSummary}
+            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+          >
+            <FileDigit className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Summarize</span>
           </Button>
         )}
       </div>
