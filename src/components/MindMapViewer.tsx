@@ -93,7 +93,8 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Set a timeout to ensure the mind map is rendered before auto-centering
       setTimeout(() => {
         // Ensure the mind map fits within the viewport
-        mind.fit();
+        // Instead of fit(), use scale to 1 and center the map
+        mind.scale(1);
         mind.toCenter();
       }, 100);
       
@@ -106,7 +107,8 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Add resize handler to ensure proper sizing when window resizes
       const handleResize = () => {
         if (mindMapRef.current) {
-          mindMapRef.current.fit(); // Ensure it fits within viewport when resized
+          // Scale to 1 (100%) instead of using fit()
+          mindMapRef.current.scale(1);
           mindMapRef.current.toCenter();
         }
       };
