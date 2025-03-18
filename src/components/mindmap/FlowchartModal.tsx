@@ -160,7 +160,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           <ul class="list-disc pl-5 text-sm">
             <li>Node IDs should be alphanumeric without hyphens</li>
             <li>All node text must be in brackets: [text], (text), or {text}</li>
-            <li>Arrows should use --> not -></li>
+            <li>Arrows should use --{'>'}  not -{'>'}  </li>
           </ul>
         </div>`;
       }
@@ -318,9 +318,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               <h4 className="font-medium">Quick Syntax Reference:</h4>
               <ul className="mt-1 pl-4 list-disc">
                 <li>Start with <code className="bg-gray-100 px-1">flowchart TD</code> for top-down layout</li>
-                <li>Node syntax: <code className="bg-gray-100 px-1">nodeId[Text]</code> or <code className="bg-gray-100 px-1">nodeId(Text)</code> or <code className="bg-gray-100 px-1">nodeId{'{Text}'}</code></li>
-                <li>Connection: <code className="bg-gray-100 px-1">A --> B</code></li>
-                <li>Labeled edge: <code className="bg-gray-100 px-1">A -->|Label| B</code></li>
+                <li>Node syntax: <code className="bg-gray-100 px-1">nodeId[Text]</code> or <code className="bg-gray-100 px-1">nodeId(Text)</code> or <code className="bg-gray-100 px-1">nodeId{'{'+'Text'+'}'}</code></li>
+                <li>Connection: <code className="bg-gray-100 px-1">A --{'>'}  B</code></li>
+                <li>Labeled edge: <code className="bg-gray-100 px-1">A --{'>'}|Label| B</code></li>
                 <li>Use alphanumeric IDs without hyphens</li>
               </ul>
             </div>
