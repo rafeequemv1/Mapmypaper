@@ -77,7 +77,7 @@ const MindMap = () => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* Simple top bar with title and controls */}
+      {/* Top bar with controls */}
       <div className="py-2 px-4 border-b bg-[#222222] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-white" />
