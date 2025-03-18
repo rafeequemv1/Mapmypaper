@@ -1,5 +1,5 @@
 
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, GitBranch } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, GitBranch, FlowChart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -84,7 +84,7 @@ const Header = ({
             className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
           >
             <GitBranch className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Flowchart</span>
+            <span className="text-sm font-medium">Create Flowchart</span>
           </Button>
         )}
       </div>
