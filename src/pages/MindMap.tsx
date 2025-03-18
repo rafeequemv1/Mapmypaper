@@ -69,7 +69,8 @@ const MindMap = () => {
       // Show toast when mind map is ready
       toast({
         title: "Mindmap loaded",
-        description: "Your mindmap is ready to use. Right-click on nodes for options."
+        description: "Your mindmap is ready to use. Right-click on nodes for options.",
+        position: "bottom-left"
       });
     }, 100);
     

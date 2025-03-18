@@ -87,6 +87,7 @@ const ChatBox = () => {
         title: "Error",
         description: "Failed to get a response. Please try again.",
         variant: "destructive",
+        position: "bottom-left"
       });
     } finally {
       setIsLoading(false);
@@ -190,7 +191,7 @@ const ChatBox = () => {
     <div className="flex flex-col h-full">
       {/* Message area - takes all available space but allows scrolling */}
       <div className="flex-1 overflow-hidden relative">
-        <ScrollArea className="h-full absolute inset-0">
+        <ScrollArea className="h-full w-full">
           <div className="p-4 space-y-4">
             {messages.map((message, index) => {
               // Check if this message is part of a sequence from the same sender
