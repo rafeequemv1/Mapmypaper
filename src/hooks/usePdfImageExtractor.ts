@@ -2,8 +2,10 @@
 import { useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Need to set the worker source
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Instead of using CDN, we'll use the worker from the package
+// This fixes the "Failed to fetch dynamically imported module" error
+const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
+pdfjsLib.GlobalWorkerOptions.workerPort = new pdfjsWorker.PDFWorkerFactory();
 
 export interface ExtractedImage {
   id: string;
