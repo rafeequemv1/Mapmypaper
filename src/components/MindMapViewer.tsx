@@ -34,7 +34,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           cssVar: {},
         },
         nodeMenu: true,
-        autoFit: true, // Keep auto-fit enabled
+        autoFit: true, // Keep auto-fit enabled for initial fit
       };
 
       const mind = new MindElixir(options);
@@ -92,7 +92,8 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       
       // Set a timeout to ensure the mind map is rendered before auto-centering
       setTimeout(() => {
-        // Properly center the mind map to fit the viewport
+        // Ensure the mind map fits within the viewport
+        mind.fit();
         mind.toCenter();
       }, 100);
       
@@ -105,6 +106,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Add resize handler to ensure proper sizing when window resizes
       const handleResize = () => {
         if (mindMapRef.current) {
+          mindMapRef.current.fit(); // Ensure it fits within viewport when resized
           mindMapRef.current.toCenter();
         }
       };
