@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -70,54 +69,36 @@ const PdfUpload = () => {
       }
     }
   }, [toast]);
-  
+
   const extractTextFromPdf = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+      console.log("Starting PDF extraction with file:", file.name, file.type, file.size);
       
-      reader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          
-          if (!arrayBuffer) {
-            throw new Error("Failed to read file");
-          }
-          
-          // Create a Blob from the Uint8Array
-          const blob = new Blob([new Uint8Array(arrayBuffer)], { type: 'application/pdf' });
-          
-          console.log("Converting PDF to text...");
-          
-          // Add timeout to prevent hanging
-          const timeoutPromise = new Promise<string>((_, timeoutReject) => {
-            setTimeout(() => timeoutReject(new Error("PDF extraction timed out")), 30000);
-          });
-          
-          // Race between the PDF extraction and the timeout
-          const text = await Promise.race([
-            PdfToText(blob),
-            timeoutPromise
-          ]);
-          
-          if (!text || typeof text !== 'string' || text.trim() === '') {
-            throw new Error("No text could be extracted from the PDF");
-          }
-          
+      // Direct approach using the library with the file
+      const extractionPromise = PdfToText(file).then((text: string) => {
+        console.log("Raw extraction result:", text);
+        if (!text || typeof text !== 'string' || text.trim() === '') {
+          throw new Error("No text could be extracted from the PDF");
+        }
+        return text;
+      });
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<string>((_, timeoutReject) => {
+        setTimeout(() => timeoutReject(new Error("PDF extraction timed out")), 30000);
+      });
+      
+      // Race between the PDF extraction and the timeout
+      Promise.race([extractionPromise, timeoutPromise])
+        .then((text) => {
           console.log("Text extracted successfully, length:", text.length);
           setExtractedText(text);
           resolve(text);
-        } catch (error) {
+        })
+        .catch((error) => {
           console.error("PDF extraction error:", error);
           reject(error instanceof Error ? error : new Error("Failed to extract text from PDF"));
-        }
-      };
-      
-      reader.onerror = (error) => {
-        console.error("FileReader error:", error);
-        reject(new Error("Error reading the file"));
-      };
-      
-      reader.readAsArrayBuffer(file);
+        });
     });
   };
 
