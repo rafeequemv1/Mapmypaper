@@ -19,11 +19,12 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         el: containerRef.current,
         direction: 1 as const, // Using 'as const' to specify it's specifically 1 (right direction)
         draggable: true,
+        editable: true, // Enable editing for context menu to work properly
         contextMenu: true,
         tools: {
           zoom: true,
-          create: false,
-          edit: false,
+          create: true, // Enable create feature
+          edit: true,   // Enable edit feature
         },
         theme: {
           name: 'gray',
@@ -31,12 +32,13 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           color: '#333',
           palette: [], // Required property
           cssVar: {}, // Required property
-        }
+        },
+        nodeMenu: true, // Explicitly enable node menu
       };
 
       const mind = new MindElixir(options);
       
-      // Install the node menu plugin
+      // Install the node menu plugin correctly
       mind.install(nodeMenu);
       
       // Create sample mindmap data using the correct types
@@ -89,8 +91,13 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       mind.init(data);
       mindMapRef.current = mind;
 
+      // Add event listener to log node menu activity
+      mind.bus.addListener('contextmenu', (node: any) => {
+        console.log('Context menu opened for node:', node);
+      });
+
       // Add mind elixir instance to window for debugging
-      console.log("Mind Elixir initialized");
+      console.log("Mind Elixir initialized with options:", options);
     }
 
     // Cleanup function to remove the mind map when component unmounts
