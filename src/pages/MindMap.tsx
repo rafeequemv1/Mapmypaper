@@ -1,13 +1,12 @@
 
 import { useState, useEffect } from "react";
-import { Brain, ArrowLeft, FileText, MessageSquare, X } from "lucide-react";
+import { Brain, ArrowLeft, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
-import ChatBox from "@/components/ChatBox";
 import { 
   ResizablePanelGroup, 
   ResizablePanel, 
@@ -21,7 +20,6 @@ const MindMap = () => {
   const [title, setTitle] = useState("Mind Map");
   const [showPdf, setShowPdf] = useState(true);
   const [pdfAvailable, setPdfAvailable] = useState(false);
-  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -85,10 +83,6 @@ const MindMap = () => {
     setShowPdf(prev => !prev);
   };
 
-  const toggleChat = () => {
-    setShowChat(prev => !prev);
-  };
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Top bar with controls */}
@@ -102,17 +96,9 @@ const MindMap = () => {
           </Button>
         </div>
         
-        {/* Centered chat button */}
+        {/* Center section - now empty */}
         <div className="flex items-center justify-center w-1/3">
-          <Toggle 
-            pressed={showChat} 
-            onPressedChange={toggleChat}
-            aria-label="Toggle research assistant"
-            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
-          >
-            <Brain className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Research Assistant</span>
-          </Toggle>
+          {/* Chat button removed */}
         </div>
         
         {/* PDF toggle on the right */}
@@ -133,7 +119,7 @@ const MindMap = () => {
 
       {/* Main Content - Flex-grow to take available space */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Resizable panels for PDF, Mind Map, and Chat */}
+        {/* Resizable panels for PDF and Mind Map only */}
         <ResizablePanelGroup direction="horizontal" className="flex-1">
           {showPdf && (
             <>
@@ -143,46 +129,9 @@ const MindMap = () => {
               <ResizableHandle withHandle />
             </>
           )}
-          <ResizablePanel defaultSize={showChat ? 50 : (showPdf ? 75 : 100)} id="mindmap-panel">
+          <ResizablePanel defaultSize={showPdf ? 75 : 100} id="mindmap-panel">
             <MindMapViewer isMapGenerated={isMapGenerated} />
           </ResizablePanel>
-          {showChat && (
-            <>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={25} minSize={20} id="chat-panel">
-                <div className="flex flex-col h-full">
-                  {/* Chat panel header with controls */}
-                  <div className="flex items-center justify-between p-2 border-b bg-secondary/30">
-                    <h3 className="font-medium">Research Assistant</h3>
-                    <div className="flex items-center gap-2">
-                      {pdfAvailable && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 text-muted-foreground hover:text-foreground" 
-                          onClick={togglePdf}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          {showPdf ? "Hide PDF" : "Show PDF"}
-                        </Button>
-                      )}
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8" 
-                        onClick={toggleChat}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <ChatBox />
-                  </div>
-                </div>
-              </ResizablePanel>
-            </>
-          )}
         </ResizablePanelGroup>
       </div>
     </div>
