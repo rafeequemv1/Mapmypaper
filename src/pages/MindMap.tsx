@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Brain, ArrowLeft, FileText } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
+import ChatBox from "@/components/ChatBox";
 import { 
   ResizablePanelGroup, 
   ResizablePanel, 
@@ -21,6 +22,7 @@ const MindMap = () => {
   const [title, setTitle] = useState("Mind Map");
   const [showPdf, setShowPdf] = useState(true);
   const [pdfAvailable, setPdfAvailable] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     // Set a small delay before generating the map to ensure DOM is ready
@@ -65,6 +67,10 @@ const MindMap = () => {
     setShowPdf(prev => !prev);
   };
 
+  const toggleChat = () => {
+    setShowChat(prev => !prev);
+  };
+
   return (
     <div className="min-h-screen flex flex-col overflow-hidden">
       {/* Header - thin and black */}
@@ -75,8 +81,8 @@ const MindMap = () => {
             <h1 className="text-base font-medium text-white">PaperMind</h1>
           </div>
           
-          {/* Center section for PDF toggle */}
-          <div className="flex items-center justify-center w-1/3">
+          {/* Center section for toggles */}
+          <div className="flex items-center justify-center gap-4 w-1/3">
             {pdfAvailable && (
               <Toggle 
                 pressed={showPdf} 
@@ -88,6 +94,16 @@ const MindMap = () => {
                 <span className="text-sm font-medium">PDF</span>
               </Toggle>
             )}
+            
+            <Toggle 
+              pressed={showChat} 
+              onPressedChange={toggleChat}
+              aria-label="Toggle chat"
+              className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              <span className="text-sm font-medium">Chat</span>
+            </Toggle>
           </div>
           
           {/* Right section for back button */}
@@ -108,19 +124,27 @@ const MindMap = () => {
           </div>
         </div>
         <div className="flex-1 flex flex-col">
-          {/* Resizable panels for PDF and Mind Map */}
+          {/* Resizable panels for PDF, Mind Map, and Chat */}
           <ResizablePanelGroup direction="horizontal" className="flex-1">
             {showPdf && pdfAvailable && (
               <>
-                <ResizablePanel defaultSize={30} minSize={25}>
+                <ResizablePanel defaultSize={25} minSize={20}>
                   <PdfViewer />
                 </ResizablePanel>
                 <ResizableHandle withHandle />
               </>
             )}
-            <ResizablePanel defaultSize={showPdf && pdfAvailable ? 70 : 100}>
+            <ResizablePanel defaultSize={showChat ? 50 : (showPdf && pdfAvailable ? 75 : 100)}>
               <MindMapViewer isMapGenerated={isMapGenerated} />
             </ResizablePanel>
+            {showChat && (
+              <>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={25} minSize={20}>
+                  <ChatBox />
+                </ResizablePanel>
+              </>
+            )}
           </ResizablePanelGroup>
         </div>
       </main>

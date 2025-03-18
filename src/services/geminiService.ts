@@ -10,6 +10,9 @@ export const getGeminiApiKey = () => apiKey;
 // Process text with Gemini to generate mindmap data
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
+    // Store the PDF text in sessionStorage for chat functionality
+    sessionStorage.setItem('pdfText', pdfText);
+    
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
