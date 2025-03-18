@@ -18,7 +18,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-hidden">
       {/* Header - thin and black */}
       <header className="py-2 px-8 border-b bg-[#222222]">
         <div className="max-w-5xl mx-auto flex items-center">
@@ -30,7 +30,7 @@ const Index = () => {
       </header>
 
       {/* Main Content - Made fullscreen */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 flex flex-col">
           {/* Mind Elixir Mindmap */}
           <MindMapViewer isMapGenerated={isMapGenerated} />

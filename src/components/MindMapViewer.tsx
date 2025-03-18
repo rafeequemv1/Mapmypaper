@@ -90,25 +90,30 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
 
       mind.init(data);
       
-      // Set a timeout to ensure the mind map is rendered before auto-centering
-      setTimeout(() => {
-        // Center the map and adjust scale to fit the viewport
-        mind.toCenter();
+      // Function to fit the mind map within the container
+      const fitMindMap = () => {
+        if (!containerRef.current || !mindMapRef.current) return;
         
-        // Get the mind map container dimensions
-        const container = containerRef.current;
-        if (container) {
-          // Force the mind map to fit within the viewport
-          const containerRect = container.getBoundingClientRect();
-          const scale = Math.min(
-            containerRect.width / (container.scrollWidth || 1),
-            containerRect.height / (container.scrollHeight || 1)
-          ) * 0.9; // 90% of available space for some margin
-          
-          mind.scale(scale);
-          mind.toCenter();
-        }
-      }, 100);
+        // Get the mind map's root element (ME instance has a container property)
+        const mindMapRoot = mind.container;
+        if (!mindMapRoot) return;
+        
+        // Get dimensions
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const rootRect = mindMapRoot.getBoundingClientRect();
+        
+        // Calculate the scale needed to fit content
+        const scaleX = (containerRect.width * 0.9) / rootRect.width;
+        const scaleY = (containerRect.height * 0.9) / rootRect.height;
+        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down if needed
+        
+        // Apply scale and center
+        mindMapRef.current.scale(scale);
+        mindMapRef.current.toCenter();
+      };
+      
+      // Set a timeout to ensure the mind map is rendered before scaling
+      setTimeout(fitMindMap, 300);
       
       mindMapRef.current = mind;
 
@@ -117,20 +122,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       console.log("Mind Elixir instance:", mind);
       
       // Add resize handler to ensure proper sizing when window resizes
-      const handleResize = () => {
-        if (mindMapRef.current && containerRef.current) {
-          const container = containerRef.current;
-          // Calculate scale based on container dimensions
-          const containerRect = container.getBoundingClientRect();
-          const scale = Math.min(
-            containerRect.width / (container.scrollWidth || 1),
-            containerRect.height / (container.scrollHeight || 1)
-          ) * 0.9; // 90% of available space for some margin
-          
-          mindMapRef.current.scale(scale);
-          mindMapRef.current.toCenter();
-        }
-      };
+      const handleResize = () => fitMindMap();
       
       window.addEventListener('resize', handleResize);
       
@@ -147,7 +139,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
-      <div className="w-full h-full flex-1 bg-card overflow-hidden relative">
+      <div className="w-full h-[calc(100vh-100px)] bg-card overflow-hidden relative">
         <div 
           ref={containerRef} 
           className="w-full h-full" 
