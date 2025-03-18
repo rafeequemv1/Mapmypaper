@@ -1,17 +1,26 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Brain, FileText, Upload } from "lucide-react";
+import PdfToText from "react-pdftotext";
+import { Brain, FileText, Upload, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { setGeminiApiKey, generateMindMapFromText } from "@/services/geminiService";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [apiKey, setApiKey] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -65,19 +74,99 @@ const PdfUpload = () => {
     }
   }, [toast]);
 
-  const handleGenerateMindmap = useCallback(() => {
-    if (selectedFile) {
-      // In a real implementation, you would process the PDF here
-      // For now, we'll just navigate to the mindmap page
-      navigate("/mindmap");
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setApiKey(e.target.value);
+  };
+
+  const handleApiKeySubmit = () => {
+    if (apiKey.trim()) {
+      const success = setGeminiApiKey(apiKey.trim());
+      if (success) {
+        setShowApiKeyInput(false);
+        toast({
+          title: "API Key saved",
+          description: "Your Gemini API key has been saved for this session.",
+        });
+      }
     } else {
+      toast({
+        title: "Invalid API Key",
+        description: "Please provide a valid Gemini API key",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const extractTextFromPdf = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        
+        if (arrayBuffer) {
+          PdfToText({ data: new Uint8Array(arrayBuffer) })
+            .then((text: string) => {
+              setExtractedText(text);
+              resolve(text);
+            })
+            .catch((error: any) => {
+              console.error("Error extracting text from PDF:", error);
+              reject(new Error("Failed to extract text from PDF"));
+            });
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const handleGenerateMindmap = useCallback(async () => {
+    if (!selectedFile) {
       toast({
         title: "No file selected",
         description: "Please upload a PDF file first",
         variant: "destructive",
       });
+      return;
     }
-  }, [selectedFile, navigate, toast]);
+
+    if (showApiKeyInput) {
+      toast({
+        title: "API Key required",
+        description: "Please provide your Gemini API key first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    toast({
+      title: "Processing PDF",
+      description: "Extracting text and generating mind map...",
+    });
+
+    try {
+      // Extract text from PDF
+      const text = await extractTextFromPdf(selectedFile);
+      
+      // Process the text with Gemini to generate mind map data
+      const mindMapData = await generateMindMapFromText(text);
+      
+      // Store the generated mind map data in sessionStorage
+      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+      
+      // Navigate to the mind map view
+      navigate("/mindmap");
+    } catch (error) {
+      console.error("Error generating mind map:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate mind map",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
+  }, [selectedFile, navigate, toast, showApiKeyInput]);
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden">
@@ -97,10 +186,36 @@ const PdfUpload = () => {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Upload PDF Document</CardTitle>
             <CardDescription>
-              Upload your research paper or document to generate a mind map
+              Upload your research paper or document to generate a mind map with Google Gemini AI
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* API Key Input */}
+            {showApiKeyInput && (
+              <div className="space-y-4 p-4 bg-secondary/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-primary" />
+                  <h3 className="font-medium">Google Gemini API Key</h3>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="api-key">Enter your Gemini API key to process PDF content</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      id="api-key" 
+                      type="password" 
+                      placeholder="Gemini API Key" 
+                      value={apiKey}
+                      onChange={handleApiKeyChange}
+                    />
+                    <Button onClick={handleApiKeySubmit}>Save Key</Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Your API key is stored locally in this browser session only and is not saved to any database.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* File Dropzone */}
             <div
               className={`border-2 border-dashed rounded-lg p-10 transition-colors ${
@@ -110,10 +225,11 @@ const PdfUpload = () => {
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
               onDrop={handleDrop}
-              onClick={() => document.getElementById("file-upload")?.click()}
+              onClick={() => fileInputRef.current?.click()}
             >
               <input
                 id="file-upload"
+                ref={fileInputRef}
                 type="file"
                 accept=".pdf"
                 className="hidden"
@@ -155,9 +271,9 @@ const PdfUpload = () => {
             <Button 
               onClick={handleGenerateMindmap} 
               className="w-full" 
-              disabled={!selectedFile}
+              disabled={!selectedFile || isProcessing || showApiKeyInput}
             >
-              Generate Mindmap
+              {isProcessing ? "Processing..." : "Generate Mindmap with Gemini AI"}
             </Button>
           </CardContent>
         </Card>

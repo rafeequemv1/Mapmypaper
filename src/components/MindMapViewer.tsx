@@ -2,8 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
-// Fix the CSS import - let's use plain CSS instead
-import "../styles/node-menu.css"; // We'll create this file to replace the missing CSS
+import "../styles/node-menu.css";
 import { Keyboard } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -12,7 +11,6 @@ interface MindMapViewerProps {
 }
 
 // Modify the EventMap to actually extend the library's EventMap type
-// This ensures type compatibility with the mind-elixir library's event system
 type MindElixirEventMap = {
   'operation': any;
   'selectNode': any;
@@ -58,51 +56,75 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Install the node menu plugin before init
       mind.install(nodeMenu);
       
-      // Create sample mindmap data using the correct types
-      const data: MindElixirData = {
-        nodeData: {
-          id: 'root',
-          topic: 'Research Paper Title',
-          children: [
-            {
-              id: 'bd1',
-              topic: 'Introduction',
-              direction: 0 as const,
+      // Get the generated mind map data from sessionStorage or use a default structure
+      let data: MindElixirData;
+      
+      try {
+        const savedData = sessionStorage.getItem('mindMapData');
+        if (savedData) {
+          data = JSON.parse(savedData);
+          console.log("Using mind map data from Gemini:", data);
+        } else {
+          // Fallback to default data if nothing is in sessionStorage
+          data = {
+            nodeData: {
+              id: 'root',
+              topic: 'Research Paper Title',
               children: [
-                { id: 'bd1-1', topic: 'Problem Statement' },
-                { id: 'bd1-2', topic: 'Research Objectives' }
-              ]
-            },
-            {
-              id: 'bd2',
-              topic: 'Methodology',
-              direction: 0 as const,
-              children: [
-                { id: 'bd2-1', topic: 'Data Collection' },
-                { id: 'bd2-2', topic: 'Analysis Techniques' }
-              ]
-            },
-            {
-              id: 'bd3',
-              topic: 'Results',
-              direction: 1 as const,
-              children: [
-                { id: 'bd3-1', topic: 'Key Finding 1' },
-                { id: 'bd3-2', topic: 'Key Finding 2' },
-              ]
-            },
-            {
-              id: 'bd4',
-              topic: 'Conclusion',
-              direction: 1 as const,
-              children: [
-                { id: 'bd4-1', topic: 'Summary' },
-                { id: 'bd4-2', topic: 'Future Work' }
+                {
+                  id: 'bd1',
+                  topic: 'Introduction',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd1-1', topic: 'Problem Statement' },
+                    { id: 'bd1-2', topic: 'Research Objectives' }
+                  ]
+                },
+                {
+                  id: 'bd2',
+                  topic: 'Methodology',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd2-1', topic: 'Data Collection' },
+                    { id: 'bd2-2', topic: 'Analysis Techniques' }
+                  ]
+                },
+                {
+                  id: 'bd3',
+                  topic: 'Results',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd3-1', topic: 'Key Finding 1' },
+                    { id: 'bd3-2', topic: 'Key Finding 2' },
+                  ]
+                },
+                {
+                  id: 'bd4',
+                  topic: 'Conclusion',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd4-1', topic: 'Summary' },
+                    { id: 'bd4-2', topic: 'Future Work' }
+                  ]
+                }
               ]
             }
-          ]
+          };
+          console.log("Using default mind map data");
         }
-      };
+      } catch (error) {
+        console.error("Error parsing mind map data:", error);
+        // Use default data in case of parsing error
+        data = {
+          nodeData: {
+            id: 'root',
+            topic: 'Error Loading Mind Map',
+            children: [
+              { id: 'error1', topic: 'There was an error loading the mind map data', direction: 0 as const }
+            ]
+          }
+        };
+      }
 
       // Initialize the mind map with data
       mind.init(data);
