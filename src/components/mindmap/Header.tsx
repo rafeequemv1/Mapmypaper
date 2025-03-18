@@ -97,12 +97,12 @@ const Header = ({
           </Button>
         )}
         
-        {onOpenSummary && pdfAvailable && (
+        {onOpenSummary && (
           <Button 
             variant="outline" 
             size="sm" 
             onClick={onOpenSummary}
-            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+            className="bg-[#8B5CF6] hover:bg-[#7c4deb] text-white border-none rounded-md px-4 py-1 h-auto"
           >
             <FileDigit className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">Summarize</span>
