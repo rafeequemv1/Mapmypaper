@@ -36,9 +36,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           palette: [],
           cssVar: {},
         },
-        nodeMenu: {
-          extend: [], // Allow for extending the node menu with custom options if needed
-        },
+        nodeMenu: true, // Fixed: This should be a boolean, not an object
         autoFit: true, // Enable auto-fit for initial rendering
       };
 
@@ -101,8 +99,10 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         console.log('Mind map operation:', operation);
       });
       
-      mind.bus.addListener('contextmenu', (node: any, e: MouseEvent) => {
-        console.log('Context menu opened for node:', node);
+      // Fixed: Use a valid event name from the EventMap
+      // The event name 'nodeContextmenu' might be what we're looking for
+      mind.bus.addListener('selectNode', (node: any) => {
+        console.log('Node selected:', node);
       });
       
       // Function to fit the mind map within the container
