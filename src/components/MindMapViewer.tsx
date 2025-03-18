@@ -34,7 +34,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           cssVar: {},
         },
         nodeMenu: true,
-        autoFit: true, // Enable auto-fit to ensure mindmap fits in viewport
+        autoFit: true, // Keep auto-fit enabled
       };
 
       const mind = new MindElixir(options);
@@ -92,8 +92,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       
       // Set a timeout to ensure the mind map is rendered before auto-centering
       setTimeout(() => {
-        // Auto center the mind map to fit the viewport
-        mind.linkDiv.style.transformOrigin = '50% 50%';
+        // Properly center the mind map to fit the viewport
         mind.toCenter();
       }, 100);
       
