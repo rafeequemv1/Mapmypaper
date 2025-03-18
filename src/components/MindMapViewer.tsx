@@ -34,7 +34,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           cssVar: {},
         },
         nodeMenu: true,
-        autoFit: true, // Keep auto-fit enabled for initial fit
+        autoFit: true, // Enable auto-fit for initial rendering
       };
 
       const mind = new MindElixir(options);
@@ -92,10 +92,22 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       
       // Set a timeout to ensure the mind map is rendered before auto-centering
       setTimeout(() => {
-        // Ensure the mind map fits within the viewport
-        // Instead of fit(), use scale to 1 and center the map
-        mind.scale(1);
+        // Center the map and adjust scale to fit the viewport
         mind.toCenter();
+        
+        // Get the mind map container dimensions
+        const container = containerRef.current;
+        if (container) {
+          // Force the mind map to fit within the viewport
+          const containerRect = container.getBoundingClientRect();
+          const scale = Math.min(
+            containerRect.width / (container.scrollWidth || 1),
+            containerRect.height / (container.scrollHeight || 1)
+          ) * 0.9; // 90% of available space for some margin
+          
+          mind.scale(scale);
+          mind.toCenter();
+        }
       }, 100);
       
       mindMapRef.current = mind;
@@ -106,9 +118,16 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       
       // Add resize handler to ensure proper sizing when window resizes
       const handleResize = () => {
-        if (mindMapRef.current) {
-          // Scale to 1 (100%) instead of using fit()
-          mindMapRef.current.scale(1);
+        if (mindMapRef.current && containerRef.current) {
+          const container = containerRef.current;
+          // Calculate scale based on container dimensions
+          const containerRect = container.getBoundingClientRect();
+          const scale = Math.min(
+            containerRect.width / (container.scrollWidth || 1),
+            containerRect.height / (container.scrollHeight || 1)
+          ) * 0.9; // 90% of available space for some margin
+          
+          mindMapRef.current.scale(scale);
           mindMapRef.current.toCenter();
         }
       };
