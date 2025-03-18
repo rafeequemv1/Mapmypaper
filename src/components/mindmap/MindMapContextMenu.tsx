@@ -10,27 +10,19 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
 } from "@/components/ui/context-menu";
-import { Edit, Plus, Trash2, PaintBucket, PenSquare, FileImage, Image } from 'lucide-react';
+import { Edit, Plus, Trash2, PaintBucket, PenSquare } from 'lucide-react';
 import { MindElixirInstance } from 'mind-elixir';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { addImageToNode } from './mindMapUtils';
 
 interface MindMapContextMenuProps {
   mindMap: MindElixirInstance | null;
   children: React.ReactNode;
-  images: Array<{ id: string; data: string; pageNumber: number }>;
-  onAddImageToNode: (nodeId: string, imageData: string) => void;
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({ 
   mindMap, 
-  children, 
-  images,
-  onAddImageToNode
+  children
 }) => {
   const [isReady, setIsReady] = useState(false);
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
 
   useEffect(() => {
     // Set ready state when mindMap is available
@@ -108,21 +100,6 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
     }
   };
 
-  // Handle adding an image to the selected node
-  const handleOpenImageDialog = () => {
-    if (mindMap && mindMap.currentNode) {
-      setIsImageDialogOpen(true);
-    }
-  };
-
-  const handleAddImage = (imageData: string) => {
-    if (mindMap && mindMap.currentNode) {
-      const nodeId = mindMap.currentNode.id;
-      onAddImageToNode(nodeId, imageData);
-      setIsImageDialogOpen(false);
-    }
-  };
-
   return (
     <>
       <ContextMenu>
@@ -144,12 +121,6 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
             Add Sibling Node
           </ContextMenuItem>
           <ContextMenuSeparator />
-          {images.length > 0 && (
-            <ContextMenuItem onClick={handleOpenImageDialog} className="flex items-center">
-              <FileImage className="mr-2 h-4 w-4" />
-              Add Image to Node
-            </ContextMenuItem>
-          )}
           <ContextMenuSub>
             <ContextMenuSubTrigger className="flex items-center">
               <PaintBucket className="mr-2 h-4 w-4" />
@@ -185,33 +156,6 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-
-      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Add Image to Node</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto p-4">
-            {images.map((image) => (
-              <div key={image.id} className="border rounded-md p-2 cursor-pointer hover:bg-accent">
-                <img 
-                  src={image.data} 
-                  alt={`Image from page ${image.pageNumber}`} 
-                  className="w-full h-auto object-contain rounded mb-2"
-                />
-                <Button 
-                  onClick={() => handleAddImage(image.data)} 
-                  size="sm" 
-                  className="w-full"
-                >
-                  <Image className="h-4 w-4 mr-2" />
-                  Use Image
-                </Button>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

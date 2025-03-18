@@ -1,15 +1,9 @@
 
 import { MindElixirData } from "mind-elixir";
-import { ExtractedImage } from "@/hooks/usePdfProcessor";
 
 export interface ExtendedNodeData {
   id: string;
   topic: string;
-  image?: {
-    src: string;
-    width?: number;
-    height?: number;
-  };
   style?: {
     background?: string;
     color?: string;
@@ -22,6 +16,5 @@ export interface ExtendedNodeData {
 export interface MindMapStorage {
   mindMapData?: MindElixirData;
   extractedText?: string;
-  extractedImages?: ExtractedImage[];
   selectedNode?: string;
 }

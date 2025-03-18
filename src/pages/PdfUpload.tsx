@@ -1,20 +1,17 @@
 
 import { useState, useRef } from "react";
-import { Upload, FileText, AlertCircle, ArrowRight, Image } from "lucide-react";
+import { Upload, FileText, AlertCircle, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
-import { usePdfProcessor, ExtractedImage } from "@/hooks/usePdfProcessor";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePdfProcessor } from "@/hooks/usePdfProcessor";
 
 const PdfUpload = () => {
   const [file, setFile] = useState<File | null>(null);
   const [extractedText, setExtractedText] = useState<string>("");
-  const [extractedImages, setExtractedImages] = useState<ExtractedImage[]>([]);
-  const [activeTab, setActiveTab] = useState<string>("text");
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processPdf, isLoading, error } = usePdfProcessor();
@@ -24,7 +21,6 @@ const PdfUpload = () => {
     if (selectedFile && selectedFile.type === "application/pdf") {
       setFile(selectedFile);
       setExtractedText("");
-      setExtractedImages([]);
       toast({
         title: "PDF Selected",
         description: `${selectedFile.name} (${(selectedFile.size / 1024).toFixed(2)} KB)`,
@@ -44,7 +40,6 @@ const PdfUpload = () => {
     if (droppedFile && droppedFile.type === "application/pdf") {
       setFile(droppedFile);
       setExtractedText("");
-      setExtractedImages([]);
       toast({
         title: "PDF Uploaded",
         description: `${droppedFile.name} (${(droppedFile.size / 1024).toFixed(2)} KB)`,
@@ -75,18 +70,10 @@ const PdfUpload = () => {
     try {
       const content = await processPdf(file);
       setExtractedText(content.text);
-      setExtractedImages(content.images);
-      
-      // Determine which tab to show based on the extracted content
-      if (content.images.length > 0) {
-        setActiveTab("images");
-      } else {
-        setActiveTab("text");
-      }
       
       toast({
         title: "PDF Processed",
-        description: `Extracted ${content.images.length} images and ${content.text.length} characters of text.`,
+        description: `Extracted ${content.text.length} characters of text.`,
       });
     } catch (err) {
       toast({
@@ -99,9 +86,8 @@ const PdfUpload = () => {
 
   const handleContinueToMindMap = () => {
     // Store extracted content in localStorage
-    if (extractedText || extractedImages.length > 0) {
+    if (extractedText) {
       localStorage.setItem('extractedPdfText', extractedText);
-      localStorage.setItem('extractedPdfImages', JSON.stringify(extractedImages));
       toast({
         title: "Content Saved",
         description: "The extracted content is ready for mind mapping.",
@@ -132,7 +118,7 @@ const PdfUpload = () => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">PDF Content Extraction</h1>
-            <p className="mt-2 text-lg text-gray-600">Upload your research paper to extract text and images for mind mapping</p>
+            <p className="mt-2 text-lg text-gray-600">Upload your research paper to extract text for mind mapping</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -177,7 +163,6 @@ const PdfUpload = () => {
                   onClick={() => {
                     setFile(null);
                     setExtractedText("");
-                    setExtractedImages([]);
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
                   disabled={!file}
@@ -198,22 +183,8 @@ const PdfUpload = () => {
               <CardHeader>
                 <CardTitle>Extracted Content</CardTitle>
                 <CardDescription>
-                  Content extracted from your PDF
+                  Text extracted from your PDF
                 </CardDescription>
-                {(extractedText || extractedImages.length > 0) && (
-                  <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="text">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Text
-                      </TabsTrigger>
-                      <TabsTrigger value="images">
-                        <Image className="h-4 w-4 mr-2" />
-                        Images ({extractedImages.length})
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                )}
               </CardHeader>
               <CardContent>
                 {error && (
@@ -223,47 +194,20 @@ const PdfUpload = () => {
                   </div>
                 )}
                 
-                <TabsContent value="text" className="mt-0">
-                  <div className="bg-white border rounded-md h-[300px] overflow-auto p-4">
-                    {extractedText ? (
-                      <pre className="text-sm whitespace-pre-wrap font-sans">{extractedText}</pre>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-gray-400">
-                        <p>Extract content from your PDF to see text here</p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="images" className="mt-0">
-                  <div className="bg-white border rounded-md h-[300px] overflow-auto p-4">
-                    {extractedImages && extractedImages.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-4">
-                        {extractedImages.map((image) => (
-                          <div key={image.id} className="border rounded p-2">
-                            <img 
-                              src={image.data} 
-                              alt={`Image from page ${image.pageNumber}`} 
-                              className="w-full h-auto object-contain"
-                            />
-                            <p className="text-xs text-center mt-1 text-muted-foreground">
-                              Page {image.pageNumber}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-gray-400">
-                        <p>No images found in the PDF</p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
+                <div className="bg-white border rounded-md h-[300px] overflow-auto p-4">
+                  {extractedText ? (
+                    <pre className="text-sm whitespace-pre-wrap font-sans">{extractedText}</pre>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-400">
+                      <p>Extract content from your PDF to see text here</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
               <CardFooter>
                 <Button 
                   className="w-full"
-                  disabled={!extractedText && extractedImages.length === 0}
+                  disabled={!extractedText}
                   onClick={handleContinueToMindMap}
                   asChild
                 >
