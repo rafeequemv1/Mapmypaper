@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -86,11 +87,32 @@ export const useFlowchartGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
+  const resetGenerator = () => {
+    // Reset state to initial values - prevents memory leaks or stale data
+    setCode(defaultFlowchart);
+    setError(null);
+    setIsGenerating(false);
+  };
+
   const generateFlowchart = async () => {
     try {
       setIsGenerating(true);
       setError(null);
-      const flowchartCode = await generateFlowchartFromPdf();
+      
+      // Use a safer approach with timeout protection
+      const timeoutPromise = new Promise<string>((_, reject) => {
+        setTimeout(() => reject(new Error("Flowchart generation timed out after 30 seconds")), 30000);
+      });
+      
+      const generationPromise = generateFlowchartFromPdf()
+        .catch(error => {
+          console.error("Error in flowchart generation:", error);
+          // Return default flowchart on error instead of throwing
+          return defaultFlowchart;
+        });
+      
+      // Use Promise.race to implement timeout
+      const flowchartCode = await Promise.race([generationPromise, timeoutPromise]);
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
@@ -136,7 +158,8 @@ export const useFlowchartGenerator = () => {
     error,
     isGenerating,
     generateFlowchart,
-    handleCodeChange
+    handleCodeChange,
+    resetGenerator
   };
 };
 

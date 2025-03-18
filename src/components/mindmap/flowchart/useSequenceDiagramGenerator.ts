@@ -33,6 +33,13 @@ export const useSequenceDiagramGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
+  const resetGenerator = () => {
+    // Reset state to initial values to prevent memory leaks or stale data
+    setCode(defaultSequenceDiagram);
+    setError(null);
+    setIsGenerating(false);
+  };
+
   const generateDiagram = async () => {
     try {
       setIsGenerating(true);
@@ -97,7 +104,8 @@ export const useSequenceDiagramGenerator = () => {
     error,
     isGenerating,
     generateDiagram,
-    handleCodeChange
+    handleCodeChange,
+    resetGenerator
   };
 };
 
