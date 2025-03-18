@@ -6,12 +6,19 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import MindMapViewer from "@/components/MindMapViewer";
+import PdfViewer from "@/components/PdfViewer";
+import { 
+  ResizablePanelGroup, 
+  ResizablePanel, 
+  ResizableHandle 
+} from "@/components/ui/resizable";
 
 const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [title, setTitle] = useState("Mind Map");
+  const [showPdf, setShowPdf] = useState(true);
 
   useEffect(() => {
     // Set a small delay before generating the map to ensure DOM is ready
@@ -27,6 +34,10 @@ const MindMap = () => {
             setTitle(data.nodeData.topic);
           }
         }
+        
+        // Check if PDF data exists
+        const pdfData = sessionStorage.getItem('pdfData');
+        setShowPdf(!!pdfData);
       } catch (error) {
         console.error("Error parsing mind map data for title:", error);
       }
@@ -69,8 +80,20 @@ const MindMap = () => {
           </div>
         </div>
         <div className="flex-1 flex flex-col">
-          {/* Mind Elixir Mindmap */}
-          <MindMapViewer isMapGenerated={isMapGenerated} />
+          {/* Resizable panels for PDF and Mind Map */}
+          <ResizablePanelGroup direction="horizontal" className="flex-1">
+            {showPdf && (
+              <>
+                <ResizablePanel defaultSize={30} minSize={25}>
+                  <PdfViewer />
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+              </>
+            )}
+            <ResizablePanel defaultSize={showPdf ? 70 : 100}>
+              <MindMapViewer isMapGenerated={isMapGenerated} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </main>
 
