@@ -2,8 +2,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { useState } from 'react';
 
-// Initialize the PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set worker path relative to our application
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 export const usePdfTextExtractor = () => {
   const [isLoading, setIsLoading] = useState(false);
