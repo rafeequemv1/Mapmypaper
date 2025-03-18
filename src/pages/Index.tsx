@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { FileUp, Download, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import MindMapViewer from "@/components/MindMapViewer";
 
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -160,41 +161,9 @@ const Index = () => {
             )}
           </div>
 
-          {/* Mindmap Preview */}
+          {/* Mind Elixir Mindmap */}
           {isMapGenerated && (
-            <div className="border rounded-lg p-6 bg-card">
-              <h3 className="text-lg font-medium mb-4 text-center">Your Mindmap</h3>
-              <div className="aspect-ratio rounded-md bg-muted p-4 relative overflow-hidden">
-                <div className="flex items-center justify-center h-full">
-                  <div className="mindmap-preview text-left">
-                    <div className="mb-4 bg-primary/10 p-3 rounded-lg">
-                      <h4 className="font-semibold">Main Research Topic</h4>
-                    </div>
-                    <div className="pl-8 mb-2">
-                      <div className="bg-accent/50 p-2 rounded-md mb-2 w-4/5">
-                        <p className="font-medium">Key Finding #1</p>
-                      </div>
-                      <div className="pl-6">
-                        <div className="bg-muted p-2 rounded-md mb-1 w-3/5">Supporting Evidence</div>
-                        <div className="bg-muted p-2 rounded-md w-3/4">Methodology</div>
-                      </div>
-                    </div>
-                    <div className="pl-8 mb-2">
-                      <div className="bg-accent/50 p-2 rounded-md mb-2 w-5/6">
-                        <p className="font-medium">Key Finding #2</p>
-                      </div>
-                      <div className="pl-6">
-                        <div className="bg-muted p-2 rounded-md mb-1 w-2/3">Data Analysis</div>
-                        <div className="bg-muted p-2 rounded-md w-1/2">Conclusion</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="text-center mt-4 text-sm text-muted-foreground">
-                This is a simplified preview. Download for the full interactive mindmap.
-              </div>
-            </div>
+            <MindMapViewer isMapGenerated={isMapGenerated} />
           )}
         </div>
       </main>
