@@ -50,9 +50,9 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({ mindMap, childr
         // trigger the built-in edit functionality
         setTimeout(() => {
           // Need a slight delay to ensure the node is selected
-          // Fix: Pass the required arguments to execCommand
-          document.execCommand('selectAll', false, null);
-          document.execCommand('delete', false, null);
+          // Fix: Pass the required arguments to execCommand with empty string as third arg
+          document.execCommand('selectAll', false, '');
+          document.execCommand('delete', false, '');
         }, 50);
       }
     }
@@ -79,10 +79,21 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({ mindMap, childr
   // Set up color change handlers
   const handleColorChange = (color: string) => {
     if (mindMap && mindMap.currentNode) {
-      // Fix: Use the correct method for updating node style in mind-elixir
-      // The MindElixirInstance type doesn't have updateNodeStyle method
-      // Use the operation.updateNodeStyle method instead
-      mindMap.operation.updateNodeStyle(mindMap.currentNode.id, { background: color });
+      // Fix: Mind-elixir's updateNodeStyle is not directly on MindElixirInstance
+      // Update node style by directly setting the background property
+      const nodeId = mindMap.currentNode.id;
+      
+      // Access the nodes map from mindMap
+      if (mindMap.nodes && mindMap.nodes[nodeId]) {
+        // Update the node style
+        mindMap.nodes[nodeId].style = {
+          ...mindMap.nodes[nodeId].style,
+          background: color
+        };
+        
+        // Refresh the map to show the changes
+        mindMap.refresh();
+      }
     }
   };
 
