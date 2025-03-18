@@ -1,4 +1,3 @@
-
 import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Share2, Network } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -158,9 +157,6 @@ const Header = ({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
                 Download as SVG
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onExportMindMap('png')}>
-                Download as PNG
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
