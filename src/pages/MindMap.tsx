@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
-import { supabase } from "@/integrations/supabase/client";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,24 +46,6 @@ const MindMap = () => {
     
     // Execute PDF check immediately
     checkPdfAvailability();
-    
-    // Check if we're in a shared view by checking URL parameters
-    const checkSharedView = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const isShared = urlParams.get('shared') === 'true';
-      
-      if (isShared) {
-        toast({
-          title: "Shared Mind Map",
-          description: "You are viewing a shared mind map.",
-        });
-      }
-    };
-    
-    checkSharedView();
-    
-    // In the future, we can implement PDF storage in Supabase
-    // For now, we're using sessionStorage for temporary storage
   }, [toast]);
 
   const togglePdf = () => {
@@ -83,7 +64,7 @@ const MindMap = () => {
     setMindMap(mindMap);
   }, []);
 
-  const handleExportMindMap = useCallback(async (type: 'svg' | 'png') => {
+  const handleExportMindMap = useCallback(async (type: 'svg') => {
     if (!mindMap) {
       toast({
         title: "Export Failed",
@@ -94,12 +75,7 @@ const MindMap = () => {
     }
 
     try {
-      let blob = null;
-      if (type === 'png') {
-        blob = await mindMap.exportPng();
-      } else {
-        blob = mindMap.exportSvg();
-      }
+      let blob = mindMap.exportSvg();
 
       if (!blob) {
         throw new Error("Failed to generate export data");
@@ -145,7 +121,7 @@ const MindMap = () => {
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#f5f5f5]">
         <PanelStructure 
           showPdf={showPdf && pdfAvailable}
           showChat={showChat}

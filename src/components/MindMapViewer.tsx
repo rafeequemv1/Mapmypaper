@@ -187,7 +187,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
-      <div className="w-full h-[calc(100vh-100px)] bg-card overflow-hidden relative">
+      <div className="w-full h-full bg-[#f5f5f5] overflow-hidden relative">
         <div 
           ref={containerRef} 
           className="w-full h-full" 

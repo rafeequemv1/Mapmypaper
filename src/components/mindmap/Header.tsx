@@ -1,4 +1,5 @@
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Share2, Network } from "lucide-react";
+
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Network } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -14,7 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
@@ -23,7 +23,7 @@ interface HeaderProps {
   pdfAvailable: boolean;
   showChat: boolean;
   toggleChat: () => void;
-  onExportMindMap?: (type: 'svg' | 'png') => void;
+  onExportMindMap?: (type: 'svg') => void;
   onOpenFlowchart?: () => void;
 }
 
@@ -38,7 +38,6 @@ const Header = ({
 }: HeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   const handleBack = () => {
     navigate("/");
@@ -47,33 +46,6 @@ const Header = ({
   const handleUploadClick = () => {
     // Navigate to the upload page
     navigate("/");
-  };
-
-  const handleShareMindMap = () => {
-    try {
-      // For now, we'll create a simple share URL with the current page
-      // In a real implementation, you'd want to save the mind map data to a database
-      // and generate a unique ID for sharing
-      const currentUrl = window.location.href;
-      const shareableUrl = `${currentUrl}?shared=true`;
-      
-      // Copy to clipboard
-      navigator.clipboard.writeText(shareableUrl);
-      
-      setShareUrl(shareableUrl);
-      
-      toast({
-        title: "Share link created",
-        description: "The link has been copied to your clipboard.",
-      });
-    } catch (error) {
-      console.error("Error creating share link:", error);
-      toast({
-        title: "Failed to create share link",
-        description: "There was an error creating the share link.",
-        variant: "destructive"
-      });
-    }
   };
 
   return (
@@ -124,7 +96,7 @@ const Header = ({
         )}
       </div>
       
-      {/* Keyboard shortcuts on the right */}
+      {/* Actions on the right */}
       <div className="flex items-center justify-end gap-4 w-1/3">
         <Button 
           variant="ghost" 
@@ -134,16 +106,6 @@ const Header = ({
         >
           <Upload className="h-4 w-4 mr-1" />
           <span className="hidden sm:inline">Upload PDF</span>
-        </Button>
-        
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-white"
-          onClick={handleShareMindMap}
-        >
-          <Share2 className="h-4 w-4 mr-1" />
-          <span className="hidden sm:inline">Share</span>
         </Button>
         
         {onExportMindMap && (
