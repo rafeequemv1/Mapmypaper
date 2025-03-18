@@ -12,11 +12,11 @@ interface MindMapViewerProps {
 
 // Define the event map type to fix TypeScript errors
 interface EventMap {
-  operation: any;
-  selectNode: any;
-  expandNode: any;
-  showNodeMenu: any;
-  hideNodeMenu: any;
+  'operation': any;
+  'selectNode': any;
+  'expandNode': any;
+  'showNodeMenu': any;  // Use quoted string literal for property names
+  'hideNodeMenu': any;
   // Add other event types as needed
 }
 
