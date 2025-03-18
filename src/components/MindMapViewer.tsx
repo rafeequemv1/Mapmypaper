@@ -36,7 +36,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           palette: [],
           cssVar: {},
         },
-        nodeMenu: true, // This enables the default node menu
+        nodeMenu: true, // Enable the nodeMenu plugin
         autoFit: true, // Enable auto-fit for initial rendering
       };
 
@@ -104,8 +104,9 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         console.log('Node selected:', node);
       });
 
-      // Add a specific listener for node context menu events to debug
-      mind.bus.addListener('contextmenu', (node: any, e: any) => {
+      // Add a specific listener for right-click events
+      // Use the correct event name according to the library
+      mind.bus.addListener('contextMenu', (node: any, e: any) => {
         console.log('Context menu triggered on node:', node);
       });
       
@@ -161,9 +162,16 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
     if (mindMapRef.current) {
       console.log("Attempting to manually trigger node menu");
       // Try to select the root node programmatically
-      const rootNode = mindMapRef.current.nodeData;
-      if (rootNode) {
-        mindMapRef.current.selectNode(rootNode);
+      const rootNodeObj = mindMapRef.current.nodeData;
+      if (rootNodeObj) {
+        // Pass the root node's DOM element to selectNode instead of the node object
+        // First, find the DOM element using the node's ID
+        const rootEl = document.querySelector(`[data-nodeid='root']`);
+        if (rootEl) {
+          mindMapRef.current.selectNode(rootEl as HTMLElement);
+        } else {
+          console.log("Root element not found in DOM");
+        }
       }
     }
   };
@@ -212,7 +220,10 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="flex items-center justify-center w-7 h-7 bg-white rounded-md shadow-sm hover:bg-gray-100 transition-colors ml-2">
+                  <button 
+                    className="flex items-center justify-center w-7 h-7 bg-white rounded-md shadow-sm hover:bg-gray-100 transition-colors ml-2"
+                    onClick={testNodeMenu} // Add click handler for testing
+                  >
                     <Keyboard className="h-4 w-4 text-gray-700" />
                   </button>
                 </TooltipTrigger>
