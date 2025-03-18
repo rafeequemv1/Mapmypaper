@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Upload, FileText, AlertCircle, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -7,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
-import { usePdfProcessor } from "@/hooks/usePdfProcessor";
+import { usePdfTextExtractor } from "@/hooks/usePdfTextExtractor";
 
 const PdfUpload = () => {
   const [file, setFile] = useState<File | null>(null);
   const [extractedText, setExtractedText] = useState<string>("");
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { processPdf, isLoading, error } = usePdfProcessor();
+  const { extractTextFromPdf, isLoading, error } = usePdfTextExtractor();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -68,12 +67,12 @@ const PdfUpload = () => {
     }
 
     try {
-      const content = await processPdf(file);
-      setExtractedText(content.text);
+      const text = await extractTextFromPdf(file);
+      setExtractedText(text);
       
       toast({
         title: "PDF Processed",
-        description: `Extracted ${content.text.length} characters of text.`,
+        description: `Extracted ${text.length} characters of text.`,
       });
     } catch (err) {
       toast({
