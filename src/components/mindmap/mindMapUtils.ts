@@ -1,3 +1,4 @@
+
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 
@@ -101,7 +102,7 @@ export const createMindMapOptions = (containerRef: HTMLDivElement) => {
         '--line-color': '#CCCCCC' // Light gray for lines
       }
     },
-    nodeMenu: true,
+    nodeMenu: nodeMenu, // Ensure we're passing the menu module directly, not a boolean
     autoFit: true,
   };
 };
@@ -128,14 +129,23 @@ export const initializeMindMap = (
   const options = createMindMapOptions(containerRef);
   const mind = new MindElixir(options);
   
-  // Install the node-menu-neo plugin
+  // Install the node menu plugin properly
   mind.install(nodeMenu);
   
   // Initialize with sample data
   mind.init(createSampleMindMapData());
   
+  // Set up right-click event handling for the container to ensure context menu works
+  containerRef.addEventListener('contextmenu', (e) => {
+    // Only prevent default if it's within the mind map
+    // This allows the browser's context menu to appear outside of nodes
+    const target = e.target as HTMLElement;
+    if (target.closest('.map-container')) {
+      e.preventDefault();
+    }
+  });
+  
   // Use the callback to set the mind map instance
-  // This avoids directly modifying the ref.current which is read-only
   setMindMap(mind);
   
   return mind;
