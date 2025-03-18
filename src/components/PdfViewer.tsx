@@ -2,11 +2,13 @@
 import { useState, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
+import { useNavigate } from "react-router-dom";
 
 // Initialize the worker for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -23,20 +25,44 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Load PDF data from sessionStorage
   useEffect(() => {
     try {
+      setIsLoading(true);
+      setLoadError(null);
+      
+      // Try to get PDF data
       const storedPdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-      if (storedPdfData) {
-        console.log("PDF data loaded, length:", storedPdfData.length);
-        setPdfData(storedPdfData);
-      } else {
-        console.error("No PDF data found in sessionStorage");
+      
+      if (!storedPdfData || storedPdfData.length < 100) {
+        console.error("No valid PDF data found in sessionStorage");
+        setLoadError("No PDF data found or data is invalid");
+        setIsLoading(false);
+        return;
       }
+      
+      // Validate that it's a base64 PDF
+      if (!storedPdfData.startsWith('data:application/pdf;base64,')) {
+        // Check if it's another valid data URL
+        if (storedPdfData.startsWith('data:')) {
+          console.error("Found data URL but not a PDF");
+          setLoadError("The stored data is not a valid PDF");
+        } else {
+          console.error("Invalid data format for PDF");
+          setLoadError("The stored data format is invalid");
+        }
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("PDF data loaded, length:", storedPdfData.length);
+      setPdfData(storedPdfData);
     } catch (error) {
       console.error("Error loading PDF data:", error);
-    } finally {
+      setLoadError("Error loading PDF data from storage");
       setIsLoading(false);
     }
   }, []);
@@ -48,6 +74,13 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
     setIsLoading(false);
   };
 
+  // Handle document load error
+  const onDocumentLoadError = (error: Error) => {
+    console.error("Error loading PDF document:", error);
+    setLoadError(`Error loading PDF: ${error.message}`);
+    setIsLoading(false);
+  };
+
   // Handle zoom in/out
   const handleZoomIn = () => {
     setScale(prevScale => Math.min(prevScale + 0.2, 3.0));
@@ -55,6 +88,11 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
 
   const handleZoomOut = () => {
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
+  };
+
+  // Handle navigation to upload page
+  const handleUploadNew = () => {
+    navigate("/");
   };
 
   // Create array of page numbers for rendering
@@ -74,6 +112,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
                   onClick={handleZoomOut}
                   className="p-1 rounded hover:bg-muted text-muted-foreground"
                   aria-label="Zoom out"
+                  disabled={!pdfData || isLoading}
                 >
                   <Minus className="h-4 w-4" />
                 </button>
@@ -91,6 +130,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
                   onClick={handleZoomIn}
                   className="p-1 rounded hover:bg-muted text-muted-foreground"
                   aria-label="Zoom in"
+                  disabled={!pdfData || isLoading}
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -101,7 +141,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
         </div>
         
         <div className="text-xs text-muted-foreground">
-          {isLoading ? 'Loading PDF...' : `Page ${currentPage} of ${numPages}`}
+          {isLoading ? 'Loading PDF...' : pdfData && numPages > 0 ? `Page ${currentPage} of ${numPages}` : 'No PDF available'}
         </div>
       </div>
       
@@ -111,16 +151,30 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
             <div className="flex items-center justify-center h-full w-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center h-full w-full p-6">
+              <Alert variant="destructive" className="mb-4 max-w-md">
+                <FileText className="h-4 w-4" />
+                <AlertTitle>PDF Error</AlertTitle>
+                <AlertDescription>{loadError}</AlertDescription>
+              </Alert>
+              <Button onClick={handleUploadNew} className="mt-4">
+                Upload New PDF
+              </Button>
+            </div>
           ) : !pdfData ? (
             <div className="flex flex-col items-center justify-center h-full w-full text-muted-foreground">
               <p>No PDF available</p>
               <p className="text-xs mt-2">Upload a PDF file to view it here</p>
+              <Button onClick={handleUploadNew} className="mt-4">
+                Upload PDF
+              </Button>
             </div>
           ) : (
             <Document
               file={pdfData}
               onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={(error) => console.error("Error loading PDF:", error)}
+              onLoadError={onDocumentLoadError}
               className="pdf-container"
               loading={
                 <div className="flex items-center justify-center h-20 w-full">

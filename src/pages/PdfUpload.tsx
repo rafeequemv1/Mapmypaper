@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -87,16 +86,28 @@ const PdfUpload = () => {
     });
 
     try {
-      // First, read the PDF as DataURL for viewing later
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64data = e.target?.result as string;
-        // Store PDF data under both keys for compatibility
-        sessionStorage.setItem('pdfData', base64data);
-        sessionStorage.setItem('uploadedPdfData', base64data);
-        console.log("PDF data stored, length:", base64data.length);
-      };
-      reader.readAsDataURL(selectedFile);
+      // Create a promise for reading the PDF data
+      const readFilePromise = new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64data = e.target?.result as string;
+          if (!base64data) {
+            reject(new Error("Failed to read PDF file"));
+            return;
+          }
+          resolve(base64data);
+        };
+        reader.onerror = () => reject(new Error("Error reading PDF file"));
+        reader.readAsDataURL(selectedFile);
+      });
+      
+      // Wait for PDF data to be read
+      const base64data = await readFilePromise;
+      
+      // Store PDF data in sessionStorage
+      sessionStorage.setItem('pdfData', base64data);
+      sessionStorage.setItem('uploadedPdfData', base64data);
+      console.log("PDF data stored, length:", base64data.length);
       
       // Extract text from PDF
       const extractedText = await PdfToText(selectedFile);
@@ -105,15 +116,28 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
       
-      // Store the extracted text in sessionStorage for summary generation
+      // Store the extracted text in sessionStorage
       sessionStorage.setItem('pdfText', extractedText);
       console.log("Stored PDF text in sessionStorage, length:", extractedText.length);
+      
+      // Validate that data is stored properly before proceeding
+      const checkData = sessionStorage.getItem('pdfData');
+      const checkText = sessionStorage.getItem('pdfText');
+      
+      if (!checkData || !checkText) {
+        throw new Error("Failed to store PDF data in session storage. Please try again.");
+      }
       
       // Process the text with Gemini to generate mind map data
       const mindMapData = await generateMindMapFromText(extractedText);
       
       // Store the generated mind map data in sessionStorage
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+      
+      // Add a final check to ensure all data is stored
+      if (!sessionStorage.getItem('mindMapData')) {
+        throw new Error("Failed to store mind map data. Please try again.");
+      }
       
       // Navigate to the mind map view
       toast({
