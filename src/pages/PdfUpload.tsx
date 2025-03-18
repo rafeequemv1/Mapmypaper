@@ -1,9 +1,8 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, FileText, Upload, FileSymlink, ScrollText, AlertCircle } from "lucide-react";
+import { Brain, FileText, Upload, FileSymlink, ScrollText, AlertCircle, FileQuestion } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +20,46 @@ const PdfUpload = () => {
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const extractTextFromPdf = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      console.log("Starting PDF extraction with file:", file.name, file.type, file.size);
+      
+      // Try extracting with different settings
+      const extractionOptions = {
+        // Sometimes setting a higher scale can help with text extraction
+        scale: 2.0,
+        // Ensure we're handling potentially scanned PDFs better
+        ocr: true
+      };
+
+      // Attempt extraction with options
+      PdfToText(file, extractionOptions)
+        .then((text: string) => {
+          console.log("Raw extraction result:", text);
+          if (!text || typeof text !== 'string' || text.trim() === '') {
+            // If text is empty, this might be a scanned PDF without embedded text
+            setExtractionError("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
+            // Allow empty text for manual entry
+            setExtractedText("");
+            resolve("");
+          } else {
+            console.log("Text extracted successfully, length:", text.length);
+            setExtractedText(text);
+            setExtractionError(null);
+            resolve(text);
+          }
+        })
+        .catch((error) => {
+          console.error("PDF extraction error:", error);
+          setExtractionError(error instanceof Error ? error.message : "Failed to extract text from PDF");
+          
+          // Still set empty text for manual entry
+          setExtractedText("");
+          resolve("");
+        });
+    });
+  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -74,40 +113,6 @@ const PdfUpload = () => {
     }
   }, [toast]);
 
-  const extractTextFromPdf = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      console.log("Starting PDF extraction with file:", file.name, file.type, file.size);
-      
-      // Direct approach using the library with the file
-      const extractionPromise = PdfToText(file).then((text: string) => {
-        console.log("Raw extraction result:", text);
-        if (!text || typeof text !== 'string' || text.trim() === '') {
-          throw new Error("No text could be extracted from the PDF");
-        }
-        return text;
-      });
-      
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise<string>((_, timeoutReject) => {
-        setTimeout(() => timeoutReject(new Error("PDF extraction timed out")), 30000);
-      });
-      
-      // Race between the PDF extraction and the timeout
-      Promise.race([extractionPromise, timeoutPromise])
-        .then((text) => {
-          console.log("Text extracted successfully, length:", text.length);
-          setExtractedText(text);
-          setExtractionError(null);
-          resolve(text);
-        })
-        .catch((error) => {
-          console.error("PDF extraction error:", error);
-          setExtractionError(error instanceof Error ? error.message : "Failed to extract text from PDF");
-          reject(error instanceof Error ? error : new Error("Failed to extract text from PDF"));
-        });
-    });
-  };
-
   const handleExtractText = useCallback(async () => {
     if (!selectedFile) {
       toast({
@@ -127,21 +132,25 @@ const PdfUpload = () => {
 
     try {
       await extractTextFromPdf(selectedFile);
+      
+      // Even if extraction returns empty string, we allow manual entry
       toast({
-        title: "Success",
-        description: "Text extracted successfully!",
+        title: "Processing Complete",
+        description: extractionError ? 
+          "Text extraction had issues. You can manually enter text below." : 
+          "Text extracted successfully!",
       });
     } catch (error) {
       console.error("Error extracting text:", error);
       toast({
-        title: "Extraction Failed",
-        description: error instanceof Error ? error.message : "Failed to extract text from PDF",
+        title: "Extraction Issue",
+        description: "You can still enter text manually below.",
         variant: "destructive",
       });
     } finally {
       setIsExtracting(false);
     }
-  }, [selectedFile, toast]);
+  }, [selectedFile, toast, extractionError]);
 
   const handleGenerateMindmap = useCallback(async () => {
     if (!selectedFile) {
@@ -283,15 +292,47 @@ const PdfUpload = () => {
             {extractionError && (
               <Alert variant="destructive" className="bg-red-100 border-red-400">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Extraction Failed</AlertTitle>
-                <AlertDescription>
-                  {extractionError}
+                <AlertTitle>Extraction Notice</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <p>{extractionError}</p>
+                  <p className="text-sm font-medium">
+                    Don't worry! You can still use the application by entering text manually below.
+                  </p>
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* Extraction Status */}
-            {extractedText && (
+            {/* Manual Text Entry Area - Always shown after extraction attempt */}
+            {(extractedText !== null || extractionError) && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  {extractionError ? (
+                    <FileQuestion className="h-5 w-5 text-amber-600" />
+                  ) : (
+                    <ScrollText className="h-5 w-5" />
+                  )}
+                  <h3 className="font-medium">
+                    {extractionError ? "Enter Text Manually" : "Extracted Text"}
+                  </h3>
+                </div>
+                <Textarea 
+                  value={extractedText || ""}
+                  onChange={(e) => setExtractedText(e.target.value)}
+                  className="min-h-[200px] max-h-[400px] overflow-y-auto font-mono text-sm"
+                  placeholder={extractionError ? 
+                    "The PDF extraction failed, but you can enter text manually here..." : 
+                    "Extracted text will appear here..."}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {extractionError ? 
+                    "Enter the text you want to use for generating a mind map." : 
+                    "You can edit the extracted text before generating the mind map if needed."}
+                </p>
+              </div>
+            )}
+
+            {/* Extraction Status - Only shown if extraction succeeded */}
+            {extractedText && !extractionError && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center gap-2 text-green-600">
                   <FileText className="h-5 w-5" />
@@ -303,30 +344,11 @@ const PdfUpload = () => {
               </div>
             )}
             
-            {/* Extracted Text Display Area */}
-            {extractedText && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <ScrollText className="h-5 w-5" />
-                  <h3 className="font-medium">Extracted Text</h3>
-                </div>
-                <Textarea 
-                  value={extractedText}
-                  onChange={(e) => setExtractedText(e.target.value)}
-                  className="min-h-[200px] max-h-[400px] overflow-y-auto font-mono text-sm"
-                  placeholder="Extracted text will appear here..."
-                />
-                <p className="text-xs text-muted-foreground">
-                  You can edit the text before generating the mind map if needed.
-                </p>
-              </div>
-            )}
-
             {/* Generate Button */}
             <Button 
               onClick={handleGenerateMindmap} 
               className="w-full" 
-              disabled={!selectedFile || isProcessing || !extractedText}
+              disabled={!selectedFile || isProcessing || !extractedText && !extractionError}
             >
               {isProcessing ? "Processing..." : "Generate Mindmap with Gemini AI"}
               <Brain className="ml-2 h-4 w-4" />
