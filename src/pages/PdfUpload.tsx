@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -97,29 +96,53 @@ const PdfUpload = () => {
       });
     }
   };
-
+  
   const extractTextFromPdf = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const arrayBuffer = e.target?.result as ArrayBuffer;
-        
-        if (arrayBuffer) {
-          // Create a Blob from the Uint8Array before passing to PdfToText
-          const blob = new Blob([new Uint8Array(arrayBuffer)]);
+      
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
           
-          PdfToText(blob)
-            .then((text: string) => {
-              setExtractedText(text);
-              resolve(text);
-            })
-            .catch((error: any) => {
-              console.error("Error extracting text from PDF:", error);
-              reject(new Error("Failed to extract text from PDF"));
-            });
+          if (!arrayBuffer) {
+            throw new Error("Failed to read file");
+          }
+          
+          // Create a Blob from the Uint8Array
+          const blob = new Blob([new Uint8Array(arrayBuffer)], { type: 'application/pdf' });
+          
+          console.log("Converting PDF to text...");
+          
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise<string>((_, timeoutReject) => {
+            setTimeout(() => timeoutReject(new Error("PDF extraction timed out")), 30000);
+          });
+          
+          // Race between the PDF extraction and the timeout
+          const text = await Promise.race([
+            PdfToText(blob),
+            timeoutPromise
+          ]);
+          
+          if (!text || typeof text !== 'string' || text.trim() === '') {
+            throw new Error("No text could be extracted from the PDF");
+          }
+          
+          console.log("Text extracted successfully, length:", text.length);
+          setExtractedText(text);
+          resolve(text);
+        } catch (error) {
+          console.error("PDF extraction error:", error);
+          reject(error instanceof Error ? error : new Error("Failed to extract text from PDF"));
         }
       };
-      reader.onerror = (error) => reject(error);
+      
+      reader.onerror = (error) => {
+        console.error("FileReader error:", error);
+        reject(new Error("Error reading the file"));
+      };
+      
       reader.readAsArrayBuffer(file);
     });
   };
@@ -149,7 +172,7 @@ const PdfUpload = () => {
     } catch (error) {
       console.error("Error extracting text:", error);
       toast({
-        title: "Error",
+        title: "Extraction Failed",
         description: error instanceof Error ? error.message : "Failed to extract text from PDF",
         variant: "destructive",
       });
@@ -312,9 +335,19 @@ const PdfUpload = () => {
                   onClick={handleExtractText} 
                   variant="outline"
                   disabled={isExtracting || !selectedFile}
+                  className="gap-2"
                 >
-                  {isExtracting ? "Extracting..." : "Extract Text"}
-                  <FileSymlink className="ml-2 h-4 w-4" />
+                  {isExtracting ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                      Extracting...
+                    </>
+                  ) : (
+                    <>
+                      Extract Text
+                      <FileSymlink className="h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             )}
