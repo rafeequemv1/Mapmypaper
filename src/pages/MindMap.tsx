@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -7,7 +6,7 @@ import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 
 const MindMap = () => {
-  const [showPdf, setShowPdf] = useState(true);
+  const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
   const [pdfAvailable, setPdfAvailable] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
@@ -26,12 +25,8 @@ const MindMap = () => {
         
         setPdfAvailable(hasPdfData);
         
-        // Only show PDF if data is available
-        if (hasPdfData) {
-          setShowPdf(true);
-        } else {
-          setShowPdf(false);
-        }
+        // Keep PDF panel visible if data is available
+        setShowPdf(hasPdfData);
         
         // Ensure PDF data is stored with the consistent key name
         if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
