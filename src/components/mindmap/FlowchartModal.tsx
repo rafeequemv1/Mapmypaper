@@ -11,8 +11,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Share2 } from "lucide-react";
+import { Download, Share2, RefreshCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { generateFlowchartFromPdf } from "@/services/geminiService";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -28,6 +29,7 @@ const defaultFlowchart = `flowchart TD
 const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [code, setCode] = useState(defaultFlowchart);
   const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -40,12 +42,42 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     });
   }, []);
 
-  // Render flowchart when code changes or when modal opens
+  // Generate flowchart when modal is opened
+  useEffect(() => {
+    if (open && code === defaultFlowchart) {
+      generateFlowchart();
+    } else if (open && previewRef.current) {
+      renderFlowchart();
+    }
+  }, [open]);
+
+  // Render flowchart when code changes
   useEffect(() => {
     if (open && previewRef.current) {
       renderFlowchart();
     }
-  }, [code, open]);
+  }, [code]);
+
+  const generateFlowchart = async () => {
+    try {
+      setIsGenerating(true);
+      const flowchartCode = await generateFlowchartFromPdf();
+      setCode(flowchartCode);
+      toast({
+        title: "Flowchart Generated",
+        description: "A flowchart has been created based on your PDF content.",
+      });
+    } catch (err) {
+      console.error("Failed to generate flowchart:", err);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate flowchart from PDF content.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const renderFlowchart = async () => {
     if (!previewRef.current) return;
@@ -183,14 +215,26 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         <DialogHeader>
           <DialogTitle>Flowchart Editor</DialogTitle>
           <DialogDescription>
-            Create and edit flowcharts using Mermaid syntax.
+            Create and edit flowcharts using Mermaid syntax. The initial flowchart is generated based on your PDF content.
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
           {/* Code editor */}
           <div className="flex flex-col">
-            <h3 className="text-sm font-medium mb-2">Mermaid Code</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium">Mermaid Code</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={generateFlowchart} 
+                disabled={isGenerating}
+                className="flex items-center gap-1"
+              >
+                <RefreshCcw className="h-3.5 w-3.5" />
+                {isGenerating ? "Generating..." : "Regenerate"}
+              </Button>
+            </div>
             <Textarea
               value={code}
               onChange={handleCodeChange}
@@ -209,7 +253,12 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             <h3 className="text-sm font-medium mb-2">Preview</h3>
             <div className="border rounded-md p-4 flex-1 overflow-auto bg-white">
               <div ref={previewRef} className="flex justify-center items-center h-full">
-                {/* Flowchart will be rendered here */}
+                {isGenerating ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                ) : (
+                  /* Flowchart will be rendered here */
+                  null
+                )}
               </div>
             </div>
           </div>

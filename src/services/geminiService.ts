@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -102,5 +101,68 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
   } catch (error) {
     console.error("Gemini API chat error:", error);
     return "Sorry, I encountered an error while processing your request. Please try again.";
+  }
+};
+
+// New function to generate flowchart from PDF content
+export const generateFlowchartFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `flowchart TD
+        A[Error] --> B[No PDF Content]
+        B --> C[Please upload a PDF first]`;
+    }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+    Analyze the following academic paper/document text and create a flowchart in Mermaid syntax.
+    The flowchart should represent the main process, methodology, or conceptual framework described in the document.
+    
+    Focus on:
+    1. Key steps or phases in the process/methodology
+    2. Decision points and alternative paths
+    3. Inputs and outputs of each step
+    4. Relationships between concepts or components
+    
+    Use Mermaid flowchart syntax. Here's an example of the syntax:
+    
+    flowchart TD
+        A[Start] --> B{Decision?}
+        B -->|Yes| C[Process 1]
+        B -->|No| D[Process 2]
+        C --> E[End]
+        D --> E[End]
+    
+    Only return the Mermaid code, nothing else. Do not include markdown code blocks or explanations.
+    
+    Here's the document text to analyze:
+    ${pdfText.slice(0, 15000)}
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    
+    // Remove any markdown code blocks if present
+    const mermaidCode = text.replace(/```mermaid\s?/g, "").replace(/```\s?/g, "").trim();
+    
+    // If the response is empty or invalid, return a default flowchart
+    if (!mermaidCode || mermaidCode.length < 20) {
+      return `flowchart TD
+        A[Start] --> B[No valid flowchart could be generated]
+        B --> C[Try with a different document]`;
+    }
+    
+    return mermaidCode;
+  } catch (error) {
+    console.error("Gemini API flowchart generation error:", error);
+    return `flowchart TD
+      A[Error] --> B[Failed to generate flowchart]
+      B --> C[Please try again]`;
   }
 };
