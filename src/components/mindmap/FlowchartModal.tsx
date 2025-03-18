@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, RefreshCcw } from "lucide-react";
+import { Download, RefreshCcw, ZoomIn, ZoomOut, Move } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
@@ -30,7 +30,12 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [code, setCode] = useState(defaultFlowchart);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const previewRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Initialize mermaid with safe configuration
@@ -124,6 +129,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       });
     } finally {
       setIsGenerating(false);
+      // Reset zoom and position when generating a new flowchart
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
     }
   };
 
@@ -156,12 +164,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         previewRef.current.innerHTML = `<div class="text-red-500 p-4">
           <h3 class="font-bold">Rendering Error</h3>
           <p>${err instanceof Error ? err.message : "Unknown error"}</p>
-          <p class="mt-2 text-sm">Common errors:</p>
-          <ul class="list-disc pl-5 text-sm">
-            <li>Node IDs should be alphanumeric without hyphens</li>
-            <li>All node text must be in brackets: [text], (text), or {text}</li>
-            <li>Arrows should use --{'>'}  not -{'>'}  </li>
-          </ul>
         </div>`;
       }
     }
@@ -169,6 +171,39 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCode(e.target.value);
+  };
+
+  const zoomIn = () => {
+    setScale(prev => Math.min(prev + 0.1, 2));
+  };
+
+  const zoomOut = () => {
+    setScale(prev => Math.max(prev - 0.1, 0.5));
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 0) { // Left click only
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const resetView = () => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
   };
 
   const exportSvg = () => {
@@ -279,7 +314,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[80vh] flex flex-col">
+      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Flowchart Editor</DialogTitle>
           <DialogDescription>
@@ -287,7 +322,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 overflow-hidden">
           {/* Code editor */}
           <div className="flex flex-col">
             <div className="flex justify-between items-center mb-2">
@@ -314,30 +349,66 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
                 {error}
               </div>
             )}
-            <div className="mt-2 bg-gray-50 p-2 rounded text-xs text-gray-600">
-              <h4 className="font-medium">Quick Syntax Reference:</h4>
-              <ul className="mt-1 pl-4 list-disc">
-                <li>Start with <code className="bg-gray-100 px-1">flowchart TD</code> for top-down layout</li>
-                <li>Node syntax: <code className="bg-gray-100 px-1">nodeId[Text]</code> or <code className="bg-gray-100 px-1">nodeId(Text)</code> or <code className="bg-gray-100 px-1">nodeId{'{'+'Text'+'}'}</code></li>
-                <li>Connection: <code className="bg-gray-100 px-1">A {'-->'} B</code></li>
-                <li>Labeled edge: <code className="bg-gray-100 px-1">A {'-->'}|Label| B</code></li>
-                <li>Subgraph: <code className="bg-gray-100 px-1">subgraph title</code> and <code className="bg-gray-100 px-1">end</code></li>
-                <li>Use alphanumeric IDs without hyphens</li>
-              </ul>
-            </div>
           </div>
           
-          {/* Preview */}
-          <div className="flex flex-col">
-            <h3 className="text-sm font-medium mb-2">Preview</h3>
-            <div className="border rounded-md p-4 flex-1 overflow-auto bg-white">
-              <div ref={previewRef} className="flex justify-center items-center h-full">
+          {/* Preview - Now takes up 2/3 of the space on medium screens and up */}
+          <div className="md:col-span-2 flex flex-col">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium">Preview</h3>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={zoomIn}
+                  className="p-1 h-8 w-8"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={zoomOut}
+                  className="p-1 h-8 w-8"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={resetView}
+                  className="p-1 h-8"
+                  title="Reset View"
+                >
+                  <Move className="h-4 w-4 mr-1" />
+                  Reset
+                </Button>
+              </div>
+            </div>
+            <div 
+              className="border rounded-md p-4 flex-1 overflow-hidden bg-white relative"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              ref={contentRef}
+              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            >
+              <div 
+                ref={previewRef} 
+                className="absolute" 
+                style={{
+                  transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
+                  transformOrigin: 'center center',
+                  transition: isDragging ? 'none' : 'transform 0.1s ease'
+                }}
+              >
                 {isGenerating ? (
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                ) : (
-                  /* Flowchart will be rendered here */
-                  null
-                )}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
