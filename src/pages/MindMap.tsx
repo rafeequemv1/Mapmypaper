@@ -41,6 +41,8 @@ const MindMap = () => {
         const pdfData = sessionStorage.getItem('pdfData');
         setPdfAvailable(!!pdfData);
         setShowPdf(!!pdfData);
+
+        console.log("PDF available:", !!pdfData); // Debug log
       } catch (error) {
         console.error("Error parsing mind map data for title:", error);
       }
@@ -72,16 +74,16 @@ const MindMap = () => {
             <Brain className="h-5 w-5 text-white" />
             <h1 className="text-base font-medium text-white">PaperMind</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             {pdfAvailable && (
               <Toggle 
                 pressed={showPdf} 
                 onPressedChange={togglePdf}
                 aria-label="Toggle PDF view"
-                className="text-white"
+                className="bg-gray-700 hover:bg-gray-600 text-white rounded-md px-3 py-1 h-auto"
               >
-                <FileText className="h-4 w-4" />
-                <span className="ml-1 text-sm">PDF</span>
+                <FileText className="h-4 w-4 mr-1" />
+                <span className="text-sm">PDF</span>
               </Toggle>
             )}
             <Button variant="ghost" size="sm" className="text-white" onClick={handleBack}>
