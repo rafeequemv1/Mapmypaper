@@ -1,12 +1,12 @@
+
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, FileText, Upload, FileSymlink, ScrollText, AlertCircle, FileQuestion } from "lucide-react";
+import { Brain, FileText, Upload, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -16,43 +16,8 @@ const PdfUpload = () => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [extractedText, setExtractedText] = useState<string | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const extractTextFromPdf = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      console.log("Starting PDF extraction with file:", file.name, file.type, file.size);
-      
-      // The PdfToText function only accepts one argument (the file)
-      // We need to remove the options object
-      PdfToText(file)
-        .then((text: string) => {
-          console.log("Raw extraction result:", text);
-          if (!text || typeof text !== 'string' || text.trim() === '') {
-            // If text is empty, this might be a scanned PDF without embedded text
-            setExtractionError("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
-            // Allow empty text for manual entry
-            setExtractedText("");
-            resolve("");
-          } else {
-            console.log("Text extracted successfully, length:", text.length);
-            setExtractedText(text);
-            setExtractionError(null);
-            resolve(text);
-          }
-        })
-        .catch((error) => {
-          console.error("PDF extraction error:", error);
-          setExtractionError(error instanceof Error ? error.message : "Failed to extract text from PDF");
-          
-          // Still set empty text for manual entry
-          setExtractedText("");
-          resolve("");
-        });
-    });
-  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -106,45 +71,6 @@ const PdfUpload = () => {
     }
   }, [toast]);
 
-  const handleExtractText = useCallback(async () => {
-    if (!selectedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please upload a PDF file first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsExtracting(true);
-    setExtractionError(null);
-    toast({
-      title: "Processing PDF",
-      description: "Extracting text from PDF...",
-    });
-
-    try {
-      await extractTextFromPdf(selectedFile);
-      
-      // Even if extraction returns empty string, we allow manual entry
-      toast({
-        title: "Processing Complete",
-        description: extractionError ? 
-          "Text extraction had issues. You can manually enter text below." : 
-          "Text extracted successfully!",
-      });
-    } catch (error) {
-      console.error("Error extracting text:", error);
-      toast({
-        title: "Extraction Issue",
-        description: "You can still enter text manually below.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExtracting(false);
-    }
-  }, [selectedFile, toast, extractionError]);
-
   const handleGenerateMindmap = useCallback(async () => {
     if (!selectedFile) {
       toast({
@@ -155,22 +81,30 @@ const PdfUpload = () => {
       return;
     }
 
-    if (!extractedText) {
-      toast({
-        title: "Extract text first",
-        description: "Please extract text from the PDF before generating a mind map",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsProcessing(true);
+    setExtractionError(null);
+    
     toast({
-      title: "Processing",
-      description: "Generating mind map with Gemini AI...",
+      title: "Processing PDF",
+      description: "Extracting text and generating mind map...",
     });
 
     try {
+      // First, read the PDF as DataURL for viewing later
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64data = e.target?.result as string;
+        sessionStorage.setItem('uploadedPdfData', base64data);
+      };
+      reader.readAsDataURL(selectedFile);
+      
+      // Extract text from PDF
+      const extractedText = await PdfToText(selectedFile);
+      
+      if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
+        throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
+      }
+      
       // Process the text with Gemini to generate mind map data
       const mindMapData = await generateMindMapFromText(extractedText);
       
@@ -178,17 +112,22 @@ const PdfUpload = () => {
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
       
       // Navigate to the mind map view
+      toast({
+        title: "Success",
+        description: "Mind map generated successfully!",
+      });
       navigate("/mindmap");
     } catch (error) {
-      console.error("Error generating mind map:", error);
+      console.error("Error processing PDF:", error);
+      setExtractionError(error instanceof Error ? error.message : "Failed to process PDF");
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate mind map",
+        description: error instanceof Error ? error.message : "Failed to process PDF",
         variant: "destructive",
       });
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast, extractedText]);
+  }, [selectedFile, navigate, toast]);
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden">
@@ -260,88 +199,25 @@ const PdfUpload = () => {
                     </p>
                   </div>
                 </div>
-                <Button 
-                  onClick={handleExtractText} 
-                  variant="outline"
-                  disabled={isExtracting || !selectedFile}
-                  className="gap-2"
-                >
-                  {isExtracting ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                      Extracting...
-                    </>
-                  ) : (
-                    <>
-                      Extract Text
-                      <FileSymlink className="h-4 w-4" />
-                    </>
-                  )}
-                </Button>
               </div>
             )}
 
-            {/* Extraction Error Alert */}
+            {/* Error Alert */}
             {extractionError && (
               <Alert variant="destructive" className="bg-red-100 border-red-400">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Extraction Notice</AlertTitle>
-                <AlertDescription className="flex flex-col gap-2">
-                  <p>{extractionError}</p>
-                  <p className="text-sm font-medium">
-                    Don't worry! You can still use the application by entering text manually below.
-                  </p>
+                <AlertTitle>Processing Error</AlertTitle>
+                <AlertDescription>
+                  {extractionError}
                 </AlertDescription>
               </Alert>
-            )}
-
-            {/* Manual Text Entry Area - Always shown after extraction attempt */}
-            {(extractedText !== null || extractionError) && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  {extractionError ? (
-                    <FileQuestion className="h-5 w-5 text-amber-600" />
-                  ) : (
-                    <ScrollText className="h-5 w-5" />
-                  )}
-                  <h3 className="font-medium">
-                    {extractionError ? "Enter Text Manually" : "Extracted Text"}
-                  </h3>
-                </div>
-                <Textarea 
-                  value={extractedText || ""}
-                  onChange={(e) => setExtractedText(e.target.value)}
-                  className="min-h-[200px] max-h-[400px] overflow-y-auto font-mono text-sm"
-                  placeholder={extractionError ? 
-                    "The PDF extraction failed, but you can enter text manually here..." : 
-                    "Extracted text will appear here..."}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {extractionError ? 
-                    "Enter the text you want to use for generating a mind map." : 
-                    "You can edit the extracted text before generating the mind map if needed."}
-                </p>
-              </div>
-            )}
-
-            {/* Extraction Status - Only shown if extraction succeeded */}
-            {extractedText && !extractionError && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 text-green-600">
-                  <FileText className="h-5 w-5" />
-                  <p className="font-medium">Text extracted successfully!</p>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Extracted {extractedText.length.toLocaleString()} characters
-                </p>
-              </div>
             )}
             
             {/* Generate Button */}
             <Button 
               onClick={handleGenerateMindmap} 
               className="w-full" 
-              disabled={!selectedFile || isProcessing || !extractedText && !extractionError}
+              disabled={!selectedFile || isProcessing}
             >
               {isProcessing ? "Processing..." : "Generate Mindmap with Gemini AI"}
               <Brain className="ml-2 h-4 w-4" />
