@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Brain, ArrowLeft, FileText, MessageSquare, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +13,8 @@ import {
 } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { chatWithGeminiAboutPdf } from "@/services/geminiService";
+import { Textarea } from "@/components/ui/textarea";
 
 const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -23,8 +24,9 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [pdfAvailable, setPdfAvailable] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
-    { role: 'assistant', content: 'Hello! I\'m your research assistant. How can I help with your document?' }
+    { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -95,28 +97,46 @@ const MindMap = () => {
     setShowChat(prev => !prev);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (inputValue.trim()) {
       // Add user message
-      setMessages(prev => [...prev, { role: 'user', content: inputValue }]);
+      const userMessage = inputValue.trim();
+      setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
       
       // Clear input
       setInputValue('');
       
-      // Simulate typing indicator
+      // Show typing indicator
       setIsTyping(true);
       
-      // Simulate AI response after a delay
-      setTimeout(() => {
+      try {
+        // Get response from Gemini
+        const response = await chatWithGeminiAboutPdf(userMessage);
+        
+        // Hide typing indicator and add AI response
         setIsTyping(false);
+        setMessages(prev => [
+          ...prev, 
+          { role: 'assistant', content: response }
+        ]);
+      } catch (error) {
+        // Handle errors
+        setIsTyping(false);
+        console.error("Chat error:", error);
         setMessages(prev => [
           ...prev, 
           { 
             role: 'assistant', 
-            content: "This is a simulated response. In a real implementation, this would call the Gemini API to generate a response based on the PDF content and your message." 
+            content: "Sorry, I encountered an error. Please try again." 
           }
         ]);
-      }, 1500);
+        
+        toast({
+          title: "Chat Error",
+          description: "Failed to get a response from the AI.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -240,13 +260,12 @@ const MindMap = () => {
                   {/* Input area */}
                   <div className="p-3 border-t">
                     <div className="flex gap-2">
-                      <textarea
-                        className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none"
-                        placeholder="Type your message..."
+                      <Textarea
+                        className="flex-1 min-h-10 max-h-32 resize-none"
+                        placeholder="Ask about the document..."
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        rows={1}
                       />
                       <Button 
                         className="shrink-0" 
