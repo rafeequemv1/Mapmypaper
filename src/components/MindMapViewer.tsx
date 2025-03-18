@@ -15,7 +15,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Initialize the mind map only once when it's generated
       const options = {
         el: containerRef.current,
-        direction: 2, // right direction
+        direction: 1, // Changed to 1 (right direction) to match the valid type (0 | 1)
         draggable: true,
         contextMenu: true,
         tools: {
@@ -24,9 +24,12 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           edit: false,
         },
         theme: {
+          // Updated to include required properties
           name: 'gray',
           background: '#f5f5f5',
           color: '#333',
+          palette: [], // Added empty array for palette
+          cssVar: {}, // Added empty object for cssVar
         }
       };
 
@@ -42,7 +45,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             {
               id: 'bd1',
               topic: 'Introduction',
-              direction: 0,
+              direction: 0, // Using 0 instead of a generic number
               children: [
                 { id: 'bd1-1', topic: 'Problem Statement' },
                 { id: 'bd1-2', topic: 'Research Objectives' }
@@ -51,7 +54,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             {
               id: 'bd2',
               topic: 'Methodology',
-              direction: 0,
+              direction: 0, // Using 0 instead of a generic number
               children: [
                 { id: 'bd2-1', topic: 'Data Collection' },
                 { id: 'bd2-2', topic: 'Analysis Techniques' }
@@ -60,7 +63,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             {
               id: 'bd3',
               topic: 'Results',
-              direction: 1,
+              direction: 1, // Using 1 instead of a generic number
               children: [
                 { id: 'bd3-1', topic: 'Key Finding 1' },
                 { id: 'bd3-2', topic: 'Key Finding 2' },
@@ -69,7 +72,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             {
               id: 'bd4',
               topic: 'Conclusion',
-              direction: 1,
+              direction: 1, // Using 1 instead of a generic number
               children: [
                 { id: 'bd4-1', topic: 'Summary' },
                 { id: 'bd4-2', topic: 'Future Work' }
