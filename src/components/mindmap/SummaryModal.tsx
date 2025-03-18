@@ -1,11 +1,14 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, Check } from "lucide-react";
+import { Loader2, Copy, Check, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateStructuredSummary } from "@/services/gemini";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SummaryModalProps {
   open: boolean;
@@ -23,9 +26,17 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Reset state when modal is closed
+  useEffect(() => {
+    if (!open) {
+      // Don't reset summaryData so it persists between modal opens
+      setError(null);
+    }
+  }, [open]);
+
   // Generate summary when modal is opened
   useEffect(() => {
-    if (open && !summaryData && !loading) {
+    if (open && !summaryData && !loading && !error) {
       generateSummary();
     }
   }, [open]);
@@ -35,6 +46,12 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     setError(null);
     
     try {
+      // Check if we have PDF data
+      const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+      if (!pdfData) {
+        throw new Error("No PDF data found. Please upload a PDF document first.");
+      }
+
       const data = await generateStructuredSummary();
       setSummaryData(data);
     } catch (err) {
@@ -107,6 +124,28 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     return formatted;
   };
 
+  // Function to render loading skeletons
+  const renderLoadingSkeletons = () => (
+    <div className="space-y-6 p-4">
+      <div>
+        <Skeleton className="h-6 w-32 mb-2" />
+        <Skeleton className="h-4 w-full mb-1" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
+      <div>
+        <Skeleton className="h-6 w-40 mb-2" />
+        <Skeleton className="h-4 w-full mb-1" />
+        <Skeleton className="h-4 w-4/6 mb-1" />
+        <Skeleton className="h-4 w-3/6" />
+      </div>
+      <div>
+        <Skeleton className="h-6 w-36 mb-2" />
+        <Skeleton className="h-4 w-full mb-1" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
@@ -118,14 +157,18 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         </DialogHeader>
         
         {loading ? (
-          <div className="flex flex-col items-center justify-center flex-1">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">Generating summary...</p>
+          <div className="flex flex-col items-center justify-center flex-1 p-6">
+            <Progress value={65} className="w-full max-w-md mb-4" />
+            <p className="text-sm text-muted-foreground mb-10">Analyzing document and generating summary...</p>
+            {renderLoadingSkeletons()}
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center flex-1 p-4">
             <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={generateSummary}>Try Again</Button>
+            <Button onClick={generateSummary} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </Button>
           </div>
         ) : summaryData ? (
           <Tabs defaultValue="all" className="flex-1 flex flex-col">
@@ -162,7 +205,15 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
               </TabsContent>
             </ScrollArea>
           </Tabs>
-        ) : null}
+        ) : (
+          <div className="flex flex-col items-center justify-center flex-1 p-4">
+            <p className="text-muted-foreground mb-4">No summary generated yet.</p>
+            <Button onClick={generateSummary} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Generate Summary
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

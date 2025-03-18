@@ -6,6 +6,11 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
   try {
     const pdfText = getPdfText();
     
+    // If there's no PDF text to analyze, throw an error
+    if (!pdfText || pdfText.trim() === '') {
+      throw new Error("No PDF content available. Please upload a PDF first.");
+    }
+    
     const model = initGeminiClient();
     
     const prompt = `
@@ -23,16 +28,43 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     If the document doesn't contain information for a specific section, provide a brief note explaining this.
     
     Document text:
-    ${truncatePdfText(pdfText)}
+    ${truncatePdfText(pdfText, 10000)}
     `;
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // Set a timeout to prevent the request from hanging indefinitely
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Request timed out. Please try again.")), 60000);
+    });
     
-    return parseJsonResponse(text);
+    // Create a promise for the Gemini API call
+    const apiPromise = model.generateContent(prompt)
+      .then(result => result.response)
+      .then(response => response.text())
+      .then(text => parseJsonResponse(text));
+    
+    // Race the API call against the timeout
+    const result = await Promise.race([apiPromise, timeoutPromise]) as Record<string, string>;
+    
+    // Validate the response structure
+    const requiredSections = ["Overview", "Key Findings", "Methods", "Results", "Conclusions"];
+    const missingSections = requiredSections.filter(section => !result[section]);
+    
+    if (missingSections.length > 0) {
+      console.warn("Some expected sections are missing in the response:", missingSections);
+      // Add placeholders for missing sections
+      missingSections.forEach(section => {
+        result[section] = `No information about ${section.toLowerCase()} was found in the document.`;
+      });
+    }
+    
+    return result;
   } catch (error) {
     console.error("Gemini API summary generation error:", error);
-    throw error;
+    // Re-throw with a more user-friendly message
+    throw new Error(
+      error instanceof Error 
+        ? `Error generating summary: ${error.message}` 
+        : "Failed to generate summary. Please try again later."
+    );
   }
 };
