@@ -1,24 +1,14 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize the Gemini API
-// In a production app, this should come from environment variables
-let apiKey = "";
+// Initialize the Gemini API with a fixed API key
+const apiKey = "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk";
 
-// This will store the API key that the user inputs
-export const setGeminiApiKey = (key: string) => {
-  apiKey = key;
-  return !!key;
-};
-
+// Get the current API key
 export const getGeminiApiKey = () => apiKey;
 
 // Process text with Gemini to generate mindmap data
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
-  if (!apiKey) {
-    throw new Error("Gemini API key not set. Please provide your API key.");
-  }
-
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
