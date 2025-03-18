@@ -1,6 +1,8 @@
 
 import { useEffect, useRef } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
+import nodeMenu from "@mind-elixir/node-menu";
+import "@mind-elixir/node-menu/dist/style.css";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -33,6 +35,9 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       };
 
       const mind = new MindElixir(options);
+      
+      // Install the node menu plugin
+      mind.install(nodeMenu);
       
       // Create sample mindmap data using the correct types
       const data: MindElixirData = {
@@ -111,7 +116,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           style={{ background: '#f5f5f5' }}
         />
         <div className="text-center p-3 text-sm text-muted-foreground">
-          You can drag to pan, use mouse wheel to zoom, and click nodes to expand/collapse.
+          You can drag to pan, use mouse wheel to zoom, and click nodes to expand/collapse. Right-click on nodes for more options.
         </div>
       </div>
     </div>
