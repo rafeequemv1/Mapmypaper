@@ -17,23 +17,24 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Initialize the mind map only once when it's generated
       const options = {
         el: containerRef.current,
-        direction: 1 as const, // Using 'as const' to specify it's specifically 1 (right direction)
+        direction: 1 as const,
         draggable: true,
-        editable: true, // Enable editing for context menu to work properly
+        editable: true,
         contextMenu: true,
         tools: {
           zoom: true,
-          create: true, // Enable create feature
-          edit: true,   // Enable edit feature
+          create: true,
+          edit: true,
         },
         theme: {
           name: 'gray',
           background: '#f5f5f5',
           color: '#333',
-          palette: [], // Required property
-          cssVar: {}, // Required property
+          palette: [],
+          cssVar: {},
         },
-        nodeMenu: true, // Explicitly enable node menu
+        nodeMenu: true,
+        autoFit: true, // Enable auto-fit to ensure mindmap fits in viewport
       };
 
       const mind = new MindElixir(options);
@@ -46,12 +47,11 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         nodeData: {
           id: 'root',
           topic: 'Research Paper Title',
-          // Removed the 'root: true' property as it's not part of the NodeObj type
           children: [
             {
               id: 'bd1',
               topic: 'Introduction',
-              direction: 0 as const, // Using 'as const' to specify literal 0
+              direction: 0 as const,
               children: [
                 { id: 'bd1-1', topic: 'Problem Statement' },
                 { id: 'bd1-2', topic: 'Research Objectives' }
@@ -60,7 +60,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             {
               id: 'bd2',
               topic: 'Methodology',
-              direction: 0 as const, // Using 'as const' to specify literal 0
+              direction: 0 as const,
               children: [
                 { id: 'bd2-1', topic: 'Data Collection' },
                 { id: 'bd2-2', topic: 'Analysis Techniques' }
@@ -69,7 +69,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             {
               id: 'bd3',
               topic: 'Results',
-              direction: 1 as const, // Using 'as const' to specify literal 1
+              direction: 1 as const,
               children: [
                 { id: 'bd3-1', topic: 'Key Finding 1' },
                 { id: 'bd3-2', topic: 'Key Finding 2' },
@@ -78,7 +78,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
             {
               id: 'bd4',
               topic: 'Conclusion',
-              direction: 1 as const, // Using 'as const' to specify literal 1
+              direction: 1 as const,
               children: [
                 { id: 'bd4-1', topic: 'Summary' },
                 { id: 'bd4-2', topic: 'Future Work' }
@@ -89,23 +89,34 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       };
 
       mind.init(data);
+      
+      // Set a timeout to ensure the mind map is rendered before auto-centering
+      setTimeout(() => {
+        // Auto center the mind map to fit the viewport
+        mind.linkDiv.style.transformOrigin = '50% 50%';
+        mind.toCenter();
+      }, 100);
+      
       mindMapRef.current = mind;
 
-      // Instead of using specific event listeners that might not be in the EventMap,
-      // let's just log the mind map instance for debugging
+      // Log the mind map instance for debugging
       console.log("Mind Elixir initialized with options:", options);
-
-      // Add mind elixir instance to window for debugging
       console.log("Mind Elixir instance:", mind);
-    }
-
-    // Cleanup function to remove the mind map when component unmounts
-    return () => {
-      if (mindMapRef.current) {
-        // Cleanup if needed
+      
+      // Add resize handler to ensure proper sizing when window resizes
+      const handleResize = () => {
+        if (mindMapRef.current) {
+          mindMapRef.current.toCenter();
+        }
+      };
+      
+      window.addEventListener('resize', handleResize);
+      
+      return () => {
+        window.removeEventListener('resize', handleResize);
         mindMapRef.current = null;
-      }
-    };
+      };
+    }
   }, [isMapGenerated]);
 
   if (!isMapGenerated) {
@@ -114,7 +125,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
-      <div className="w-full h-full flex-1 bg-card overflow-hidden">
+      <div className="w-full h-full flex-1 bg-card overflow-hidden relative">
         <div 
           ref={containerRef} 
           className="w-full h-full" 
