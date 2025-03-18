@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -19,16 +18,66 @@ export const cleanMermaidSyntax = (input: string): string => {
     // Fix arrows if needed
     .replace(/-+>/g, "-->")
     // Replace any hyphens in node IDs with underscores
-    .replace(/(\w+)-(\w+)/g, "$1_$2")
-    // Replace year ranges with underscores
-    .replace(/(\d{4})-(\d{4})/g, "$1_$2");
+    .replace(/(\w+)-(\w+)/g, "$1_$2");
   
   // Ensure it starts with flowchart directive
   if (!cleaned.startsWith("flowchart")) {
     cleaned = "flowchart TD\n" + cleaned;
   }
   
-  return cleaned;
+  // Process line by line to ensure each line is valid
+  const lines = cleaned.split('\n');
+  const processedLines = lines.map(line => {
+    // Skip empty lines or lines starting with flowchart, subgraph, or end
+    if (!line.trim() || 
+        line.trim().startsWith('flowchart') || 
+        line.trim().startsWith('subgraph') || 
+        line.trim() === 'end') {
+      return line;
+    }
+    
+    // Handle node definitions with text containing hyphens
+    // Replace hyphens inside node text brackets
+    let processedLine = line;
+    
+    // Handle square brackets []
+    processedLine = processedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
+      return '[' + p1 + ' ' + p2 + ']';
+    });
+    
+    // Handle parentheses ()
+    processedLine = processedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
+      return '(' + p1 + ' ' + p2 + ')';
+    });
+    
+    // Handle curly braces {}
+    processedLine = processedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
+      return '{' + p1 + ' ' + p2 + '}';
+    });
+    
+    // Replace all remaining dashes in node text with spaces or underscores
+    // This needs to run multiple times to catch all hyphens in text
+    for (let i = 0; i < 3; i++) {
+      // Handle square brackets []
+      processedLine = processedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
+        return '[' + p1 + ' ' + p2 + ']';
+      });
+      
+      // Handle parentheses ()
+      processedLine = processedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
+        return '(' + p1 + ' ' + p2 + ')';
+      });
+      
+      // Handle curly braces {}
+      processedLine = processedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
+        return '{' + p1 + ' ' + p2 + '}';
+      });
+    }
+    
+    return processedLine;
+  });
+  
+  return processedLines.join('\n');
 };
 
 export const useFlowchartGenerator = () => {

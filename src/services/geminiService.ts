@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -132,25 +131,17 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     6. Max 12 nodes total
     7. For labels on arrows: A -->|Label text| B (use single pipes)
     8. Never use semicolons (;) in node text or connections
-    9. IMPORTANT: Never use hyphens (-) in node text. Replace them with underscores (_) or spaces.
+    9. EXTREMELY IMPORTANT: Never use hyphens (-) in node text. Replace ALL hyphens with spaces or underscores.
     10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
+    11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
     
     EXAMPLE CORRECT SYNTAX:
     flowchart TD
       A[Start] --> B{Decision}
-      B -->|Yes| C[Process1]
-      B -->|No| D[Process2]
+      B -->|Yes| C[Process One]
+      B -->|No| D[Process Two]
       C --> E[End]
       D --> E
-    
-    If you need to define subgraphs:
-    flowchart TD
-      A[Start] --> B[Process]
-      B --> C[End]
-      
-      subgraph Section1
-        D[Step1] --> E[Step2]
-      end
     
     Here's the document text:
     ${pdfText.slice(0, 8000)}
@@ -168,8 +159,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
       .replace(/```\s?/g, "")
       .trim();
     
-    // Clean the Mermaid syntax before returning
-    return cleanMermaidSyntax(mermaidCode);
+    return mermaidCode;
   } catch (error) {
     console.error("Gemini API flowchart generation error:", error);
     return `flowchart TD
