@@ -1,7 +1,9 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
-import "@mind-elixir/node-menu-neo/dist/style.css";
+// Remove the incorrect CSS import that's causing the error
+// import "@mind-elixir/node-menu-neo/dist/style.css";
 import { Keyboard } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
