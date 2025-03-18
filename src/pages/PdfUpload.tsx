@@ -3,11 +3,12 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, FileText, Upload, FileSymlink, ScrollText } from "lucide-react";
+import { Brain, FileText, Upload, FileSymlink, ScrollText, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { generateMindMapFromText } from "@/services/geminiService";
 
 const PdfUpload = () => {
@@ -18,6 +19,7 @@ const PdfUpload = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -95,10 +97,12 @@ const PdfUpload = () => {
         .then((text) => {
           console.log("Text extracted successfully, length:", text.length);
           setExtractedText(text);
+          setExtractionError(null);
           resolve(text);
         })
         .catch((error) => {
           console.error("PDF extraction error:", error);
+          setExtractionError(error instanceof Error ? error.message : "Failed to extract text from PDF");
           reject(error instanceof Error ? error : new Error("Failed to extract text from PDF"));
         });
     });
@@ -115,6 +119,7 @@ const PdfUpload = () => {
     }
 
     setIsExtracting(true);
+    setExtractionError(null);
     toast({
       title: "Processing PDF",
       description: "Extracting text from PDF...",
@@ -272,6 +277,17 @@ const PdfUpload = () => {
                   )}
                 </Button>
               </div>
+            )}
+
+            {/* Extraction Error Alert */}
+            {extractionError && (
+              <Alert variant="destructive" className="bg-red-100 border-red-400">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Extraction Failed</AlertTitle>
+                <AlertDescription>
+                  {extractionError}
+                </AlertDescription>
+              </Alert>
             )}
 
             {/* Extraction Status */}
