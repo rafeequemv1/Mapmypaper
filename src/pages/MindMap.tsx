@@ -113,12 +113,6 @@ const MindMap = () => {
         </div>
       </div>
 
-      {/* Title area */}
-      <div className="px-4 py-2 bg-secondary/30">
-        <h2 className="text-lg font-medium truncate">{title}</h2>
-        <p className="text-sm text-muted-foreground">AI-generated mind map from your PDF</p>
-      </div>
-
       {/* Main Content - Flex-grow to take available space */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Resizable panels for PDF, Mind Map, and Chat */}
