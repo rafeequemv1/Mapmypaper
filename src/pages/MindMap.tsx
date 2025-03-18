@@ -91,17 +91,31 @@ const MindMap = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Top bar with controls */}
-      <div className="py-2 px-4 border-b bg-[#222222] flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="py-2 px-4 border-b bg-[#222222] flex items-center">
+        <div className="flex items-center gap-2 w-1/3">
           <Brain className="h-5 w-5 text-white" />
           <h1 className="text-base font-medium text-white">PaperMind</h1>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" className="text-white" onClick={handleBack}>
+          
+          <Button variant="ghost" size="sm" className="text-white ml-2" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
-          
+        </div>
+        
+        {/* Centered chat button */}
+        <div className="flex items-center justify-center w-1/3">
+          <Toggle 
+            pressed={showChat} 
+            onPressedChange={toggleChat}
+            aria-label="Toggle chat"
+            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Chat with AI</span>
+          </Toggle>
+        </div>
+        
+        {/* PDF toggle on the right */}
+        <div className="flex items-center justify-end gap-4 w-1/3">
           {pdfAvailable && (
             <Toggle 
               pressed={showPdf} 
@@ -113,16 +127,6 @@ const MindMap = () => {
               <span className="text-sm font-medium">PDF</span>
             </Toggle>
           )}
-          
-          <Toggle 
-            pressed={showChat} 
-            onPressedChange={toggleChat}
-            aria-label="Toggle chat"
-            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
-          >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Chat</span>
-          </Toggle>
         </div>
       </div>
 

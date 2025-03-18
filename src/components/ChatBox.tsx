@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, User, Bot } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +11,7 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  isTyping?: boolean;
 };
 
 const ChatBox = () => {
@@ -51,24 +51,37 @@ const ChatBox = () => {
     setIsLoading(true);
 
     try {
+      // Add a placeholder typing message
+      const typingMessage: Message = {
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+        isTyping: true,
+      };
+      
+      setMessages(prev => [...prev, typingMessage]);
+
       // Use the Gemini API service to get a response
       const pdfText = sessionStorage.getItem("pdfText") || "";
       const userQuery = input.trim();
       
-      // Here we're re-using the generateMindMapFromText function
-      // In a real app, you'd want a separate function for chat
+      // Get the response
       const response = await generateChatResponse(userQuery, pdfText);
       
-      // Add assistant message
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: response,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      // Remove the typing message and add the real response with typing animation
+      setMessages(prev => {
+        const newMessages = prev.filter(msg => !msg.isTyping);
+        return [...newMessages, {
+          role: "assistant",
+          content: response,
+          timestamp: new Date(),
+        }];
+      });
     } catch (error) {
       console.error("Error getting response:", error);
+      // Remove typing indicator if there's an error
+      setMessages(prev => prev.filter(msg => !msg.isTyping));
+      
       toast({
         title: "Error",
         description: "Failed to get a response. Please try again.",
@@ -163,6 +176,15 @@ const ChatBox = () => {
     return content;
   };
 
+  // Renders a typing animation
+  const TypeAnimation = () => (
+    <div className="flex space-x-1 items-center py-2 px-1">
+      <div className="h-2 w-2 rounded-full bg-current animate-bounce" />
+      <div className="h-2 w-2 rounded-full bg-current animate-bounce delay-75" />
+      <div className="h-2 w-2 rounded-full bg-current animate-bounce delay-150" />
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-full">
       {/* Message area - takes all available space but allows scrolling */}
@@ -199,16 +221,22 @@ const ChatBox = () => {
                       message.role === "assistant" && isSequence ? "ml-12" : ""
                     )}
                   >
-                    <div 
-                      className="whitespace-pre-wrap break-words"
-                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
-                    />
-                    <div className="text-xs opacity-70 mt-1.5 text-right">
-                      {message.timestamp.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
+                    {message.isTyping ? (
+                      <TypeAnimation />
+                    ) : (
+                      <>
+                        <div 
+                          className="whitespace-pre-wrap break-words"
+                          dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
+                        />
+                        <div className="text-xs opacity-70 mt-1.5 text-right">
+                          {message.timestamp.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
                   
                   {/* Only show avatar for first message in a sequence */}
@@ -224,20 +252,6 @@ const ChatBox = () => {
           </div>
         </ScrollArea>
       </div>
-      
-      {/* Typing indicator when loading */}
-      {isLoading && (
-        <div className="px-4 py-2">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <div className="flex space-x-1">
-              <div className="h-2 w-2 rounded-full bg-current animate-bounce" />
-              <div className="h-2 w-2 rounded-full bg-current animate-bounce delay-75" />
-              <div className="h-2 w-2 rounded-full bg-current animate-bounce delay-150" />
-            </div>
-            <span className="text-xs">AI is thinking...</span>
-          </div>
-        </div>
-      )}
       
       {/* Fixed input area at bottom */}
       <div className="flex-shrink-0 border-t bg-background p-3">
