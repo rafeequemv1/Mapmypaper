@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, User, Bot } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +19,7 @@ const ChatBox = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hello! I'm your AI assistant. Ask me anything about the mind map or the document.",
+      content: "Hello! I'm your Research Assistant. Ask me anything about the mind map or the document.",
       timestamp: new Date(),
     },
   ]);

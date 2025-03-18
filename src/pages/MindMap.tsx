@@ -106,11 +106,11 @@ const MindMap = () => {
           <Toggle 
             pressed={showChat} 
             onPressedChange={toggleChat}
-            aria-label="Toggle chat"
+            aria-label="Toggle research assistant"
             className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
           >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Chat with AI</span>
+            <Brain className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Research Assistant</span>
           </Toggle>
         </div>
         
@@ -152,7 +152,7 @@ const MindMap = () => {
                 <div className="flex flex-col h-full">
                   {/* Chat panel header with controls */}
                   <div className="flex items-center justify-between p-2 border-b bg-secondary/30">
-                    <h3 className="font-medium">AI Chat Assistant</h3>
+                    <h3 className="font-medium">Research Assistant</h3>
                     <div className="flex items-center gap-2">
                       {pdfAvailable && (
                         <Button 
