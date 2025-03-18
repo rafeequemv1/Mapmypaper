@@ -1,8 +1,7 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
-import nodeMenu from "@mind-elixir/node-menu";
-import "@mind-elixir/node-menu/dist/style.css";
+import nodeMenu from "@mind-elixir/node-menu-neo";
+import "@mind-elixir/node-menu-neo/dist/style.css";
 import { Keyboard } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -36,13 +35,13 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           palette: [],
           cssVar: {},
         },
-        nodeMenu: true, // Fixed: This should be a boolean, not an object
+        nodeMenu: true, // This should be a boolean, not an object
         autoFit: true, // Enable auto-fit for initial rendering
       };
 
       const mind = new MindElixir(options);
       
-      // Install the node menu plugin correctly - make sure it runs before init
+      // Install the new node-menu-neo plugin correctly - make sure it runs before init
       mind.install(nodeMenu);
       
       // Create sample mindmap data using the correct types
@@ -99,8 +98,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         console.log('Mind map operation:', operation);
       });
       
-      // Fixed: Use a valid event name from the EventMap
-      // The event name 'nodeContextmenu' might be what we're looking for
+      // Use a valid event name from the EventMap
       mind.bus.addListener('selectNode', (node: any) => {
         console.log('Node selected:', node);
       });

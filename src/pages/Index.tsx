@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -17,12 +16,12 @@ const Index = () => {
       // Show toast when mind map is ready
       toast({
         title: "Mindmap loaded",
-        description: "Your mindmap is ready to use. Right-click on nodes for options."
+        description: "Your mindmap is ready to use. Right-click on nodes to access the node menu with options."
       });
     }, 100);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [toast]);
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden">
