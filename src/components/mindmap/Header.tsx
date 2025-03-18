@@ -1,5 +1,5 @@
 
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -23,6 +23,7 @@ interface HeaderProps {
   showChat: boolean;
   toggleChat: () => void;
   onExportMindMap?: (type: 'svg' | 'png') => void;
+  onOpenFlowchart?: () => void;
 }
 
 const Header = ({ 
@@ -31,7 +32,8 @@ const Header = ({
   pdfAvailable, 
   showChat, 
   toggleChat,
-  onExportMindMap 
+  onExportMindMap,
+  onOpenFlowchart
 }: HeaderProps) => {
   const navigate = useNavigate();
 
@@ -72,6 +74,18 @@ const Header = ({
             <FileText className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">PDF</span>
           </Toggle>
+        )}
+        
+        {onOpenFlowchart && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onOpenFlowchart}
+            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+          >
+            <GitBranch className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Flowchart</span>
+          </Button>
         )}
       </div>
       
