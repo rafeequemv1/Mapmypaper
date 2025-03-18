@@ -119,19 +119,19 @@ const MindMap = () => {
         <ResizablePanelGroup direction="horizontal" className="flex-1">
           {showPdf && (
             <>
-              <ResizablePanel defaultSize={25} minSize={20}>
+              <ResizablePanel defaultSize={25} minSize={20} id="pdf-panel">
                 <PdfViewer />
               </ResizablePanel>
               <ResizableHandle withHandle />
             </>
           )}
-          <ResizablePanel defaultSize={showChat ? 50 : (showPdf ? 75 : 100)}>
+          <ResizablePanel defaultSize={showChat ? 50 : (showPdf ? 75 : 100)} id="mindmap-panel">
             <MindMapViewer isMapGenerated={isMapGenerated} />
           </ResizablePanel>
           {showChat && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={25} minSize={20}>
+              <ResizablePanel defaultSize={25} minSize={20} id="chat-panel">
                 <div className="flex flex-col h-full">
                   {/* Chat panel header with controls */}
                   <div className="flex items-center justify-between p-2 border-b bg-secondary/30">
