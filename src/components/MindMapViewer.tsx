@@ -20,6 +20,22 @@ type MindElixirEventMap = {
   // Add other event types as needed
 }
 
+// Helper function to format node text with line breaks
+const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
+  if (!text) return '';
+  
+  const words = text.split(' ');
+  if (words.length <= wordsPerLine) return text;
+  
+  let result = '';
+  for (let i = 0; i < words.length; i += wordsPerLine) {
+    const chunk = words.slice(i, i + wordsPerLine).join(' ');
+    result += chunk + (i + wordsPerLine < words.length ? '\n' : '');
+  }
+  
+  return result;
+};
+
 const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
@@ -62,14 +78,34 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       try {
         const savedData = sessionStorage.getItem('mindMapData');
         if (savedData) {
-          data = JSON.parse(savedData);
+          const parsedData = JSON.parse(savedData);
+          
+          // Apply line breaks to node topics
+          const formatNodes = (node: any) => {
+            if (node.topic) {
+              node.topic = formatNodeText(node.topic);
+            }
+            
+            if (node.children && node.children.length > 0) {
+              node.children.forEach(formatNodes);
+            }
+            
+            return node;
+          };
+          
+          // Format the root node and all children
+          if (parsedData.nodeData) {
+            formatNodes(parsedData.nodeData);
+          }
+          
+          data = parsedData;
           console.log("Using mind map data from Gemini:", data);
         } else {
           // Fallback to default data if nothing is in sessionStorage
           data = {
             nodeData: {
               id: 'root',
-              topic: 'Research Paper Title',
+              topic: 'Research\nPaper\nTitle',
               children: [
                 {
                   id: 'bd1',
@@ -118,7 +154,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         data = {
           nodeData: {
             id: 'root',
-            topic: 'Error Loading Mind Map',
+            topic: 'Error\nLoading\nMind Map',
             children: [
               { id: 'error1', topic: 'There was an error loading the mind map data', direction: 0 as const }
             ]
