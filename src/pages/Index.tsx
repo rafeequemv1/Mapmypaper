@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Download, Brain } from "lucide-react";
+import { Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import MindMapViewer from "@/components/MindMapViewer";
@@ -18,32 +17,14 @@ const Index = () => {
     });
   }, []);
 
-  const downloadMindmap = () => {
-    toast({
-      title: "Download started",
-      description: "Your mindmap is being downloaded",
-    });
-    // In a real app, this would trigger the actual download
-  };
-
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="py-6 px-8 border-b">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+      {/* Header - thin and black */}
+      <header className="py-2 px-8 border-b bg-[#222222]">
+        <div className="max-w-5xl mx-auto flex items-center">
           <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-semibold">PaperMind Mapper</h1>
-          </div>
-          <div>
-            <Button 
-              variant="outline" 
-              onClick={downloadMindmap}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Download Mindmap
-            </Button>
+            <Brain className="h-5 w-5 text-white" />
+            <h1 className="text-base font-medium text-white">PaperMind</h1>
           </div>
         </div>
       </header>

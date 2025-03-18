@@ -91,9 +91,9 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       mind.init(data);
       mindMapRef.current = mind;
 
-      // Log when node menu should be opening (using the correct event name from the library)
-      mind.bus.addListener('node_mouse_up', (node) => {
-        console.log('Node clicked:', node);
+      // Fix: Use 'contextmenu' event instead of 'node_mouse_up'
+      mind.bus.addListener('contextmenu', (node) => {
+        console.log('Context menu opened on node:', node);
       });
 
       // Add mind elixir instance to window for debugging
