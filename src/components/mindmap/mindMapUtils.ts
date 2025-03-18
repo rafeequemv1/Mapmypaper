@@ -85,13 +85,24 @@ export const createMindMapOptions = (containerRef: HTMLDivElement) => {
         '#F59E0B', // Amber
         '#6D28D9'  // Purple
       ],
+      // Fixed cssVar to match the expected type format
       cssVar: {
-        '--me-line-color': '#8E9196', // Line color
-        '--me-root-color': '#8B5CF6', // Root node color
-        '--me-second-color': '#0EA5E9', // Secondary node color (left)
-        '--me-third-color': '#F97316', // Tertiary node color (right)
-        '--me-hover-color': 'rgba(139, 92, 246, 0.3)' // Hover highlight color
-      },
+        '--main-color': '#8E9196',
+        '--main-bgcolor': '#f8f9fa',
+        '--color': '#333',
+        '--bgcolor': '#fff',
+        '--selected': 'rgba(139, 92, 246, 0.3)',
+        '--root-color': '#8B5CF6',
+        '--root-bgcolor': '#fff',
+        '--root-border-color': '#8B5CF6',
+        '--second-color': '#0EA5E9',
+        '--second-bgcolor': '#fff',
+        '--second-border-color': '#0EA5E9',
+        '--third-color': '#F97316',
+        '--third-bgcolor': '#fff',
+        '--third-border-color': '#F97316',
+        '--line-color': '#8E9196'
+      }
     },
     nodeMenu: true,
     autoFit: true,
@@ -132,4 +143,3 @@ export const initializeMindMap = (
   
   return mind;
 };
-
