@@ -1,7 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
-import mermaid from "mermaid";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,307 +8,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Download, RefreshCcw, ZoomIn, ZoomOut, Move } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { generateFlowchartFromPdf } from "@/services/geminiService";
+import { Button } from "@/components/ui/button";
+import FlowchartEditor from "./flowchart/FlowchartEditor";
+import FlowchartPreview from "./flowchart/FlowchartPreview";
+import FlowchartExport from "./flowchart/FlowchartExport";
+import useMermaidInit from "./flowchart/useMermaidInit";
+import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 
 interface FlowchartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const defaultFlowchart = `flowchart TD
-    A[Start] --> B{Is it working?}
-    B -->|Yes| C[Great!]
-    B -->|No| D[Debug]
-    D --> B`;
-
 const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
-  const [code, setCode] = useState(defaultFlowchart);
-  const [error, setError] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const previewRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-
-  // Initialize mermaid with safe configuration
-  useEffect(() => {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: "default",
-      securityLevel: "loose",
-      flowchart: {
-        useMaxWidth: false,
-        htmlLabels: true
-      },
-      logLevel: 3 // Enables warning logs for debugging
-    });
-  }, []);
+  const { code, error, isGenerating, generateFlowchart, handleCodeChange } = useFlowchartGenerator();
+  
+  // Initialize mermaid library
+  useMermaidInit();
 
   // Generate flowchart when modal is opened
   useEffect(() => {
     if (open) {
       if (code === defaultFlowchart) {
         generateFlowchart();
-      } else {
-        renderFlowchart();
       }
     }
   }, [open]);
-
-  // Render flowchart when code changes
-  useEffect(() => {
-    if (open && previewRef.current) {
-      renderFlowchart();
-    }
-  }, [code]);
-
-  // Helper function to clean and validate Mermaid syntax
-  const cleanMermaidSyntax = (input: string): string => {
-    let cleaned = input.trim();
-    
-    // Fix common syntax errors
-    cleaned = cleaned
-      // Fix arrows if needed
-      .replace(/-+>/g, "-->")
-      // Replace any hyphens in node IDs with underscores
-      .replace(/(\w+)-(\w+)/g, "$1_$2")
-      // Replace year ranges with underscores
-      .replace(/(\d{4})-(\d{4})/g, "$1_$2");
-    
-    // Ensure it starts with flowchart directive
-    if (!cleaned.startsWith("flowchart")) {
-      cleaned = "flowchart TD\n" + cleaned;
-    }
-    
-    return cleaned;
-  };
-
-  const generateFlowchart = async () => {
-    try {
-      setIsGenerating(true);
-      setError(null);
-      const flowchartCode = await generateFlowchartFromPdf();
-      
-      // Clean and validate the mermaid syntax
-      const cleanedCode = cleanMermaidSyntax(flowchartCode);
-      
-      // Check if the flowchart code is valid
-      try {
-        await mermaid.parse(cleanedCode);
-        setCode(cleanedCode);
-        toast({
-          title: "Flowchart Generated",
-          description: "A flowchart has been created based on your PDF content.",
-        });
-      } catch (parseError) {
-        console.error("Mermaid parse error:", parseError);
-        setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-        setCode(defaultFlowchart);
-        toast({
-          title: "Syntax Error",
-          description: "The generated flowchart had syntax errors. Using a default template instead.",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      console.error("Failed to generate flowchart:", err);
-      setCode(defaultFlowchart);
-      setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate flowchart from PDF content.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-      // Reset zoom and position when generating a new flowchart
-      setScale(1);
-      setPosition({ x: 0, y: 0 });
-    }
-  };
-
-  const renderFlowchart = async () => {
-    if (!previewRef.current) return;
-
-    try {
-      // Clear the preview area
-      previewRef.current.innerHTML = "";
-      setError(null);
-
-      // Create a unique ID for the diagram
-      const id = `flowchart-${Date.now()}`;
-      
-      // Attempt to clean the syntax before parsing
-      const cleanedCode = cleanMermaidSyntax(code);
-      
-      // Parse the flowchart to verify syntax before rendering
-      await mermaid.parse(cleanedCode);
-      
-      // If parse succeeds, render the flowchart
-      const { svg } = await mermaid.render(id, cleanedCode);
-      previewRef.current.innerHTML = svg;
-    } catch (err) {
-      console.error("Failed to render flowchart:", err);
-      setError(err instanceof Error ? err.message : "Failed to render flowchart");
-      
-      // Display error message in preview area
-      if (previewRef.current) {
-        previewRef.current.innerHTML = `<div class="text-red-500 p-4">
-          <h3 class="font-bold">Rendering Error</h3>
-          <p>${err instanceof Error ? err.message : "Unknown error"}</p>
-        </div>`;
-      }
-    }
-  };
-
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setCode(e.target.value);
-  };
-
-  const zoomIn = () => {
-    setScale(prev => Math.min(prev + 0.1, 2));
-  };
-
-  const zoomOut = () => {
-    setScale(prev => Math.max(prev - 0.1, 0.5));
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0) { // Left click only
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const resetView = () => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const exportSvg = () => {
-    if (!previewRef.current || !previewRef.current.querySelector("svg")) {
-      toast({
-        title: "Export Failed",
-        description: "No flowchart to export. Please ensure your flowchart renders correctly.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const svgElement = previewRef.current.querySelector("svg");
-      const svgData = new XMLSerializer().serializeToString(svgElement!);
-      const blob = new Blob([svgData], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "flowchart.svg";
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Export Successful",
-        description: "Your flowchart has been exported as SVG.",
-      });
-    } catch (error) {
-      console.error("Export error:", error);
-      toast({
-        title: "Export Failed",
-        description: `There was an error exporting the flowchart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const exportPng = async () => {
-    if (!previewRef.current || !previewRef.current.querySelector("svg")) {
-      toast({
-        title: "Export Failed",
-        description: "No flowchart to export. Please ensure your flowchart renders correctly.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const svgElement = previewRef.current.querySelector("svg")!;
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      
-      // Get SVG dimensions
-      const bbox = svgElement.getBBox();
-      canvas.width = bbox.width * 2; // Scale up for better quality
-      canvas.height = bbox.height * 2;
-      
-      // Convert SVG to data URL
-      const svgData = new XMLSerializer().serializeToString(svgElement);
-      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(svgBlob);
-      
-      // Create image from SVG
-      const img = new Image();
-      img.onload = () => {
-        if (!ctx) return;
-        
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        URL.revokeObjectURL(url);
-        
-        // Convert canvas to PNG
-        canvas.toBlob((blob) => {
-          if (!blob) return;
-          
-          const pngUrl = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = pngUrl;
-          a.download = "flowchart.png";
-          document.body.appendChild(a);
-          a.click();
-          
-          // Cleanup
-          document.body.removeChild(a);
-          URL.revokeObjectURL(pngUrl);
-          
-          toast({
-            title: "Export Successful",
-            description: "Your flowchart has been exported as PNG.",
-          });
-        }, "image/png");
-      };
-      
-      img.src = url;
-    } catch (error) {
-      console.error("Export error:", error);
-      toast({
-        title: "Export Failed",
-        description: `There was an error exporting the flowchart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -325,106 +49,27 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 overflow-hidden">
           {/* Code editor */}
           <div className="flex flex-col">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-medium">Mermaid Code</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={generateFlowchart} 
-                disabled={isGenerating}
-                className="flex items-center gap-1"
-              >
-                <RefreshCcw className="h-3.5 w-3.5" />
-                {isGenerating ? "Generating..." : "Regenerate"}
-              </Button>
-            </div>
-            <Textarea
-              value={code}
-              onChange={handleCodeChange}
-              className="flex-1 font-mono text-sm resize-none"
-              placeholder="Enter your Mermaid flowchart code here..."
+            <FlowchartEditor
+              code={code}
+              error={error}
+              isGenerating={isGenerating}
+              onCodeChange={handleCodeChange}
+              onRegenerate={generateFlowchart}
             />
-            {error && (
-              <div className="mt-2 text-red-500 text-sm overflow-auto max-h-24 bg-red-50 p-2 rounded border border-red-100">
-                {error}
-              </div>
-            )}
           </div>
           
           {/* Preview - Now takes up 2/3 of the space on medium screens and up */}
           <div className="md:col-span-2 flex flex-col">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-medium">Preview</h3>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={zoomIn}
-                  className="p-1 h-8 w-8"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={zoomOut}
-                  className="p-1 h-8 w-8"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={resetView}
-                  className="p-1 h-8"
-                  title="Reset View"
-                >
-                  <Move className="h-4 w-4 mr-1" />
-                  Reset
-                </Button>
-              </div>
-            </div>
-            <div 
-              className="border rounded-md p-4 flex-1 overflow-hidden bg-white relative"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              ref={contentRef}
-              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-            >
-              <div 
-                ref={previewRef} 
-                className="absolute" 
-                style={{
-                  transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
-                  transformOrigin: 'center center',
-                  transition: isDragging ? 'none' : 'transform 0.1s ease'
-                }}
-              >
-                {isGenerating ? (
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
+            <FlowchartPreview
+              code={code}
+              error={error}
+              isGenerating={isGenerating}
+            />
           </div>
         </div>
         
         <DialogFooter className="flex justify-between sm:justify-between">
-          <div className="flex gap-2">
-            <Button onClick={exportSvg} variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-1" />
-              Export SVG
-            </Button>
-            <Button onClick={exportPng} variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-1" />
-              Export PNG
-            </Button>
-          </div>
+          <FlowchartExport previewRef={previewRef} />
           <Button onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
       </DialogContent>
