@@ -131,60 +131,65 @@ const ChatBox = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Message area with fixed height and scrolling */}
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full px-4 py-4">
+          <div className="space-y-4 pb-2">
+            {messages.map((message, index) => (
               <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                key={index}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
-                <p className="text-xs opacity-70 mt-1">
-                  {message.timestamp.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
+                <div
+                  className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                  <p className="text-xs opacity-70 mt-1">
+                    {message.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+      </div>
       
-      <Separator />
-      
-      <div className="p-3">
-        <div className="flex gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
-            className="min-h-[60px] resize-none"
-            disabled={isLoading}
-          />
-          <Button 
-            onClick={handleSendMessage} 
-            size="icon"
-            disabled={isLoading || !input.trim()}
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+      {/* Fixed input area at bottom */}
+      <div className="flex-shrink-0 border-t">
+        <div className="p-3">
+          <div className="flex gap-2">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message..."
+              className="min-h-[60px] max-h-[120px] resize-none"
+              disabled={isLoading}
+            />
+            <Button 
+              onClick={handleSendMessage} 
+              size="icon"
+              className="h-auto"
+              disabled={isLoading || !input.trim()}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
