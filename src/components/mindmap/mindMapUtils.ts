@@ -1,6 +1,6 @@
+
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
-import { ExtendedNodeData } from "@/types/mindMap";
 
 // Sample mind map data
 export const createSampleMindMapData = (): MindElixirData => {
@@ -121,72 +121,6 @@ export const calculateMindMapScale = (container: HTMLDivElement, mindMapRoot: HT
   return Math.min(scaleX, scaleY, 1);
 };
 
-// Add an image to a node in the mind map
-export const addImageToNode = (mind: MindElixirInstance, nodeId: string, imageData: string): void => {
-  if (!mind || !mind.nodes || !mind.nodes[nodeId]) {
-    console.error('Invalid mind map or node ID');
-    return;
-  }
-
-  // Create an image element
-  const img = document.createElement('img');
-  img.src = imageData;
-  img.style.maxWidth = '100%';
-  img.style.maxHeight = '150px';
-  img.style.objectFit = 'contain';
-  img.style.marginTop = '5px';
-
-  // Find the node DOM element
-  const nodeEl = document.querySelector(`[data-nodeid="${nodeId}"]`);
-  if (nodeEl) {
-    // Find or create a container for the image
-    let imgContainer = nodeEl.querySelector('.node-image-container');
-    if (!imgContainer) {
-      imgContainer = document.createElement('div');
-      imgContainer.className = 'node-image-container';
-      nodeEl.appendChild(imgContainer);
-    } else {
-      // Clear existing images
-      imgContainer.innerHTML = '';
-    }
-
-    // Add the image to the container
-    imgContainer.appendChild(img);
-
-    // Store the image data in the node data
-    mind.nodes[nodeId].image = {
-      src: imageData,
-      width: img.naturalWidth,
-      height: img.naturalHeight
-    };
-
-    // Refresh the mind map to update the layout
-    mind.refresh();
-  }
-};
-
-// Create a new node with an image
-export const createImageNode = (mind: MindElixirInstance, imageData: string): string | null => {
-  if (!mind || !mind.currentNode) {
-    console.error('Invalid mind map or no node selected');
-    return null;
-  }
-
-  // Add a child node to the currently selected node
-  const parentId = mind.currentNode.id;
-  
-  // Generate a unique ID for the new node
-  const newNodeId = `img_node_${Date.now()}`;
-  
-  // Create the new node with a generic topic
-  mind.addChild(parentId, newNodeId, 'Image Node');
-  
-  // Add the image to the new node
-  addImageToNode(mind, newNodeId, imageData);
-  
-  return newNodeId;
-};
-
 // Initialize the mind map
 export const initializeMindMap = (
   containerRef: HTMLDivElement,
@@ -210,38 +144,6 @@ export const initializeMindMap = (
       e.preventDefault();
     }
   });
-  
-  // Add support for rendering images in nodes
-  const originalRenderer = mind.nodeDataToElements;
-  if (originalRenderer) {
-    mind.nodeDataToElements = (node: any, element: HTMLElement) => {
-      // Call the original renderer first
-      originalRenderer(node, element);
-      
-      // Then check if the node has image data
-      if (node.image && node.image.src) {
-        // Create or find image container
-        let imgContainer = element.querySelector('.node-image-container');
-        if (!imgContainer) {
-          imgContainer = document.createElement('div');
-          imgContainer.className = 'node-image-container';
-          element.appendChild(imgContainer);
-        } else {
-          // Clear existing images
-          imgContainer.innerHTML = '';
-        }
-        
-        // Create and add the image
-        const img = document.createElement('img');
-        img.src = node.image.src;
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = '150px';
-        img.style.objectFit = 'contain';
-        img.style.marginTop = '5px';
-        imgContainer.appendChild(img);
-      }
-    };
-  }
   
   // Use the callback to set the mind map instance
   setMindMap(mind);

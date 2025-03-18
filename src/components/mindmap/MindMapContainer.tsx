@@ -4,16 +4,12 @@ import { MindElixirInstance } from "mind-elixir";
 import KeyboardShortcutsTooltip from "./KeyboardShortcutsTooltip";
 import { useMindMapInitializer } from "@/hooks/useMindMapInitializer";
 import MindMapContextMenu from "./MindMapContextMenu";
-import ImageGallery from "./ImageGallery";
-import { addImageToNode, createImageNode } from "./mindMapUtils";
-import { ExtractedImage } from "@/hooks/usePdfProcessor";
 
 interface MindMapContainerProps {
   isMapGenerated: boolean;
-  extractedImages?: ExtractedImage[];
 }
 
-const MindMapContainer = ({ isMapGenerated, extractedImages = [] }: MindMapContainerProps) => {
+const MindMapContainer = ({ isMapGenerated }: MindMapContainerProps) => {
   // Use mutable ref object pattern instead of RefObject to allow setting current
   const containerRef = useRef<HTMLDivElement>(null);
   // Create a mutable ref for mind map instance
@@ -30,54 +26,28 @@ const MindMapContainer = ({ isMapGenerated, extractedImages = [] }: MindMapConta
     }
   }, [isReady, mindMapRef]);
 
-  // Handler for adding an image to a node
-  const handleAddImageToNode = (nodeId: string, imageData: string) => {
-    if (mindMap) {
-      addImageToNode(mindMap, nodeId, imageData);
-    }
-  };
-
-  // Handler for adding a new image node
-  const handleAddImageNode = (imageData: string) => {
-    if (mindMap) {
-      createImageNode(mindMap, imageData);
-    }
-  };
-
   if (!isMapGenerated) {
     return null;
   }
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
-      <div className="w-full h-[calc(100vh-100px)] flex bg-card overflow-hidden relative">
-        <MindMapContextMenu 
-          mindMap={mindMap}
-          images={extractedImages}
-          onAddImageToNode={handleAddImageToNode}
-        >
+      <MindMapContextMenu mindMap={mindMap}>
+        <div className="w-full h-[calc(100vh-100px)] bg-card overflow-hidden relative">
           <div 
             ref={containerRef} 
-            className="flex-1 h-full" 
+            className="w-full h-full" 
             style={{ background: '#f8f9fa' }}
           />
-        </MindMapContextMenu>
-        
-        {/* Image gallery sidebar */}
-        {extractedImages && extractedImages.length > 0 && (
-          <ImageGallery 
-            images={extractedImages} 
-            onAddImageNode={handleAddImageNode} 
-          />
-        )}
-        
-        {/* Keyboard shortcuts tooltip */}
-        <KeyboardShortcutsTooltip isVisible={isReady} />
-        
-        <div className="text-center p-1 text-xs text-muted-foreground absolute bottom-0 left-0 right-0 bg-background/80">
-          Right-click on a node to open the context menu with options. You can also drag to pan, use mouse wheel to zoom.
+          
+          {/* Keyboard shortcuts tooltip */}
+          <KeyboardShortcutsTooltip isVisible={isReady} />
+          
+          <div className="text-center p-1 text-xs text-muted-foreground absolute bottom-0 left-0 right-0 bg-background/80">
+            Right-click on a node to open the context menu with options. You can also drag to pan, use mouse wheel to zoom.
+          </div>
         </div>
-      </div>
+      </MindMapContextMenu>
     </div>
   );
 };
