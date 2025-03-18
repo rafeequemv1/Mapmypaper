@@ -67,44 +67,6 @@ const PdfUpload = () => {
     }
   }, [toast]);
 
-  // Helper function to safely store PDF data
-  const safePdfDataStorage = async (pdfData: string): Promise<boolean> => {
-    try {
-      // First attempt: Try storing full data
-      try {
-        sessionStorage.setItem('pdfData', pdfData);
-        console.log("Successfully stored full PDF data");
-        return true;
-      } catch (error) {
-        console.warn("Full PDF storage failed, attempting compressed storage", error);
-      }
-      
-      // If the PDF is too large, we'll use a different approach:
-      // 1. Store only a portion of the PDF data (first 2MB) which should be enough for preview
-      // 2. Set a flag indicating it's partial data
-      const truncatedSize = 2 * 1024 * 1024; // 2MB
-      if (pdfData.length > truncatedSize) {
-        const truncatedData = pdfData.substring(0, truncatedSize);
-        sessionStorage.setItem('pdfData', truncatedData);
-        sessionStorage.setItem('isPdfTruncated', 'true');
-        console.log(`PDF was too large. Stored truncated version (${truncatedSize} bytes)`);
-        
-        toast({
-          title: "PDF file is large",
-          description: "Using a compressed version for preview. Some features may be limited.",
-          variant: "warning",
-        });
-        
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Failed to store PDF data even after compression:", error);
-      return false;
-    }
-  };
-
   const handleGenerateMindmap = useCallback(async () => {
     if (!selectedFile) {
       toast({
@@ -113,16 +75,6 @@ const PdfUpload = () => {
         variant: "destructive",
       });
       return;
-    }
-
-    // File size check
-    if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
-      toast({
-        title: "File too large",
-        description: "Please upload a PDF file smaller than 10MB for best results",
-        variant: "warning",
-      });
-      // We'll still try to process, but warn the user
     }
 
     setIsProcessing(true);
@@ -152,12 +104,10 @@ const PdfUpload = () => {
       // Wait for PDF data to be read
       const base64data = await readFilePromise;
       
-      // Store PDF data in sessionStorage safely
-      const storedSuccessfully = await safePdfDataStorage(base64data);
-      
-      if (!storedSuccessfully) {
-        throw new Error("Failed to store PDF data due to browser storage limitations. Try a smaller PDF file.");
-      }
+      // Store PDF data in sessionStorage
+      sessionStorage.setItem('pdfData', base64data);
+      sessionStorage.setItem('uploadedPdfData', base64data);
+      console.log("PDF data stored, length:", base64data.length);
       
       // Extract text from PDF
       const extractedText = await PdfToText(selectedFile);
@@ -166,65 +116,27 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
       
-      // Store the extracted text in sessionStorage - handle large text
-      try {
-        // Try to store full text
-        sessionStorage.setItem('pdfText', extractedText);
-        console.log("Stored PDF text in sessionStorage, length:", extractedText.length);
-      } catch (textError) {
-        // If text is too large, truncate it
-        console.warn("PDF text too large for sessionStorage, truncating:", textError);
-        const maxLength = 500000; // ~500KB
-        const truncatedText = extractedText.substring(0, maxLength);
-        sessionStorage.setItem('pdfText', truncatedText);
-        sessionStorage.setItem('isPdfTextTruncated', 'true');
-        console.log(`Stored truncated PDF text (${truncatedText.length} characters)`);
-        
-        toast({
-          title: "PDF text is large",
-          description: "Using truncated text for analysis. Some content may be missed.",
-          variant: "warning",
-        });
-      }
+      // Store the extracted text in sessionStorage
+      sessionStorage.setItem('pdfText', extractedText);
+      console.log("Stored PDF text in sessionStorage, length:", extractedText.length);
       
       // Validate that data is stored properly before proceeding
-      if (!sessionStorage.getItem('pdfData')) {
-        throw new Error("Failed to store PDF data in session storage. Please try a smaller PDF file.");
+      const checkData = sessionStorage.getItem('pdfData');
+      const checkText = sessionStorage.getItem('pdfText');
+      
+      if (!checkData || !checkText) {
+        throw new Error("Failed to store PDF data in session storage. Please try again.");
       }
       
       // Process the text with Gemini to generate mind map data
       const mindMapData = await generateMindMapFromText(extractedText);
       
       // Store the generated mind map data in sessionStorage
-      try {
-        sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
-      } catch (mapError) {
-        console.error("Failed to store complete mind map data:", mapError);
-        // If mind map data is too large, store a simplified version
-        const simplifiedData = {
-          nodeData: {
-            id: "root",
-            topic: "PDF Content (Simplified)",
-            children: [
-              {
-                id: "error",
-                topic: "Data Too Large",
-                direction: 0,
-                children: [
-                  {id: "error-1", topic: "The mind map data was too large to store in browser memory"},
-                  {id: "error-2", topic: "Try using a smaller PDF file"}
-                ]
-              }
-            ]
-          }
-        };
-        
-        sessionStorage.setItem('mindMapData', JSON.stringify(simplifiedData));
-        toast({
-          title: "Mind Map Simplified",
-          description: "The PDF generated too much data. Using a simplified mind map.",
-          variant: "warning",
-        });
+      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+      
+      // Add a final check to ensure all data is stored
+      if (!sessionStorage.getItem('mindMapData')) {
+        throw new Error("Failed to store mind map data. Please try again.");
       }
       
       // Navigate to the mind map view
