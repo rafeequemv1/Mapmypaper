@@ -1,5 +1,5 @@
 
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -9,6 +9,12 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   showPdf: boolean;
@@ -16,6 +22,7 @@ interface HeaderProps {
   pdfAvailable: boolean;
   showChat: boolean;
   toggleChat: () => void;
+  onExportMindMap?: (type: 'svg' | 'png') => void;
 }
 
 const Header = ({ 
@@ -23,7 +30,8 @@ const Header = ({
   togglePdf, 
   pdfAvailable, 
   showChat, 
-  toggleChat 
+  toggleChat,
+  onExportMindMap 
 }: HeaderProps) => {
   const navigate = useNavigate();
 
@@ -69,6 +77,25 @@ const Header = ({
       
       {/* Keyboard shortcuts on the right */}
       <div className="flex items-center justify-end gap-4 w-1/3">
+        {onExportMindMap && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-white">
+                <Download className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
+                Download as SVG
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExportMindMap('png')}>
+                Download as PNG
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

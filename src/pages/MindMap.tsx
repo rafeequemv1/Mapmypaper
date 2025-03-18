@@ -1,13 +1,17 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import { supabase } from "@/integrations/supabase/client";
+import { MindElixirInstance } from "mind-elixir";
+import { useToast } from "@/hooks/use-toast";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [pdfAvailable, setPdfAvailable] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
+  const { toast } = useToast();
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -54,6 +58,58 @@ const MindMap = () => {
     setShowChat(prev => !prev);
   };
 
+  const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
+    setMindMap(mindMap);
+  }, []);
+
+  const handleExportMindMap = useCallback(async (type: 'svg' | 'png') => {
+    if (!mindMap) {
+      toast({
+        title: "Export Failed",
+        description: "The mind map is not ready. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      let blob = null;
+      if (type === 'png') {
+        blob = await mindMap.exportPng();
+      } else {
+        blob = mindMap.exportSvg();
+      }
+
+      if (!blob) {
+        throw new Error("Failed to generate export data");
+      }
+
+      // Create a download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mindmap.${type}`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: `Your mind map has been exported as ${type.toUpperCase()}.`
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Export Failed",
+        description: `There was an error exporting the mind map: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
+  }, [mindMap, toast]);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header component with navigation and toggles */}
@@ -63,6 +119,7 @@ const MindMap = () => {
         pdfAvailable={pdfAvailable}
         showChat={showChat}
         toggleChat={toggleChat}
+        onExportMindMap={handleExportMindMap}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -72,6 +129,7 @@ const MindMap = () => {
           showChat={showChat}
           toggleChat={toggleChat}
           togglePdf={togglePdf}
+          onMindMapReady={handleMindMapReady}
         />
       </div>
     </div>

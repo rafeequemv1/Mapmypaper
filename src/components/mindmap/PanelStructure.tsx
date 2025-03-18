@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   ResizablePanelGroup, 
   ResizablePanel,
@@ -10,19 +10,22 @@ import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "./ChatPanel";
 import MobileChatSheet from "./MobileChatSheet";
 import { useToast } from "@/hooks/use-toast";
+import { MindElixirInstance } from "mind-elixir";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
+  onMindMapReady?: (mindMap: MindElixirInstance) => void;
 }
 
 const PanelStructure = ({ 
   showPdf, 
   showChat,
   toggleChat,
-  togglePdf
+  togglePdf,
+  onMindMapReady
 }: PanelStructureProps) => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -58,7 +61,10 @@ const PanelStructure = ({
         defaultSize={showChat ? 50 : (showPdf ? 75 : 100)} 
         id="mindmap-panel"
       >
-        <MindMapViewer isMapGenerated={isMapGenerated} />
+        <MindMapViewer 
+          isMapGenerated={isMapGenerated} 
+          onMindMapReady={onMindMapReady}
+        />
       </ResizablePanel>
       
       {showChat && (

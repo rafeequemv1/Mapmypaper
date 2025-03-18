@@ -1,10 +1,13 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
+import { useToast } from "@/hooks/use-toast";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
+  onMindMapReady?: (mindMap: MindElixirInstance) => void;
 }
 
 // Modify the EventMap to actually extend the library's EventMap type
@@ -33,10 +36,11 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
-const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
+const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -163,16 +167,19 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Initialize the mind map with data
       mind.init(data);
       
-      
       mindMapRef.current = mind;
+      
+      // Notify parent component that mind map is ready
+      if (onMindMapReady) {
+        onMindMapReady(mind);
+      }
       
       // Set a timeout to ensure the mind map is rendered before scaling
       setTimeout(() => {
-        
         setIsReady(true);
       }, 300);
     }
-  }, [isMapGenerated]);
+  }, [isMapGenerated, onMindMapReady]);
 
   if (!isMapGenerated) {
     return null;
