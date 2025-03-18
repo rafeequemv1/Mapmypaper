@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -121,38 +122,44 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     
     const prompt = `
     Analyze the following academic paper/document text and create a flowchart in Mermaid syntax.
-    The flowchart should represent the main process, methodology, or conceptual framework described in the document.
     
-    Focus on:
-    1. Key steps or phases in the process/methodology
-    2. Decision points and alternative paths
-    3. Inputs and outputs of each step
-    4. Relationships between concepts or components
+    IMPORTANT INSTRUCTIONS FOR MERMAID FLOWCHART:
+    1. Use only standard Mermaid flowchart TD syntax
+    2. Do NOT use hyphens or dashes in node IDs - use alphanumeric characters only
+    3. Avoid special characters in node text that might break the parser
+    4. For any years or dates, use underscore instead of hyphen (e.g., "2023_2024" not "2023-2024")
+    5. Keep node texts very short and concise
+    6. Always use letters or alphanumeric strings for node IDs (e.g., A, B, C, process1, etc.)
+    7. Wrap all node texts in square brackets
+    8. Use only these node shapes: [] for rectangle, () for rounded rectangle, {} for diamond
+    9. Maximum 15-20 nodes total for clarity
     
-    Use Mermaid flowchart syntax. Here's an example of the syntax:
+    Example of correct syntax:
     
     flowchart TD
-        A[Start] --> B{Decision?}
+        A[Start] --> B{Decision Point}
         B -->|Yes| C[Process 1]
         B -->|No| D[Process 2]
-        C --> E[End]
-        D --> E[End]
-    
-    Only return the Mermaid code, nothing else. Do not include markdown code blocks or explanations.
+        C --> E[End Result]
+        D --> E
     
     Here's the document text to analyze:
-    ${pdfText.slice(0, 15000)}
+    ${pdfText.slice(0, 10000)}
     `;
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text().trim();
     
-    // Remove any markdown code blocks if present
-    const mermaidCode = text.replace(/```mermaid\s?/g, "").replace(/```\s?/g, "").trim();
+    // Remove any markdown code blocks and clean up the response
+    const mermaidCode = text
+      .replace(/```mermaid\s?/g, "")
+      .replace(/```\s?/g, "")
+      .trim();
     
-    // If the response is empty or invalid, return a default flowchart
-    if (!mermaidCode || mermaidCode.length < 20) {
+    // Add basic error checking - if the response is empty, too short, or doesn't start with "flowchart"
+    if (!mermaidCode || mermaidCode.length < 20 || !mermaidCode.startsWith("flowchart")) {
+      console.error("Invalid flowchart generated:", mermaidCode);
       return `flowchart TD
         A[Start] --> B[No valid flowchart could be generated]
         B --> C[Try with a different document]`;

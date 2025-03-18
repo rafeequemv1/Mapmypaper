@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Share2, RefreshCcw } from "lucide-react";
+import { Download, RefreshCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
@@ -33,21 +33,28 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Initialize mermaid
+  // Initialize mermaid with safe configuration
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: false,
       theme: "default",
       securityLevel: "loose",
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true
+      },
+      logLevel: 3 // Enables warning logs for debugging
     });
   }, []);
 
   // Generate flowchart when modal is opened
   useEffect(() => {
-    if (open && code === defaultFlowchart) {
-      generateFlowchart();
-    } else if (open && previewRef.current) {
-      renderFlowchart();
+    if (open) {
+      if (code === defaultFlowchart) {
+        generateFlowchart();
+      } else {
+        renderFlowchart();
+      }
     }
   }, [open]);
 
@@ -61,14 +68,31 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const generateFlowchart = async () => {
     try {
       setIsGenerating(true);
+      setError(null);
       const flowchartCode = await generateFlowchartFromPdf();
-      setCode(flowchartCode);
-      toast({
-        title: "Flowchart Generated",
-        description: "A flowchart has been created based on your PDF content.",
-      });
+      
+      // Check if the flowchart code is valid
+      try {
+        await mermaid.parse(flowchartCode);
+        setCode(flowchartCode);
+        toast({
+          title: "Flowchart Generated",
+          description: "A flowchart has been created based on your PDF content.",
+        });
+      } catch (parseError) {
+        console.error("Mermaid parse error:", parseError);
+        setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        setCode(defaultFlowchart);
+        toast({
+          title: "Syntax Error",
+          description: "The generated flowchart had syntax errors. Using a default template instead.",
+          variant: "destructive",
+        });
+      }
     } catch (err) {
       console.error("Failed to generate flowchart:", err);
+      setCode(defaultFlowchart);
+      setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
       toast({
         title: "Generation Failed",
         description: "Failed to generate flowchart from PDF content.",
@@ -90,12 +114,24 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       // Create a unique ID for the diagram
       const id = `flowchart-${Date.now()}`;
       
-      // Parse and render the flowchart
+      // Parse the flowchart to verify syntax before rendering
+      await mermaid.parse(code);
+      
+      // If parse succeeds, render the flowchart
       const { svg } = await mermaid.render(id, code);
       previewRef.current.innerHTML = svg;
     } catch (err) {
       console.error("Failed to render flowchart:", err);
       setError(err instanceof Error ? err.message : "Failed to render flowchart");
+      
+      // Display error message in preview area
+      if (previewRef.current) {
+        previewRef.current.innerHTML = `<div class="text-red-500 p-4">
+          <h3 class="font-bold">Rendering Error</h3>
+          <p>${err instanceof Error ? err.message : "Unknown error"}</p>
+          <p class="mt-2 text-sm">Please check your syntax and try again.</p>
+        </div>`;
+      }
     }
   };
 
@@ -242,7 +278,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               placeholder="Enter your Mermaid flowchart code here..."
             />
             {error && (
-              <div className="mt-2 text-red-500 text-sm overflow-auto max-h-24">
+              <div className="mt-2 text-red-500 text-sm overflow-auto max-h-24 bg-red-50 p-2 rounded border border-red-100">
                 {error}
               </div>
             )}
