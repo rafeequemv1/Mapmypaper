@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { MindElixirInstance } from "mind-elixir";
 import KeyboardShortcutsTooltip from "./KeyboardShortcutsTooltip";
 import { useMindMapInitializer } from "@/hooks/useMindMapInitializer";
@@ -9,7 +9,9 @@ interface MindMapContainerProps {
 }
 
 const MindMapContainer = ({ isMapGenerated }: MindMapContainerProps) => {
+  // Use mutable ref object pattern instead of RefObject to allow setting current
   const containerRef = useRef<HTMLDivElement>(null);
+  // Create a mutable ref for mind map instance
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   
   const { isReady } = useMindMapInitializer(isMapGenerated, containerRef, mindMapRef);

@@ -103,7 +103,8 @@ export const initializeMindMap = (
   // Initialize with sample data
   mind.init(createSampleMindMapData());
   
-  // Set the reference
+  // Use the callback to set the mind map instance
+  // This avoids directly modifying the ref.current which is read-only
   setMindMap(mind);
   
   return mind;

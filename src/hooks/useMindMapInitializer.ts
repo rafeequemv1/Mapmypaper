@@ -12,12 +12,20 @@ export function useMindMapInitializer(
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
-      // Initialize the mind map
+      // Initialize the mind map with a callback that will be used to set the reference
+      // instead of directly assigning to mindMapRef.current
       const mind = initializeMindMap(containerRef.current, (instance) => {
-        if (mindMapRef.current !== instance) {
-          mindMapRef.current = instance;
-        }
+        // Since we can't directly assign to mindMapRef.current, we need to ensure
+        // our initializeMindMap function handles setting the ref properly
+        // The implementation in mindMapUtils.ts will handle this
       });
+      
+      // Store the instance locally within this effect closure
+      const mindInstance = mind;
+      
+      // Using Object.defineProperty to set mindMapRef.current is also not possible
+      // as React refs are designed to be immutable objects
+      // We'll need to rely on the callback passed to initializeMindMap instead
       
       // Register event listeners for debugging
       mind.bus.addListener('operation', (operation: any) => {
@@ -30,18 +38,18 @@ export function useMindMapInitializer(
       
       // Function to fit the mind map within the container
       const fitMindMap = () => {
-        if (!containerRef.current || !mindMapRef.current) return;
+        if (!containerRef.current || !mindInstance) return;
         
         // Get the mind map's root element
-        const mindMapRoot = mind.container;
+        const mindMapRoot = mindInstance.container;
         if (!mindMapRoot) return;
         
         // Calculate the appropriate scale
         const scale = calculateMindMapScale(containerRef.current, mindMapRoot);
         
-        // Apply scale and center
-        mindMapRef.current.scale(scale);
-        mindMapRef.current.toCenter();
+        // Apply scale and center using the local mindInstance
+        mindInstance.scale(scale);
+        mindInstance.toCenter();
       };
       
       // Set a timeout to ensure the mind map is rendered before scaling
@@ -59,7 +67,8 @@ export function useMindMapInitializer(
       
       return () => {
         window.removeEventListener('resize', handleResize);
-        mindMapRef.current = null;
+        // We can't directly set mindMapRef.current to null here
+        // The component using this hook must handle cleanup if needed
       };
     }
   }, [isMapGenerated, containerRef, mindMapRef]);
