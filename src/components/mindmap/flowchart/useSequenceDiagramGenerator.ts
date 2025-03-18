@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
-import { generateSequenceDiagramFromPdf } from "@/services/geminiService";
+import { generateSequenceDiagramFromPdf } from "@/services/gemini";
 
 export const defaultSequenceDiagram = `sequenceDiagram
     participant Researcher

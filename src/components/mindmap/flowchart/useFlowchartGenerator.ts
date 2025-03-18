@@ -1,7 +1,7 @@
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
-import { generateFlowchartFromPdf } from "@/services/geminiService";
+import { generateFlowchartFromPdf } from "@/services/gemini";
 
 export const defaultFlowchart = `flowchart TD
     A[Start] --> B{Is it working?}
