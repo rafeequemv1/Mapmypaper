@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus, FileText } from "lucide-react";
+import { Minus, Plus, FileText, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -26,6 +26,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isTruncated, setIsTruncated] = useState<boolean>(false);
   const navigate = useNavigate();
 
   // Load PDF data from sessionStorage
@@ -35,7 +36,11 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
       setLoadError(null);
       
       // Try to get PDF data
-      const storedPdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+      const storedPdfData = sessionStorage.getItem('pdfData');
+      
+      // Check if PDF is truncated
+      const truncationFlag = sessionStorage.getItem('isPdfTruncated');
+      setIsTruncated(truncationFlag === 'true');
       
       if (!storedPdfData || storedPdfData.length < 100) {
         console.error("No valid PDF data found in sessionStorage");
@@ -144,6 +149,16 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
           {isLoading ? 'Loading PDF...' : pdfData && numPages > 0 ? `Page ${currentPage} of ${numPages}` : 'No PDF available'}
         </div>
       </div>
+      
+      {isTruncated && (
+        <Alert variant="warning" className="m-2 bg-amber-50 border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertTitle className="text-amber-700">Limited Preview</AlertTitle>
+          <AlertDescription className="text-amber-600 text-xs">
+            The PDF was too large for full display. You're viewing a compressed version.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <ScrollArea className="flex-1">
         <div className="min-h-full p-4 flex flex-col items-center bg-muted/10">
