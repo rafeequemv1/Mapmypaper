@@ -10,8 +10,21 @@ export const getGeminiApiKey = () => apiKey;
 // Initialize Gemini client
 export const initGeminiClient = () => {
   try {
+    if (!apiKey || apiKey.trim() === '') {
+      console.error("Missing API key");
+      throw new Error("API key is missing or invalid");
+    }
+    
     const genAI = new GoogleGenerativeAI(apiKey);
-    return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    return genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.4,
+        topK: 32,
+        topP: 0.95,
+      }
+    });
   } catch (error) {
     console.error("Failed to initialize Gemini client:", error);
     throw new Error("Failed to initialize AI service. Please try again later.");
@@ -74,12 +87,27 @@ export const storePdfText = (pdfText: string) => {
 };
 
 export const getPdfText = (): string => {
-  const pdfText = sessionStorage.getItem('pdfText');
-  if (!pdfText || pdfText.trim() === '') {
-    console.error("No PDF text found in session storage");
+  try {
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (pdfText && pdfText.trim() !== '') {
+      return pdfText;
+    }
+    
+    // Try alternative sources
+    const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+    
+    if (!pdfData || pdfData.trim() === '') {
+      console.error("No PDF data found in session storage");
+      throw new Error("No PDF content available. Please upload a PDF first.");
+    }
+    
+    // If we have PDF data but no extracted text, return a placeholder
+    return "PDF text extraction incomplete. Limited analysis available.";
+  } catch (error) {
+    console.error("Error retrieving PDF text:", error);
     throw new Error("No PDF content available. Please upload a PDF first.");
   }
-  return pdfText;
 };
 
 // Safely truncate PDF text to avoid exceeding token limits
