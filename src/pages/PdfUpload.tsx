@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Upload, FileText, AlertCircle, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -210,7 +209,7 @@ const PdfUpload = () => {
                   onClick={handleContinueToMindMap}
                   asChild
                 >
-                  <Link to="/">
+                  <Link to="/mindmap">
                     Continue to Mind Map <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
