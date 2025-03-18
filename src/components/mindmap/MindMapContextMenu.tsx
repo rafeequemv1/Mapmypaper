@@ -52,9 +52,9 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         mindMap.selectNode(selectedNode);
         // trigger the built-in edit functionality
         setTimeout(() => {
-          // Fixed: Pass required parameters to execCommand
-          document.execCommand('selectAll', false, null);
-          document.execCommand('delete', false, null);
+          // The execCommand method expects up to 3 arguments: command name, user interface flag, and value
+          document.execCommand('selectAll', false, undefined);
+          document.execCommand('delete', false, undefined);
         }, 50);
       }
     }
