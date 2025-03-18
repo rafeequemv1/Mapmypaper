@@ -1,13 +1,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
-import nodeMenu from "@mind-elixir/node-menu";
-import "@mind-elixir/node-menu/dist/style.css";
+import nodeMenu from "@mind-elixir/node-menu-neo";
+import "@mind-elixir/node-menu-neo/dist/style.css";
 import { Keyboard } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
+}
+
+// Define the event map type to fix TypeScript errors
+interface EventMap {
+  operation: any;
+  selectNode: any;
+  expandNode: any;
+  showNodeMenu: any;
+  hideNodeMenu: any;
+  // Add other event types as needed
 }
 
 const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
@@ -105,9 +115,9 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       });
 
       // Add a specific listener for right-click events
-      // Use the correct event name according to the library
-      mind.bus.addListener('contextMenu', (node: any, e: any) => {
-        console.log('Context menu triggered on node:', node);
+      // Use 'showNodeMenu' instead of 'contextMenu' for the neo package
+      mind.bus.addListener('showNodeMenu', (node: any, e: any) => {
+        console.log('Node menu shown for node:', node);
       });
       
       // Function to fit the mind map within the container
@@ -161,17 +171,22 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
   const testNodeMenu = () => {
     if (mindMapRef.current) {
       console.log("Attempting to manually trigger node menu");
-      // Try to select the root node programmatically
-      const rootNodeObj = mindMapRef.current.nodeData;
-      if (rootNodeObj) {
-        // Pass the root node's DOM element to selectNode instead of the node object
-        // First, find the DOM element using the node's ID
-        const rootEl = document.querySelector(`[data-nodeid='root']`);
-        if (rootEl) {
-          mindMapRef.current.selectNode(rootEl as HTMLElement);
-        } else {
-          console.log("Root element not found in DOM");
-        }
+      
+      // Find a node element in the DOM
+      const nodeEl = document.querySelector('.mind-elixir-node');
+      if (nodeEl) {
+        // Simulate a right-click on the node
+        const evt = new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          button: 2,
+          buttons: 2,
+        });
+        nodeEl.dispatchEvent(evt);
+        console.log("Triggered contextmenu event on node element");
+      } else {
+        console.log("No node elements found in DOM");
       }
     }
   };
