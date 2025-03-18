@@ -113,15 +113,14 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
   }
 
   return (
-    <div className="w-full">
-      <div className="border rounded-lg bg-card overflow-hidden">
-        <h3 className="text-lg font-medium p-4 text-center border-b">Your Mindmap</h3>
+    <div className="w-full h-full flex-1 flex flex-col">
+      <div className="w-full h-full flex-1 bg-card overflow-hidden">
         <div 
           ref={containerRef} 
-          className="w-full h-[600px]" 
+          className="w-full h-full" 
           style={{ background: '#f5f5f5' }}
         />
-        <div className="text-center p-3 text-sm text-muted-foreground">
+        <div className="text-center p-1 text-xs text-muted-foreground absolute bottom-0 left-0 right-0 bg-background/80">
           You can drag to pan, use mouse wheel to zoom, and click nodes to expand/collapse. Right-click on nodes for more options.
         </div>
       </div>

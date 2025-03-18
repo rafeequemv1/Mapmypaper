@@ -29,23 +29,16 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 py-8 px-4 md:px-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold">Research Paper Mindmap</h2>
-            <p className="text-muted-foreground">
-              Visualize key concepts and relationships from your research paper
-            </p>
-          </div>
-
+      {/* Main Content - Made fullscreen */}
+      <main className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col">
           {/* Mind Elixir Mindmap */}
           <MindMapViewer isMapGenerated={isMapGenerated} />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="py-6 px-8 border-t">
+      <footer className="py-2 px-8 border-t">
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
