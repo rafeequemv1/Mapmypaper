@@ -24,6 +24,31 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
+    // Check for PDF data immediately when component mounts
+    const checkPdfAvailability = () => {
+      try {
+        // Check if PDF data exists in either storage key
+        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+        const hasPdfData = !!pdfData;
+        
+        console.log("PDF check on mount - available:", hasPdfData, "PDF data length:", pdfData ? pdfData.length : 0);
+        
+        setPdfAvailable(hasPdfData);
+        setShowPdf(hasPdfData);
+        
+        // Ensure PDF data is stored with the consistent key name
+        if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
+          sessionStorage.setItem('pdfData', sessionStorage.getItem('uploadedPdfData')!);
+        }
+      } catch (error) {
+        console.error("Error checking PDF availability:", error);
+        setPdfAvailable(false);
+      }
+    };
+    
+    // Execute PDF check immediately
+    checkPdfAvailability();
+    
     // Set a small delay before generating the map to ensure DOM is ready
     const timer = setTimeout(() => {
       setIsMapGenerated(true);
@@ -37,18 +62,6 @@ const MindMap = () => {
             setTitle(data.nodeData.topic);
           }
         }
-        
-        // Check if PDF data exists in either storage key
-        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-        setPdfAvailable(!!pdfData);
-        setShowPdf(!!pdfData);
-
-        console.log("PDF available:", !!pdfData, "PDF data length:", pdfData ? pdfData.length : 0);
-        
-        // Ensure PDF data is also stored with the consistent key name
-        if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
-          sessionStorage.setItem('pdfData', sessionStorage.getItem('uploadedPdfData')!);
-        }
       } catch (error) {
         console.error("Error parsing mind map data for title:", error);
       }
@@ -61,7 +74,7 @@ const MindMap = () => {
     }, 100);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [toast]);
 
   const handleBack = () => {
     navigate("/");
