@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -131,6 +132,8 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     6. Max 12 nodes total
     7. For labels on arrows: A -->|Label text| B (use single pipes)
     8. Never use semicolons (;) in node text or connections
+    9. IMPORTANT: Never use hyphens (-) in node text. Replace them with underscores (_) or spaces.
+    10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
     
     EXAMPLE CORRECT SYNTAX:
     flowchart TD
@@ -221,7 +224,29 @@ const cleanMermaidSyntax = (code: string): string => {
       fixedLine = fixedLine.replace(/([A-Za-z0-9_]+)\s*-+>\s*\|([^|]*)\|\s*([A-Za-z0-9_]+)/g, "$1 -->|$2| $3");
       
       // Fix node IDs with hyphens by replacing with underscores
-      fixedLine = fixedLine.replace(/\b([A-Za-z0-9]+)-([A-Za-z0-9]+)\b/g, "$1_$2");
+      fixedLine = fixedLine.replace(/\b([A-Za-z0-9]+)-([A-Za-z0-9]+)\b(?!\]|\)|\})/g, "$1_$2");
+      
+      // Fix date ranges in node text by replacing hyphens with underscores
+      // Look for patterns like [text (1871-2020) text] and replace with [text (1871_2020) text]
+      fixedLine = fixedLine.replace(/\[([^\]]*?)(\d{4})-(\d{4})([^\]]*?)\]/g, '[$1$2_$3$4]');
+      fixedLine = fixedLine.replace(/\(([^\)]*)(\d{4})-(\d{4})([^\)]*)\)/g, '($1$2_$3$4)');
+      fixedLine = fixedLine.replace(/\{([^\}]*)(\d{4})-(\d{4})([^\}]*)\}/g, '{$1$2_$3$4}');
+      
+      // Replace all remaining hyphens inside node text with spaces or underscores
+      // Handle square brackets []
+      fixedLine = fixedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
+        return '[' + p1 + ' ' + p2 + ']';
+      });
+      
+      // Handle parentheses ()
+      fixedLine = fixedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
+        return '(' + p1 + ' ' + p2 + ')';
+      });
+      
+      // Handle curly braces {}
+      fixedLine = fixedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
+        return '{' + p1 + ' ' + p2 + '}';
+      });
       
       // Fix nodes without brackets by adding them
       const nodeDefinitionRegex = /^([A-Za-z0-9_]+)\s+\[([^\]]+)\]/;

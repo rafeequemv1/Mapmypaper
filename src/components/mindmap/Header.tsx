@@ -1,4 +1,3 @@
-
 import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Share2, Network2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
