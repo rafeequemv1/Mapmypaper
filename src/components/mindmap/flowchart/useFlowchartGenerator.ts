@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
