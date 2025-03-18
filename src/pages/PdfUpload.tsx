@@ -3,7 +3,7 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, FileText, Upload, KeyRound } from "lucide-react";
+import { Brain, FileText, Upload, KeyRound, FileSymlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +18,7 @@ const PdfUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,6 +122,40 @@ const PdfUpload = () => {
     });
   };
 
+  const handleExtractText = useCallback(async () => {
+    if (!selectedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please upload a PDF file first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExtracting(true);
+    toast({
+      title: "Processing PDF",
+      description: "Extracting text from PDF...",
+    });
+
+    try {
+      await extractTextFromPdf(selectedFile);
+      toast({
+        title: "Success",
+        description: "Text extracted successfully!",
+      });
+    } catch (error) {
+      console.error("Error extracting text:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to extract text from PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [selectedFile, toast]);
+
   const handleGenerateMindmap = useCallback(async () => {
     if (!selectedFile) {
       toast({
@@ -140,18 +175,24 @@ const PdfUpload = () => {
       return;
     }
 
+    if (!extractedText) {
+      toast({
+        title: "Extract text first",
+        description: "Please extract text from the PDF before generating a mind map",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     toast({
-      title: "Processing PDF",
-      description: "Extracting text and generating mind map...",
+      title: "Processing",
+      description: "Generating mind map with Gemini AI...",
     });
 
     try {
-      // Extract text from PDF
-      const text = await extractTextFromPdf(selectedFile);
-      
       // Process the text with Gemini to generate mind map data
-      const mindMapData = await generateMindMapFromText(text);
+      const mindMapData = await generateMindMapFromText(extractedText);
       
       // Store the generated mind map data in sessionStorage
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
@@ -167,7 +208,7 @@ const PdfUpload = () => {
       });
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast, showApiKeyInput]);
+  }, [selectedFile, navigate, toast, showApiKeyInput, extractedText]);
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden">
@@ -265,6 +306,27 @@ const PdfUpload = () => {
                     </p>
                   </div>
                 </div>
+                <Button 
+                  onClick={handleExtractText} 
+                  variant="outline"
+                  disabled={isExtracting || !selectedFile}
+                >
+                  {isExtracting ? "Extracting..." : "Extract Text"}
+                  <FileSymlink className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Extraction Status */}
+            {extractedText && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-600">
+                  <FileText className="h-5 w-5" />
+                  <p className="font-medium">Text extracted successfully!</p>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Extracted {extractedText.length.toLocaleString()} characters
+                </p>
               </div>
             )}
 
@@ -272,9 +334,10 @@ const PdfUpload = () => {
             <Button 
               onClick={handleGenerateMindmap} 
               className="w-full" 
-              disabled={!selectedFile || isProcessing || showApiKeyInput}
+              disabled={!selectedFile || isProcessing || showApiKeyInput || !extractedText}
             >
               {isProcessing ? "Processing..." : "Generate Mindmap with Gemini AI"}
+              <Brain className="ml-2 h-4 w-4" />
             </Button>
           </CardContent>
         </Card>
