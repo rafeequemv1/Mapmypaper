@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from "react";
-import { Brain, ArrowLeft } from "lucide-react";
+import { Brain, ArrowLeft, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
 import { 
@@ -19,6 +20,7 @@ const MindMap = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("Mind Map");
   const [showPdf, setShowPdf] = useState(true);
+  const [pdfAvailable, setPdfAvailable] = useState(false);
 
   useEffect(() => {
     // Set a small delay before generating the map to ensure DOM is ready
@@ -37,6 +39,7 @@ const MindMap = () => {
         
         // Check if PDF data exists
         const pdfData = sessionStorage.getItem('pdfData');
+        setPdfAvailable(!!pdfData);
         setShowPdf(!!pdfData);
       } catch (error) {
         console.error("Error parsing mind map data for title:", error);
@@ -56,6 +59,10 @@ const MindMap = () => {
     navigate("/");
   };
 
+  const togglePdf = () => {
+    setShowPdf(prev => !prev);
+  };
+
   return (
     <div className="min-h-screen flex flex-col overflow-hidden">
       {/* Header - thin and black */}
@@ -65,9 +72,22 @@ const MindMap = () => {
             <Brain className="h-5 w-5 text-white" />
             <h1 className="text-base font-medium text-white">PaperMind</h1>
           </div>
-          <Button variant="ghost" size="sm" className="text-white" onClick={handleBack}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back to Upload
-          </Button>
+          <div className="flex items-center gap-2">
+            {pdfAvailable && (
+              <Toggle 
+                pressed={showPdf} 
+                onPressedChange={togglePdf}
+                aria-label="Toggle PDF view"
+                className="text-white"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="ml-1 text-sm">PDF</span>
+              </Toggle>
+            )}
+            <Button variant="ghost" size="sm" className="text-white" onClick={handleBack}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back to Upload
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -82,7 +102,7 @@ const MindMap = () => {
         <div className="flex-1 flex flex-col">
           {/* Resizable panels for PDF and Mind Map */}
           <ResizablePanelGroup direction="horizontal" className="flex-1">
-            {showPdf && (
+            {showPdf && pdfAvailable && (
               <>
                 <ResizablePanel defaultSize={30} minSize={25}>
                   <PdfViewer />
@@ -90,7 +110,7 @@ const MindMap = () => {
                 <ResizableHandle withHandle />
               </>
             )}
-            <ResizablePanel defaultSize={showPdf ? 70 : 100}>
+            <ResizablePanel defaultSize={showPdf && pdfAvailable ? 70 : 100}>
               <MindMapViewer isMapGenerated={isMapGenerated} />
             </ResizablePanel>
           </ResizablePanelGroup>
