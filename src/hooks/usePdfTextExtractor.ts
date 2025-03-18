@@ -1,9 +1,6 @@
 
-import * as pdfjsLib from 'pdfjs-dist';
 import { useState } from 'react';
-
-// Set worker path relative to our application
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+import * as PDFToText from 'react-pdftotext';
 
 export const usePdfTextExtractor = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,26 +11,10 @@ export const usePdfTextExtractor = () => {
     setError(null);
     
     try {
-      // Read the file as array buffer
-      const arrayBuffer = await file.arrayBuffer();
+      // Convert the PDF file to text using react-pdftotext
+      const text = await PDFToText.default(file);
       
-      // Load the PDF document
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
-      
-      let fullText = '';
-      
-      // Extract text from each page
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const textItems = textContent.items.map((item: any) => 
-          'str' in item ? item.str : ''
-        );
-        fullText += textItems.join(' ') + '\n\n';
-      }
-      
-      return fullText;
+      return text;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to extract text from PDF';
       setError(errorMessage);
