@@ -56,6 +56,9 @@ const PdfViewer = ({ className }: PdfViewerProps) => {
       };
       
       await page.render(renderContext).promise;
+      
+      // Update current page
+      setCurrentPage(pageNum);
     } catch (error) {
       console.error("Error rendering PDF page:", error);
     }
@@ -66,8 +69,8 @@ const PdfViewer = ({ className }: PdfViewerProps) => {
     setIsLoading(true);
     
     try {
-      // Get PDF data from sessionStorage
-      const pdfData = sessionStorage.getItem('pdfData');
+      // Get PDF data from sessionStorage - try both possible keys
+      const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
       
       if (!pdfData) {
         console.error("No PDF data found in sessionStorage");
@@ -75,8 +78,18 @@ const PdfViewer = ({ className }: PdfViewerProps) => {
         return;
       }
       
+      console.log("Loading PDF with data length:", pdfData.length);
+      
+      // Check if it's a base64 data URL
+      let pdfBytes;
+      if (pdfData.startsWith('data:application/pdf;base64,')) {
+        pdfBytes = atob(pdfData.split(',')[1]);
+      } else {
+        pdfBytes = atob(pdfData);
+      }
+      
       // Load the PDF
-      const loadingTask = PDFJS.getDocument({ data: atob(pdfData) });
+      const loadingTask = PDFJS.getDocument({ data: pdfBytes });
       const pdf = await loadingTask.promise;
       
       setPdfDoc(pdf);

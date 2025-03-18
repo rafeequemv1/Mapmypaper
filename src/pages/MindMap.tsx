@@ -38,12 +38,17 @@ const MindMap = () => {
           }
         }
         
-        // Check if PDF data exists
-        const pdfData = sessionStorage.getItem('pdfData');
+        // Check if PDF data exists in either storage key
+        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
         setPdfAvailable(!!pdfData);
         setShowPdf(!!pdfData);
 
         console.log("PDF available:", !!pdfData, "PDF data length:", pdfData ? pdfData.length : 0);
+        
+        // Ensure PDF data is also stored with the consistent key name
+        if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
+          sessionStorage.setItem('pdfData', sessionStorage.getItem('uploadedPdfData')!);
+        }
       } catch (error) {
         console.error("Error parsing mind map data for title:", error);
       }
@@ -118,12 +123,15 @@ const MindMap = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Resizable panels for PDF, Mind Map, and Chat */}
         <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {/* Force show PDF for debugging - we'll remove this force later */}
-          <ResizablePanel defaultSize={25} minSize={20}>
-            <PdfViewer />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={showChat ? 50 : 75}>
+          {showPdf && (
+            <>
+              <ResizablePanel defaultSize={25} minSize={20}>
+                <PdfViewer />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+            </>
+          )}
+          <ResizablePanel defaultSize={showChat ? 50 : (showPdf ? 75 : 100)}>
             <MindMapViewer isMapGenerated={isMapGenerated} />
           </ResizablePanel>
           {showChat && (
@@ -135,15 +143,17 @@ const MindMap = () => {
                   <div className="flex items-center justify-between p-2 border-b bg-secondary/30">
                     <h3 className="font-medium">AI Chat Assistant</h3>
                     <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 text-muted-foreground hover:text-foreground" 
-                        onClick={togglePdf}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        {showPdf ? "Hide PDF" : "Show PDF"}
-                      </Button>
+                      {pdfAvailable && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 text-muted-foreground hover:text-foreground" 
+                          onClick={togglePdf}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          {showPdf ? "Hide PDF" : "Show PDF"}
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="icon" 

@@ -94,7 +94,10 @@ const PdfUpload = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64data = e.target?.result as string;
+        // Store PDF data under both keys for compatibility
+        sessionStorage.setItem('pdfData', base64data);
         sessionStorage.setItem('uploadedPdfData', base64data);
+        console.log("PDF data stored, length:", base64data.length);
       };
       reader.readAsDataURL(selectedFile);
       
