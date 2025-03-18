@@ -36,7 +36,7 @@ const Header = ({
         </Button>
       </div>
       
-      {/* Center section - Chat toggle button */}
+      {/* Center section - Research Assistant toggle button */}
       <div className="flex items-center justify-center w-1/3">
         <Toggle 
           pressed={showChat} 

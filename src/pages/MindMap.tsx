@@ -19,7 +19,11 @@ const MindMap = () => {
         console.log("PDF check on mount - available:", hasPdfData, "PDF data length:", pdfData ? pdfData.length : 0);
         
         setPdfAvailable(hasPdfData);
-        setShowPdf(hasPdfData);
+        
+        // Only show PDF if data is available
+        if (hasPdfData) {
+          setShowPdf(true);
+        }
         
         // Ensure PDF data is stored with the consistent key name
         if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
