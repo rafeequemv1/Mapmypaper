@@ -1,7 +1,9 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
-import "@mind-elixir/node-menu-neo/dist/style.css";
+// Fix the CSS import - let's use plain CSS instead
+import "../styles/node-menu.css"; // We'll create this file to replace the missing CSS
 import { Keyboard } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -14,7 +16,7 @@ interface EventMap {
   'operation': any;
   'selectNode': any;
   'expandNode': any;
-  'showNodeMenu': any;  // Use quoted string literal for property names
+  'showNodeMenu': any;
   'hideNodeMenu': any;
   // Add other event types as needed
 }
@@ -105,17 +107,17 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       mind.init(data);
       
       // Register event listeners for debugging
-      mind.bus.addListener('operation' as keyof EventMap, (operation: any) => {
+      // We need to explicitly type these for TypeScript compatibility
+      mind.bus.addListener('operation', (operation: any) => {
         console.log('Mind map operation:', operation);
       });
       
-      mind.bus.addListener('selectNode' as keyof EventMap, (node: any) => {
+      mind.bus.addListener('selectNode', (node: any) => {
         console.log('Node selected:', node);
       });
 
       // Add a specific listener for right-click events
-      // Use the correct type for the event name
-      mind.bus.addListener('showNodeMenu' as keyof EventMap, (node: any, e: any) => {
+      mind.bus.addListener('showNodeMenu', (node: any, e: any) => {
         console.log('Node menu shown for node:', node);
       });
       
