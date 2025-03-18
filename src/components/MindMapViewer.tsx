@@ -91,9 +91,9 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       mind.init(data);
       mindMapRef.current = mind;
 
-      // Add event listener to log node menu activity
-      mind.bus.addListener('contextmenu', (node: any) => {
-        console.log('Context menu opened for node:', node);
+      // Log when node menu should be opening (using the correct event name from the library)
+      mind.bus.addListener('node_mouse_up', (node) => {
+        console.log('Node clicked:', node);
       });
 
       // Add mind elixir instance to window for debugging
@@ -119,7 +119,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         <h3 className="text-lg font-medium p-4 text-center border-b">Your Mindmap</h3>
         <div 
           ref={containerRef} 
-          className="w-full h-[500px]" 
+          className="w-full h-[600px]" 
           style={{ background: '#f5f5f5' }}
         />
         <div className="text-center p-3 text-sm text-muted-foreground">
