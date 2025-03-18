@@ -23,7 +23,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         direction: 1 as const,
         draggable: true,
         editable: true,
-        contextMenu: true,
+        contextMenu: true, // Ensure context menu is enabled
         tools: {
           zoom: true,
           create: true,
@@ -36,13 +36,15 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           palette: [],
           cssVar: {},
         },
-        nodeMenu: true,
+        nodeMenu: {
+          extend: [], // Allow for extending the node menu with custom options if needed
+        },
         autoFit: true, // Enable auto-fit for initial rendering
       };
 
       const mind = new MindElixir(options);
       
-      // Install the node menu plugin correctly
+      // Install the node menu plugin correctly - make sure it runs before init
       mind.install(nodeMenu);
       
       // Create sample mindmap data using the correct types
@@ -91,7 +93,17 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         }
       };
 
+      // Initialize the mind map with data
       mind.init(data);
+      
+      // Register event listeners for debugging
+      mind.bus.addListener('operation', (operation: any) => {
+        console.log('Mind map operation:', operation);
+      });
+      
+      mind.bus.addListener('contextmenu', (node: any, e: MouseEvent) => {
+        console.log('Context menu opened for node:', node);
+      });
       
       // Function to fit the mind map within the container
       const fitMindMap = () => {
@@ -204,7 +216,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         )}
         
         <div className="text-center p-1 text-xs text-muted-foreground absolute bottom-0 left-0 right-0 bg-background/80">
-          You can drag to pan, use mouse wheel to zoom, and click nodes to expand/collapse. Right-click on nodes for more options.
+          Right-click on a node to open the context menu with options. You can also drag to pan, use mouse wheel to zoom.
         </div>
       </div>
     </div>

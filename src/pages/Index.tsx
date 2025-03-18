@@ -6,15 +6,22 @@ import { Separator } from "@/components/ui/separator";
 import MindMapViewer from "@/components/MindMapViewer";
 
 const Index = () => {
-  const [isMapGenerated, setIsMapGenerated] = useState(true); // Start with the map already generated
+  const [isMapGenerated, setIsMapGenerated] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Show toast when component mounts to indicate the mindmap is ready
-    toast({
-      title: "Mindmap loaded",
-      description: "Your mindmap is ready to use"
-    });
+    // Set a small delay before generating the map to ensure DOM is ready
+    const timer = setTimeout(() => {
+      setIsMapGenerated(true);
+      
+      // Show toast when mind map is ready
+      toast({
+        title: "Mindmap loaded",
+        description: "Your mindmap is ready to use. Right-click on nodes for options."
+      });
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   return (
