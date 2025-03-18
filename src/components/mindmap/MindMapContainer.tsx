@@ -26,7 +26,7 @@ const MindMapContainer = ({ isMapGenerated }: MindMapContainerProps) => {
         <div 
           ref={containerRef} 
           className="w-full h-full" 
-          style={{ background: '#f5f5f5' }}
+          style={{ background: '#f8f9fa' }}
         />
         
         {/* Keyboard shortcuts tooltip */}
