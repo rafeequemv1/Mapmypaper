@@ -45,7 +45,7 @@ const Header = ({
           className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
         >
           <MessageSquare className="h-4 w-4 mr-2" />
-          <span className="text-sm font-medium">Chat Assistant</span>
+          <span className="text-sm font-medium">Research Assistant</span>
         </Toggle>
       </div>
       

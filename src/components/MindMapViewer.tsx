@@ -1,10 +1,7 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
-import { Keyboard } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -44,6 +41,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
       // Initialize the mind map only once when it's generated
+      
       const options = {
         el: containerRef.current,
         direction: 1 as const,
@@ -76,8 +74,10 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       let data: MindElixirData;
       
       try {
+        
         const savedData = sessionStorage.getItem('mindMapData');
         if (savedData) {
+          
           const parsedData = JSON.parse(savedData);
           
           // Apply line breaks to node topics
@@ -99,9 +99,8 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           }
           
           data = parsedData;
-          console.log("Using mind map data from Gemini:", data);
         } else {
-          // Fallback to default data if nothing is in sessionStorage
+          
           data = {
             nodeData: {
               id: 'root',
@@ -146,11 +145,10 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
               ]
             }
           };
-          console.log("Using default mind map data");
         }
       } catch (error) {
+        
         console.error("Error parsing mind map data:", error);
-        // Use default data in case of parsing error
         data = {
           nodeData: {
             id: 'root',
@@ -165,121 +163,20 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Initialize the mind map with data
       mind.init(data);
       
-      // Register event listeners for debugging
-      // Use type assertion to any to bypass the TypeScript error
-      (mind.bus.addListener as any)('operation', (operation: any) => {
-        console.log('Mind map operation:', operation);
-      });
       
-      (mind.bus.addListener as any)('selectNode', (node: any) => {
-        console.log('Node selected:', node);
-      });
-
-      // Add a specific listener for right-click events
-      // Use type assertion to bypass the TypeScript error
-      (mind.bus.addListener as any)('showNodeMenu', (node: any, e: any) => {
-        console.log('Node menu shown for node:', node);
-      });
-      
-      // Function to fit the mind map within the container
-      const fitMindMap = () => {
-        if (!containerRef.current || !mindMapRef.current) return;
-        
-        // Get the mind map's root element
-        const mindMapRoot = mind.container;
-        if (!mindMapRoot) return;
-        
-        // Get dimensions
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const rootRect = mindMapRoot.getBoundingClientRect();
-        
-        // Calculate the scale needed to fit content
-        const scaleX = (containerRect.width * 0.9) / rootRect.width;
-        const scaleY = (containerRect.height * 0.9) / rootRect.height;
-        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down if needed
-        
-        // Apply scale and center
-        mindMapRef.current.scale(scale);
-        mindMapRef.current.toCenter();
-      };
+      mindMapRef.current = mind;
       
       // Set a timeout to ensure the mind map is rendered before scaling
       setTimeout(() => {
-        fitMindMap();
+        
         setIsReady(true);
       }, 300);
-      
-      mindMapRef.current = mind;
-
-      // Log the mind map instance for debugging
-      console.log("Mind Elixir initialized with options:", options);
-      console.log("Mind Elixir instance:", mind);
-      console.log("Node menu plugin status:", nodeMenu);
-      
-      // Add resize handler to ensure proper sizing when window resizes
-      const handleResize = () => fitMindMap();
-      
-      window.addEventListener('resize', handleResize);
-      
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        mindMapRef.current = null;
-      };
     }
   }, [isMapGenerated]);
-
-  // Function to handle manually opening node menu for testing
-  const testNodeMenu = () => {
-    if (mindMapRef.current) {
-      console.log("Attempting to manually trigger node menu");
-      
-      // Find a node element in the DOM
-      const nodeEl = document.querySelector('.mind-elixir-node');
-      if (nodeEl) {
-        // Simulate a right-click on the node
-        const evt = new MouseEvent('contextmenu', {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          button: 2,
-          buttons: 2,
-        });
-        nodeEl.dispatchEvent(evt);
-        console.log("Triggered contextmenu event on node element");
-      } else {
-        console.log("No node elements found in DOM");
-      }
-    }
-  };
 
   if (!isMapGenerated) {
     return null;
   }
-
-  const shortcuts = [
-    { key: 'Enter', action: 'Insert sibling node' },
-    { key: 'Shift + Enter', action: 'Insert sibling node before' },
-    { key: 'Tab', action: 'Insert child node' },
-    { key: 'Ctrl + Enter', action: 'Insert parent node' },
-    { key: 'F1', action: 'Center mind map' },
-    { key: 'F2', action: 'Edit current node' },
-    { key: '↑', action: 'Select previous node' },
-    { key: '↓', action: 'Select next node' },
-    { key: '← / →', action: 'Select nodes on the left/right' },
-    { key: 'PageUp / Alt + ↑', action: 'Move up' },
-    { key: 'PageDown / Alt + ↓', action: 'Move down' },
-    { key: 'Ctrl + ↑', action: 'Use two-sided layout' },
-    { key: 'Ctrl + ←', action: 'Use left-sided layout' },
-    { key: 'Ctrl + →', action: 'Use right-sided layout' },
-    { key: 'Delete', action: 'Remove node' },
-    { key: 'Ctrl + C', action: 'Copy' },
-    { key: 'Ctrl + V', action: 'Paste' },
-    { key: 'Ctrl + Z', action: 'Undo' },
-    { key: 'Ctrl + Y', action: 'Redo' },
-    { key: 'Ctrl + +', action: 'Zoom in mind map' },
-    { key: 'Ctrl + -', action: 'Zoom out mind map' },
-    { key: 'Ctrl + 0', action: 'Reset size' },
-  ];
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
@@ -289,35 +186,6 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           className="w-full h-full" 
           style={{ background: '#f5f5f5' }}
         />
-        
-        {/* Shortcuts button - positioned next to the toolbox */}
-        {isReady && (
-          <div className="absolute top-6 right-5 z-10">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button 
-                    className="flex items-center justify-center w-7 h-7 bg-white rounded-md shadow-sm hover:bg-gray-100 transition-colors ml-2"
-                    onClick={testNodeMenu} // Add click handler for testing
-                  >
-                    <Keyboard className="h-4 w-4 text-gray-700" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="p-2 bg-white shadow-md rounded-md w-64 max-h-80 overflow-y-auto">
-                  <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
-                  <ul className="space-y-1 text-xs">
-                    {shortcuts.map((shortcut, index) => (
-                      <li key={index} className="flex justify-between">
-                        <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
-                        <span className="text-gray-600">{shortcut.action}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        )}
       </div>
     </div>
   );

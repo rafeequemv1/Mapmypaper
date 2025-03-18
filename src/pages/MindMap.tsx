@@ -60,6 +60,7 @@ const MindMap = () => {
           showPdf={showPdf && pdfAvailable}
           showChat={showChat}
           toggleChat={toggleChat}
+          togglePdf={togglePdf}
         />
       </div>
     </div>

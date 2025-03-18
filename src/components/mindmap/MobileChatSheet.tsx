@@ -80,7 +80,7 @@ const MobileChatSheet = () => {
         <div className="flex items-center justify-between p-3 border-b">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            <h3 className="font-medium text-sm">Chat Assistant</h3>
+            <h3 className="font-medium text-sm">Research Assistant</h3>
           </div>
         </div>
         

@@ -1,22 +1,27 @@
-
 import { useEffect, useRef, useState } from "react";
 import * as PDFJS from "pdfjs-dist";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Eye, EyeOff, Minus, Plus, Keyboard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Initialize PDF.js worker
 PDFJS.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
   className?: string;
+  onTogglePdf?: () => void;
+  showPdf?: boolean;
 }
 
-const PdfViewer = ({ className }: PdfViewerProps) => {
+const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [pdfDoc, setPdfDoc] = useState<PDFJS.PDFDocumentProxy | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
 
   // Function to render a specific page
   const renderPage = async (pageNum: number) => {
@@ -170,6 +175,32 @@ const PdfViewer = ({ className }: PdfViewerProps) => {
     }
   };
 
+  // Keyboard shortcuts list
+  const shortcuts = [
+    { key: 'Enter', action: 'Insert sibling node' },
+    { key: 'Shift + Enter', action: 'Insert sibling node before' },
+    { key: 'Tab', action: 'Insert child node' },
+    { key: 'Ctrl + Enter', action: 'Insert parent node' },
+    { key: 'F1', action: 'Center mind map' },
+    { key: 'F2', action: 'Edit current node' },
+    { key: '↑', action: 'Select previous node' },
+    { key: '↓', action: 'Select next node' },
+    { key: '← / →', action: 'Select nodes on the left/right' },
+    { key: 'PageUp / Alt + ↑', action: 'Move up' },
+    { key: 'PageDown / Alt + ↓', action: 'Move down' },
+    { key: 'Ctrl + ↑', action: 'Use two-sided layout' },
+    { key: 'Ctrl + ←', action: 'Use left-sided layout' },
+    { key: 'Ctrl + →', action: 'Use right-sided layout' },
+    { key: 'Delete', action: 'Remove node' },
+    { key: 'Ctrl + C', action: 'Copy' },
+    { key: 'Ctrl + V', action: 'Paste' },
+    { key: 'Ctrl + Z', action: 'Undo' },
+    { key: 'Ctrl + Y', action: 'Redo' },
+    { key: 'Ctrl + +', action: 'Zoom in mind map' },
+    { key: 'Ctrl + -', action: 'Zoom out mind map' },
+    { key: 'Ctrl + 0', action: 'Reset size' },
+  ];
+
   return (
     <div className={`flex flex-col h-full ${className}`}>
       <div className="bg-muted/20 p-2 border-b flex items-center justify-between">
@@ -179,11 +210,7 @@ const PdfViewer = ({ className }: PdfViewerProps) => {
             className="p-1 rounded hover:bg-muted text-muted-foreground"
             aria-label="Zoom out"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              <line x1="8" y1="11" x2="14" y2="11" />
-            </svg>
+            <Minus className="h-4 w-4" />
           </button>
           
           <span className="text-xs">{Math.round(scale * 100)}%</span>
@@ -193,18 +220,50 @@ const PdfViewer = ({ className }: PdfViewerProps) => {
             className="p-1 rounded hover:bg-muted text-muted-foreground"
             aria-label="Zoom in"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              <line x1="11" y1="8" x2="11" y2="14" />
-              <line x1="8" y1="11" x2="14" y2="11" />
-            </svg>
+            <Plus className="h-4 w-4" />
           </button>
+          
+          <TooltipProvider>
+            <Tooltip open={showShortcuts} onOpenChange={setShowShortcuts}>
+              <TooltipTrigger asChild>
+                <button 
+                  className="p-1 rounded hover:bg-muted text-muted-foreground"
+                  onClick={() => setShowShortcuts(!showShortcuts)}
+                  aria-label="Keyboard shortcuts"
+                >
+                  <Keyboard className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="p-2 bg-white shadow-md rounded-md w-64 max-h-80 overflow-y-auto">
+                <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
+                <ul className="space-y-1 text-xs">
+                  {shortcuts.map((shortcut, index) => (
+                    <li key={index} className="flex justify-between">
+                      <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
+                      <span className="text-gray-600">{shortcut.action}</span>
+                    </li>
+                  ))}
+                </ul>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         <div className="text-xs text-muted-foreground">
           {isLoading ? 'Loading PDF...' : `Page ${currentPage} of ${numPages}`}
         </div>
+        
+        {onTogglePdf && (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={onTogglePdf} 
+            className="ml-2"
+            aria-label={showPdf ? "Hide PDF" : "Show PDF"}
+          >
+            {showPdf ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
       
       <ScrollArea className="flex-1" onScrollCapture={handleScroll}>
