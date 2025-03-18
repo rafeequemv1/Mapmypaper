@@ -1,8 +1,10 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu";
 import "@mind-elixir/node-menu/dist/style.css";
+import { Keyboard } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -11,6 +13,7 @@ interface MindMapViewerProps {
 const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -113,7 +116,10 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       };
       
       // Set a timeout to ensure the mind map is rendered before scaling
-      setTimeout(fitMindMap, 300);
+      setTimeout(() => {
+        fitMindMap();
+        setIsReady(true);
+      }, 300);
       
       mindMapRef.current = mind;
 
@@ -137,6 +143,14 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
     return null;
   }
 
+  const shortcuts = [
+    { key: 'Tab', action: 'Add child node' },
+    { key: 'Enter', action: 'Add sibling node' },
+    { key: 'Delete', action: 'Remove node' },
+    { key: 'Ctrl+Z', action: 'Undo' },
+    { key: 'Ctrl+Y', action: 'Redo' },
+  ];
+
   return (
     <div className="w-full h-full flex-1 flex flex-col">
       <div className="w-full h-[calc(100vh-100px)] bg-card overflow-hidden relative">
@@ -145,6 +159,33 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           className="w-full h-full" 
           style={{ background: '#f5f5f5' }}
         />
+        
+        {/* Shortcuts button - positioned next to the toolbox */}
+        {isReady && (
+          <div className="absolute top-6 right-5 z-10">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="flex items-center justify-center w-7 h-7 bg-white rounded-md shadow-sm hover:bg-gray-100 transition-colors ml-2">
+                    <Keyboard className="h-4 w-4 text-gray-700" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="p-2 bg-white shadow-md rounded-md w-56">
+                  <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
+                  <ul className="space-y-1 text-xs">
+                    {shortcuts.map((shortcut, index) => (
+                      <li key={index} className="flex justify-between">
+                        <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
+                        <span className="text-gray-600">{shortcut.action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+        
         <div className="text-center p-1 text-xs text-muted-foreground absolute bottom-0 left-0 right-0 bg-background/80">
           You can drag to pan, use mouse wheel to zoom, and click nodes to expand/collapse. Right-click on nodes for more options.
         </div>
