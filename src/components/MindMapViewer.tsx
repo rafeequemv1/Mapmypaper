@@ -1,12 +1,19 @@
 
 import MindMapContainer from "./mindmap/MindMapContainer";
+import { ExtractedImage } from "@/hooks/usePdfProcessor";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
+  extractedImages?: ExtractedImage[];
 }
 
-const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
-  return <MindMapContainer isMapGenerated={isMapGenerated} />;
+const MindMapViewer = ({ isMapGenerated, extractedImages }: MindMapViewerProps) => {
+  return (
+    <MindMapContainer 
+      isMapGenerated={isMapGenerated} 
+      extractedImages={extractedImages} 
+    />
+  );
 };
 
 export default MindMapViewer;
