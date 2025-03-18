@@ -25,16 +25,9 @@ const PdfUpload = () => {
     return new Promise((resolve, reject) => {
       console.log("Starting PDF extraction with file:", file.name, file.type, file.size);
       
-      // Try extracting with different settings
-      const extractionOptions = {
-        // Sometimes setting a higher scale can help with text extraction
-        scale: 2.0,
-        // Ensure we're handling potentially scanned PDFs better
-        ocr: true
-      };
-
-      // Attempt extraction with options
-      PdfToText(file, extractionOptions)
+      // The PdfToText function only accepts one argument (the file)
+      // We need to remove the options object
+      PdfToText(file)
         .then((text: string) => {
           console.log("Raw extraction result:", text);
           if (!text || typeof text !== 'string' || text.trim() === '') {
