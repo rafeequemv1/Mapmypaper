@@ -17,15 +17,11 @@ export function useMindMapInitializer(
       const mind = initializeMindMap(containerRef.current, (instance) => {
         // Since we can't directly assign to mindMapRef.current, we need to ensure
         // our initializeMindMap function handles setting the ref properly
-        // The implementation in mindMapUtils.ts will handle this
+        mindMapRef.current = instance;
       });
       
       // Store the instance locally within this effect closure
       const mindInstance = mind;
-      
-      // Using Object.defineProperty to set mindMapRef.current is also not possible
-      // as React refs are designed to be immutable objects
-      // We'll need to rely on the callback passed to initializeMindMap instead
       
       // Register event listeners for debugging
       mind.bus.addListener('operation', (operation: any) => {
@@ -67,8 +63,10 @@ export function useMindMapInitializer(
       
       return () => {
         window.removeEventListener('resize', handleResize);
-        // We can't directly set mindMapRef.current to null here
-        // The component using this hook must handle cleanup if needed
+        // Clean up mind map instance
+        if (mindMapRef.current) {
+          mindMapRef.current = null;
+        }
       };
     }
   }, [isMapGenerated, containerRef, mindMapRef]);
