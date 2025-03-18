@@ -74,9 +74,13 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       // Fix arrows if needed
       .replace(/->/g, "-->")
       // Replace any hyphens in node IDs with underscores
-      .replace(/(\w+)-(\w+)/g, "$1_$2")
+      .replace(/(\w+)-(\w+)(\[|\(|\{|\[\(|\{\{|\>\[)/g, "$1_$2$3")
       // Replace year ranges with underscores
-      .replace(/(\d{4})-(\d{4})/g, "$1_$2");
+      .replace(/(\d{4})-(\d{4})/g, "$1_$2")
+      // Fix malformed node definitions (missing closing brackets)
+      .replace(/(\w+\[.*?)(\r?\n|\s{2,})/g, "$1]$2")
+      .replace(/(\w+\(.*?)(\r?\n|\s{2,})/g, "$1)$2")
+      .replace(/(\w+\{.*?)(\r?\n|\s{2,})/g, "$1}$2");
     
     // Ensure it starts with flowchart directive
     if (!cleaned.startsWith("flowchart")) {
@@ -319,9 +323,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               <ul className="mt-1 pl-4 list-disc">
                 <li>Start with <code className="bg-gray-100 px-1">flowchart TD</code> for top-down layout</li>
                 <li>Node syntax: <code className="bg-gray-100 px-1">nodeId[Text]</code> or <code className="bg-gray-100 px-1">nodeId(Text)</code> or <code className="bg-gray-100 px-1">nodeId{'{'+'Text'+'}'}</code></li>
-                <li>Connection: <code className="bg-gray-100 px-1">A --{'>'}  B</code></li>
-                <li>Labeled edge: <code className="bg-gray-100 px-1">A --{'>'}|Label| B</code></li>
-                <li>Use alphanumeric IDs without hyphens</li>
+                <li>Connection: <code className="bg-gray-100 px-1">A --{'>'} B</code></li>
+                <li>Labeled edge: <code className="bg-gray-100 px-1">A --{'>'}{"|Label|"} B</code></li>
+                <li>Use alphanumeric IDs without hyphens or spaces</li>
+                <li>Subgraph: <code className="bg-gray-100 px-1">subgraph title ... end</code></li>
               </ul>
             </div>
           </div>
