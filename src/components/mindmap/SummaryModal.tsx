@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Copy, Check, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { generateStructuredSummary } from "@/services/gemini";
+import { generateStructuredSummary } from "@/services/gemini/summaryService";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -25,6 +25,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const [error, setError] = useState<string | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const { toast } = useToast();
+  const [progress, setProgress] = useState(20);
 
   // Reset state when modal is closed
   useEffect(() => {
@@ -41,35 +42,77 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     }
   }, [open]);
 
+  // Simulate progress during loading
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (loading) {
+      setProgress(20);
+      interval = setInterval(() => {
+        setProgress(prev => {
+          // Don't go beyond 90% until we actually get results
+          const next = prev + 5;
+          return next > 90 ? 90 : next;
+        });
+      }, 1000);
+    } else {
+      setProgress(100);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [loading]);
+
   const generateSummary = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // Check for PDF text first - this is what generateStructuredSummary will use
+      toast({
+        title: "Analyzing document",
+        description: "Generating a comprehensive summary...",
+      });
+      
+      console.log("Checking for PDF text");
+      // Check if PDF data exists
+      const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+      if (!pdfData) {
+        throw new Error("No PDF data found. Please upload a PDF document first.");
+      }
+      
+      console.log("PDF data found, length:", pdfData.length);
+      
+      // Check if pdfText exists, if not try to create a placeholder
       const pdfText = sessionStorage.getItem('pdfText');
       if (!pdfText || pdfText.trim() === '') {
-        // If pdfText is not available, try to extract it from the PDF data
-        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-        if (!pdfData) {
-          throw new Error("No PDF data found. Please upload a PDF document first.");
-        }
-        
-        // Store a placeholder if needed - normally this would come from PdfUpload.tsx
-        if (!sessionStorage.getItem('pdfText')) {
-          console.log("Setting temporary PDF text in session storage");
-          sessionStorage.setItem('pdfText', 'PDF text needs to be extracted');
-        }
+        console.log("No PDF text found, creating placeholder");
+        // Create a placeholder text so the service has something to work with
+        sessionStorage.setItem('pdfText', 'PDF text extraction in progress. Using document data for analysis.');
       }
 
-      const data = await generateStructuredSummary();
+      // Set a timeout to prevent the UI from hanging if the request takes too long
+      const timeoutPromise = new Promise<Record<string, string>>(
+        (_, reject) => setTimeout(() => reject(new Error("Summary generation is taking too long. Please try again.")), 45000)
+      );
+
+      const summaryPromise = generateStructuredSummary();
+      
+      const data = await Promise.race([summaryPromise, timeoutPromise]);
+      console.log("Summary data received:", Object.keys(data));
       setSummaryData(data);
+      
+      toast({
+        title: "Summary complete",
+        description: "Document analysis finished successfully",
+      });
     } catch (err) {
       console.error("Error generating summary:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate summary");
+      const errorMessage = err instanceof Error ? err.message : "Failed to generate summary";
+      setError(errorMessage);
+      
       toast({
         title: "Summary Generation Failed",
-        description: err instanceof Error ? err.message : "Failed to generate summary",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -134,9 +177,28 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     
     // Format bullet points with proper styling
     formatted = formatted.replace(/- (.*?)(?=\n|$)/g, '<li class="ml-4">$1</li>');
-    formatted = formatted.replace(/<li/g, '<ul class="list-disc pl-4 my-2"><li');
-    formatted = formatted.replace(/<\/li>/g, '</li></ul>');
-    formatted = formatted.replace(/<\/ul><ul class="list-disc pl-4 my-2">/g, '');
+    
+    // Wrap bullet points in ul tags
+    let hasOpenUl = false;
+    const lines = formatted.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('<li')) {
+        if (!hasOpenUl) {
+          lines[i] = '<ul class="list-disc pl-4 my-2">' + lines[i];
+          hasOpenUl = true;
+        }
+      } else if (hasOpenUl) {
+        lines[i-1] = lines[i-1] + '</ul>';
+        hasOpenUl = false;
+      }
+    }
+    
+    if (hasOpenUl) {
+      lines[lines.length-1] = lines[lines.length-1] + '</ul>';
+    }
+    
+    formatted = lines.join('\n');
     
     // Convert newlines to paragraph breaks
     formatted = formatted.split('\n\n').map(para => {
@@ -186,7 +248,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         
         {loading ? (
           <div className="flex flex-col items-center justify-center flex-1 p-6">
-            <Progress value={65} className="w-full max-w-md mb-4" />
+            <Progress value={progress} className="w-full max-w-md mb-4" />
             <p className="text-sm text-muted-foreground mb-10">Analyzing document and generating summary...</p>
             {renderLoadingSkeletons()}
           </div>
