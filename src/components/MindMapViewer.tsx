@@ -91,9 +91,9 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       mind.init(data);
       mindMapRef.current = mind;
 
-      // Fix: Use 'mouseup' or 'node_click' event instead of 'contextmenu' which is not in EventMap
-      mind.bus.addListener('mouseup', (node) => {
-        console.log('Mouse up on node:', node);
+      // Fix: Use 'node_click' event which is a valid event in the MindElixir EventMap
+      mind.bus.addListener('node_click', (node) => {
+        console.log('Node clicked:', node);
       });
 
       // Add mind elixir instance to window for debugging
