@@ -34,7 +34,7 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({ mindMap, childr
   };
 
   const handleAddSibling = () => {
-    if (mindMap) mindMap.insertSibling('after');
+    if (mindMap) mindMap.insertSibling();
   };
 
   const handleRemoveNode = () => {
