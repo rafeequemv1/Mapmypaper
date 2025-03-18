@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Eye, EyeOff, Minus, Plus, Keyboard } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -23,7 +23,6 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -57,32 +56,6 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   const handleZoomOut = () => {
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
   };
-
-  // Keyboard shortcuts list
-  const shortcuts = [
-    { key: 'Enter', action: 'Insert sibling node' },
-    { key: 'Shift + Enter', action: 'Insert sibling node before' },
-    { key: 'Tab', action: 'Insert child node' },
-    { key: 'Ctrl + Enter', action: 'Insert parent node' },
-    { key: 'F1', action: 'Center mind map' },
-    { key: 'F2', action: 'Edit current node' },
-    { key: '↑', action: 'Select previous node' },
-    { key: '↓', action: 'Select next node' },
-    { key: '← / →', action: 'Select nodes on the left/right' },
-    { key: 'PageUp / Alt + ↑', action: 'Move up' },
-    { key: 'PageDown / Alt + ↓', action: 'Move down' },
-    { key: 'Ctrl + ↑', action: 'Use two-sided layout' },
-    { key: 'Ctrl + ←', action: 'Use left-sided layout' },
-    { key: 'Ctrl + →', action: 'Use right-sided layout' },
-    { key: 'Delete', action: 'Remove node' },
-    { key: 'Ctrl + C', action: 'Copy' },
-    { key: 'Ctrl + V', action: 'Paste' },
-    { key: 'Ctrl + Z', action: 'Undo' },
-    { key: 'Ctrl + Y', action: 'Redo' },
-    { key: 'Ctrl + +', action: 'Zoom in mind map' },
-    { key: 'Ctrl + -', action: 'Zoom out mind map' },
-    { key: 'Ctrl + 0', action: 'Reset size' },
-  ];
 
   // Create array of page numbers for rendering
   const pageNumbers = Array.from(
@@ -125,48 +98,11 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
               <TooltipContent side="bottom">Zoom in</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip open={showShortcuts} onOpenChange={setShowShortcuts}>
-              <TooltipTrigger asChild>
-                <button 
-                  className="p-1 rounded hover:bg-muted text-muted-foreground"
-                  onClick={() => setShowShortcuts(!showShortcuts)}
-                  aria-label="Keyboard shortcuts"
-                >
-                  <Keyboard className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="p-2 bg-white shadow-md rounded-md w-64 max-h-80 overflow-y-auto">
-                <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
-                <ul className="space-y-1 text-xs">
-                  {shortcuts.map((shortcut, index) => (
-                    <li key={index} className="flex justify-between">
-                      <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
-                      <span className="text-gray-600">{shortcut.action}</span>
-                    </li>
-                  ))}
-                </ul>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
         
         <div className="text-xs text-muted-foreground">
           {isLoading ? 'Loading PDF...' : `Page ${currentPage} of ${numPages}`}
         </div>
-        
-        {onTogglePdf && (
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={onTogglePdf} 
-            className="ml-2"
-            aria-label={showPdf ? "Hide PDF" : "Show PDF"}
-          >
-            {showPdf ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-        )}
       </div>
       
       <ScrollArea className="flex-1">

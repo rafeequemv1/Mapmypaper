@@ -10,8 +10,6 @@ import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "./ChatPanel";
 import MobileChatSheet from "./MobileChatSheet";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -28,7 +26,6 @@ const PanelStructure = ({
 }: PanelStructureProps) => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   
   useEffect(() => {
     // Set a small delay before generating the map to ensure DOM is ready
@@ -55,17 +52,7 @@ const PanelStructure = ({
           </ResizablePanel>
           <ResizableHandle withHandle />
         </>
-      ) : (
-        <div className="absolute top-[60px] left-4 z-10">
-          <Button 
-            variant="secondary" 
-            className="rounded-full h-8 w-8 p-0 shadow-md"
-            onClick={togglePdf}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      ) : null}
       
       <ResizablePanel 
         defaultSize={showChat ? 50 : (showPdf ? 75 : 100)} 

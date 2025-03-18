@@ -1,5 +1,5 @@
 
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -15,6 +15,7 @@ const MobileChatSheet = () => {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
@@ -66,6 +67,31 @@ const MobileChatSheet = () => {
     }
   };
 
+  const copyToClipboard = (text: string, messageId: number) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedMessageId(messageId);
+      
+      toast({
+        title: "Copied to clipboard",
+        description: "Message content has been copied",
+        duration: 2000,
+      });
+      
+      // Reset the copied icon after 2 seconds
+      setTimeout(() => {
+        setCopiedMessageId(null);
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+      
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive"
+      });
+    });
+  };
+
   return (
     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
       <SheetTrigger asChild>
@@ -87,15 +113,31 @@ const MobileChatSheet = () => {
         <ScrollArea className="flex-1 p-4">
           <div className="flex flex-col gap-3">
             {messages.map((message, i) => (
-              <div 
-                key={i} 
-                className={`max-w-[80%] rounded-lg p-3 ${
-                  message.role === 'user' 
-                    ? 'bg-primary text-primary-foreground ml-auto' 
-                    : 'bg-muted'
-                }`}
-              >
-                {message.content}
+              <div key={i} className="group relative">
+                <div 
+                  className={`max-w-[80%] rounded-lg p-3 ${
+                    message.role === 'user' 
+                      ? 'bg-primary text-primary-foreground ml-auto' 
+                      : 'bg-muted'
+                  }`}
+                >
+                  {message.content}
+                  
+                  {message.role === 'assistant' && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => copyToClipboard(message.content, i)}
+                    >
+                      {copiedMessageId === i ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
             

@@ -1,8 +1,14 @@
 
-import { Brain, ArrowLeft, FileText, MessageSquare } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface HeaderProps {
   showPdf: boolean;
@@ -36,8 +42,8 @@ const Header = ({
         </Button>
       </div>
       
-      {/* Center section - Research Assistant toggle button */}
-      <div className="flex items-center justify-center w-1/3">
+      {/* Center section - Toggle buttons for research assistant and PDF */}
+      <div className="flex items-center justify-center w-1/3 gap-4">
         <Toggle 
           pressed={showChat} 
           onPressedChange={toggleChat}
@@ -47,10 +53,7 @@ const Header = ({
           <MessageSquare className="h-4 w-4 mr-2" />
           <span className="text-sm font-medium">Research Assistant</span>
         </Toggle>
-      </div>
-      
-      {/* PDF toggle on the right */}
-      <div className="flex items-center justify-end gap-4 w-1/3">
+        
         {pdfAvailable && (
           <Toggle 
             pressed={showPdf} 
@@ -62,6 +65,48 @@ const Header = ({
             <span className="text-sm font-medium">PDF</span>
           </Toggle>
         )}
+      </div>
+      
+      {/* Keyboard shortcuts on the right */}
+      <div className="flex items-center justify-end gap-4 w-1/3">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white"
+              >
+                <Keyboard className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="p-2 bg-white shadow-md rounded-md w-64 max-h-80 overflow-y-auto">
+              <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
+              <ul className="space-y-1 text-xs">
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Enter</span>
+                  <span className="text-gray-600">Insert sibling node</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Tab</span>
+                  <span className="text-gray-600">Insert child node</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Delete</span>
+                  <span className="text-gray-600">Remove node</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">F2</span>
+                  <span className="text-gray-600">Edit current node</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + C/V</span>
+                  <span className="text-gray-600">Copy/Paste</span>
+                </li>
+              </ul>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
+import { supabase } from "@/integrations/supabase/client";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -23,6 +24,8 @@ const MindMap = () => {
         // Only show PDF if data is available
         if (hasPdfData) {
           setShowPdf(true);
+        } else {
+          setShowPdf(false);
         }
         
         // Ensure PDF data is stored with the consistent key name
@@ -32,11 +35,15 @@ const MindMap = () => {
       } catch (error) {
         console.error("Error checking PDF availability:", error);
         setPdfAvailable(false);
+        setShowPdf(false);
       }
     };
     
     // Execute PDF check immediately
     checkPdfAvailability();
+    
+    // In the future, we can implement PDF storage in Supabase
+    // For now, we're using sessionStorage for temporary storage
   }, []);
 
   const togglePdf = () => {
