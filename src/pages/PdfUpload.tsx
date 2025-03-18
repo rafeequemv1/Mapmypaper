@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Upload, FileText, AlertCircle, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -6,20 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { usePdfTextExtractor } from "@/hooks/usePdfTextExtractor";
+import { usePdfImageExtractor, ExtractedImage } from "@/hooks/usePdfImageExtractor";
 import { Link } from "react-router-dom";
+import ReactMarkdown from 'react-markdown';
+import { Textarea } from "@/components/ui/textarea";
+import ImageGallery from "@/components/ImageGallery";
 
 const PdfUpload = () => {
   const [file, setFile] = useState<File | null>(null);
   const [extractedText, setExtractedText] = useState<string>("");
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { extractTextFromPdf, isLoading, error } = usePdfTextExtractor();
+  const { extractTextFromPdf, isLoading: isTextLoading, error: textError } = usePdfTextExtractor();
+  const { extractImagesFromPdf, extractedImages, isLoading: isImagesLoading, error: imagesError } = usePdfImageExtractor();
+  const [markdownContent, setMarkdownContent] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && selectedFile.type === "application/pdf") {
       setFile(selectedFile);
       setExtractedText("");
+      setMarkdownContent("");
       toast({
         title: "PDF Selected",
         description: `${selectedFile.name} (${(selectedFile.size / 1024).toFixed(2)} KB)`,
@@ -39,6 +48,7 @@ const PdfUpload = () => {
     if (droppedFile && droppedFile.type === "application/pdf") {
       setFile(droppedFile);
       setExtractedText("");
+      setMarkdownContent("");
       toast({
         title: "PDF Uploaded",
         description: `${droppedFile.name} (${(droppedFile.size / 1024).toFixed(2)} KB)`,
@@ -56,7 +66,7 @@ const PdfUpload = () => {
     e.preventDefault();
   };
 
-  const handleExtractText = async () => {
+  const handleExtractContent = async () => {
     if (!file) {
       toast({
         variant: "destructive",
@@ -66,39 +76,68 @@ const PdfUpload = () => {
       return;
     }
 
+    setIsProcessing(true);
+    
     try {
-      const text = await extractTextFromPdf(file);
+      // Extract text and images in parallel
+      const [text, images] = await Promise.all([
+        extractTextFromPdf(file),
+        extractImagesFromPdf(file)
+      ]);
+      
       setExtractedText(text);
+      
+      // Create markdown content with text and image references
+      let mdContent = text;
+      
+      if (images.length > 0) {
+        mdContent += "\n\n## Extracted Images\n\n";
+        images.forEach((img, index) => {
+          mdContent += `![Image ${index + 1} from page ${img.pageNumber}](${img.base64Data})\n\n`;
+        });
+      }
+      
+      setMarkdownContent(mdContent);
+      
       toast({
-        title: "Text Extracted",
-        description: "PDF text has been successfully extracted.",
+        title: "Content Extracted",
+        description: `Text and ${images.length} images extracted successfully.`,
       });
     } catch (err) {
       toast({
         variant: "destructive",
         title: "Extraction Failed",
-        description: error || "Failed to extract text from PDF.",
+        description: textError || imagesError || "Failed to extract content from PDF.",
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleContinueToMindMap = () => {
-    // Here you would typically store the extracted text in state or context
-    // For now, we'll just navigate to the mind map page
     if (extractedText) {
       localStorage.setItem('extractedPdfText', extractedText);
+      
+      // Store images in localStorage as well
+      if (extractedImages.length > 0) {
+        localStorage.setItem('extractedPdfImages', JSON.stringify(extractedImages));
+      }
+      
       toast({
-        title: "Text Saved",
-        description: "The extracted text is ready for mind mapping.",
+        title: "Content Saved",
+        description: "The extracted content is ready for mind mapping.",
       });
     } else {
       toast({
         variant: "destructive",
-        title: "No Text Available",
-        description: "Please extract text from a PDF first.",
+        title: "No Content Available",
+        description: "Please extract content from a PDF first.",
       });
     }
   };
+
+  const isLoading = isTextLoading || isImagesLoading || isProcessing;
+  const error = textError || imagesError;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -116,8 +155,8 @@ const PdfUpload = () => {
       <main className="flex-1 py-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">PDF Text Extraction</h1>
-            <p className="mt-2 text-lg text-gray-600">Upload your research paper to extract text for mind mapping</p>
+            <h1 className="text-3xl font-bold text-gray-900">PDF Content Extraction</h1>
+            <p className="mt-2 text-lg text-gray-600">Upload your research paper to extract text and images for mind mapping</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -162,17 +201,18 @@ const PdfUpload = () => {
                   onClick={() => {
                     setFile(null);
                     setExtractedText("");
+                    setMarkdownContent("");
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
-                  disabled={!file}
+                  disabled={!file || isLoading}
                 >
                   Clear
                 </Button>
                 <Button 
-                  onClick={handleExtractText} 
+                  onClick={handleExtractContent} 
                   disabled={!file || isLoading}
                 >
-                  {isLoading ? "Extracting..." : "Extract Text"}
+                  {isLoading ? "Extracting..." : "Extract Content"}
                 </Button>
               </CardFooter>
             </Card>
@@ -180,9 +220,9 @@ const PdfUpload = () => {
             {/* Results Section */}
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle>Extracted Text</CardTitle>
+                <CardTitle>Extracted Content</CardTitle>
                 <CardDescription>
-                  Text content extracted from your PDF
+                  Text and images extracted from your PDF
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -193,14 +233,22 @@ const PdfUpload = () => {
                   </div>
                 )}
                 <div className="bg-white border rounded-md h-[300px] overflow-auto p-4">
-                  {extractedText ? (
-                    <pre className="text-sm whitespace-pre-wrap font-sans">{extractedText}</pre>
+                  {markdownContent ? (
+                    <div className="prose prose-sm max-w-none">
+                      <ReactMarkdown>
+                        {markdownContent}
+                      </ReactMarkdown>
+                    </div>
                   ) : (
                     <div className="h-full flex items-center justify-center text-gray-400">
-                      <p>Extract text from your PDF to see results here</p>
+                      <p>Extract content from your PDF to see results here</p>
                     </div>
                   )}
                 </div>
+                
+                {extractedImages.length > 0 && (
+                  <ImageGallery images={extractedImages} />
+                )}
               </CardContent>
               <CardFooter>
                 <Button 
