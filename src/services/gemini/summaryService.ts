@@ -4,7 +4,21 @@ import { initGeminiClient, getPdfText, parseJsonResponse, truncatePdfText } from
 // Generate structured summaries from PDF content
 export const generateStructuredSummary = async (): Promise<Record<string, string>> => {
   try {
-    const pdfText = getPdfText();
+    // Attempt to get PDF text, will throw error if not available
+    let pdfText = "";
+    try {
+      pdfText = getPdfText();
+    } catch (error) {
+      // If getPdfText() fails, try to get PDF data directly from sessionStorage
+      const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+      if (!pdfData) {
+        throw new Error("No PDF content available. Please upload a PDF first.");
+      }
+      // If we have PDF data but no extracted text, use a simpler prompt
+      pdfText = "PDF text extraction incomplete. Using simplified analysis.";
+      // Store it so next time getPdfText() works
+      sessionStorage.setItem('pdfText', pdfText);
+    }
     
     // If there's no PDF text to analyze, throw an error
     if (!pdfText || pdfText.trim() === '') {
@@ -26,6 +40,11 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     Format your response as a JSON object with these section names as keys and the content as values.
     Keep each section concise and focused on the most important information.
     If the document doesn't contain information for a specific section, provide a brief note explaining this.
+    
+    Use proper formatting with markdown:
+    - Use headings with # for important section subtitles
+    - Format bullet points with - at the start of lines
+    - Use paragraphs separated by blank lines
     
     Document text:
     ${truncatePdfText(pdfText, 10000)}

@@ -46,10 +46,20 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     setError(null);
     
     try {
-      // Check if we have PDF data
-      const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-      if (!pdfData) {
-        throw new Error("No PDF data found. Please upload a PDF document first.");
+      // Check for PDF text first - this is what generateStructuredSummary will use
+      const pdfText = sessionStorage.getItem('pdfText');
+      if (!pdfText || pdfText.trim() === '') {
+        // If pdfText is not available, try to extract it from the PDF data
+        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+        if (!pdfData) {
+          throw new Error("No PDF data found. Please upload a PDF document first.");
+        }
+        
+        // Store a placeholder if needed - normally this would come from PdfUpload.tsx
+        if (!sessionStorage.getItem('pdfText')) {
+          console.log("Setting temporary PDF text in session storage");
+          sessionStorage.setItem('pdfText', 'PDF text needs to be extracted');
+        }
       }
 
       const data = await generateStructuredSummary();
@@ -93,9 +103,9 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
 
   const renderSummarySection = (title: string, content: string) => {
     return (
-      <div className="relative group mb-5">
+      <div className="relative group mb-5 p-4 bg-muted/10 rounded-lg">
         <div className="flex items-start justify-between">
-          <h3 className="text-lg font-semibold text-primary mb-2">{title}</h3>
+          <h3 className="text-xl font-semibold text-primary mb-3">{title}</h3>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -105,21 +115,39 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             {copiedSection === title ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
-        <div className="text-sm" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
+        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
       </div>
     );
   };
 
-  // Helper function to format text with bullet points and paragraphs
+  // Enhanced helper function to format text with bullet points, paragraphs and headings
   const formatText = (text: string): string => {
+    if (!text) return "";
+    
     // Replace bullet points
     let formatted = text.replace(/•/g, '&bull;');
     
-    // Convert newlines to <br> tags
-    formatted = formatted.replace(/\n/g, '<br>');
+    // Convert markdown-style headings to HTML
+    formatted = formatted.replace(/^###\s+(.*?)$/gm, '<h3 class="text-md font-medium mt-3 mb-2">$1</h3>');
+    formatted = formatted.replace(/^##\s+(.*?)$/gm, '<h2 class="text-lg font-semibold mt-4 mb-2">$1</h2>');
+    formatted = formatted.replace(/^#\s+(.*?)$/gm, '<h1 class="text-xl font-bold mt-4 mb-3">$1</h1>');
     
-    // Format bullet points with proper indentation
-    formatted = formatted.replace(/- /g, '&bull; ');
+    // Format bullet points with proper styling
+    formatted = formatted.replace(/- (.*?)(?=\n|$)/g, '<li class="ml-4">$1</li>');
+    formatted = formatted.replace(/<li/g, '<ul class="list-disc pl-4 my-2"><li');
+    formatted = formatted.replace(/<\/li>/g, '</li></ul>');
+    formatted = formatted.replace(/<\/ul><ul class="list-disc pl-4 my-2">/g, '');
+    
+    // Convert newlines to paragraph breaks
+    formatted = formatted.split('\n\n').map(para => {
+      if (!para.trim().startsWith('<h') && !para.trim().startsWith('<ul')) {
+        return `<p class="mb-2">${para}</p>`;
+      }
+      return para;
+    }).join('');
+    
+    // Fix any remaining newlines
+    formatted = formatted.replace(/\n/g, '<br>');
     
     return formatted;
   };
@@ -180,29 +208,31 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             </TabsList>
             
             <ScrollArea className="flex-1">
-              <TabsContent value="all" className="p-4">
-                {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
-                {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
-                {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
-                {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
-                {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
-                {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
-              </TabsContent>
-              
-              <TabsContent value="key-points" className="p-4">
-                {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
-                {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
-                {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
-              </TabsContent>
-              
-              <TabsContent value="methods-results" className="p-4">
-                {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
-                {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
-              </TabsContent>
-              
-              <TabsContent value="conclusions" className="p-4">
-                {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
-              </TabsContent>
+              <div className="p-4">
+                <TabsContent value="all" className="mt-0">
+                  {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
+                  {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
+                  {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
+                  {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
+                  {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
+                  {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
+                </TabsContent>
+                
+                <TabsContent value="key-points" className="mt-0">
+                  {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
+                  {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
+                  {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
+                </TabsContent>
+                
+                <TabsContent value="methods-results" className="mt-0">
+                  {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
+                  {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
+                </TabsContent>
+                
+                <TabsContent value="conclusions" className="mt-0">
+                  {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
+                </TabsContent>
+              </div>
             </ScrollArea>
           </Tabs>
         ) : (

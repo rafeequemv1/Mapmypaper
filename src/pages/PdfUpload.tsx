@@ -105,6 +105,10 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
       
+      // Store the extracted text in sessionStorage for summary generation
+      sessionStorage.setItem('pdfText', extractedText);
+      console.log("Stored PDF text in sessionStorage, length:", extractedText.length);
+      
       // Process the text with Gemini to generate mind map data
       const mindMapData = await generateMindMapFromText(extractedText);
       
