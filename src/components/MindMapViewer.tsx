@@ -36,13 +36,14 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           palette: [],
           cssVar: {},
         },
-        nodeMenu: true, // Fixed: This should be a boolean, not an object
+        nodeMenu: true, // This enables the built-in node menu
         autoFit: true, // Enable auto-fit for initial rendering
       };
 
+      // Create mind map instance
       const mind = new MindElixir(options);
       
-      // Install the node menu plugin correctly - make sure it runs before init
+      // Install the node menu plugin before init
       mind.install(nodeMenu);
       
       // Create sample mindmap data using the correct types
@@ -99,8 +100,6 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         console.log('Mind map operation:', operation);
       });
       
-      // Fixed: Use a valid event name from the EventMap
-      // The event name 'nodeContextmenu' might be what we're looking for
       mind.bus.addListener('selectNode', (node: any) => {
         console.log('Node selected:', node);
       });
@@ -109,7 +108,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       const fitMindMap = () => {
         if (!containerRef.current || !mindMapRef.current) return;
         
-        // Get the mind map's root element (ME instance has a container property)
+        // Get the mind map's root element
         const mindMapRoot = mind.container;
         if (!mindMapRoot) return;
         
