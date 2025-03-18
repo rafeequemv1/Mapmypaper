@@ -39,7 +39,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         nodeData: {
           id: 'root',
           topic: 'Research Paper Title',
-          root: true,
+          // Removed the 'root: true' property as it's not part of the NodeObj type
           children: [
             {
               id: 'bd1',
