@@ -1,4 +1,5 @@
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Share2, Network2 } from "lucide-react";
+
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Share2, Network } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -118,7 +119,7 @@ const Header = ({
             onClick={onOpenFlowchart}
             className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
           >
-            <Network2 className="h-4 w-4 mr-2" />
+            <Network className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">Create Flowchart</span>
           </Button>
         )}
