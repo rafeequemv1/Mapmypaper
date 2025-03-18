@@ -10,9 +10,9 @@ interface MindMapContainerProps {
 }
 
 const MindMapContainer = ({ isMapGenerated }: MindMapContainerProps) => {
-  // Use mutable ref object pattern instead of RefObject to allow setting current
+  // Use mutable ref object pattern
   const containerRef = useRef<HTMLDivElement>(null);
-  // Create a mutable ref for mind map instance
+  // Create a mutable ref for mind map instance (using generic MutableRefObject type)
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   // State to track if mind map is ready for our custom context menu
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);

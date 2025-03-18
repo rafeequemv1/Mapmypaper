@@ -1,22 +1,20 @@
 
-import { useEffect, useState, RefObject } from "react";
+import { useEffect, useState, RefObject, MutableRefObject } from "react";
 import { MindElixirInstance } from "mind-elixir";
 import { initializeMindMap, calculateMindMapScale } from "@/components/mindmap/mindMapUtils";
 
 export function useMindMapInitializer(
   isMapGenerated: boolean,
   containerRef: RefObject<HTMLDivElement>,
-  mindMapRef: RefObject<MindElixirInstance | null>
+  mindMapRef: MutableRefObject<MindElixirInstance | null>
 ) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
       // Initialize the mind map with a callback that will be used to set the reference
-      // instead of directly assigning to mindMapRef.current
       const mind = initializeMindMap(containerRef.current, (instance) => {
-        // Since we can't directly assign to mindMapRef.current, we need to ensure
-        // our initializeMindMap function handles setting the ref properly
+        // This callback will assign the instance to the ref
         mindMapRef.current = instance;
       });
       
@@ -63,10 +61,8 @@ export function useMindMapInitializer(
       
       return () => {
         window.removeEventListener('resize', handleResize);
-        // Clean up mind map instance
-        if (mindMapRef.current) {
-          mindMapRef.current = null;
-        }
+        // Clean up mind map instance - ensure this is a MutableRefObject to allow assignment
+        mindMapRef.current = null;
       };
     }
   }, [isMapGenerated, containerRef, mindMapRef]);

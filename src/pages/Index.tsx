@@ -6,29 +6,16 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import MindMapViewer from "@/components/MindMapViewer";
-import { ExtractedImage } from "@/hooks/usePdfProcessor";
 
 const Index = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [pdfTextLoaded, setPdfTextLoaded] = useState(false);
-  const [extractedImages, setExtractedImages] = useState<ExtractedImage[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     // Check if we have extracted PDF text
     const extractedText = localStorage.getItem('extractedPdfText');
     setPdfTextLoaded(!!extractedText);
-    
-    // Check if we have extracted PDF images
-    const imagesJson = localStorage.getItem('extractedPdfImages');
-    if (imagesJson) {
-      try {
-        const images = JSON.parse(imagesJson);
-        setExtractedImages(images);
-      } catch (err) {
-        console.error('Failed to parse extracted images:', err);
-      }
-    }
     
     // Set a small delay before generating the map to ensure DOM is ready
     const timer = setTimeout(() => {
@@ -70,7 +57,7 @@ const Index = () => {
           <div className="bg-green-50 px-4 py-2 border-b border-green-200 flex justify-center items-center">
             <FileText className="h-4 w-4 text-green-600 mr-2" />
             <p className="text-sm text-green-800">
-              PDF content loaded: {extractedImages.length > 0 ? `${extractedImages.length} images and text` : 'text only'}
+              PDF content loaded: text only
             </p>
           </div>
         )}
@@ -78,7 +65,6 @@ const Index = () => {
           {/* Mind Elixir Mindmap */}
           <MindMapViewer 
             isMapGenerated={isMapGenerated}
-            extractedImages={extractedImages}
           />
         </div>
       </main>
