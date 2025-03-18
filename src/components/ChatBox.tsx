@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { generateMindMapFromText } from "@/services/geminiService";
 import { useToast } from "@/hooks/use-toast";
 
 type Message = {
@@ -132,12 +131,7 @@ const ChatBox = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-l-lg shadow-md border-l">
-      <div className="p-3 border-b bg-secondary/30">
-        <h3 className="font-medium">AI Chat Assistant</h3>
-        <p className="text-xs text-muted-foreground">Ask questions about your document</p>
-      </div>
-      
+    <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message, index) => (
