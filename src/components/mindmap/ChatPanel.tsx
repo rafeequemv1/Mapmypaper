@@ -4,16 +4,14 @@ import { MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 
 interface ChatPanelProps {
-  showChat: boolean;
   toggleChat: () => void;
 }
 
-const ChatPanel = ({ showChat, toggleChat }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -83,80 +81,73 @@ const ChatPanel = ({ showChat, toggleChat }: ChatPanelProps) => {
     }
   };
 
-  if (!showChat) return null;
-
   return (
-    <>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={25} minSize={20} id="chat-panel">
-        <div className="flex flex-col h-full border-l">
-          {/* Chat panel header */}
-          <div className="flex items-center justify-between p-3 border-b bg-secondary/30">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              <h3 className="font-medium text-sm">Chat Assistant</h3>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8" 
-              onClick={toggleChat}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {/* Chat messages area */}
-          <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-            <div className="flex flex-col gap-3">
-              {messages.map((message, i) => (
-                <div 
-                  key={i} 
-                  className={`max-w-[80%] rounded-lg p-3 ${
-                    message.role === 'user' 
-                      ? 'bg-primary text-primary-foreground ml-auto' 
-                      : 'bg-muted'
-                  }`}
-                >
-                  {message.content}
-                </div>
-              ))}
-              
-              {isTyping && (
-                <div className="max-w-[80%] rounded-lg p-3 bg-muted">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
-                    <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          
-          {/* Input area */}
-          <div className="p-3 border-t">
-            <div className="flex gap-2">
-              <Textarea
-                className="flex-1 min-h-10 max-h-32 resize-none"
-                placeholder="Ask about the document..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-              <Button 
-                className="shrink-0" 
-                size="sm" 
-                onClick={handleSendMessage}
-                disabled={!inputValue.trim()}
-              >
-                Send
-              </Button>
-            </div>
-          </div>
+    <div className="flex flex-col h-full border-l">
+      {/* Chat panel header */}
+      <div className="flex items-center justify-between p-3 border-b bg-secondary/30">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          <h3 className="font-medium text-sm">Chat Assistant</h3>
         </div>
-      </ResizablePanel>
-    </>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={toggleChat}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      {/* Chat messages area */}
+      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+        <div className="flex flex-col gap-3">
+          {messages.map((message, i) => (
+            <div 
+              key={i} 
+              className={`max-w-[80%] rounded-lg p-3 ${
+                message.role === 'user' 
+                  ? 'bg-primary text-primary-foreground ml-auto' 
+                  : 'bg-muted'
+              }`}
+            >
+              {message.content}
+            </div>
+          ))}
+          
+          {isTyping && (
+            <div className="max-w-[80%] rounded-lg p-3 bg-muted">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+      
+      {/* Input area */}
+      <div className="p-3 border-t">
+        <div className="flex gap-2">
+          <Textarea
+            className="flex-1 min-h-10 max-h-32 resize-none"
+            placeholder="Ask about the document..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <Button 
+            className="shrink-0" 
+            size="sm" 
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim()}
+          >
+            Send
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 };
 

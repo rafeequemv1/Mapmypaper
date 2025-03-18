@@ -51,6 +51,7 @@ const PanelStructure = ({
           <ResizableHandle withHandle />
         </>
       )}
+      
       <ResizablePanel 
         defaultSize={showChat ? 50 : (showPdf ? 75 : 100)} 
         id="mindmap-panel"
@@ -58,8 +59,14 @@ const PanelStructure = ({
         <MindMapViewer isMapGenerated={isMapGenerated} />
       </ResizablePanel>
       
-      {/* Chat panel - only rendered when showChat is true */}
-      <ChatPanel showChat={showChat} toggleChat={toggleChat} />
+      {showChat && (
+        <>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={25} minSize={20} id="chat-panel">
+            <ChatPanel toggleChat={toggleChat} />
+          </ResizablePanel>
+        </>
+      )}
       
       {/* Mobile chat sheet - always rendered but only visible on mobile */}
       <MobileChatSheet />

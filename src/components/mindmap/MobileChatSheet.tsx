@@ -14,6 +14,7 @@ const MobileChatSheet = () => {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
@@ -66,7 +67,7 @@ const MobileChatSheet = () => {
   };
 
   return (
-    <Sheet>
+    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
       <SheetTrigger asChild>
         <Button 
           className="fixed right-4 bottom-4 rounded-full h-12 w-12 md:hidden shadow-lg"

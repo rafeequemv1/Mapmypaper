@@ -57,7 +57,7 @@ const MindMap = () => {
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <PanelStructure 
-          showPdf={showPdf}
+          showPdf={showPdf && pdfAvailable}
           showChat={showChat}
           toggleChat={toggleChat}
         />
