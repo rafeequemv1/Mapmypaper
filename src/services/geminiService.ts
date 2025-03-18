@@ -124,27 +124,34 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     Analyze the following academic paper/document text and create a flowchart in Mermaid syntax.
     
     IMPORTANT INSTRUCTIONS FOR MERMAID FLOWCHART:
-    1. Use only standard Mermaid flowchart TD syntax
-    2. Do NOT use hyphens or dashes in node IDs - use alphanumeric characters only
-    3. Avoid special characters in node text that might break the parser
-    4. For any years or dates, use underscore instead of hyphen (e.g., "2023_2024" not "2023-2024")
-    5. Keep node texts very short and concise
-    6. Always use letters or alphanumeric strings for node IDs (e.g., A, B, C, process1, etc.)
-    7. Wrap all node texts in square brackets
-    8. Use only these node shapes: [] for rectangle, () for rounded rectangle, {} for diamond
-    9. Maximum 15-20 nodes total for clarity
+    1. Use 'flowchart TD' for top-down flowchart direction
+    2. Follow EXACTLY this syntax for node definition: nodeId[Text] or nodeId(Text) or nodeId{Text}
+    3. Follow EXACTLY this syntax for edges: nodeId1 --> nodeId2
+    4. Use alphanumeric characters ONLY for node IDs - NO HYPHENS or special characters
+    5. Node IDs should be simple like A, B, C, process1, decision1, etc.
+    6. All text content must be enclosed in square brackets [], parentheses (), or curly braces {}
+    7. For edge labels, use: nodeId1 -->|Text| nodeId2
+    8. Avoid dates with hyphens like "2023-2024" - use "2023_2024" instead
+    9. Keep the flowchart simple with max 15 nodes
+    10. Check every line to ensure it matches proper Mermaid syntax
     
-    Example of correct syntax:
-    
+    CORRECT SYNTAX EXAMPLES:
     flowchart TD
-        A[Start] --> B{Decision Point}
-        B -->|Yes| C[Process 1]
-        B -->|No| D[Process 2]
-        C --> E[End Result]
+        A[Start] --> B{Decision}
+        B -->|Yes| C[Process1]
+        B -->|No| D[Process2]
+        C --> E[End]
         D --> E
+    
+    INCORRECT SYNTAX EXAMPLES (DO NOT DO THESE):
+    - Using hyphens in node IDs: node-1 --> node-2
+    - Missing brackets for text: A Start --> B Decision
+    - Using dates with hyphens: A[2023-2024 Report]
     
     Here's the document text to analyze:
     ${pdfText.slice(0, 10000)}
+    
+    Respond ONLY with valid Mermaid flowchart code, nothing else.
     `;
     
     const result = await model.generateContent(prompt);
@@ -157,12 +164,34 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
       .replace(/```\s?/g, "")
       .trim();
     
-    // Add basic error checking - if the response is empty, too short, or doesn't start with "flowchart"
-    if (!mermaidCode || mermaidCode.length < 20 || !mermaidCode.startsWith("flowchart")) {
-      console.error("Invalid flowchart generated:", mermaidCode);
+    // Validate syntax - basic checks for common issues
+    const validationChecks = [
+      { test: /flowchart (TD|LR|RL|BT)/i, error: "Missing or invalid flowchart directive" },
+      { test: /->/g, error: "Invalid arrow syntax (-> instead of -->)" },
+      { test: /\w+-\w+/g, error: "Node IDs contain hyphens" },
+      { test: /\d{4}-\d{4}/g, error: "Year ranges contain hyphens" },
+    ];
+    
+    for (const check of validationChecks) {
+      if (check.test.test(mermaidCode) && check.error.includes("Invalid arrow")) {
+        return mermaidCode.replace(/->/g, "-->");
+      }
+      
+      if (check.test.test(mermaidCode) && check.error.includes("Node IDs contain hyphens")) {
+        return `flowchart TD
+          A[Error] --> B[Invalid Syntax]
+          B --> C[Node IDs should not contain hyphens]`;
+      }
+      
+      if (check.test.test(mermaidCode) && check.error.includes("Year ranges contain hyphens")) {
+        return mermaidCode.replace(/(\d{4})-(\d{4})/g, "$1_$2");
+      }
+    }
+    
+    if (!mermaidCode.startsWith("flowchart")) {
       return `flowchart TD
-        A[Start] --> B[No valid flowchart could be generated]
-        B --> C[Try with a different document]`;
+        A[Error] --> B[Invalid Syntax]
+        B --> C[Flowchart directive missing]`;
     }
     
     return mermaidCode;

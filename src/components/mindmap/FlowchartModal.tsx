@@ -65,16 +65,40 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     }
   }, [code]);
 
+  // Helper function to clean and validate Mermaid syntax
+  const cleanMermaidSyntax = (input: string): string => {
+    let cleaned = input.trim();
+    
+    // Fix common syntax errors
+    cleaned = cleaned
+      // Fix arrows if needed
+      .replace(/->/g, "-->")
+      // Replace any hyphens in node IDs with underscores
+      .replace(/(\w+)-(\w+)/g, "$1_$2")
+      // Replace year ranges with underscores
+      .replace(/(\d{4})-(\d{4})/g, "$1_$2");
+    
+    // Ensure it starts with flowchart directive
+    if (!cleaned.startsWith("flowchart")) {
+      cleaned = "flowchart TD\n" + cleaned;
+    }
+    
+    return cleaned;
+  };
+
   const generateFlowchart = async () => {
     try {
       setIsGenerating(true);
       setError(null);
       const flowchartCode = await generateFlowchartFromPdf();
       
+      // Clean and validate the mermaid syntax
+      const cleanedCode = cleanMermaidSyntax(flowchartCode);
+      
       // Check if the flowchart code is valid
       try {
-        await mermaid.parse(flowchartCode);
-        setCode(flowchartCode);
+        await mermaid.parse(cleanedCode);
+        setCode(cleanedCode);
         toast({
           title: "Flowchart Generated",
           description: "A flowchart has been created based on your PDF content.",
@@ -114,11 +138,14 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       // Create a unique ID for the diagram
       const id = `flowchart-${Date.now()}`;
       
+      // Attempt to clean the syntax before parsing
+      const cleanedCode = cleanMermaidSyntax(code);
+      
       // Parse the flowchart to verify syntax before rendering
-      await mermaid.parse(code);
+      await mermaid.parse(cleanedCode);
       
       // If parse succeeds, render the flowchart
-      const { svg } = await mermaid.render(id, code);
+      const { svg } = await mermaid.render(id, cleanedCode);
       previewRef.current.innerHTML = svg;
     } catch (err) {
       console.error("Failed to render flowchart:", err);
@@ -129,7 +156,12 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         previewRef.current.innerHTML = `<div class="text-red-500 p-4">
           <h3 class="font-bold">Rendering Error</h3>
           <p>${err instanceof Error ? err.message : "Unknown error"}</p>
-          <p class="mt-2 text-sm">Please check your syntax and try again.</p>
+          <p class="mt-2 text-sm">Common errors:</p>
+          <ul class="list-disc pl-5 text-sm">
+            <li>Node IDs should be alphanumeric without hyphens</li>
+            <li>All node text must be in brackets: [text], (text), or {text}</li>
+            <li>Arrows should use --> not -></li>
+          </ul>
         </div>`;
       }
     }
@@ -282,6 +314,16 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
                 {error}
               </div>
             )}
+            <div className="mt-2 bg-gray-50 p-2 rounded text-xs text-gray-600">
+              <h4 className="font-medium">Quick Syntax Reference:</h4>
+              <ul className="mt-1 pl-4 list-disc">
+                <li>Start with <code className="bg-gray-100 px-1">flowchart TD</code> for top-down layout</li>
+                <li>Node syntax: <code className="bg-gray-100 px-1">nodeId[Text]</code> or <code className="bg-gray-100 px-1">nodeId(Text)</code> or <code className="bg-gray-100 px-1">nodeId{'{Text}'}</code></li>
+                <li>Connection: <code className="bg-gray-100 px-1">A --> B</code></li>
+                <li>Labeled edge: <code className="bg-gray-100 px-1">A -->|Label| B</code></li>
+                <li>Use alphanumeric IDs without hyphens</li>
+              </ul>
+            </div>
           </div>
           
           {/* Preview */}
