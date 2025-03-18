@@ -120,67 +120,53 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Analyze the following academic paper/document text and create a flowchart in Mermaid syntax.
+    Create a simple, valid Mermaid flowchart based on this document text.
     
-    CRITICAL SYNTAX RULES FOR MERMAID FLOWCHART:
-    1. Use 'flowchart TD' for top-down flowchart direction
-    2. Node definitions MUST follow this syntax: nodeId[Text] or nodeId(Text) or nodeId{Text}
-    3. Connections MUST use EXACTLY TWO DASHES and ONE ARROW: A --> B (not A -> B or A ---> B)
-    4. Use ONLY alphanumeric characters for node IDs - NO HYPHENS or special characters
-    5. Node IDs should be simple like A, B, C, process1, decision1, etc.
-    6. All node text content must be enclosed in square brackets [], parentheses (), or curly braces {}
-    7. For edge labels use: A -->|Text| B (exactly this format with single pipes)
-    8. Do not use hyphens in any node IDs or edge labels
-    9. Keep the flowchart simple with max 12 nodes
-    10. IMPORTANT: Use exactly 2 dashes in arrows: A --> B (not A -> B or A ---> B)
-    11. For subgraphs, use this exact syntax:
-       subgraph title
-         node1 --> node2
-       end
+    CRITICAL MERMAID SYNTAX RULES:
+    1. Start with 'flowchart TD'
+    2. Nodes MUST have this format: A[Text] or A(Text) or A{Text} - no exceptions
+    3. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
+    4. Connections MUST use EXACTLY TWO dashes: A --> B (not A->B or A---->B)
+    5. Each line should define ONE connection or ONE node
+    6. Max 12 nodes total
+    7. For labels on arrows: A -->|Label text| B (use single pipes)
+    8. Never use semicolons (;) in node text or connections
     
-    EXAMPLES OF CORRECT SYNTAX:
-    \`\`\`
+    EXAMPLE CORRECT SYNTAX:
     flowchart TD
-        A[Start] --> B{Decision}
-        B -->|Yes| C[Process1]
-        B -->|No| D[Process2]
-        C --> E[End]
-        D --> E
-        
-        subgraph Section1
-          F[Step1] --> G[Step2]
-        end
-        
-        E --> F
-    \`\`\`
+      A[Start] --> B{Decision}
+      B -->|Yes| C[Process1]
+      B -->|No| D[Process2]
+      C --> E[End]
+      D --> E
     
-    EXAMPLES OF INCORRECT SYNTAX (DO NOT DO THESE):
-    - WRONG: A[Start] -> B{Decision}  (use A --> B instead)
-    - WRONG: A[Start] ---> B{Decision}  (use A --> B instead)
-    - WRONG: node-1 --> node-2  (don't use hyphens in node IDs)
-    - WRONG: A Start --> B Decision  (text must be in brackets)
-    - WRONG: A--B  (must use the exact syntax A --> B)
+    If you need to define subgraphs:
+    flowchart TD
+      A[Start] --> B[Process]
+      B --> C[End]
+      
+      subgraph Section1
+        D[Step1] --> E[Step2]
+      end
     
-    Here's the document text to analyze:
-    ${pdfText.slice(0, 10000)}
+    Here's the document text:
+    ${pdfText.slice(0, 8000)}
     
-    Respond ONLY with valid Mermaid flowchart code, nothing else.
+    Generate ONLY valid Mermaid flowchart code, nothing else.
     `;
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text().trim();
     
-    // Remove any markdown code blocks and clean up the response
+    // Remove markdown code blocks if present
     const mermaidCode = text
       .replace(/```mermaid\s?/g, "")
       .replace(/```\s?/g, "")
       .trim();
     
-    // Clean the generated code
-    const cleanedCode = cleanMermaidSyntax(mermaidCode);
-    
-    return cleanedCode;
+    // Clean the Mermaid syntax before returning
+    return cleanMermaidSyntax(mermaidCode);
   } catch (error) {
     console.error("Gemini API flowchart generation error:", error);
     return `flowchart TD
@@ -197,60 +183,73 @@ const cleanMermaidSyntax = (code: string): string => {
       B --> C[Please try again]`;
   }
 
-  // Ensure the code starts with flowchart directive
-  let cleaned = code.trim();
-  if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart TD\n" + cleaned;
-  }
+  try {
+    // Ensure the code starts with flowchart directive
+    let cleaned = code.trim();
+    if (!cleaned.startsWith("flowchart")) {
+      cleaned = "flowchart TD\n" + cleaned;
+    }
 
-  // Fix arrow syntax: replace any variations of arrows with proper -->
-  cleaned = cleaned
-    .replace(/-+>/g, "-->") // Replace any number of dashes with exactly 2
-    .replace(/([A-Za-z0-9_]+)[ ]*->[ ]*([A-Za-z0-9_]+)/g, "$1 --> $2"); // Add proper spacing
-
-  // Fix node IDs with hyphens
-  cleaned = cleaned.replace(/([A-Za-z0-9]+)-([A-Za-z0-9]+)/g, "$1_$2");
-
-  // Fix missing brackets in node definitions
-  // This regex looks for node IDs that aren't followed by [], (), or {}
-  cleaned = cleaned.replace(/\b([A-Za-z0-9_]+)(?!\[[^\]]*\]|\([^)]*\)|{[^}]*})(?=\s|$|-->)/g, "$1[?]");
-
-  // Validate lines to ensure they follow Mermaid syntax
-  const lines = cleaned.split('\n');
-  const validLines = lines.filter(line => {
-    // Keep comment lines, empty lines, subgraph lines, and end
-    if (line.trim() === '' || line.trim().startsWith('%') || 
-        line.trim().startsWith('subgraph') || line.trim() === 'end') {
-      return true;
+    // Process line by line to ensure each line is valid
+    const lines = cleaned.split('\n');
+    const validLines: string[] = [];
+    
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      
+      // Skip empty lines and keep comments
+      if (trimmedLine === '' || trimmedLine.startsWith('%')) {
+        validLines.push(line);
+        return;
+      }
+      
+      // Keep flowchart directive
+      if (trimmedLine.startsWith('flowchart') || 
+          trimmedLine.startsWith('subgraph') || 
+          trimmedLine === 'end') {
+        validLines.push(line);
+        return;
+      }
+      
+      // Fix arrow syntax: ensure exactly two dashes
+      let fixedLine = line;
+      
+      // Replace arrows with more or fewer than 2 dashes
+      fixedLine = fixedLine.replace(/([A-Za-z0-9_]+)\s*-+>\s*([A-Za-z0-9_]+)/g, "$1 --> $2");
+      
+      // Fix arrows with labels too
+      fixedLine = fixedLine.replace(/([A-Za-z0-9_]+)\s*-+>\s*\|([^|]*)\|\s*([A-Za-z0-9_]+)/g, "$1 -->|$2| $3");
+      
+      // Fix node IDs with hyphens by replacing with underscores
+      fixedLine = fixedLine.replace(/\b([A-Za-z0-9]+)-([A-Za-z0-9]+)\b/g, "$1_$2");
+      
+      // Fix nodes without brackets by adding them
+      const nodeDefinitionRegex = /^([A-Za-z0-9_]+)\s+\[([^\]]+)\]/;
+      const nodeWithoutBrackets = /^([A-Za-z0-9_]+)(\s+)(?!\[|\(|\{)(.*?)(\s*-->|\s*$)/;
+      
+      if (nodeWithoutBrackets.test(fixedLine)) {
+        fixedLine = fixedLine.replace(nodeWithoutBrackets, "$1$2[$3]$4");
+      }
+      
+      // Remove semicolons which can cause issues
+      fixedLine = fixedLine.replace(/;/g, "");
+      
+      validLines.push(fixedLine);
+    });
+    
+    // Validate: ensure there's at least one connection (arrow)
+    const hasConnections = validLines.some(line => line.includes('-->'));
+    
+    if (!hasConnections) {
+      console.warn("No connections found in flowchart, adding default connection");
+      validLines.push("A[Start] --> B[End]");
     }
     
-    // Keep lines that define connections (A --> B)
-    if (line.includes('-->')) {
-      return true;
-    }
-    
-    // Keep lines that define nodes (A[Text])
-    if (/[A-Za-z0-9_]+\[[^\]]*\]/.test(line) || 
-        /[A-Za-z0-9_]+\([^)]*\)/.test(line) || 
-        /[A-Za-z0-9_]+{[^}]*}/.test(line)) {
-      return true;
-    }
-    
-    // Keep flowchart directive lines
-    if (line.startsWith('flowchart')) {
-      return true;
-    }
-    
-    // Filter out any lines that don't match the above criteria
-    return false;
-  });
-  
-  // If we've filtered out too many lines, use a default flowchart
-  if (validLines.length < 3 && !validLines.some(line => line.includes('-->'))) {
+    return validLines.join('\n');
+  } catch (error) {
+    console.error("Error cleaning Mermaid syntax:", error);
     return `flowchart TD
-      A[Error] --> B[Invalid Syntax]
-      B --> C[Could not generate valid flowchart]`;
+      A[Error] --> B[Syntax Cleaning Failed]
+      B --> C[Please try again]`;
   }
-  
-  return validLines.join('\n');
 };
