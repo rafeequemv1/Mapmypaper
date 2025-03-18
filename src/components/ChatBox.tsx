@@ -1,10 +1,12 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, User, Bot } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 type Message = {
   role: "user" | "assistant";
@@ -129,40 +131,113 @@ const ChatBox = () => {
     }
   };
 
+  // Format message content with basic markdown-like formatting
+  const formatMessageContent = (content: string) => {
+    // Handle code blocks with ```
+    content = content.replace(
+      /```(.*?)\n([\s\S]*?)```/g,
+      '<pre class="bg-muted p-3 rounded-md my-2 overflow-x-auto"><code>$2</code></pre>'
+    );
+    
+    // Handle inline code with `
+    content = content.replace(
+      /`([^`]+)`/g, 
+      '<code class="bg-muted px-1 rounded text-sm font-mono">$1</code>'
+    );
+    
+    // Handle bold with ** or __
+    content = content.replace(
+      /(\*\*|__)(.*?)\1/g,
+      '<strong>$2</strong>'
+    );
+    
+    // Handle italic with * or _
+    content = content.replace(
+      /(\*|_)(.*?)\1/g,
+      '<em>$2</em>'
+    );
+    
+    // Handle line breaks
+    content = content.replace(/\n/g, '<br/>');
+    
+    return content;
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Message area - takes all available space but allows scrolling */}
       <div className="flex-1 overflow-hidden relative">
         <ScrollArea className="h-full absolute inset-0">
           <div className="p-4 space-y-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+            {messages.map((message, index) => {
+              // Check if this message is part of a sequence from the same sender
+              const isSequence = index > 0 && messages[index - 1].role === message.role;
+              return (
                 <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}
+                  key={index}
+                  className={cn(
+                    "flex gap-3 items-start",
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  )}
                 >
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1">
-                    {message.timestamp.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                  {/* Only show avatar for first message in a sequence */}
+                  {message.role === "assistant" && !isSequence && (
+                    <Avatar className="h-8 w-8 bg-primary/10 flex items-center justify-center">
+                      <Bot className="h-4 w-4 text-primary" />
+                    </Avatar>
+                  )}
+                  
+                  <div
+                    className={cn(
+                      "max-w-[85%] rounded-lg px-4 py-2.5 text-sm",
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-tr-none"
+                        : "bg-muted rounded-tl-none",
+                      // Add margin-left for user messages in a sequence
+                      message.role === "user" && isSequence ? "ml-12" : "",
+                      // Add margin-right for assistant messages in a sequence  
+                      message.role === "assistant" && isSequence ? "ml-12" : ""
+                    )}
+                  >
+                    <div 
+                      className="whitespace-pre-wrap break-words"
+                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
+                    />
+                    <div className="text-xs opacity-70 mt-1.5 text-right">
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Only show avatar for first message in a sequence */}
+                  {message.role === "user" && !isSequence && (
+                    <Avatar className="h-8 w-8 bg-primary flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary-foreground" />
+                    </Avatar>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
       </div>
+      
+      {/* Typing indicator when loading */}
+      {isLoading && (
+        <div className="px-4 py-2">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="flex space-x-1">
+              <div className="h-2 w-2 rounded-full bg-current animate-bounce" />
+              <div className="h-2 w-2 rounded-full bg-current animate-bounce delay-75" />
+              <div className="h-2 w-2 rounded-full bg-current animate-bounce delay-150" />
+            </div>
+            <span className="text-xs">AI is thinking...</span>
+          </div>
+        </div>
+      )}
       
       {/* Fixed input area at bottom */}
       <div className="flex-shrink-0 border-t bg-background p-3">
