@@ -85,6 +85,10 @@ const MindMap = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" className="text-white" onClick={handleBack}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+          
           {pdfAvailable && (
             <Toggle 
               pressed={showPdf} 
@@ -106,10 +110,6 @@ const MindMap = () => {
             <MessageSquare className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">Chat</span>
           </Toggle>
-          
-          <Button variant="ghost" size="sm" className="text-white" onClick={handleBack}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
         </div>
       </div>
 
