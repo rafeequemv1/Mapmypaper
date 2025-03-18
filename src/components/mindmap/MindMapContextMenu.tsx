@@ -41,7 +41,7 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
     if (onDelete) {
       onDelete();
     } else {
-      // Default delete behavior - fix by adding required arguments
+      // Default delete behavior - with required arguments
       document.execCommand('delete', false, undefined);
     }
   };

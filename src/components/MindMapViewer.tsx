@@ -23,7 +23,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
         direction: 1 as const,
         draggable: true,
         editable: true,
-        contextMenu: true, // Ensure context menu is enabled
+        contextMenu: true, // This enables the context menu
         tools: {
           zoom: true,
           create: true,
@@ -36,7 +36,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
           palette: [],
           cssVar: {},
         },
-        nodeMenu: true, // This enables the built-in node menu
+        nodeMenu: true, // This enables the default node menu
         autoFit: true, // Enable auto-fit for initial rendering
       };
 
@@ -103,6 +103,11 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       mind.bus.addListener('selectNode', (node: any) => {
         console.log('Node selected:', node);
       });
+
+      // Add a specific listener for node context menu events to debug
+      mind.bus.addListener('contextmenu', (node: any, e: any) => {
+        console.log('Context menu triggered on node:', node);
+      });
       
       // Function to fit the mind map within the container
       const fitMindMap = () => {
@@ -137,6 +142,7 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       // Log the mind map instance for debugging
       console.log("Mind Elixir initialized with options:", options);
       console.log("Mind Elixir instance:", mind);
+      console.log("Node menu plugin status:", nodeMenu);
       
       // Add resize handler to ensure proper sizing when window resizes
       const handleResize = () => fitMindMap();
@@ -149,6 +155,18 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       };
     }
   }, [isMapGenerated]);
+
+  // Function to handle manually opening node menu for testing
+  const testNodeMenu = () => {
+    if (mindMapRef.current) {
+      console.log("Attempting to manually trigger node menu");
+      // Try to select the root node programmatically
+      const rootNode = mindMapRef.current.nodeData;
+      if (rootNode) {
+        mindMapRef.current.selectNode(rootNode);
+      }
+    }
+  };
 
   if (!isMapGenerated) {
     return null;
