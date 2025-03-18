@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Brain, ArrowLeft, FileText } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import {
   ResizablePanel, 
   ResizableHandle 
 } from "@/components/ui/resizable";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -20,6 +22,12 @@ const MindMap = () => {
   const [title, setTitle] = useState("Mind Map");
   const [showPdf, setShowPdf] = useState(true);
   const [pdfAvailable, setPdfAvailable] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
+    { role: 'assistant', content: 'Hello! I\'m your research assistant. How can I help with your document?' }
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -83,6 +91,42 @@ const MindMap = () => {
     setShowPdf(prev => !prev);
   };
 
+  const toggleChat = () => {
+    setShowChat(prev => !prev);
+  };
+
+  const handleSendMessage = () => {
+    if (inputValue.trim()) {
+      // Add user message
+      setMessages(prev => [...prev, { role: 'user', content: inputValue }]);
+      
+      // Clear input
+      setInputValue('');
+      
+      // Simulate typing indicator
+      setIsTyping(true);
+      
+      // Simulate AI response after a delay
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages(prev => [
+          ...prev, 
+          { 
+            role: 'assistant', 
+            content: "This is a simulated response. In a real implementation, this would call the Gemini API to generate a response based on the PDF content and your message." 
+          }
+        ]);
+      }, 1500);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Top bar with controls */}
@@ -96,9 +140,17 @@ const MindMap = () => {
           </Button>
         </div>
         
-        {/* Center section - now empty */}
+        {/* Center section - Chat toggle button */}
         <div className="flex items-center justify-center w-1/3">
-          {/* Chat button removed */}
+          <Toggle 
+            pressed={showChat} 
+            onPressedChange={toggleChat}
+            aria-label="Toggle research assistant"
+            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Chat Assistant</span>
+          </Toggle>
         </div>
         
         {/* PDF toggle on the right */}
@@ -119,7 +171,7 @@ const MindMap = () => {
 
       {/* Main Content - Flex-grow to take available space */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Resizable panels for PDF and Mind Map only */}
+        {/* Resizable panels for PDF, Mind Map, and Chat */}
         <ResizablePanelGroup direction="horizontal" className="flex-1">
           {showPdf && (
             <>
@@ -129,9 +181,155 @@ const MindMap = () => {
               <ResizableHandle withHandle />
             </>
           )}
-          <ResizablePanel defaultSize={showPdf ? 75 : 100} id="mindmap-panel">
+          <ResizablePanel 
+            defaultSize={showChat ? 50 : (showPdf ? 75 : 100)} 
+            id="mindmap-panel"
+          >
             <MindMapViewer isMapGenerated={isMapGenerated} />
           </ResizablePanel>
+          
+          {showChat && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={25} minSize={20} id="chat-panel">
+                <div className="flex flex-col h-full border-l">
+                  {/* Chat panel header */}
+                  <div className="flex items-center justify-between p-3 border-b bg-secondary/30">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      <h3 className="font-medium text-sm">Chat Assistant</h3>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={toggleChat}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Chat messages area */}
+                  <ScrollArea className="flex-1 p-4">
+                    <div className="flex flex-col gap-3">
+                      {messages.map((message, i) => (
+                        <div 
+                          key={i} 
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            message.role === 'user' 
+                              ? 'bg-primary text-primary-foreground ml-auto' 
+                              : 'bg-muted'
+                          }`}
+                        >
+                          {message.content}
+                        </div>
+                      ))}
+                      
+                      {isTyping && (
+                        <div className="max-w-[80%] rounded-lg p-3 bg-muted">
+                          <div className="flex gap-1">
+                            <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                            <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                  
+                  {/* Input area */}
+                  <div className="p-3 border-t">
+                    <div className="flex gap-2">
+                      <textarea
+                        className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none"
+                        placeholder="Type your message..."
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        rows={1}
+                      />
+                      <Button 
+                        className="shrink-0" 
+                        size="sm" 
+                        onClick={handleSendMessage}
+                        disabled={!inputValue.trim()}
+                      >
+                        Send
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </ResizablePanel>
+            </>
+          )}
+          
+          {/* Mobile chat sheet for small screens */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button 
+                className="fixed right-4 bottom-4 rounded-full h-12 w-12 md:hidden shadow-lg"
+                size="icon"
+              >
+                <MessageSquare className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="sm:max-w-lg w-full p-0 flex flex-col">
+              <div className="flex items-center justify-between p-3 border-b">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <h3 className="font-medium text-sm">Chat Assistant</h3>
+                </div>
+              </div>
+              
+              <ScrollArea className="flex-1 p-4">
+                <div className="flex flex-col gap-3">
+                  {messages.map((message, i) => (
+                    <div 
+                      key={i} 
+                      className={`max-w-[80%] rounded-lg p-3 ${
+                        message.role === 'user' 
+                          ? 'bg-primary text-primary-foreground ml-auto' 
+                          : 'bg-muted'
+                      }`}
+                    >
+                      {message.content}
+                    </div>
+                  ))}
+                  
+                  {isTyping && (
+                    <div className="max-w-[80%] rounded-lg p-3 bg-muted">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse"></div>
+                        <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                        <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              
+              <div className="p-3 border-t mt-auto">
+                <div className="flex gap-2">
+                  <textarea
+                    className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none"
+                    placeholder="Type your message..."
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                  />
+                  <Button 
+                    className="shrink-0" 
+                    size="sm" 
+                    onClick={handleSendMessage}
+                    disabled={!inputValue.trim()}
+                  >
+                    Send
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </ResizablePanelGroup>
       </div>
     </div>
