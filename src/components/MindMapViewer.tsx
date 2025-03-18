@@ -108,16 +108,17 @@ const MindMapViewer = ({ isMapGenerated }: MindMapViewerProps) => {
       
       // Register event listeners for debugging
       // We need to explicitly type these for TypeScript compatibility
-      mind.bus.addListener('operation', (operation: any) => {
+      mind.bus.addListener('operation' as keyof EventMap, (operation: any) => {
         console.log('Mind map operation:', operation);
       });
       
-      mind.bus.addListener('selectNode', (node: any) => {
+      mind.bus.addListener('selectNode' as keyof EventMap, (node: any) => {
         console.log('Node selected:', node);
       });
 
       // Add a specific listener for right-click events
-      mind.bus.addListener('showNodeMenu', (node: any, e: any) => {
+      // Use the correct type for the event name
+      mind.bus.addListener('showNodeMenu' as keyof EventMap, (node: any, e: any) => {
         console.log('Node menu shown for node:', node);
       });
       
