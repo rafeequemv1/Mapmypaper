@@ -130,11 +130,11 @@ const ChatBox = () => {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Message area with fixed height and scrolling */}
-      <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full px-4 py-4">
-          <div className="space-y-4 pb-2">
+    <div className="flex flex-col h-full">
+      {/* Message area - takes all available space but allows scrolling */}
+      <div className="flex-1 overflow-hidden relative">
+        <ScrollArea className="h-full absolute inset-0">
+          <div className="p-4 space-y-4">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -165,30 +165,28 @@ const ChatBox = () => {
       </div>
       
       {/* Fixed input area at bottom */}
-      <div className="flex-shrink-0 border-t">
-        <div className="p-3">
-          <div className="flex gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message..."
-              className="min-h-[60px] max-h-[120px] resize-none"
-              disabled={isLoading}
-            />
-            <Button 
-              onClick={handleSendMessage} 
-              size="icon"
-              className="h-auto"
-              disabled={isLoading || !input.trim()}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+      <div className="flex-shrink-0 border-t bg-background p-3">
+        <div className="flex gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your message..."
+            className="min-h-[60px] max-h-[120px] resize-none"
+            disabled={isLoading}
+          />
+          <Button 
+            onClick={handleSendMessage} 
+            size="icon"
+            className="h-auto"
+            disabled={isLoading || !input.trim()}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
         </div>
       </div>
     </div>
