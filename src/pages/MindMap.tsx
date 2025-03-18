@@ -48,9 +48,24 @@ const MindMap = () => {
     // Execute PDF check immediately
     checkPdfAvailability();
     
+    // Check if we're in a shared view by checking URL parameters
+    const checkSharedView = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isShared = urlParams.get('shared') === 'true';
+      
+      if (isShared) {
+        toast({
+          title: "Shared Mind Map",
+          description: "You are viewing a shared mind map.",
+        });
+      }
+    };
+    
+    checkSharedView();
+    
     // In the future, we can implement PDF storage in Supabase
     // For now, we're using sessionStorage for temporary storage
-  }, []);
+  }, [toast]);
 
   const togglePdf = () => {
     setShowPdf(prev => !prev);
