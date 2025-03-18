@@ -1,11 +1,13 @@
+
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, FileText, Upload, FileSymlink } from "lucide-react";
+import { Brain, FileText, Upload, FileSymlink, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { generateMindMapFromText } from "@/services/geminiService";
 
 const PdfUpload = () => {
@@ -281,6 +283,25 @@ const PdfUpload = () => {
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Extracted {extractedText.length.toLocaleString()} characters
+                </p>
+              </div>
+            )}
+            
+            {/* Extracted Text Display Area */}
+            {extractedText && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <ScrollText className="h-5 w-5" />
+                  <h3 className="font-medium">Extracted Text</h3>
+                </div>
+                <Textarea 
+                  value={extractedText}
+                  onChange={(e) => setExtractedText(e.target.value)}
+                  className="min-h-[200px] max-h-[400px] overflow-y-auto font-mono text-sm"
+                  placeholder="Extracted text will appear here..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  You can edit the text before generating the mind map if needed.
                 </p>
               </div>
             )}
