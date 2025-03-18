@@ -6,9 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import MindMapViewer from "@/components/MindMapViewer";
+import PdfViewer from "@/components/PdfViewer";
 
 const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [title, setTitle] = useState("Mind Map");
@@ -48,7 +50,7 @@ const MindMap = () => {
   return (
     <div className="min-h-screen flex flex-col overflow-hidden">
       {/* Header - thin and black */}
-      <header className="py-2 px-8 border-b bg-[#222222]">
+      <header className="py-2 px-8 border-b bg-[#222222] z-30">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-white" />
@@ -59,6 +61,9 @@ const MindMap = () => {
           </Button>
         </div>
       </header>
+
+      {/* PDF Viewer (collapsible) */}
+      <PdfViewer open={pdfViewerOpen} onOpenChange={setPdfViewerOpen} />
 
       {/* Main Content - Made fullscreen */}
       <main className="flex-1 flex flex-col overflow-hidden">
