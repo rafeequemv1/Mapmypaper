@@ -69,23 +69,29 @@ const MindMap = () => {
     <div className="min-h-screen flex flex-col overflow-hidden">
       {/* Header - thin and black */}
       <header className="py-2 px-8 border-b bg-[#222222]">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="max-w-5xl mx-auto flex items-center">
+          <div className="flex items-center gap-2 w-1/3">
             <Brain className="h-5 w-5 text-white" />
             <h1 className="text-base font-medium text-white">PaperMind</h1>
           </div>
-          <div className="flex items-center gap-4">
+          
+          {/* Center section for PDF toggle */}
+          <div className="flex items-center justify-center w-1/3">
             {pdfAvailable && (
               <Toggle 
                 pressed={showPdf} 
                 onPressedChange={togglePdf}
                 aria-label="Toggle PDF view"
-                className="bg-gray-700 hover:bg-gray-600 text-white rounded-md px-3 py-1 h-auto"
+                className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
               >
-                <FileText className="h-4 w-4 mr-1" />
-                <span className="text-sm">PDF</span>
+                <FileText className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">PDF</span>
               </Toggle>
             )}
+          </div>
+          
+          {/* Right section for back button */}
+          <div className="flex items-center justify-end w-1/3">
             <Button variant="ghost" size="sm" className="text-white" onClick={handleBack}>
               <ArrowLeft className="h-4 w-4 mr-1" /> Back to Upload
             </Button>
@@ -93,7 +99,7 @@ const MindMap = () => {
         </div>
       </header>
 
-      {/* Main Content - Made fullscreen */}
+      {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         <div className="px-8 py-2 bg-secondary/30">
           <div className="max-w-5xl mx-auto">
