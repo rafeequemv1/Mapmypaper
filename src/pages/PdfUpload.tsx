@@ -1,212 +1,352 @@
-import React, { useState, useCallback } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { UploadCloud, FileText, AlertTriangle } from 'lucide-react';
+import { useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import PdfToText from "react-pdftotext";
+import { Brain, FileText, Upload, FileSymlink, ScrollText, AlertCircle, FileQuestion } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useNavigate } from 'react-router-dom';
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { useDebounce } from "@/hooks/use-debounce";
-import { toast } from "@/hooks/use-toast";
-import { saveMindMapData } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { generateMindMapFromText } from "@/services/geminiService";
 
 const PdfUpload = () => {
-  const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState<string>('');
-  const [pdfText, setPdfText] = useState<string>('');
-  const [isExtracting, setIsExtracting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showFileError, setShowFileError] = useState<boolean>(false);
-  const [progress, setProgress] = useState<number>(0);
-  const [title, setTitle] = useState<string>('');
-  const debouncedTitle = useDebounce(title, 500);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setFile(file);
-      setFileName(file.name);
-      setPdfText('');
-      setIsExtracting(true);
-      setError(null);
-      setShowFileError(false);
+  const extractTextFromPdf = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      console.log("Starting PDF extraction with file:", file.name, file.type, file.size);
+      
+      // The PdfToText function only accepts one argument (the file)
+      // We need to remove the options object
+      PdfToText(file)
+        .then((text: string) => {
+          console.log("Raw extraction result:", text);
+          if (!text || typeof text !== 'string' || text.trim() === '') {
+            // If text is empty, this might be a scanned PDF without embedded text
+            setExtractionError("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
+            // Allow empty text for manual entry
+            setExtractedText("");
+            resolve("");
+          } else {
+            console.log("Text extracted successfully, length:", text.length);
+            setExtractedText(text);
+            setExtractionError(null);
+            resolve(text);
+          }
+        })
+        .catch((error) => {
+          console.error("PDF extraction error:", error);
+          setExtractionError(error instanceof Error ? error.message : "Failed to extract text from PDF");
+          
+          // Still set empty text for manual entry
+          setExtractedText("");
+          resolve("");
+        });
+    });
+  };
 
-      // Store the PDF in sessionStorage for viewing in the MindMap page
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64data = e.target?.result as string;
-        sessionStorage.setItem('uploadedPdfData', base64data);
-      };
-      reader.readAsDataURL(file);
-
-      // Extract text from PDF
-      const fileReader = new FileReader();
-      fileReader.onload = async (event) => {
-        try {
-          const pdf = await import('pdf-parse');
-          const arrayBuffer = event.target?.result as ArrayBuffer;
-          const data = await pdf(arrayBuffer);
-          setPdfText(data.text);
-          setIsExtracting(false);
-          setProgress(100);
-          toast({
-            title: "PDF Uploaded",
-            description: "Your PDF has been uploaded and is ready to be processed."
-          });
-        } catch (err) {
-          console.error("Error extracting text from PDF:", err);
-          setError("Failed to extract text from PDF. Please try again.");
-          setIsExtracting(false);
-          setProgress(0);
-        }
-      };
-
-      fileReader.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percentage = Math.round((event.loaded / event.total) * 100);
-          setProgress(percentage);
-        }
-      };
-
-      fileReader.readAsArrayBuffer(file);
-    } else {
-      setFile(null);
-      setFileName('');
-      setPdfText('');
-      setIsExtracting(false);
-      setError("Please select a valid PDF file.");
-      setShowFileError(true);
-      setProgress(0);
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
     }
-  };
+  }, []);
 
-  const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(event.target.value);
-  };
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === "application/pdf") {
+        setSelectedFile(file);
+        toast({
+          title: "PDF uploaded successfully",
+          description: `File: ${file.name}`,
+        });
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF file",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [toast]);
 
-  const generateMindMap = useCallback(async () => {
-    if (!pdfText) {
-      setError("Please upload a PDF file before generating the mind map.");
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.type === "application/pdf") {
+        setSelectedFile(file);
+        toast({
+          title: "PDF uploaded successfully",
+          description: `File: ${file.name}`,
+        });
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF file",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [toast]);
+
+  const handleExtractText = useCallback(async () => {
+    if (!selectedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please upload a PDF file first",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsExtracting(true);
-    setError(null);
+    setExtractionError(null);
+    toast({
+      title: "Processing PDF",
+      description: "Extracting text from PDF...",
+    });
 
     try {
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pdfText, title: debouncedTitle }),
+      await extractTextFromPdf(selectedFile);
+      
+      // Even if extraction returns empty string, we allow manual entry
+      toast({
+        title: "Processing Complete",
+        description: extractionError ? 
+          "Text extraction had issues. You can manually enter text below." : 
+          "Text extracted successfully!",
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Mind map data from Gemini:", data);
-
-      // Save the mind map data to session storage
-      saveMindMapData(data);
-
-      setIsExtracting(false);
-      navigate('/mindmap');
-    } catch (err: any) {
-      console.error("Error generating mind map:", err);
-      setError(`Failed to generate mind map: ${err.message}`);
+    } catch (error) {
+      console.error("Error extracting text:", error);
+      toast({
+        title: "Extraction Issue",
+        description: "You can still enter text manually below.",
+        variant: "destructive",
+      });
+    } finally {
       setIsExtracting(false);
     }
-  }, [pdfText, debouncedTitle, navigate]);
+  }, [selectedFile, toast, extractionError]);
+
+  const handleGenerateMindmap = useCallback(async () => {
+    if (!selectedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please upload a PDF file first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!extractedText) {
+      toast({
+        title: "Extract text first",
+        description: "Please extract text from the PDF before generating a mind map",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    toast({
+      title: "Processing",
+      description: "Generating mind map with Gemini AI...",
+    });
+
+    try {
+      // Process the text with Gemini to generate mind map data
+      const mindMapData = await generateMindMapFromText(extractedText);
+      
+      // Store the generated mind map data in sessionStorage
+      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+      
+      // Navigate to the mind map view
+      navigate("/mindmap");
+    } catch (error) {
+      console.error("Error generating mind map:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate mind map",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
+  }, [selectedFile, navigate, toast, extractedText]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-hidden">
       {/* Header - thin and black */}
       <header className="py-2 px-8 border-b bg-[#222222]">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <h1 className="text-base font-medium text-white">PaperMind</h1>
+        <div className="max-w-5xl mx-auto flex items-center">
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-white" />
+            <h1 className="text-base font-medium text-white">PaperMind</h1>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-8">
-        <Card className="w-full max-w-lg shadow-md">
-          <CardHeader>
-            <CardTitle className="text-2xl">Upload Your Research Paper</CardTitle>
+      <main className="flex-1 flex items-center justify-center p-6">
+        <Card className="max-w-2xl w-full">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Upload PDF Document</CardTitle>
             <CardDescription>
-              Transform your research into an interactive mind map.
+              Upload your research paper or document to generate a mind map with Google Gemini AI
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4">
-            {/* File Upload Section */}
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="pdf-file">PDF File</Label>
-              <Input
-                id="pdf-file"
+          <CardContent className="space-y-6">
+            {/* File Dropzone */}
+            <div
+              className={`border-2 border-dashed rounded-lg p-10 transition-colors ${
+                dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/20"
+              } text-center cursor-pointer relative flex flex-col items-center justify-center gap-4`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                id="file-upload"
+                ref={fileInputRef}
                 type="file"
                 accept=".pdf"
+                className="hidden"
                 onChange={handleFileChange}
-                disabled={isExtracting}
-                className="cursor-pointer"
               />
-              {fileName && <p className="text-sm text-muted-foreground">Selected: {fileName}</p>}
-              {showFileError && error && (
-                <p className="text-sm text-destructive flex items-center gap-1"><AlertTriangle className="h-4 w-4" /> {error}</p>
-              )}
+              <FileText className="h-12 w-12 text-muted-foreground" />
+              <div className="space-y-2">
+                <p className="font-medium">
+                  Drag & drop your PDF here or click to browse
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Supported format: PDF
+                </p>
+              </div>
+              <div className="pt-4">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Select PDF
+                </Button>
+              </div>
             </div>
 
-            {/* Title Input */}
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="title">Title (Optional)</Label>
-              <Input
-                type="text"
-                id="title"
-                placeholder="Enter a title for your mind map"
-                value={title}
-                onChange={handleTitleChange}
-                disabled={isExtracting}
-              />
-              <p className="text-sm text-muted-foreground">
-                A title can help to focus the AI on the core aspects of your research.
-              </p>
-            </div>
-
-            {/* Progress Bar */}
-            {isExtracting && (
-              <div className="flex flex-col space-y-1.5">
-                <Label>Extracting Text</Label>
-                <Progress value={progress} />
+            {/* Selected File Info */}
+            {selectedFile && (
+              <div className="p-4 bg-secondary rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-6 w-6" />
+                  <div>
+                    <p className="font-medium">{selectedFile.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleExtractText} 
+                  variant="outline"
+                  disabled={isExtracting || !selectedFile}
+                  className="gap-2"
+                >
+                  {isExtracting ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                      Extracting...
+                    </>
+                  ) : (
+                    <>
+                      Extract Text
+                      <FileSymlink className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
               </div>
             )}
 
-            {/* PDF Text Preview */}
-            {pdfText && (
-              <div className="flex flex-col space-y-1.5">
-                <Label>PDF Content Preview</Label>
-                <Textarea
-                  value={pdfText}
-                  readOnly
-                  className="min-h-[100px] resize-none"
+            {/* Extraction Error Alert */}
+            {extractionError && (
+              <Alert variant="destructive" className="bg-red-100 border-red-400">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Extraction Notice</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <p>{extractionError}</p>
+                  <p className="text-sm font-medium">
+                    Don't worry! You can still use the application by entering text manually below.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Manual Text Entry Area - Always shown after extraction attempt */}
+            {(extractedText !== null || extractionError) && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  {extractionError ? (
+                    <FileQuestion className="h-5 w-5 text-amber-600" />
+                  ) : (
+                    <ScrollText className="h-5 w-5" />
+                  )}
+                  <h3 className="font-medium">
+                    {extractionError ? "Enter Text Manually" : "Extracted Text"}
+                  </h3>
+                </div>
+                <Textarea 
+                  value={extractedText || ""}
+                  onChange={(e) => setExtractedText(e.target.value)}
+                  className="min-h-[200px] max-h-[400px] overflow-y-auto font-mono text-sm"
+                  placeholder={extractionError ? 
+                    "The PDF extraction failed, but you can enter text manually here..." : 
+                    "Extracted text will appear here..."}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {extractionError ? 
+                    "Enter the text you want to use for generating a mind map." : 
+                    "You can edit the extracted text before generating the mind map if needed."}
+                </p>
               </div>
             )}
 
-            {error && !showFileError && (
-              <p className="text-sm text-destructive flex items-center gap-1"><AlertTriangle className="h-4 w-4" /> {error}</p>
+            {/* Extraction Status - Only shown if extraction succeeded */}
+            {extractedText && !extractionError && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-600">
+                  <FileText className="h-5 w-5" />
+                  <p className="font-medium">Text extracted successfully!</p>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Extracted {extractedText.length.toLocaleString()} characters
+                </p>
+              </div>
             )}
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button onClick={generateMindMap} disabled={isExtracting || !file}>
-              Generate Mind Map
+            
+            {/* Generate Button */}
+            <Button 
+              onClick={handleGenerateMindmap} 
+              className="w-full" 
+              disabled={!selectedFile || isProcessing || !extractedText && !extractionError}
+            >
+              {isProcessing ? "Processing..." : "Generate Mindmap with Gemini AI"}
+              <Brain className="ml-2 h-4 w-4" />
             </Button>
-          </CardFooter>
+          </CardContent>
         </Card>
       </main>
 
