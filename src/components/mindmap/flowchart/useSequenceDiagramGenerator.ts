@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useRef, useCallback } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateSequenceDiagramFromPdf } from "@/services/gemini";
@@ -31,12 +32,42 @@ export const useSequenceDiagramGenerator = () => {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const generationAbortController = useRef<AbortController | null>(null);
+
+  // Add cleanup resources function
+  const cleanupResources = useCallback(() => {
+    // Cancel any pending API requests
+    if (generationAbortController.current) {
+      generationAbortController.current.abort();
+      generationAbortController.current = null;
+    }
+    
+    // Reset state if needed
+    setIsGenerating(false);
+    
+    // Clear any errors
+    setError(null);
+    
+    console.log("Sequence diagram generator resources cleaned up");
+  }, []);
 
   const generateDiagram = async () => {
     try {
+      // Clean up any previous generation attempt
+      cleanupResources();
+      
+      // Create a new abort controller for this generation
+      generationAbortController.current = new AbortController();
+      
       setIsGenerating(true);
       setError(null);
       const diagramCode = await generateSequenceDiagramFromPdf();
+      
+      // Check if we've been aborted
+      if (generationAbortController.current.signal.aborted) {
+        console.log("Sequence diagram generation was aborted");
+        return;
+      }
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanSequenceDiagramSyntax(diagramCode);
@@ -60,16 +91,22 @@ export const useSequenceDiagramGenerator = () => {
         });
       }
     } catch (err) {
-      console.error("Failed to generate sequence diagram:", err);
-      setCode(defaultSequenceDiagram);
-      setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate sequence diagram from PDF content.",
-        variant: "destructive",
-      });
+      // Only show error if we haven't been aborted
+      if (!generationAbortController.current?.signal.aborted) {
+        console.error("Failed to generate sequence diagram:", err);
+        setCode(defaultSequenceDiagram);
+        setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
+        toast({
+          title: "Generation Failed",
+          description: "Failed to generate sequence diagram from PDF content.",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setIsGenerating(false);
+      // Only update state if we haven't been aborted
+      if (generationAbortController.current && !generationAbortController.current.signal.aborted) {
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -82,7 +119,8 @@ export const useSequenceDiagramGenerator = () => {
     error,
     isGenerating,
     generateDiagram,
-    handleCodeChange
+    handleCodeChange,
+    cleanupResources
   };
 };
 

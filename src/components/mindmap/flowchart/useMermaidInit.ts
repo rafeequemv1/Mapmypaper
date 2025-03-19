@@ -31,8 +31,10 @@ const useMermaidInit = () => {
       // Reset any global mermaid state that might persist
       try {
         // Clear any global mermaid caches or listeners
-        if (typeof mermaid.reset === 'function') {
-          mermaid.reset();
+        // Using the any type to bypass TypeScript's type checking
+        const mermaidAny = mermaid as any;
+        if (typeof mermaidAny.reset === 'function') {
+          mermaidAny.reset();
         }
       } catch (error) {
         console.error("Error cleaning up mermaid:", error);
@@ -43,8 +45,10 @@ const useMermaidInit = () => {
   // Return a cleanup function that can be called explicitly
   const cleanup = () => {
     try {
-      if (typeof mermaid.reset === 'function') {
-        mermaid.reset();
+      // Using the any type to bypass TypeScript's type checking
+      const mermaidAny = mermaid as any;
+      if (typeof mermaidAny.reset === 'function') {
+        mermaidAny.reset();
       }
       
       // Force cleanup of any DOM elements created by mermaid
