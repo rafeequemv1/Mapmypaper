@@ -34,11 +34,15 @@ export const useSequenceDiagramGenerator = () => {
   const { toast } = useToast();
   const generationAbortController = useRef<AbortController | null>(null);
 
-  // Add cleanup resources function
+  // Add cleanup resources function - now safer
   const cleanupResources = useCallback(() => {
     // Cancel any pending API requests
     if (generationAbortController.current) {
-      generationAbortController.current.abort();
+      try {
+        generationAbortController.current.abort();
+      } catch (err) {
+        console.error("Error aborting generation:", err);
+      }
       generationAbortController.current = null;
     }
     
@@ -48,7 +52,7 @@ export const useSequenceDiagramGenerator = () => {
     // Clear any errors
     setError(null);
     
-    console.log("Sequence diagram generator resources cleaned up");
+    console.log("Sequence diagram generator resources cleaned up safely");
   }, []);
 
   const generateDiagram = async () => {

@@ -62,72 +62,26 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     // Clean up when component unmounts
     return () => {
       isMounted = false;
-      if (!open) {
-        try {
-          // Cleanup when closing
-          performCleanup();
-        } catch (error) {
-          console.error("Error during cleanup:", error);
-        }
-      }
     };
-  }, [open, code, generateFlowchart, cleanupResources, cleanupMermaid, toast]);
+  }, [open, code, generateFlowchart, toast]);
   
-  // Perform complete cleanup
-  const performCleanup = () => {
-    try {
-      // First call specific cleanup functions
-      cleanupResources();
-      cleanupMermaid();
-      
-      // Additional cleanup to ensure complete removal of mermaid elements
-      // This is a safeguard in case the other cleanups missed something
-      try {
-        // Find and remove any remaining mermaid elements
-        const selectors = [
-          '[id^="mermaid-"]',
-          '[id^="flowchart-"]',
-          '.mermaid',
-          '.mermaid svg'
-        ];
-        
-        selectors.forEach(selector => {
-          document.querySelectorAll(selector).forEach(el => {
-            if (el.parentNode) {
-              try {
-                if (selector === '.mermaid') {
-                  // Clear the inner HTML of mermaid containers instead of removing them
-                  el.innerHTML = '';
-                } else {
-                  // Remove other mermaid-related elements
-                  el.parentNode.removeChild(el);
-                }
-              } catch (err) {
-                console.error(`Error processing element with selector ${selector}:`, err);
-              }
-            }
-          });
-        });
-      } catch (err) {
-        console.error("Error in additional cleanup:", err);
-      }
-      
-      console.log("FlowchartModal cleanup completed");
-    } catch (error) {
-      console.error("Error in performCleanup:", error);
-    }
-  };
-  
-  // Cleanup when modal closes
+  // Perform gentle cleanup that won't affect other components
   const handleCloseModal = () => {
     try {
-      // Perform cleanup before closing the modal
-      performCleanup();
+      // Only clean up resources related to this component
+      cleanupResources();
+      
+      // Use the limited mermaid cleanup that only affects modal content
+      cleanupMermaid();
+      
+      console.log("FlowchartModal cleanup completed safely");
     } catch (error) {
       console.error("Error during modal close cleanup:", error);
     } finally {
-      // Always notify parent that modal should close, even if cleanup had errors
-      onOpenChange(false);
+      // Delay the modal closing slightly to ensure cleanup is complete
+      setTimeout(() => {
+        onOpenChange(false);
+      }, 50);
     }
   };
 

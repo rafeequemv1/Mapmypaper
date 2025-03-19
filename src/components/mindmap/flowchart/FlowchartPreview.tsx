@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useCallback } from "react";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
@@ -57,22 +56,6 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
   useEffect(() => {
     return () => {
       cleanupPreviousRender();
-      
-      // Find and remove any orphaned SVG elements that might have been created by mermaid
-      try {
-        const svgElements = document.querySelectorAll(`svg[id^="flowchart-"]`);
-        svgElements.forEach(svg => {
-          try {
-            if (svg.parentNode) {
-              svg.parentNode.removeChild(svg);
-            }
-          } catch (removeError) {
-            console.error("Error removing SVG element:", removeError);
-          }
-        });
-      } catch (err) {
-        console.error("Error cleaning up SVG elements:", err);
-      }
     };
   }, [cleanupPreviousRender]);
 
@@ -111,6 +94,8 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
       // Only update DOM if the component is still mounted
       if (previewRef.current) {
         previewRef.current.innerHTML = svg;
+        // Mark this container for targeted cleanup
+        previewRef.current.setAttribute('data-mermaid-container', 'true');
       }
     } catch (err) {
       console.error("Failed to render flowchart:", err);
@@ -228,6 +213,7 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
             transformOrigin: 'center center',
             transition: isDragging ? 'none' : 'transform 0.1s ease'
           }}
+          data-mermaid-container="true"
         />
       </div>
     </div>

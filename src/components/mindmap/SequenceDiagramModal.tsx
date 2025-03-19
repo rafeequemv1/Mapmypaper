@@ -36,16 +36,22 @@ const SequenceDiagramModal = ({ open, onOpenChange }: SequenceDiagramModalProps)
     }
   }, [open, generateDiagram, code]);
   
-  // Handle modal close with cleanup
+  // Handle modal close with safer cleanup
   const handleCloseModal = () => {
-    // First call the cleanup functions
-    cleanupResources();
-    cleanupMermaid();
-    
-    // Then notify parent that modal should close with a small delay
-    setTimeout(() => {
-      onOpenChange(false);
-    }, 10);
+    try {
+      // First call the cleanup functions, but with limited scope
+      cleanupResources();
+      cleanupMermaid();
+      
+      console.log("SequenceDiagramModal cleanup completed safely");
+    } catch (error) {
+      console.error("Error during sequence diagram modal cleanup:", error);
+    } finally {
+      // Then notify parent that modal should close with a small delay
+      setTimeout(() => {
+        onOpenChange(false);
+      }, 50);
+    }
   };
 
   return (

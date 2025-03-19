@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -93,17 +92,7 @@ export const useFlowchartGenerator = () => {
     // Clear any errors
     setError(null);
     
-    // Reset mermaid if initialized
-    try {
-      if (mermaidInitialized.current && typeof (mermaid as any).reset === 'function') {
-        (mermaid as any).reset();
-        mermaidInitialized.current = false;
-      }
-    } catch (resetError) {
-      console.error("Error resetting mermaid:", resetError);
-    }
-    
-    console.log("Flowchart generator resources cleaned up");
+    console.log("Flowchart generator resources cleaned up safely");
   }, []);
 
   const initializeMermaid = useCallback(() => {
