@@ -52,13 +52,17 @@ const useMermaidInit = () => {
         mermaidAny.reset();
       }
       
-      // Only remove mermaid SVGs within the modals to avoid breaking other components
+      // Only remove mermaid SVGs within the specific containers
       // This is the key change - we avoid removing elements that might be used elsewhere
       const modalContainers = document.querySelectorAll('[data-mermaid-container="true"]');
       modalContainers.forEach(container => {
         if (container) {
           try {
-            container.innerHTML = '';
+            // Instead of innerHTML='', find and remove only SVG elements to be more precise
+            const svgElements = container.querySelectorAll('svg.mermaid-svg');
+            svgElements.forEach(svg => svg.remove());
+            
+            console.log(`Cleaned up ${svgElements.length} mermaid SVGs`);
           } catch (err) {
             console.error("Error clearing mermaid container:", err);
           }

@@ -1,10 +1,11 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { RefreshCw } from "lucide-react"; // Changed to RefreshCw which is a reload/refresh icon
+import { RefreshCw } from "lucide-react"; // Using RefreshCw from lucide-react
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -173,29 +174,47 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
               throw new Error("Invalid mind map data structure");
             }
             
-            // Apply line breaks to node topics
-            const formatNodes = (node: any) => {
-              if (node.topic) {
-                node.topic = formatNodeText(node.topic);
-              }
-              
-              if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-                node.children.forEach(formatNodes);
-              }
-              
-              return node;
-            };
+            // Ensure the data structure is compatible with mind-elixir
+            // The nodeData should be an object with id, topic, and children properties
+            const nodeData = parsedData.nodeData;
             
-            // Format the root node and all children
-            if (parsedData.nodeData) {
-              formatNodes(parsedData.nodeData);
+            // Ensure children is an array before processing
+            if (nodeData.children && !Array.isArray(nodeData.children)) {
+              console.error("Children is not an array:", nodeData.children);
+              throw new Error("Invalid children structure in mind map data");
             }
             
-            data = parsedData;
-            console.log("Mind map data loaded successfully");
+            // Apply line breaks to node topics - use a proper deep clone to avoid reference issues
+            const formatNodes = (node: any): any => {
+              if (!node || typeof node !== 'object') {
+                console.error("Invalid node during formatting:", node);
+                return { id: 'error', topic: 'Invalid Node', children: [] };
+              }
+              
+              // Create a new node object to avoid reference issues
+              const formattedNode = {
+                id: node.id || `node-${Math.random().toString(36).substr(2, 9)}`,
+                topic: node.topic ? formatNodeText(node.topic) : 'Untitled',
+                direction: node.direction !== undefined ? node.direction : undefined,
+                children: []
+              };
+              
+              // Process children if they exist
+              if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+                formattedNode.children = node.children.map((child: any) => formatNodes(child));
+              }
+              
+              return formattedNode;
+            };
+            
+            // Deep clone and format the node structure
+            const formattedNodeData = formatNodes(nodeData);
+            data = { nodeData: formattedNodeData };
+            
+            console.log("Mind map data processed successfully:", data);
           } catch (parseError) {
-            console.error("Error parsing mind map data:", parseError);
-            throw new Error("Failed to parse mind map data");
+            console.error("Error processing mind map data:", parseError);
+            throw new Error("Failed to process mind map data");
           }
         } else {
           console.log("No saved data found, using default structure");
@@ -210,8 +229,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
                   topic: 'Introduction',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd1-1', topic: 'Problem Statement' },
-                    { id: 'bd1-2', topic: 'Research Objectives' }
+                    { id: 'bd1-1', topic: 'Problem Statement', children: [] },
+                    { id: 'bd1-2', topic: 'Research Objectives', children: [] }
                   ]
                 },
                 {
@@ -219,8 +238,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
                   topic: 'Methodology',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd2-1', topic: 'Data Collection' },
-                    { id: 'bd2-2', topic: 'Analysis Techniques' }
+                    { id: 'bd2-1', topic: 'Data Collection', children: [] },
+                    { id: 'bd2-2', topic: 'Analysis Techniques', children: [] }
                   ]
                 },
                 {
@@ -228,8 +247,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
                   topic: 'Results',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd3-1', topic: 'Key Finding 1' },
-                    { id: 'bd3-2', topic: 'Key Finding 2' },
+                    { id: 'bd3-1', topic: 'Key Finding 1', children: [] },
+                    { id: 'bd3-2', topic: 'Key Finding 2', children: [] },
                   ]
                 },
                 {
@@ -237,8 +256,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
                   topic: 'Conclusion',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd4-1', topic: 'Summary' },
-                    { id: 'bd4-2', topic: 'Future Work' }
+                    { id: 'bd4-1', topic: 'Summary', children: [] },
+                    { id: 'bd4-2', topic: 'Future Work', children: [] }
                   ]
                 }
               ]
@@ -253,7 +272,12 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
             id: 'root',
             topic: 'Error\nLoading\nMind Map',
             children: [
-              { id: 'error1', topic: 'There was an error loading the mind map data', direction: 0 as const }
+              { 
+                id: 'error1', 
+                topic: 'There was an error loading the mind map data', 
+                direction: 0 as const,
+                children: [] 
+              }
             ]
           }
         };

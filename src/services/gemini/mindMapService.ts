@@ -51,42 +51,93 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     const parsedData = parseJsonResponse(text);
     
     // Ensure proper object structure for the mind map
-    if (typeof parsedData === 'string' || !parsedData.nodeData) {
+    if (!parsedData || typeof parsedData !== 'object' || !parsedData.nodeData) {
       console.error("Invalid mind map data structure:", parsedData);
       // Return a fallback structure
-      return {
-        nodeData: {
-          id: 'root',
-          topic: 'Document Analysis',
+      return createFallbackMindMap("Invalid Response Format");
+    }
+    
+    // Additional validation to ensure the structure matches what mind-elixir expects
+    try {
+      validateMindMapStructure(parsedData.nodeData);
+      return parsedData;
+    } catch (structureError) {
+      console.error("Mind map structure validation error:", structureError);
+      return createFallbackMindMap("Data Structure Error");
+    }
+  } catch (error) {
+    console.error("Gemini API error:", error);
+    return createFallbackMindMap("API Error");
+  }
+};
+
+// Validate the mind map structure recursively
+const validateMindMapStructure = (node: any) => {
+  if (!node || typeof node !== 'object') {
+    throw new Error("Node is not an object");
+  }
+  
+  if (!node.id || typeof node.id !== 'string') {
+    throw new Error("Node id is missing or not a string");
+  }
+  
+  if (!node.topic || typeof node.topic !== 'string') {
+    throw new Error("Node topic is missing or not a string");
+  }
+  
+  // Ensure children is an array if present
+  if (node.children !== undefined) {
+    if (!Array.isArray(node.children)) {
+      throw new Error("Node children is not an array");
+    }
+    
+    // Validate each child
+    node.children.forEach((child: any) => validateMindMapStructure(child));
+  } else {
+    // Ensure children is at least an empty array
+    node.children = [];
+  }
+  
+  return true;
+};
+
+// Create a fallback mind map structure when there's an error
+const createFallbackMindMap = (errorType: string) => {
+  return {
+    nodeData: {
+      id: 'root',
+      topic: 'Document Analysis',
+      children: [
+        {
+          id: 'error',
+          topic: `Error: ${errorType}`,
+          direction: 0,
           children: [
             {
-              id: 'error',
-              topic: 'Error analyzing document',
-              direction: 0,
+              id: 'error-1',
+              topic: 'Please try again or upload a different document',
+              children: []
+            }
+          ]
+        },
+        {
+          id: 'suggestion',
+          topic: 'Suggestions',
+          direction: 1,
+          children: [
+            {
+              id: 'suggestion-1',
+              topic: 'Check document format',
+              children: []
+            },
+            {
+              id: 'suggestion-2',
+              topic: 'Try with a shorter document',
               children: []
             }
           ]
         }
-      };
+      ]
     }
-    
-    return parsedData;
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    // Return a fallback structure in case of error
-    return {
-      nodeData: {
-        id: 'root',
-        topic: 'Error Processing Document',
-        children: [
-          {
-            id: 'error',
-            topic: 'Could not analyze document content',
-            direction: 0,
-            children: []
-          }
-        ]
-      }
-    };
-  }
+  };
 };
