@@ -29,47 +29,6 @@ const PanelStructure = ({
 }: PanelStructureProps) => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
-  const [pdfDataAvailable, setPdfDataAvailable] = useState(false);
-  
-  // Check if PDF data is available on mount with improved detection
-  useEffect(() => {
-    const checkPdfData = () => {
-      try {
-        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-        const isAvailable = !!pdfData && pdfData.length > 100;
-        
-        console.log("Panel structure - PDF data check:", isAvailable, "Data length:", pdfData ? pdfData.length : 0);
-        setPdfDataAvailable(isAvailable);
-        
-        if (!isAvailable) {
-          toast({
-            title: "PDF Data Issue",
-            description: "PDF data may not be properly loaded. Some features might be limited.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Error checking PDF data availability:", error);
-        setPdfDataAvailable(false);
-      }
-    };
-    
-    // Initial check
-    checkPdfData();
-    
-    // Set up a short interval to check again (in case PDF data is loaded after component mount)
-    const checkInterval = setInterval(checkPdfData, 2000);
-    
-    // Clear after 10 seconds (5 checks) to avoid continuous checking
-    const clearCheckTimeout = setTimeout(() => {
-      clearInterval(checkInterval);
-    }, 10000);
-    
-    return () => {
-      clearInterval(checkInterval);
-      clearTimeout(clearCheckTimeout);
-    };
-  }, [toast]);
   
   useEffect(() => {
     // Set a small delay before generating the map to ensure DOM is ready

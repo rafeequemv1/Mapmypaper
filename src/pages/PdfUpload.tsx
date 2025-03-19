@@ -67,21 +67,6 @@ const PdfUpload = () => {
     }
   }, [toast]);
 
-  // Clear sessionStorage to start fresh
-  const clearPreviousData = () => {
-    try {
-      // Clear any previous PDF data
-      sessionStorage.removeItem('pdfData');
-      sessionStorage.removeItem('uploadedPdfData');
-      sessionStorage.removeItem('pdfText');
-      sessionStorage.removeItem('isPdfTextTruncated');
-      sessionStorage.removeItem('mindMapData');
-      console.log("Cleared previous PDF data from sessionStorage");
-    } catch (error) {
-      console.error("Error clearing sessionStorage:", error);
-    }
-  };
-
   const handleGenerateMindmap = useCallback(async () => {
     if (!selectedFile) {
       toast({
@@ -101,9 +86,6 @@ const PdfUpload = () => {
     });
 
     try {
-      // Clear previous data first
-      clearPreviousData();
-      
       // Create a promise for reading the PDF data
       const readFilePromise = new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -122,114 +104,47 @@ const PdfUpload = () => {
       // Wait for PDF data to be read
       const base64data = await readFilePromise;
       
-      // Check file size and warn if large
-      if (base64data.length > 5000000) { // ~5MB
-        toast({
-          title: "Large PDF detected",
-          description: "This PDF is quite large and may be truncated for processing",
-        });
-      }
-      
-      // Try different storage approaches to handle quota issues
-      let storedSuccessfully = false;
-      
-      try {
-        // Attempt to store in pdfData first
-        sessionStorage.setItem('pdfData', base64data);
-        storedSuccessfully = true;
-        console.log("PDF data stored in 'pdfData', length:", base64data.length);
-      } catch (storageError) {
-        console.error("Error storing PDF data in 'pdfData':", storageError);
-        
-        try {
-          // Try alternate storage key
-          sessionStorage.setItem('uploadedPdfData', base64data);
-          storedSuccessfully = true;
-          console.log("PDF data stored in 'uploadedPdfData', length:", base64data.length);
-        } catch (altStorageError) {
-          console.error("Error storing PDF data in alternate location:", altStorageError);
-          
-          // Try to store a truncated version if both full storage attempts failed
-          try {
-            // Store only the first part of data which should be enough for preview
-            const maxSize = Math.min(2000000, Math.floor(base64data.length * 0.7)); // 2MB or 70% of original
-            const truncatedData = base64data.substring(0, maxSize);
-            sessionStorage.setItem('pdfData', truncatedData);
-            console.log(`Stored truncated PDF data (${truncatedData.length} chars, ${Math.round(truncatedData.length/base64data.length*100)}%)`);
-            
-            toast({
-              title: "Storage limitation",
-              description: "PDF was truncated for browser storage. Some features may be limited.",
-            });
-            
-            storedSuccessfully = true;
-          } catch (truncateError) {
-            console.error("Failed to store even truncated PDF data:", truncateError);
-          }
-        }
-      }
-      
-      if (!storedSuccessfully) {
-        throw new Error("Failed to store PDF data due to browser storage limitations. Try a smaller PDF file.");
-      }
+      // Store PDF data in sessionStorage
+      sessionStorage.setItem('pdfData', base64data);
+      sessionStorage.setItem('uploadedPdfData', base64data);
+      console.log("PDF data stored, length:", base64data.length);
       
       // Extract text from PDF
-      let extractedText;
-      try {
-        extractedText = await PdfToText(selectedFile);
-        
-        if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
-          throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
-        }
-        
-        console.log("Text extracted successfully, length:", extractedText.length);
-        
-        // Store the extracted text safely
-        try {
-          sessionStorage.setItem('pdfText', extractedText);
-          console.log("PDF text stored successfully");
-        } catch (textStorageError) {
-          console.error("Error storing full PDF text:", textStorageError);
-          
-          // Try storing a truncated version
-          const truncatedText = extractedText.substring(0, 100000); // ~100KB truncated text
-          try {
-            sessionStorage.setItem('pdfText', truncatedText);
-            sessionStorage.setItem('isPdfTextTruncated', 'true');
-            console.log("Stored truncated PDF text");
-          } catch (truncateTextError) {
-            console.error("Failed to store even truncated PDF text:", truncateTextError);
-            // Just continue - we'll extract text again if needed
-          }
-        }
-      } catch (extractError) {
-        console.error("Error extracting text from PDF:", extractError);
-        throw new Error("Failed to extract text from the PDF. It may be password-protected or corrupted.");
+      const extractedText = await PdfToText(selectedFile);
+      
+      if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
+        throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
+      }
+      
+      // Store the extracted text in sessionStorage
+      sessionStorage.setItem('pdfText', extractedText);
+      console.log("Stored PDF text in sessionStorage, length:", extractedText.length);
+      
+      // Validate that data is stored properly before proceeding
+      const checkData = sessionStorage.getItem('pdfData');
+      const checkText = sessionStorage.getItem('pdfText');
+      
+      if (!checkData || !checkText) {
+        throw new Error("Failed to store PDF data in session storage. Please try again.");
       }
       
       // Process the text with Gemini to generate mind map data
-      try {
-        const mindMapData = await generateMindMapFromText(extractedText);
-        
-        // Store the generated mind map data in sessionStorage
-        try {
-          sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
-          console.log("Mind map data stored successfully");
-        } catch (storeError) {
-          console.error("Error storing mind map data:", storeError);
-          throw new Error("Failed to store mind map data. The PDF might be too complex.");
-        }
-        
-        // Navigate to the mind map view
-        toast({
-          title: "Success",
-          description: "Mind map generated successfully!",
-        });
-        navigate("/mindmap");
-      } catch (aiError) {
-        console.error("Error generating mind map:", aiError);
-        throw new Error("Failed to generate mind map. The AI service encountered an error.");
+      const mindMapData = await generateMindMapFromText(extractedText);
+      
+      // Store the generated mind map data in sessionStorage
+      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+      
+      // Add a final check to ensure all data is stored
+      if (!sessionStorage.getItem('mindMapData')) {
+        throw new Error("Failed to store mind map data. Please try again.");
       }
+      
+      // Navigate to the mind map view
+      toast({
+        title: "Success",
+        description: "Mind map generated successfully!",
+      });
+      navigate("/mindmap");
     } catch (error) {
       console.error("Error processing PDF:", error);
       setExtractionError(error instanceof Error ? error.message : "Failed to process PDF");
@@ -242,7 +157,6 @@ const PdfUpload = () => {
     }
   }, [selectedFile, navigate, toast]);
 
-  
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}

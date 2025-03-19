@@ -75,18 +75,7 @@ export const parseJsonResponse = (text: string): any => {
   }
 };
 
-// Helper function to safely store data in sessionStorage
-const safeSessionStorage = (key: string, data: string): boolean => {
-  try {
-    sessionStorage.setItem(key, data);
-    return true;
-  } catch (error) {
-    console.warn(`Failed to store ${key} in sessionStorage:`, error);
-    return false;
-  }
-};
-
-// Improved storage with multiple fallbacks and size checks
+// Store/retrieve PDF text from session storage with enhanced validation
 export const storePdfText = (pdfText: string) => {
   if (!pdfText || pdfText.trim() === '') {
     console.warn("Attempted to store empty PDF text");
@@ -100,41 +89,32 @@ export const storePdfText = (pdfText: string) => {
       console.warn("Storing PDF text but no PDF data found in session storage");
     }
     
-    // Try to store the full text first
-    let storedSuccessfully = safeSessionStorage('pdfText', pdfText);
-    if (storedSuccessfully) {
-      console.log("Stored PDF text in session storage, length:", pdfText.length);
-    } else {
-      // If full storage fails, try storing a truncated version
-      const maxLength = Math.min(500000, Math.floor(pdfText.length * 0.7)); // ~500KB or 70% of original
-      const truncatedText = pdfText.substring(0, maxLength);
-      storedSuccessfully = safeSessionStorage('pdfText', truncatedText);
+    sessionStorage.setItem('pdfText', pdfText);
+    console.log("Stored PDF text in session storage, length:", pdfText.length);
+    
+    // Verify storage was successful
+    const storedText = sessionStorage.getItem('pdfText');
+    if (!storedText || storedText.length < pdfText.length * 0.9) { // Allow for some loss
+      console.warn("PDF text storage verification failed, trying truncated version");
       
-      if (storedSuccessfully) {
-        safeSessionStorage('isPdfTextTruncated', 'true');
-        console.log("Stored truncated PDF text, length:", truncatedText.length);
-      } else {
-        // If all else fails, store a very small snippet
-        const miniSnippet = pdfText.substring(0, 10000) + "\n\n[Content truncated due to size limitations]";
-        safeSessionStorage('pdfText', miniSnippet);
-        safeSessionStorage('isPdfTextTruncated', 'true');
-        console.log("Stored minimal PDF text snippet");
-      }
+      // Try to store a truncated version if the original might be too large
+      const truncatedText = pdfText.substring(0, Math.min(1000000, pdfText.length * 0.9)); // ~1MB limit for sessionStorage
+      sessionStorage.setItem('pdfText', truncatedText);
+      console.log("Stored truncated PDF text in session storage, length:", truncatedText.length);
     }
   } catch (error) {
     console.error("Failed to store PDF text in session storage:", error);
-    // Try a last-ditch minimal storage
+    // Try to store a truncated version if the original is too large
     try {
-      const fallbackText = "PDF content too large to store in browser memory. Limited analysis available.";
-      sessionStorage.setItem('pdfText', fallbackText);
-      sessionStorage.setItem('isPdfTextTruncated', 'true');
-    } catch (fallbackError) {
-      console.error("Complete failure to store even minimal text:", fallbackError);
+      const truncatedText = pdfText.substring(0, 500000); // ~500KB limit
+      sessionStorage.setItem('pdfText', truncatedText);
+      console.log("Stored truncated PDF text in session storage after error, length:", truncatedText.length);
+    } catch (truncateError) {
+      console.error("Failed to store even truncated PDF text:", truncateError);
     }
   }
 };
 
-// Improved PDF text retrieval with better fallbacks
 export const getPdfText = (): string => {
   try {
     // First validate that we have PDF data before attempting to get text
@@ -157,13 +137,7 @@ export const getPdfText = (): string => {
     const pdfText = sessionStorage.getItem('pdfText');
     
     if (pdfText && pdfText.trim() !== '') {
-      const isTruncated = sessionStorage.getItem('isPdfTextTruncated') === 'true';
-      console.log(`Found PDF text in session storage, length: ${pdfText.length}, truncated: ${isTruncated}`);
-      
-      if (isTruncated) {
-        return pdfText + "\n\n[Note: This is a truncated version of the document due to size limitations]";
-      }
-      
+      console.log("Found PDF text in session storage, length:", pdfText.length);
       return pdfText;
     } else {
       console.log("No PDF text found, but PDF data exists. Creating fallback text.");

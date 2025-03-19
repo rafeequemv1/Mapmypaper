@@ -1,4 +1,3 @@
-
 import { initGeminiClient, getPdfText, truncatePdfText } from "./baseService";
 
 // Generate flowchart from PDF content
@@ -15,7 +14,6 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     
     const model = initGeminiClient();
     
-    // Use a more efficient prompt with smaller context
     const prompt = `
     Create a simple, valid Mermaid flowchart based on this document text.
     
@@ -25,21 +23,23 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     3. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
     4. Connections MUST use EXACTLY TWO dashes: A --> B (not A->B or A---->B)
     5. Each line should define ONE connection or ONE node
-    6. Max 8 nodes total (important for performance)
+    6. Max 12 nodes total
     7. For labels on arrows: A -->|Label text| B (use single pipes)
     8. Never use semicolons (;) in node text or connections
-    9. Replace ALL hyphens with spaces or underscores in node text
-    10. Simple node text is best - keep it short and concise
+    9. EXTREMELY IMPORTANT: never use hyphens (-) in node text. Replace ALL hyphens with spaces or underscores.
+    10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
+    11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
     
-    EXAMPLE:
+    EXAMPLE CORRECT SYNTAX:
     flowchart TD
       A[Start] --> B{Decision}
-      B -->|Yes| C[Process]
-      B -->|No| D[End]
-      C --> D
+      B -->|Yes| C[Process One]
+      B -->|No| D[Process Two]
+      C --> E[End]
+      D --> E
     
-    Document summary (extract key concepts only):
-    ${truncatePdfText(pdfText, 5000)}
+    Here's the document text:
+    ${truncatePdfText(pdfText, 8000)}
     
     Generate ONLY valid Mermaid flowchart code, nothing else.
     `;
@@ -112,6 +112,7 @@ export const cleanMermaidSyntax = (code: string): string => {
       fixedLine = fixedLine.replace(/\b([A-Za-z0-9]+)-([A-Za-z0-9]+)\b(?!\]|\)|\})/g, "$1_$2");
       
       // Fix date ranges in node text by replacing hyphens with underscores
+      // Look for patterns like [text (1871-2020) text] and replace with [text (1871_2020) text]
       fixedLine = fixedLine.replace(/\[([^\]]*?)(\d{4})-(\d{4})([^\]]*?)\]/g, '[$1$2_$3$4]');
       fixedLine = fixedLine.replace(/\(([^\)]*)(\d{4})-(\d{4})([^\)]*)\)/g, '($1$2_$3$4)');
       fixedLine = fixedLine.replace(/\{([^\}]*)(\d{4})-(\d{4})([^\}]*)\}/g, '{$1$2_$3$4}');
@@ -151,13 +152,6 @@ export const cleanMermaidSyntax = (code: string): string => {
     if (!hasConnections) {
       console.warn("No connections found in flowchart, adding default connection");
       validLines.push("A[Start] --> B[End]");
-    }
-    
-    // Limit the number of nodes to 10 for performance
-    if (validLines.length > 15) {
-      console.warn("Flowchart too large, trimming to 15 lines for performance");
-      validLines.splice(12, validLines.length - 12);
-      validLines.push("# Flowchart was trimmed for performance reasons");
     }
     
     return validLines.join('\n');

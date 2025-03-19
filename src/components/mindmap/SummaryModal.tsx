@@ -173,6 +173,25 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     });
   };
 
+  const renderSummarySection = (title: string, content: string) => {
+    return (
+      <div className="relative group mb-5 p-4 bg-muted/10 rounded-lg">
+        <div className="flex items-start justify-between">
+          <h3 className="text-xl font-semibold text-primary mb-3">{title}</h3>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => copyToClipboard(content, title)}
+          >
+            {copiedSection === title ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          </Button>
+        </div>
+        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
+      </div>
+    );
+  };
+
   // Enhanced helper function to format text with bullet points, paragraphs and headings
   const formatText = (text: string): string => {
     if (!text) return "";
@@ -191,29 +210,24 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     // Wrap bullet points in ul tags
     let hasOpenUl = false;
     const lines = formatted.split('\n');
-    const processedLines = [];
     
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].includes('<li')) {
         if (!hasOpenUl) {
-          processedLines.push('<ul class="list-disc pl-4 my-2">');
+          lines[i] = '<ul class="list-disc pl-4 my-2">' + lines[i];
           hasOpenUl = true;
         }
-        processedLines.push(lines[i]);
-      } else {
-        if (hasOpenUl) {
-          processedLines.push('</ul>');
-          hasOpenUl = false;
-        }
-        processedLines.push(lines[i]);
+      } else if (hasOpenUl) {
+        lines[i-1] = lines[i-1] + '</ul>';
+        hasOpenUl = false;
       }
     }
     
     if (hasOpenUl) {
-      processedLines.push('</ul>');
+      lines[lines.length-1] = lines[lines.length-1] + '</ul>';
     }
     
-    formatted = processedLines.join('\n');
+    formatted = lines.join('\n');
     
     // Convert newlines to paragraph breaks
     formatted = formatted.split('\n\n').map(para => {
@@ -227,25 +241,6 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     formatted = formatted.replace(/\n/g, '<br>');
     
     return formatted;
-  };
-
-  const renderSummarySection = (title: string, content: string) => {
-    return (
-      <div className="relative group mb-5 p-4 bg-muted/10 rounded-lg">
-        <div className="flex items-start justify-between">
-          <h3 className="text-xl font-semibold text-primary mb-3">{title}</h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => copyToClipboard(content, title)}
-          >
-            {copiedSection === title ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </Button>
-        </div>
-        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
-      </div>
-    );
   };
 
   // Function to render loading skeletons
