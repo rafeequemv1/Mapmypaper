@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Minus, Plus } from "lucide-react";
@@ -23,6 +23,8 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -39,6 +41,32 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // Monitor container size changes
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const updateContainerWidth = () => {
+      if (containerRef.current) {
+        // Get the width of the container minus padding
+        const newWidth = containerRef.current.clientWidth - 32; // 32px for padding
+        setContainerWidth(newWidth);
+      }
+    };
+    
+    // Initial width calculation
+    updateContainerWidth();
+    
+    // Set up resize observer
+    const resizeObserver = new ResizeObserver(updateContainerWidth);
+    resizeObserver.observe(containerRef.current);
+    
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+    };
   }, []);
 
   // Handle successful document load
@@ -64,7 +92,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   );
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full ${className}`} ref={containerRef}>
       <div className="bg-muted/20 p-2 border-b flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <TooltipProvider>
@@ -131,7 +159,10 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
               {pageNumbers.map(pageNumber => (
                 <div 
                   key={`page_${pageNumber}`} 
-                  className="mb-4 shadow-md"
+                  className="mb-4 shadow-md max-w-full"
+                  style={{
+                    width: containerWidth > 0 ? `${containerWidth}px` : 'auto'
+                  }}
                   onLoad={() => {
                     if (pageNumber === 1) setCurrentPage(1);
                   }}
@@ -141,6 +172,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
                     scale={scale}
                     renderTextLayer={true}
                     renderAnnotationLayer={true}
+                    width={containerWidth > 0 ? containerWidth : undefined}
                     onRenderSuccess={() => {
                       const observer = new IntersectionObserver((entries) => {
                         entries.forEach(entry => {
