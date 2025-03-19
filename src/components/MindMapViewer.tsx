@@ -1,11 +1,10 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { ReloadIcon } from "@radix-ui/react-icons";
+import { ReloadIcon } from "lucide-react"; // Changed from @radix-ui/react-icons to lucide-react
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
