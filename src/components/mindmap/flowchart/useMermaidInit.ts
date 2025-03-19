@@ -1,0 +1,32 @@
+
+import { useEffect } from "react";
+import mermaid from "mermaid";
+
+export const useMermaidInit = () => {
+  // Initialize mermaid with safe configuration
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "default",
+      securityLevel: "loose",
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true
+      },
+      sequence: {
+        diagramMarginX: 50,
+        diagramMarginY: 10,
+        actorMargin: 50,
+        width: 150,
+        height: 65,
+        boxMargin: 10,
+        boxTextMargin: 5,
+        noteMargin: 10,
+        messageMargin: 35
+      },
+      logLevel: 3 // Enables warning logs for debugging
+    });
+  }, []);
+};
+
+export default useMermaidInit;
