@@ -31,6 +31,8 @@ const useMermaidInit = () => {
           mirrorActors: true,
         },
       });
+      
+      console.log("Mermaid initialized successfully");
     } catch (error) {
       console.error("Error initializing mermaid:", error);
     }
@@ -129,6 +131,8 @@ const useMermaidInit = () => {
       } catch (cloneErr) {
         console.error("Error replacing mermaid elements:", cloneErr);
       }
+      
+      console.log("Mermaid cleanup completed successfully");
     } catch (error) {
       console.error("Error in mermaid cleanup:", error);
     }

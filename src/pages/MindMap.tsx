@@ -16,6 +16,7 @@ const MindMap = () => {
   const [showSequenceDiagram, setShowSequenceDiagram] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
+  const [isPageReady, setIsPageReady] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -46,29 +47,42 @@ const MindMap = () => {
     
     // Execute PDF check immediately
     checkPdfAvailability();
+    
+    // Set a timeout to ensure the page is fully loaded before enabling interactions
+    const timeoutId = setTimeout(() => {
+      setIsPageReady(true);
+    }, 1000); // 1 second delay to ensure everything is ready
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [toast]);
 
-  const togglePdf = () => {
+  const togglePdf = useCallback(() => {
     setShowPdf(prev => !prev);
-  };
+  }, []);
 
-  const toggleChat = () => {
+  const toggleChat = useCallback(() => {
     setShowChat(prev => !prev);
-  };
+  }, []);
 
-  const toggleFlowchart = () => {
+  const toggleFlowchart = useCallback(() => {
+    if (!isPageReady) return; // Prevent opening if page isn't fully loaded
     setShowFlowchart(prev => !prev);
-  };
+  }, [isPageReady]);
   
-  const toggleSequenceDiagram = () => {
+  const toggleSequenceDiagram = useCallback(() => {
+    if (!isPageReady) return; // Prevent opening if page isn't fully loaded
     setShowSequenceDiagram(prev => !prev);
-  };
+  }, [isPageReady]);
   
-  const toggleSummary = () => {
+  const toggleSummary = useCallback(() => {
+    if (!isPageReady) return; // Prevent opening if page isn't fully loaded
     setShowSummary(prev => !prev);
-  };
+  }, [isPageReady]);
 
   const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
+    console.log("Mind map instance received in parent component");
     setMindMap(mindMap);
   }, []);
 
