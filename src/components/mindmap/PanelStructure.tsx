@@ -65,6 +65,20 @@ const PanelStructure = ({
 
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
+      {/* PDF panel - conditionally rendered on left side */}
+      {showPdf && (
+        <>
+          <ResizablePanel defaultSize={30} minSize={20} id="pdf-panel">
+            <PdfViewer 
+              onTogglePdf={togglePdf} 
+              showPdf={showPdf} 
+              onExplainText={handleExplainText}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+        </>
+      )}
+      
       {/* MindMap panel - always visible */}
       <ResizablePanel 
         defaultSize={50} 
@@ -76,20 +90,6 @@ const PanelStructure = ({
           onMindMapReady={onMindMapReady}
         />
       </ResizablePanel>
-      
-      {/* PDF panel - conditionally rendered */}
-      {showPdf && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={30} minSize={20} id="pdf-panel">
-            <PdfViewer 
-              onTogglePdf={togglePdf} 
-              showPdf={showPdf} 
-              onExplainText={handleExplainText}
-            />
-          </ResizablePanel>
-        </>
-      )}
       
       {/* Chat panel - conditionally rendered */}
       {showChat && (
