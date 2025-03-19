@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/gemini";
@@ -87,14 +87,14 @@ export const useFlowchartGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const resetGenerator = () => {
+  const resetGenerator = useCallback(() => {
     // Reset state to initial values - prevents memory leaks or stale data
     setCode(defaultFlowchart);
     setError(null);
     setIsGenerating(false);
-  };
+  }, []);
 
-  const generateFlowchart = async () => {
+  const generateFlowchart = useCallback(async () => {
     try {
       setIsGenerating(true);
       setError(null);
@@ -104,6 +104,7 @@ export const useFlowchartGenerator = () => {
         setTimeout(() => reject(new Error("Flowchart generation timed out after 30 seconds")), 30000);
       });
       
+      // Use Promise.race with a shorter timeout to prevent UI freezing
       const generationPromise = generateFlowchartFromPdf()
         .catch(error => {
           console.error("Error in flowchart generation:", error);
@@ -114,44 +115,62 @@ export const useFlowchartGenerator = () => {
       // Use Promise.race to implement timeout
       const flowchartCode = await Promise.race([generationPromise, timeoutPromise]);
       
-      // Clean and validate the mermaid syntax
-      const cleanedCode = cleanMermaidSyntax(flowchartCode);
-      
-      // Check if the flowchart code is valid
-      try {
-        await mermaid.parse(cleanedCode);
-        setCode(cleanedCode);
-        toast({
-          title: "Flowchart Generated",
-          description: "A flowchart has been created based on your PDF content.",
-        });
-      } catch (parseError) {
-        console.error("Mermaid parse error:", parseError);
-        setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-        setCode(defaultFlowchart);
-        toast({
-          title: "Syntax Error",
-          description: "The generated flowchart had syntax errors. Using a default template instead.",
-          variant: "destructive",
-        });
-      }
+      // Avoid freezing the UI by moving the heavy processing to the next tick
+      setTimeout(() => {
+        try {
+          // Clean and validate the mermaid syntax
+          const cleanedCode = cleanMermaidSyntax(flowchartCode);
+          
+          // Check if the flowchart code is valid
+          mermaid.parse(cleanedCode)
+            .then(() => {
+              setCode(cleanedCode);
+              toast({
+                title: "Flowchart Generated",
+                description: "A flowchart has been created based on your PDF content.",
+              });
+            })
+            .catch((parseError) => {
+              console.error("Mermaid parse error:", parseError);
+              setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+              setCode(defaultFlowchart);
+              toast({
+                title: "Syntax Error",
+                description: "The generated flowchart had syntax errors. Using a default template instead.",
+                variant: "destructive",
+              });
+            })
+            .finally(() => {
+              setIsGenerating(false);
+            });
+        } catch (err) {
+          console.error("Failed to process flowchart:", err);
+          setCode(defaultFlowchart);
+          setError(`Processing failed: ${err instanceof Error ? err.message : String(err)}`);
+          setIsGenerating(false);
+          toast({
+            title: "Processing Failed",
+            description: "Failed to process flowchart code.",
+            variant: "destructive",
+          });
+        }
+      }, 0);
     } catch (err) {
       console.error("Failed to generate flowchart:", err);
       setCode(defaultFlowchart);
       setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
+      setIsGenerating(false);
       toast({
         title: "Generation Failed",
         description: "Failed to generate flowchart from PDF content.",
         variant: "destructive",
       });
-    } finally {
-      setIsGenerating(false);
     }
-  };
+  }, [toast]);
 
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleCodeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCode(e.target.value);
-  };
+  }, []);
 
   return {
     code,

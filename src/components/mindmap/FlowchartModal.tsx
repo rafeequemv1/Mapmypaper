@@ -23,6 +23,7 @@ interface FlowchartModalProps {
 const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const { code, error, isGenerating, generateFlowchart, handleCodeChange, resetGenerator } = useFlowchartGenerator();
+  const generationAttempted = useRef(false);
   
   // Initialize mermaid library
   useMermaidInit();
@@ -30,21 +31,27 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // Generate flowchart when modal is opened
   useEffect(() => {
     if (open) {
-      if (code === defaultFlowchart) {
-        generateFlowchart();
+      if (code === defaultFlowchart && !generationAttempted.current) {
+        // Set a small delay to ensure the modal is fully rendered first
+        const timer = setTimeout(() => {
+          generateFlowchart();
+          generationAttempted.current = true;
+        }, 100);
+        
+        return () => clearTimeout(timer);
       }
     } else {
       // Clean up when modal is closed
       resetGenerator();
+      generationAttempted.current = false;
     }
-    
-    // This effect should only run when the 'open' state changes
   }, [open, generateFlowchart, code, resetGenerator]);
 
   // Handle modal close
   const handleModalClose = () => {
     // Clean up and close the modal
     resetGenerator();
+    generationAttempted.current = false;
     onOpenChange(false);
   };
 
