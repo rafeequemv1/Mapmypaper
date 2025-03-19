@@ -29,7 +29,6 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [selectedText, setSelectedText] = useState<string>("");
-  const [selectionPosition, setSelectionPosition] = useState<{ x: number, y: number } | null>(null);
   const { toast } = useToast();
 
   // Load PDF data from sessionStorage
@@ -75,7 +74,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
     };
   }, []);
 
-  // Handle text selection in the PDF
+  // Handle text selection in the PDF and automatically explain
   useEffect(() => {
     const handleTextSelection = () => {
       const selection = window.getSelection();
@@ -101,22 +100,38 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
           ) {
             isWithinPdf = true;
             
-            // Calculate position for the tooltip
-            const x = rect.left + rect.width / 2 - pdfRect.left;
-            const y = rect.bottom - pdfRect.top;
-            
-            setSelectionPosition({ x, y });
+            // Set selected text
             setSelectedText(text);
+            
+            // Automatically trigger explanation
+            if (onExplainText && text.length > 0) {
+              // Small delay to ensure the selection is complete
+              setTimeout(() => {
+                onExplainText(text);
+                
+                toast({
+                  title: "Explaining selected text",
+                  description: "Processing your selection...",
+                });
+                
+                // Clear selection after sending for explanation
+                if (window.getSelection) {
+                  if (window.getSelection()?.empty) {
+                    window.getSelection()?.empty();
+                  } else if (window.getSelection()?.removeAllRanges) {
+                    window.getSelection()?.removeAllRanges();
+                  }
+                }
+              }, 100);
+            }
           }
         }
         
         if (!isWithinPdf) {
-          setSelectionPosition(null);
           setSelectedText("");
         }
       } else {
         // No text selected
-        setSelectionPosition(null);
         setSelectedText("");
       }
     };
@@ -126,43 +141,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
     return () => {
       document.removeEventListener('mouseup', handleTextSelection);
     };
-  }, []);
-
-  // Handle clicking outside to dismiss the selection tooltip
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        containerRef.current && 
-        !containerRef.current.contains(e.target as Node) &&
-        selectionPosition
-      ) {
-        setSelectionPosition(null);
-        setSelectedText("");
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [selectionPosition]);
-
-  // Handle explanation request
-  const handleExplain = () => {
-    if (selectedText && onExplainText) {
-      onExplainText(selectedText);
-      
-      toast({
-        title: "Explanation requested",
-        description: "Asking for explanation about the selected text.",
-      });
-      
-      // Hide the selection tooltip after request
-      setSelectionPosition(null);
-      setSelectedText("");
-    }
-  };
+  }, [onExplainText, toast]);
 
   // Handle successful document load
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -245,28 +224,6 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
                 </div>
               ))}
             </Document>
-          )}
-          
-          {/* Selection Tooltip */}
-          {selectionPosition && selectedText && (
-            <div 
-              className="absolute z-50 bg-white shadow-lg rounded-md border border-gray-200"
-              style={{ 
-                left: `${selectionPosition.x}px`, 
-                top: `${selectionPosition.y + 10}px`,
-                transform: 'translateX(-50%)'
-              }}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1.5 p-2"
-                onClick={handleExplain}
-              >
-                <HelpCircle className="h-4 w-4" />
-                <span>Explain</span>
-              </Button>
-            </div>
           )}
         </div>
       </ScrollArea>

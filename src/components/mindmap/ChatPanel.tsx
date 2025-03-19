@@ -30,7 +30,18 @@ const ChatPanel = ({
   // Update messages when initialMessages changes
   useEffect(() => {
     if (initialMessages && initialMessages.length > 0) {
-      setMessages(initialMessages);
+      // Get the last message to check if it's a new text selection
+      const lastMessage = initialMessages[initialMessages.length - 1];
+      
+      // If the last message contains "Explain this text" and it's from the user
+      if (lastMessage.role === 'user' && lastMessage.content.startsWith('Explain this text:')) {
+        setMessages(initialMessages);
+        
+        // Automatically process this request
+        handleTextExplanationRequest(lastMessage.content);
+      } else {
+        setMessages(initialMessages);
+      }
     }
   }, [initialMessages]);
   
@@ -40,6 +51,41 @@ const ChatPanel = ({
       onMessagesChange(messages);
     }
   }, [messages, onMessagesChange]);
+  
+  // Handle text explanation requests automatically
+  const handleTextExplanationRequest = async (userMessage: string) => {
+    // Show typing indicator
+    setIsTyping(true);
+    
+    try {
+      // Get response from Gemini
+      const response = await chatWithGeminiAboutPdf(userMessage);
+      
+      // Hide typing indicator and add AI response
+      setIsTyping(false);
+      setMessages(prev => [
+        ...prev, 
+        { role: 'assistant', content: response }
+      ]);
+    } catch (error) {
+      // Handle errors
+      setIsTyping(false);
+      console.error("Chat error:", error);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          role: 'assistant', 
+          content: "Sorry, I encountered an error processing your selection. Please try again." 
+        }
+      ]);
+      
+      toast({
+        title: "Processing Error",
+        description: "Failed to explain the selected text.",
+        variant: "destructive"
+      });
+    }
+  };
   
   const handleSendMessage = async (userMessage: string) => {
     // Add user message
@@ -58,9 +104,6 @@ const ChatPanel = ({
         ...prev, 
         { role: 'assistant', content: response }
       ]);
-      
-      // Store chat history in Supabase if needed in the future
-      // Currently not implemented as we need to set up authentication first
     } catch (error) {
       // Handle errors
       setIsTyping(false);
