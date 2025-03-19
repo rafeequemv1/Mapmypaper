@@ -11,6 +11,7 @@ import ChatPanel from "./ChatPanel";
 import MobileChatSheet from "./MobileChatSheet";
 import { useToast } from "@/hooks/use-toast";
 import { MindElixirInstance } from "mind-elixir";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -29,6 +30,7 @@ const PanelStructure = ({
 }: PanelStructureProps) => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     // Set a small delay before generating the map to ensure DOM is ready
@@ -50,7 +52,8 @@ const PanelStructure = ({
     <ResizablePanelGroup direction="horizontal" className="flex-1">
       {showPdf ? (
         <>
-          <ResizablePanel defaultSize={30} minSize={20} id="pdf-panel">
+          {/* Changed the order of the panels for correct resizing direction */}
+          <ResizablePanel defaultSize={30} minSize={20} id="mindmap-panel-left">
             <PdfViewer onTogglePdf={togglePdf} showPdf={showPdf} />
           </ResizablePanel>
           <ResizableHandle withHandle />

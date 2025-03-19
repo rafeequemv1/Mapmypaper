@@ -5,7 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Slider } from "@/components/ui/slider";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -58,11 +57,6 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
   };
 
-  // Handle zoom via slider
-  const handleZoomChange = (value: number[]) => {
-    setScale(value[0]);
-  };
-
   // Create array of page numbers for rendering
   const pageNumbers = Array.from(
     new Array(numPages),
@@ -72,7 +66,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   return (
     <div className={`flex flex-col h-full ${className}`}>
       <div className="bg-muted/20 p-2 border-b flex items-center justify-between">
-        <div className="flex items-center space-x-2 w-full">
+        <div className="flex items-center space-x-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -88,18 +82,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
             </Tooltip>
           </TooltipProvider>
           
-          <div className="w-32 mx-2">
-            <Slider
-              value={[scale]}
-              min={0.5}
-              max={3.0}
-              step={0.1}
-              onValueChange={handleZoomChange}
-              aria-label="Zoom level"
-            />
-          </div>
-          
-          <span className="text-xs w-12">{Math.round(scale * 100)}%</span>
+          <span className="text-xs">{Math.round(scale * 100)}%</span>
           
           <TooltipProvider>
             <Tooltip>
