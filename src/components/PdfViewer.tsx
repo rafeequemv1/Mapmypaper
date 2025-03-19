@@ -2,9 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { chatWithGeminiAboutPdf } from "@/services/gemini";
+import { useToast } from "@/hooks/use-toast";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -15,9 +17,10 @@ interface PdfViewerProps {
   className?: string;
   onTogglePdf?: () => void;
   showPdf?: boolean;
+  onExplainText?: (text: string) => void;
 }
 
-const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) => {
+const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: PdfViewerProps) => {
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -25,6 +28,9 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [selectedText, setSelectedText] = useState<string>("");
+  const [selectionPosition, setSelectionPosition] = useState<{ x: number, y: number } | null>(null);
+  const { toast } = useToast();
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -69,20 +75,100 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
     };
   }, []);
 
+  // Handle text selection in the PDF
+  useEffect(() => {
+    const handleTextSelection = () => {
+      const selection = window.getSelection();
+      
+      if (selection && selection.toString().trim().length > 0) {
+        const text = selection.toString().trim();
+        
+        // Check if selection is within our container
+        let isWithinPdf = false;
+        const pdfContainer = containerRef.current;
+        
+        if (pdfContainer && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          const pdfRect = pdfContainer.getBoundingClientRect();
+          
+          // Check if selection is within PDF container
+          if (
+            rect.left >= pdfRect.left &&
+            rect.right <= pdfRect.right &&
+            rect.top >= pdfRect.top &&
+            rect.bottom <= pdfRect.bottom
+          ) {
+            isWithinPdf = true;
+            
+            // Calculate position for the tooltip
+            const x = rect.left + rect.width / 2 - pdfRect.left;
+            const y = rect.bottom - pdfRect.top;
+            
+            setSelectionPosition({ x, y });
+            setSelectedText(text);
+          }
+        }
+        
+        if (!isWithinPdf) {
+          setSelectionPosition(null);
+          setSelectedText("");
+        }
+      } else {
+        // No text selected
+        setSelectionPosition(null);
+        setSelectedText("");
+      }
+    };
+    
+    document.addEventListener('mouseup', handleTextSelection);
+    
+    return () => {
+      document.removeEventListener('mouseup', handleTextSelection);
+    };
+  }, []);
+
+  // Handle clicking outside to dismiss the selection tooltip
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(e.target as Node) &&
+        selectionPosition
+      ) {
+        setSelectionPosition(null);
+        setSelectedText("");
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectionPosition]);
+
+  // Handle explanation request
+  const handleExplain = () => {
+    if (selectedText && onExplainText) {
+      onExplainText(selectedText);
+      
+      toast({
+        title: "Explanation requested",
+        description: "Asking for explanation about the selected text.",
+      });
+      
+      // Hide the selection tooltip after request
+      setSelectionPosition(null);
+      setSelectedText("");
+    }
+  };
+
   // Handle successful document load
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     console.log(`Document loaded with ${numPages} pages`);
     setNumPages(numPages);
     setIsLoading(false);
-  };
-
-  // Handle zoom in/out
-  const handleZoomIn = () => {
-    setScale(prevScale => Math.min(prevScale + 0.2, 3.0));
-  };
-
-  const handleZoomOut = () => {
-    setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
   };
 
   // Create array of page numbers for rendering
@@ -94,40 +180,6 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   return (
     <div className={`flex flex-col h-full ${className}`} ref={containerRef}>
       <div className="bg-muted/20 p-2 border-b flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={handleZoomOut}
-                  className="p-1 rounded hover:bg-muted text-muted-foreground"
-                  aria-label="Zoom out"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Zoom out</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <span className="text-xs">{Math.round(scale * 100)}%</span>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={handleZoomIn}
-                  className="p-1 rounded hover:bg-muted text-muted-foreground"
-                  aria-label="Zoom in"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Zoom in</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        
         <div className="text-xs text-muted-foreground">
           {isLoading ? 'Loading PDF...' : `Page ${currentPage} of ${numPages}`}
         </div>
@@ -193,6 +245,28 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
                 </div>
               ))}
             </Document>
+          )}
+          
+          {/* Selection Tooltip */}
+          {selectionPosition && selectedText && (
+            <div 
+              className="absolute z-50 bg-white shadow-lg rounded-md border border-gray-200"
+              style={{ 
+                left: `${selectionPosition.x}px`, 
+                top: `${selectionPosition.y + 10}px`,
+                transform: 'translateX(-50%)'
+              }}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1.5 p-2"
+                onClick={handleExplain}
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span>Explain</span>
+              </Button>
+            </div>
           )}
         </div>
       </ScrollArea>

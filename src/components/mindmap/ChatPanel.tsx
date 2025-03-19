@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -9,15 +9,37 @@ import ChatInput from "./chat/ChatInput";
 
 interface ChatPanelProps {
   toggleChat: () => void;
+  initialMessages?: { role: 'user' | 'assistant'; content: string }[];
+  onMessagesChange?: (messages: { role: 'user' | 'assistant'; content: string }[]) => void;
 }
 
-const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
+const ChatPanel = ({ 
+  toggleChat, 
+  initialMessages,
+  onMessagesChange
+}: ChatPanelProps) => {
   const { toast } = useToast();
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
-    { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
-  ]);
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>(
+    initialMessages || [
+      { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
+    ]
+  );
   const [isTyping, setIsTyping] = useState(false);
+  
+  // Update messages when initialMessages changes
+  useEffect(() => {
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages);
+    }
+  }, [initialMessages]);
+  
+  // Notify parent component about message changes
+  useEffect(() => {
+    if (onMessagesChange) {
+      onMessagesChange(messages);
+    }
+  }, [messages, onMessagesChange]);
   
   const handleSendMessage = async (userMessage: string) => {
     // Add user message

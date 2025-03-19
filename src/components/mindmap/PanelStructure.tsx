@@ -31,6 +31,9 @@ const PanelStructure = ({
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const isMobile = useIsMobile();
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
+    { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
+  ]);
   
   useEffect(() => {
     // Set a small delay before generating the map to ensure DOM is ready
@@ -48,12 +51,28 @@ const PanelStructure = ({
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Handle text explanation request
+  const handleExplainText = useCallback((text: string) => {
+    // Add user message with the text to explain
+    const userMessage = `Explain this text: "${text}"`;
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    
+    // Show chat panel if not already visible
+    if (!showChat) {
+      toggleChat();
+    }
+  }, [showChat, toggleChat]);
+
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
       {showPdf ? (
         <>
           <ResizablePanel defaultSize={30} minSize={20} id="pdf-panel">
-            <PdfViewer onTogglePdf={togglePdf} showPdf={showPdf} />
+            <PdfViewer 
+              onTogglePdf={togglePdf} 
+              showPdf={showPdf} 
+              onExplainText={handleExplainText}
+            />
           </ResizablePanel>
           <ResizableHandle withHandle />
         </>
@@ -73,7 +92,11 @@ const PanelStructure = ({
         <>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={25} minSize={20} id="chat-panel">
-            <ChatPanel toggleChat={toggleChat} />
+            <ChatPanel 
+              toggleChat={toggleChat} 
+              initialMessages={chatMessages}
+              onMessagesChange={setChatMessages}
+            />
           </ResizablePanel>
         </>
       )}
