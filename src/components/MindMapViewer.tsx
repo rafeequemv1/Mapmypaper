@@ -4,7 +4,7 @@ import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { ReloadIcon } from "lucide-react"; // Changed from @radix-ui/react-icons to lucide-react
+import { RefreshCw } from "lucide-react"; // Changed to RefreshCw which is a reload/refresh icon
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -311,7 +311,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
             onClick={resetAndRetry}
             className="mt-2 inline-flex items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
           >
-            <ReloadIcon className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 h-4 w-4" />
             Try Again
           </button>
         </Alert>
