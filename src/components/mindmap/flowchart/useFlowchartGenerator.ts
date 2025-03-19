@@ -14,51 +14,34 @@ export const defaultFlowchart = `flowchart TD
 export const cleanMermaidSyntax = (input: string): string => {
   let cleaned = input.trim();
   
-  // Fix common syntax errors
-  cleaned = cleaned
-    // Fix arrows if needed
-    .replace(/-+>/g, "-->")
-    // Replace any hyphens in node IDs with underscores
-    .replace(/(\w+)-(\w+)/g, "$1_$2");
-  
-  // Ensure it starts with flowchart directive
-  if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart TD\n" + cleaned;
-  }
-  
-  // Process line by line to ensure each line is valid
-  const lines = cleaned.split('\n');
-  const processedLines = lines.map(line => {
-    // Skip empty lines or lines starting with flowchart, subgraph, or end
-    if (!line.trim() || 
-        line.trim().startsWith('flowchart') || 
-        line.trim().startsWith('subgraph') || 
-        line.trim() === 'end') {
-      return line;
+  try {
+    // Fix common syntax errors
+    cleaned = cleaned
+      // Fix arrows if needed
+      .replace(/-+>/g, "-->")
+      // Replace any hyphens in node IDs with underscores
+      .replace(/(\w+)-(\w+)/g, "$1_$2");
+    
+    // Ensure it starts with flowchart directive
+    if (!cleaned.startsWith("flowchart")) {
+      cleaned = "flowchart TD\n" + cleaned;
     }
     
-    // Handle node definitions with text containing hyphens
-    // Replace hyphens inside node text brackets
-    let processedLine = line;
-    
-    // Handle square brackets []
-    processedLine = processedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
-      return '[' + p1 + ' ' + p2 + ']';
-    });
-    
-    // Handle parentheses ()
-    processedLine = processedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
-      return '(' + p1 + ' ' + p2 + ')';
-    });
-    
-    // Handle curly braces {}
-    processedLine = processedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
-      return '{' + p1 + ' ' + p2 + '}';
-    });
-    
-    // Replace all remaining dashes in node text with spaces or underscores
-    // This needs to run multiple times to catch all hyphens in text
-    for (let i = 0; i < 3; i++) {
+    // Process line by line to ensure each line is valid
+    const lines = cleaned.split('\n');
+    const processedLines = lines.map(line => {
+      // Skip empty lines or lines starting with flowchart, subgraph, or end
+      if (!line.trim() || 
+          line.trim().startsWith('flowchart') || 
+          line.trim().startsWith('subgraph') || 
+          line.trim() === 'end') {
+        return line;
+      }
+      
+      // Handle node definitions with text containing hyphens
+      // Replace hyphens inside node text brackets
+      let processedLine = line;
+      
       // Handle square brackets []
       processedLine = processedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
         return '[' + p1 + ' ' + p2 + ']';
@@ -73,12 +56,15 @@ export const cleanMermaidSyntax = (input: string): string => {
       processedLine = processedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
         return '{' + p1 + ' ' + p2 + '}';
       });
-    }
+      
+      return processedLine;
+    });
     
-    return processedLine;
-  });
-  
-  return processedLines.join('\n');
+    return processedLines.join('\n');
+  } catch (error) {
+    console.error("Error in cleanMermaidSyntax:", error);
+    return cleaned; // Return the original cleaned string if any error occurs
+  }
 };
 
 export const useFlowchartGenerator = () => {
@@ -87,12 +73,17 @@ export const useFlowchartGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const generationAbortController = useRef<AbortController | null>(null);
+  const mermaidInitialized = useRef(false);
 
   // Cleanup function to abort any pending operations
   const cleanupResources = useCallback(() => {
     // Cancel any pending API requests
     if (generationAbortController.current) {
-      generationAbortController.current.abort();
+      try {
+        generationAbortController.current.abort();
+      } catch (err) {
+        console.error("Error aborting generation:", err);
+      }
       generationAbortController.current = null;
     }
     
@@ -102,7 +93,38 @@ export const useFlowchartGenerator = () => {
     // Clear any errors
     setError(null);
     
+    // Reset mermaid if initialized
+    try {
+      if (mermaidInitialized.current && typeof (mermaid as any).reset === 'function') {
+        (mermaid as any).reset();
+        mermaidInitialized.current = false;
+      }
+    } catch (resetError) {
+      console.error("Error resetting mermaid:", resetError);
+    }
+    
     console.log("Flowchart generator resources cleaned up");
+  }, []);
+
+  const initializeMermaid = useCallback(() => {
+    try {
+      if (!mermaidInitialized.current) {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: "default",
+          logLevel: "error",
+          securityLevel: "loose",
+          flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true,
+            curve: "basis",
+          },
+        });
+        mermaidInitialized.current = true;
+      }
+    } catch (error) {
+      console.error("Error initializing mermaid:", error);
+    }
   }, []);
 
   const generateFlowchart = useCallback(async () => {
@@ -126,6 +148,9 @@ export const useFlowchartGenerator = () => {
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
+      
+      // Initialize mermaid before parsing
+      initializeMermaid();
       
       // Check if the flowchart code is valid
       try {
@@ -163,11 +188,15 @@ export const useFlowchartGenerator = () => {
         setIsGenerating(false);
       }
     }
-  }, [toast, cleanupResources]);
+  }, [toast, cleanupResources, initializeMermaid]);
 
   const handleCodeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCode(e.target.value);
-  }, []);
+    // Clear errors when user edits the code
+    if (error) {
+      setError(null);
+    }
+  }, [error]);
 
   return {
     code,

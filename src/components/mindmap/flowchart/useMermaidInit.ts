@@ -4,27 +4,36 @@ import mermaid from "mermaid";
 
 const useMermaidInit = () => {
   useEffect(() => {
-    // Initialize mermaid with specific configuration
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: "default",
-      logLevel: "error",
-      securityLevel: "loose",
-      flowchart: {
-        useMaxWidth: true,
-        htmlLabels: true,
-        curve: "basis",
-      },
-      fontFamily: "Inter, sans-serif",
-      sequence: {
-        diagramMarginX: 50,
-        diagramMarginY: 10,
-        boxMargin: 10,
-        noteMargin: 10,
-        messageMargin: 35,
-        mirrorActors: true,
-      },
-    });
+    try {
+      // Reset mermaid before initializing
+      if (typeof (mermaid as any).reset === 'function') {
+        (mermaid as any).reset();
+      }
+      
+      // Initialize mermaid with specific configuration
+      mermaid.initialize({
+        startOnLoad: false, // Changed to false to avoid automatic rendering
+        theme: "default",
+        logLevel: "error",
+        securityLevel: "loose",
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true,
+          curve: "basis",
+        },
+        fontFamily: "Inter, sans-serif",
+        sequence: {
+          diagramMarginX: 50,
+          diagramMarginY: 10,
+          boxMargin: 10,
+          noteMargin: 10,
+          messageMargin: 35,
+          mirrorActors: true,
+        },
+      });
+    } catch (error) {
+      console.error("Error initializing mermaid:", error);
+    }
     
     return () => {
       // Cleanup function
@@ -43,19 +52,23 @@ const useMermaidInit = () => {
       
       // Clean up any orphaned SVG elements
       try {
-        const mermaidSvgs = document.querySelectorAll('[id^="mermaid-"]');
-        mermaidSvgs.forEach(svg => {
-          if (svg.parentNode) {
-            svg.parentNode.removeChild(svg);
-          }
-        });
+        // Remove all mermaid-related SVGs
+        const selectors = [
+          '[id^="mermaid-"]',
+          '[id^="flowchart-"]',
+          '.mermaid svg'
+        ];
         
-        // Also look for flowchart SVGs
-        const flowchartSvgs = document.querySelectorAll('[id^="flowchart-"]');
-        flowchartSvgs.forEach(svg => {
-          if (svg.parentNode) {
-            svg.parentNode.removeChild(svg);
-          }
+        selectors.forEach(selector => {
+          document.querySelectorAll(selector).forEach(el => {
+            try {
+              if (el.parentNode) {
+                el.parentNode.removeChild(el);
+              }
+            } catch (err) {
+              console.error(`Error removing element with selector ${selector}:`, err);
+            }
+          });
         });
       } catch (err) {
         console.error("Error removing mermaid SVGs:", err);

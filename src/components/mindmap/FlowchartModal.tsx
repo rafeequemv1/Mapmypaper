@@ -14,6 +14,7 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
+import { useToast } from "@/hooks/use-toast";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ interface FlowchartModalProps {
 
 const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   const { 
     code, 
     error, 
@@ -34,32 +36,56 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // Initialize mermaid library
   const { cleanup: cleanupMermaid } = useMermaidInit();
 
-  // Generate flowchart when modal is opened
+  // Generate flowchart when modal is opened for the first time
   useEffect(() => {
+    let isMounted = true;
+    
     if (open) {
       if (code === defaultFlowchart) {
-        generateFlowchart();
+        try {
+          generateFlowchart().catch(err => {
+            if (isMounted) {
+              console.error("Error generating flowchart:", err);
+              toast({
+                title: "Generation Error",
+                description: "Failed to generate flowchart. You can try manually editing the code.",
+                variant: "destructive"
+              });
+            }
+          });
+        } catch (error) {
+          console.error("Unexpected error during flowchart generation:", error);
+        }
       }
     }
     
-    // Clean up when modal is closed
+    // Clean up when component unmounts
     return () => {
+      isMounted = false;
       if (!open) {
-        // Cleanup when closing
-        cleanupResources();
-        cleanupMermaid();
+        try {
+          // Cleanup when closing
+          cleanupResources();
+          cleanupMermaid();
+        } catch (error) {
+          console.error("Error during cleanup:", error);
+        }
       }
     };
-  }, [open, code, generateFlowchart, cleanupResources, cleanupMermaid]);
+  }, [open, code, generateFlowchart, cleanupResources, cleanupMermaid, toast]);
   
   // Cleanup when modal closes
   const handleCloseModal = () => {
-    // First call the cleanup functions
-    cleanupResources();
-    cleanupMermaid();
-    
-    // Then notify parent that modal should close
-    onOpenChange(false);
+    try {
+      // First call the cleanup functions
+      cleanupResources();
+      cleanupMermaid();
+    } catch (error) {
+      console.error("Error during modal close cleanup:", error);
+    } finally {
+      // Always notify parent that modal should close, even if cleanup had errors
+      onOpenChange(false);
+    }
   };
 
   return (

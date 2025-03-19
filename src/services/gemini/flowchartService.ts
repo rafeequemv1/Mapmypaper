@@ -1,3 +1,4 @@
+
 import { initGeminiClient, getPdfText, truncatePdfText } from "./baseService";
 
 // Generate flowchart from PDF content
@@ -7,6 +8,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     try {
       pdfText = getPdfText();
     } catch (error) {
+      console.error("Error getting PDF text:", error);
       return `flowchart TD
         A[Error] --> B[No PDF Content]
         B --> C[Please upload a PDF first]`;
@@ -23,12 +25,13 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     3. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
     4. Connections MUST use EXACTLY TWO dashes: A --> B (not A->B or A---->B)
     5. Each line should define ONE connection or ONE node
-    6. Max 12 nodes total
+    6. Max 10 nodes total - VERY IMPORTANT to keep it simple
     7. For labels on arrows: A -->|Label text| B (use single pipes)
     8. Never use semicolons (;) in node text or connections
     9. EXTREMELY IMPORTANT: never use hyphens (-) in node text. Replace ALL hyphens with spaces or underscores.
     10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
     11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
+    12. CRITICAL: Every node MUST be connected to at least one other node
     
     EXAMPLE CORRECT SYNTAX:
     flowchart TD
@@ -39,7 +42,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
       D --> E
     
     Here's the document text:
-    ${truncatePdfText(pdfText, 8000)}
+    ${truncatePdfText(pdfText, 6000)}
     
     Generate ONLY valid Mermaid flowchart code, nothing else.
     `;
@@ -81,7 +84,10 @@ export const cleanMermaidSyntax = (code: string): string => {
     // Process line by line to ensure each line is valid
     const lines = cleaned.split('\n');
     const validLines: string[] = [];
+    const nodeIds = new Set<string>();
+    const connections = new Set<string>();
     
+    // First pass: collect node IDs and validate lines
     lines.forEach(line => {
       const trimmedLine = line.trim();
       
@@ -133,6 +139,21 @@ export const cleanMermaidSyntax = (code: string): string => {
         return '{' + p1 + ' ' + p2 + '}';
       });
       
+      // Extract node IDs from node definitions
+      const nodeMatch = fixedLine.match(/^([A-Za-z0-9_]+)(?:\[|\(|\{)/);
+      if (nodeMatch) {
+        nodeIds.add(nodeMatch[1]);
+      }
+      
+      // Extract connection info
+      const connectionMatch = fixedLine.match(/([A-Za-z0-9_]+)\s*-->\s*(?:\|[^|]*\|\s*)?([A-Za-z0-9_]+)/);
+      if (connectionMatch) {
+        const [_, fromNode, toNode] = connectionMatch;
+        nodeIds.add(fromNode);
+        nodeIds.add(toNode);
+        connections.add(`${fromNode}->${toNode}`);
+      }
+      
       // Fix nodes without brackets by adding them
       const nodeWithoutBrackets = /^([A-Za-z0-9_]+)(\s+)(?!\[|\(|\{)(.*?)(\s*-->|\s*$)/;
       
@@ -147,11 +168,16 @@ export const cleanMermaidSyntax = (code: string): string => {
     });
     
     // Validate: ensure there's at least one connection (arrow)
-    const hasConnections = validLines.some(line => line.includes('-->'));
-    
-    if (!hasConnections) {
+    if (connections.size === 0) {
       console.warn("No connections found in flowchart, adding default connection");
       validLines.push("A[Start] --> B[End]");
+    }
+    
+    // Ensure at least some minimal structure if we ended up with an empty or invalid flowchart
+    if (validLines.length <= 1 || nodeIds.size < 2) {
+      return `flowchart TD
+        A[Start] --> B[Process]
+        B --> C[End]`;
     }
     
     return validLines.join('\n');

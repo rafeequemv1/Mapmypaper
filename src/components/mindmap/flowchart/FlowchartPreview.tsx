@@ -15,6 +15,7 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [renderError, setRenderError] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const renderTimeoutRef = useRef<number | null>(null);
@@ -32,6 +33,9 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
     if (previewRef.current) {
       previewRef.current.innerHTML = "";
     }
+    
+    // Reset any error state
+    setRenderError(null);
   }, []);
 
   // Render flowchart when code changes
@@ -42,7 +46,7 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
     // Add a small timeout to ensure DOM is ready
     renderTimeoutRef.current = window.setTimeout(() => {
       renderFlowchart();
-    }, 50);
+    }, 100); // Increased timeout for more stability
     
     return () => {
       cleanupPreviousRender();
@@ -54,15 +58,16 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
     return () => {
       cleanupPreviousRender();
       
-      // Find any orphaned SVG elements that might have been created by mermaid
-      // and remove them to prevent the DOM errors
+      // Find and remove any orphaned SVG elements that might have been created by mermaid
       try {
         const svgElements = document.querySelectorAll(`svg[id^="flowchart-"]`);
         svgElements.forEach(svg => {
-          if (svg.parentNode) {
-            svg.parentNode.removeChild(svg);
-          } else {
-            document.body.removeChild(svg);
+          try {
+            if (svg.parentNode) {
+              svg.parentNode.removeChild(svg);
+            }
+          } catch (removeError) {
+            console.error("Error removing SVG element:", removeError);
           }
         });
       } catch (err) {
@@ -77,10 +82,25 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
     try {
       // Clear the preview area
       previewRef.current.innerHTML = "";
+      
+      // Ensure any error state is reset
+      setRenderError(null);
 
       // Create a unique ID for the diagram
       const id = `flowchart-${Date.now()}`;
       svgIdRef.current = id;
+      
+      // Initialize mermaid configuration for this render
+      await mermaid.initialize({
+        startOnLoad: false,
+        theme: "default",
+        securityLevel: "loose",
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true,
+          curve: "basis",
+        },
+      });
       
       // Parse the flowchart to verify syntax before rendering
       await mermaid.parse(code);
@@ -94,6 +114,7 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
       }
     } catch (err) {
       console.error("Failed to render flowchart:", err);
+      setRenderError(err instanceof Error ? err.message : "Unknown rendering error");
       
       // Display error message in preview area
       if (previewRef.current) {
@@ -182,6 +203,23 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
         ref={contentRef}
         style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
       >
+        {/* Loading indicator */}
+        {isGenerating && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          </div>
+        )}
+        
+        {/* Error message */}
+        {(error || renderError) && !isGenerating && (
+          <div className="absolute bottom-4 left-4 right-4 bg-red-50 border border-red-200 rounded-md p-3 z-10">
+            <p className="text-red-600 text-sm">
+              {error || renderError}
+            </p>
+          </div>
+        )}
+        
+        {/* The flowchart container */}
         <div 
           ref={previewRef} 
           className="absolute" 
@@ -190,13 +228,7 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
             transformOrigin: 'center center',
             transition: isDragging ? 'none' : 'transform 0.1s ease'
           }}
-        >
-          {isGenerating ? (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : null}
-        </div>
+        />
       </div>
     </div>
   );
