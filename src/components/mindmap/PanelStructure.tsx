@@ -63,12 +63,23 @@ const PanelStructure = ({
     }
   }, [showChat, toggleChat]);
 
+  // Define panel sizes for better control
+  const pdfPanelSize = 30;
+  const mindMapPanelSize = showPdf ? (showChat ? 40 : 70) : (showChat ? 75 : 100);
+  const chatPanelSize = 30;
+
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
-      {/* PDF panel - conditionally rendered on left side */}
+      {/* PDF panel - left side */}
       {showPdf && (
         <>
-          <ResizablePanel defaultSize={30} minSize={20} id="pdf-panel">
+          <ResizablePanel 
+            defaultSize={pdfPanelSize} 
+            minSize={20} 
+            maxSize={50}
+            id="pdf-panel"
+            order={1}
+          >
             <PdfViewer 
               onTogglePdf={togglePdf} 
               showPdf={showPdf} 
@@ -79,10 +90,11 @@ const PanelStructure = ({
         </>
       )}
       
-      {/* MindMap panel - always visible */}
+      {/* MindMap panel - center */}
       <ResizablePanel 
-        defaultSize={50} 
-        minSize={30} 
+        defaultSize={mindMapPanelSize} 
+        minSize={30}
+        order={2}
         id="mindmap-panel"
       >
         <MindMapViewer 
@@ -91,11 +103,17 @@ const PanelStructure = ({
         />
       </ResizablePanel>
       
-      {/* Chat panel - conditionally rendered */}
+      {/* Chat panel - right side */}
       {showChat && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={20} minSize={20} id="chat-panel">
+          <ResizablePanel 
+            defaultSize={chatPanelSize} 
+            minSize={20} 
+            maxSize={50}
+            order={3}
+            id="chat-panel"
+          >
             <ChatPanel 
               toggleChat={toggleChat} 
               initialMessages={chatMessages}

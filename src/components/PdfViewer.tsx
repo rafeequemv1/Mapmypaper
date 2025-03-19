@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,6 +37,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [showTooltip, setShowTooltip] = useState(false);
   const { toast } = useToast();
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -85,28 +87,31 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
     const handleTextSelection = () => {
       const selection = window.getSelection();
       
-      if (selection && selection.toString().trim().length > 0) {
+      if (!selection || !pdfContainerRef.current) {
+        setShowTooltip(false);
+        return;
+      }
+      
+      if (selection.toString().trim().length > 0) {
         const text = selection.toString().trim();
         
-        // Check if selection is within our container
+        // Check if selection is within PDF container
         let isWithinPdf = false;
-        const pdfContainer = containerRef.current;
         
-        if (pdfContainer && selection.rangeCount > 0) {
+        if (selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           const rect = range.getBoundingClientRect();
-          const pdfRect = pdfContainer.getBoundingClientRect();
+          const pdfRect = pdfContainerRef.current.getBoundingClientRect();
           
-          // Check if selection is within PDF container
-          if (
-            rect.left >= pdfRect.left &&
-            rect.right <= pdfRect.right &&
-            rect.top >= pdfRect.top &&
-            rect.bottom <= pdfRect.bottom
-          ) {
-            isWithinPdf = true;
-            
-            // Set selected text
+          // Calculate if the selection is within the PDF container
+          isWithinPdf = !(
+            rect.right < pdfRect.left || 
+            rect.left > pdfRect.right || 
+            rect.bottom < pdfRect.top || 
+            rect.top > pdfRect.bottom
+          );
+          
+          if (isWithinPdf) {
             setSelectedText(text);
             
             // Position the tooltip near the selection
@@ -117,26 +122,37 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
             
             // Show tooltip
             setShowTooltip(true);
+            return;
           }
         }
-        
-        if (!isWithinPdf) {
-          setSelectedText("");
+      }
+      
+      // No valid selection, hide tooltip
+      setSelectedText("");
+      setShowTooltip(false);
+    };
+    
+    // Register mouseup event to capture text selection
+    document.addEventListener('mouseup', handleTextSelection);
+    
+    // Register mousedown to hide tooltip when clicking elsewhere
+    const handleMouseDown = (e: MouseEvent) => {
+      if (showTooltip) {
+        // Check if click is outside tooltip
+        const tooltip = document.querySelector('.tooltip-explain-button');
+        if (tooltip && !tooltip.contains(e.target as Node)) {
           setShowTooltip(false);
         }
-      } else {
-        // No text selected
-        setSelectedText("");
-        setShowTooltip(false);
       }
     };
     
-    document.addEventListener('mouseup', handleTextSelection);
+    document.addEventListener('mousedown', handleMouseDown);
     
     return () => {
       document.removeEventListener('mouseup', handleTextSelection);
+      document.removeEventListener('mousedown', handleMouseDown);
     };
-  }, []);
+  }, [showTooltip]);
 
   // Handle explaining selected text
   const handleExplainClick = () => {
@@ -184,7 +200,10 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
       </div>
       
       <ScrollArea className="flex-1">
-        <div className="min-h-full p-4 flex flex-col items-center bg-muted/10">
+        <div 
+          className="min-h-full p-4 flex flex-col items-center bg-muted/10"
+          ref={pdfContainerRef}
+        >
           {isLoading ? (
             <div className="flex items-center justify-center h-full w-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -248,7 +267,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
               {/* Explain tooltip */}
               {showTooltip && selectedText && (
                 <div 
-                  className="fixed z-50"
+                  className="fixed z-50 tooltip-explain-button"
                   style={{
                     left: `${tooltipPosition.x}px`,
                     top: `${tooltipPosition.y}px`,
