@@ -23,7 +23,7 @@ interface HeaderProps {
   pdfAvailable: boolean;
   showChat: boolean;
   toggleChat: () => void;
-  onExportMindMap?: (type: 'svg') => void;
+  onExportMindMap?: (type: 'svg' | 'png') => void;
   onOpenSummary?: () => void;
 }
 
@@ -119,6 +119,9 @@ const Header = ({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
                 Download as SVG
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExportMindMap('png')}>
+                Download as PNG
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

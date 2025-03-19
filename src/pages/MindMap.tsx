@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -59,7 +60,7 @@ const MindMap = () => {
     setMindMap(mindMap);
   }, []);
 
-  const handleExportMindMap = useCallback(async (type: 'svg') => {
+  const handleExportMindMap = useCallback(async (type: 'svg' | 'png') => {
     if (!mindMap) {
       toast({
         title: "Export Failed",
@@ -70,7 +71,13 @@ const MindMap = () => {
     }
 
     try {
-      let blob = mindMap.exportSvg();
+      let blob;
+      
+      if (type === 'svg') {
+        blob = mindMap.exportSvg();
+      } else if (type === 'png') {
+        blob = await mindMap.exportPng();
+      }
 
       if (!blob) {
         throw new Error("Failed to generate export data");

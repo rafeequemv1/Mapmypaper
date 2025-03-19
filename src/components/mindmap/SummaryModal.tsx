@@ -110,7 +110,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+      <DialogContent className="max-w-3xl h-[80vh] flex flex-col bg-white">
         <DialogHeader>
           <DialogTitle>Document Summary</DialogTitle>
           <DialogDescription>
