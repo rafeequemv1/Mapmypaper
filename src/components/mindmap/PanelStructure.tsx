@@ -52,8 +52,7 @@ const PanelStructure = ({
     <ResizablePanelGroup direction="horizontal" className="flex-1">
       {showPdf ? (
         <>
-          {/* Changed the order of the panels for correct resizing direction */}
-          <ResizablePanel defaultSize={30} minSize={20} id="mindmap-panel-left">
+          <ResizablePanel defaultSize={30} minSize={20} id="pdf-panel">
             <PdfViewer onTogglePdf={togglePdf} showPdf={showPdf} />
           </ResizablePanel>
           <ResizableHandle withHandle />
