@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -74,6 +75,26 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     });
   };
 
+  // Helper function to format text with bullet points and paragraphs
+  const formatText = (text: string): string => {
+    // Check if text is a string
+    if (typeof text !== 'string') {
+      console.warn('formatText received non-string value:', text);
+      return String(text || '');
+    }
+    
+    // Replace bullet points
+    let formatted = text.replace(/•/g, '&bull;');
+    
+    // Convert newlines to <br> tags
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    // Format bullet points with proper indentation
+    formatted = formatted.replace(/- /g, '&bull; ');
+    
+    return formatted;
+  };
+
   const renderSummarySection = (title: string, content: string) => {
     return (
       <div className="relative group mb-5">
@@ -91,20 +112,6 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         <div className="text-sm" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
       </div>
     );
-  };
-
-  // Helper function to format text with bullet points and paragraphs
-  const formatText = (text: string): string => {
-    // Replace bullet points
-    let formatted = text.replace(/•/g, '&bull;');
-    
-    // Convert newlines to <br> tags
-    formatted = formatted.replace(/\n/g, '<br>');
-    
-    // Format bullet points with proper indentation
-    formatted = formatted.replace(/- /g, '&bull; ');
-    
-    return formatted;
   };
 
   return (
