@@ -22,7 +22,7 @@ interface FlowchartModalProps {
 
 const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
-  const { code, error, isGenerating, generateFlowchart, handleCodeChange, resetGenerator } = useFlowchartGenerator();
+  const { code, error, isGenerating, generateFlowchart, handleCodeChange } = useFlowchartGenerator();
   
   // Initialize mermaid library
   useMermaidInit();
@@ -33,23 +33,11 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       if (code === defaultFlowchart) {
         generateFlowchart();
       }
-    } else {
-      // Clean up when modal is closed
-      resetGenerator();
     }
-    
-    // This effect should only run when the 'open' state changes
-  }, [open, generateFlowchart, code, resetGenerator]);
-
-  // Handle modal close
-  const handleModalClose = () => {
-    // Clean up and close the modal
-    resetGenerator();
-    onOpenChange(false);
-  };
+  }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={handleModalClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Flowchart Editor</DialogTitle>
@@ -82,7 +70,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         
         <DialogFooter className="flex justify-between sm:justify-between">
           <FlowchartExport previewRef={previewRef} />
-          <Button onClick={handleModalClose}>Done</Button>
+          <Button onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

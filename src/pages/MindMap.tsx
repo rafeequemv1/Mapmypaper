@@ -7,7 +7,6 @@ import SequenceDiagramModal from "@/components/mindmap/SequenceDiagramModal";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -18,7 +17,6 @@ const MindMap = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -26,25 +24,9 @@ const MindMap = () => {
       try {
         // Check if PDF data exists in either storage key
         const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-        const hasPdfData = !!pdfData && pdfData.length > 100;
+        const hasPdfData = !!pdfData;
         
         console.log("PDF check on mount - available:", hasPdfData, "PDF data length:", pdfData ? pdfData.length : 0);
-        
-        if (!hasPdfData) {
-          // No PDF data available, show error and navigate back to upload page
-          toast({
-            title: "No PDF Available",
-            description: "Please upload a PDF document first",
-            variant: "destructive",
-          });
-          
-          // Navigate back to the upload page after a brief delay
-          setTimeout(() => {
-            navigate("/");
-          }, 1500);
-          
-          return;
-        }
         
         setPdfAvailable(hasPdfData);
         
@@ -55,37 +37,16 @@ const MindMap = () => {
         if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
           sessionStorage.setItem('pdfData', sessionStorage.getItem('uploadedPdfData')!);
         }
-        
-        // Check for PDF text as well
-        const pdfText = sessionStorage.getItem('pdfText');
-        if (!pdfText && hasPdfData) {
-          console.warn("PDF data found but no extracted text. Some features may be limited.");
-          toast({
-            title: "PDF Text Not Found",
-            description: "Some features like chat and summary may be limited",
-          });
-        }
       } catch (error) {
         console.error("Error checking PDF availability:", error);
         setPdfAvailable(false);
         setShowPdf(false);
-        
-        toast({
-          title: "Error",
-          description: "There was a problem accessing the PDF data",
-          variant: "destructive",
-        });
-        
-        // Navigate back to the upload page after a brief delay
-        setTimeout(() => {
-          navigate("/");
-        }, 1500);
       }
     };
     
     // Execute PDF check immediately
     checkPdfAvailability();
-  }, [toast, navigate]);
+  }, [toast]);
 
   const togglePdf = () => {
     setShowPdf(prev => !prev);

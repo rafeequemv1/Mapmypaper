@@ -1,39 +1,18 @@
-
 import { initGeminiClient, getPdfText, truncatePdfText } from "./baseService";
 
 // Generate sequence diagram from PDF content
 export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
   try {
-    // Try to get PDF text safely
     let pdfText;
     try {
       pdfText = getPdfText();
     } catch (error) {
-      console.warn("Could not get PDF text:", error);
-      // Return a default diagram instead of throwing
       return `sequenceDiagram
+        participant Error
         participant User
-        participant PDF
-        participant System
         
-        User->>PDF: Upload document
-        Note right of User: No PDF detected
-        PDF->>System: Missing content
-        System->>User: Please upload a PDF first`;
-    }
-    
-    // Check if PDF text is actually valid before proceeding
-    if (!pdfText || pdfText.trim().length < 100) {
-      console.warn("PDF text is too short or empty");
-      return `sequenceDiagram
-        participant User
-        participant PDF
-        participant System
-        
-        User->>PDF: Upload document
-        Note right of PDF: PDF text is too short
-        PDF->>System: Insufficient content
-        System->>User: Please upload a more detailed PDF`;
+        Error->>User: No PDF Content
+        User->>Error: Please upload a PDF first`;
     }
     
     const model = initGeminiClient();
@@ -71,47 +50,25 @@ export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
     Generate ONLY valid Mermaid sequence diagram code, nothing else.
     `;
     
-    // Use Promise.race with timeout to prevent hanging
-    const timeoutPromise = new Promise<string>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timed out after 25 seconds")), 25000);
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
     
-    const generationPromise = model.generateContent(prompt)
-      .then(result => result.response.text().trim())
-      .then(text => {
-        // Remove markdown code blocks if present
-        return text
-          .replace(/```mermaid\s?/g, "")
-          .replace(/```\s?/g, "")
-          .trim();
-      });
+    // Remove markdown code blocks if present
+    const mermaidCode = text
+      .replace(/```mermaid\s?/g, "")
+      .replace(/```\s?/g, "")
+      .trim();
     
-    // Race against timeout
-    try {
-      const mermaidCode = await Promise.race([generationPromise, timeoutPromise]);
-      return cleanSequenceDiagramSyntax(mermaidCode);
-    } catch (timeoutError) {
-      console.error("Gemini API request timed out:", timeoutError);
-      return `sequenceDiagram
-        participant User
-        participant API
-        participant System
-        
-        User->>API: Request diagram
-        API->>System: Processing timeout
-        System->>User: Request timed out, please try again`;
-    }
+    return cleanSequenceDiagramSyntax(mermaidCode);
   } catch (error) {
     console.error("Gemini API sequence diagram generation error:", error);
-    // Return a valid diagram instead of throwing
     return `sequenceDiagram
       participant Error
       participant System
-      participant User
       
       Error->>System: Failed to generate diagram
-      System->>User: Error encountered
-      User->>System: Please try again or edit manually`;
+      System->>Error: Please try again`;
   }
 };
 

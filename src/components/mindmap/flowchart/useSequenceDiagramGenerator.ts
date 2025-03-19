@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -33,32 +32,11 @@ export const useSequenceDiagramGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const resetGenerator = () => {
-    // Reset state to initial values to prevent memory leaks or stale data
-    setCode(defaultSequenceDiagram);
-    setError(null);
-    setIsGenerating(false);
-  };
-
   const generateDiagram = async () => {
     try {
       setIsGenerating(true);
       setError(null);
-      
-      // Use a safer approach with timeout protection
-      const timeoutPromise = new Promise<string>((_, reject) => {
-        setTimeout(() => reject(new Error("Sequence diagram generation timed out after 30 seconds")), 30000);
-      });
-      
-      const generationPromise = generateSequenceDiagramFromPdf()
-        .catch(error => {
-          console.error("Error in diagram generation:", error);
-          // Return default diagram on error instead of throwing
-          return defaultSequenceDiagram;
-        });
-      
-      // Use Promise.race to implement timeout
-      const diagramCode = await Promise.race([generationPromise, timeoutPromise]);
+      const diagramCode = await generateSequenceDiagramFromPdf();
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanSequenceDiagramSyntax(diagramCode);
@@ -87,7 +65,7 @@ export const useSequenceDiagramGenerator = () => {
       setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
       toast({
         title: "Generation Failed",
-        description: "Failed to generate sequence diagram from PDF content. Using default template.",
+        description: "Failed to generate sequence diagram from PDF content.",
         variant: "destructive",
       });
     } finally {
@@ -104,8 +82,7 @@ export const useSequenceDiagramGenerator = () => {
     error,
     isGenerating,
     generateDiagram,
-    handleCodeChange,
-    resetGenerator
+    handleCodeChange
   };
 };
 
