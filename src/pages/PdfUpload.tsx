@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +67,21 @@ const PdfUpload = () => {
     }
   }, [toast]);
 
+  // Clear sessionStorage to start fresh
+  const clearPreviousData = () => {
+    try {
+      // Clear any previous PDF data
+      sessionStorage.removeItem('pdfData');
+      sessionStorage.removeItem('uploadedPdfData');
+      sessionStorage.removeItem('pdfText');
+      sessionStorage.removeItem('isPdfTextTruncated');
+      sessionStorage.removeItem('mindMapData');
+      console.log("Cleared previous PDF data from sessionStorage");
+    } catch (error) {
+      console.error("Error clearing sessionStorage:", error);
+    }
+  };
+
   const handleGenerateMindmap = useCallback(async () => {
     if (!selectedFile) {
       toast({
@@ -87,6 +101,9 @@ const PdfUpload = () => {
     });
 
     try {
+      // Clear previous data first
+      clearPreviousData();
+      
       // Create a promise for reading the PDF data
       const readFilePromise = new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -113,27 +130,47 @@ const PdfUpload = () => {
         });
       }
       
-      // Try to safely store PDF data in chunks if needed
+      // Try different storage approaches to handle quota issues
+      let storedSuccessfully = false;
+      
       try {
+        // Attempt to store in pdfData first
         sessionStorage.setItem('pdfData', base64data);
-        console.log("PDF data stored successfully, length:", base64data.length);
+        storedSuccessfully = true;
+        console.log("PDF data stored in 'pdfData', length:", base64data.length);
       } catch (storageError) {
-        console.error("Error storing full PDF data:", storageError);
-        toast({
-          title: "Storage limitation",
-          description: "PDF is too large for full storage. Some features may be limited.",
-        });
+        console.error("Error storing PDF data in 'pdfData':", storageError);
         
-        // Try to store a smaller version
         try {
-          // Store only the first 2MB of data which should be enough for preview
-          const truncatedData = base64data.substring(0, 2000000);
-          sessionStorage.setItem('pdfData', truncatedData);
-          sessionStorage.setItem('pdfDataTruncated', 'true');
-          console.log("Stored truncated PDF data, length:", truncatedData.length);
-        } catch (truncateError) {
-          console.error("Failed to store even truncated PDF data:", truncateError);
+          // Try alternate storage key
+          sessionStorage.setItem('uploadedPdfData', base64data);
+          storedSuccessfully = true;
+          console.log("PDF data stored in 'uploadedPdfData', length:", base64data.length);
+        } catch (altStorageError) {
+          console.error("Error storing PDF data in alternate location:", altStorageError);
+          
+          // Try to store a truncated version if both full storage attempts failed
+          try {
+            // Store only the first part of data which should be enough for preview
+            const maxSize = Math.min(2000000, Math.floor(base64data.length * 0.7)); // 2MB or 70% of original
+            const truncatedData = base64data.substring(0, maxSize);
+            sessionStorage.setItem('pdfData', truncatedData);
+            console.log(`Stored truncated PDF data (${truncatedData.length} chars, ${Math.round(truncatedData.length/base64data.length*100)}%)`);
+            
+            toast({
+              title: "Storage limitation",
+              description: "PDF was truncated for browser storage. Some features may be limited.",
+            });
+            
+            storedSuccessfully = true;
+          } catch (truncateError) {
+            console.error("Failed to store even truncated PDF data:", truncateError);
+          }
         }
+      }
+      
+      if (!storedSuccessfully) {
+        throw new Error("Failed to store PDF data due to browser storage limitations. Try a smaller PDF file.");
       }
       
       // Extract text from PDF
@@ -146,6 +183,25 @@ const PdfUpload = () => {
         }
         
         console.log("Text extracted successfully, length:", extractedText.length);
+        
+        // Store the extracted text safely
+        try {
+          sessionStorage.setItem('pdfText', extractedText);
+          console.log("PDF text stored successfully");
+        } catch (textStorageError) {
+          console.error("Error storing full PDF text:", textStorageError);
+          
+          // Try storing a truncated version
+          const truncatedText = extractedText.substring(0, 100000); // ~100KB truncated text
+          try {
+            sessionStorage.setItem('pdfText', truncatedText);
+            sessionStorage.setItem('isPdfTextTruncated', 'true');
+            console.log("Stored truncated PDF text");
+          } catch (truncateTextError) {
+            console.error("Failed to store even truncated PDF text:", truncateTextError);
+            // Just continue - we'll extract text again if needed
+          }
+        }
       } catch (extractError) {
         console.error("Error extracting text from PDF:", extractError);
         throw new Error("Failed to extract text from the PDF. It may be password-protected or corrupted.");
@@ -186,6 +242,7 @@ const PdfUpload = () => {
     }
   }, [selectedFile, navigate, toast]);
 
+  
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}

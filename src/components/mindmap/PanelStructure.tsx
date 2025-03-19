@@ -31,7 +31,7 @@ const PanelStructure = ({
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [pdfDataAvailable, setPdfDataAvailable] = useState(false);
   
-  // Check if PDF data is available on mount
+  // Check if PDF data is available on mount with improved detection
   useEffect(() => {
     const checkPdfData = () => {
       try {
@@ -54,7 +54,21 @@ const PanelStructure = ({
       }
     };
     
+    // Initial check
     checkPdfData();
+    
+    // Set up a short interval to check again (in case PDF data is loaded after component mount)
+    const checkInterval = setInterval(checkPdfData, 2000);
+    
+    // Clear after 10 seconds (5 checks) to avoid continuous checking
+    const clearCheckTimeout = setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 10000);
+    
+    return () => {
+      clearInterval(checkInterval);
+      clearTimeout(clearCheckTimeout);
+    };
   }, [toast]);
   
   useEffect(() => {

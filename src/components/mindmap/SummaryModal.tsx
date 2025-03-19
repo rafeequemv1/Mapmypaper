@@ -191,24 +191,29 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     // Wrap bullet points in ul tags
     let hasOpenUl = false;
     const lines = formatted.split('\n');
+    const processedLines = [];
     
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].includes('<li')) {
         if (!hasOpenUl) {
-          lines[i] = '<ul class="list-disc pl-4 my-2">' + lines[i];
+          processedLines.push('<ul class="list-disc pl-4 my-2">');
           hasOpenUl = true;
         }
-      } else if (hasOpenUl) {
-        lines[i-1] = lines[i-1] + '</ul>';
-        hasOpenUl = false;
+        processedLines.push(lines[i]);
+      } else {
+        if (hasOpenUl) {
+          processedLines.push('</ul>');
+          hasOpenUl = false;
+        }
+        processedLines.push(lines[i]);
       }
     }
     
     if (hasOpenUl) {
-      lines[lines.length-1] = lines[lines.length-1] + '</ul>';
+      processedLines.push('</ul>');
     }
     
-    formatted = lines.join('\n');
+    formatted = processedLines.join('\n');
     
     // Convert newlines to paragraph breaks
     formatted = formatted.split('\n\n').map(para => {

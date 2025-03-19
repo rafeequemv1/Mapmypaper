@@ -36,7 +36,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
         setIsLoading(true);
         setLoadError(null);
         
-        // Try to get PDF data from either storage key
+        // Check all possible storage locations for PDF data
         const storedPdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
         
         if (!storedPdfData || storedPdfData.length < 100) {
