@@ -78,11 +78,15 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
       let data: MindElixirData;
       
       try {
-        
         const savedData = sessionStorage.getItem('mindMapData');
         if (savedData) {
-          
           const parsedData = JSON.parse(savedData);
+          
+          // Validate the data structure
+          if (!parsedData || typeof parsedData !== 'object' || !parsedData.nodeData) {
+            console.error("Invalid mind map data structure:", parsedData);
+            throw new Error("Invalid mind map data structure");
+          }
           
           // Apply line breaks to node topics
           const formatNodes = (node: any) => {
@@ -90,7 +94,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
               node.topic = formatNodeText(node.topic);
             }
             
-            if (node.children && node.children.length > 0) {
+            if (node.children && Array.isArray(node.children) && node.children.length > 0) {
               node.children.forEach(formatNodes);
             }
             
@@ -104,7 +108,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
           
           data = parsedData;
         } else {
-          
+          // Default fallback structure
           data = {
             nodeData: {
               id: 'root',
@@ -151,8 +155,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
           };
         }
       } catch (error) {
-        
         console.error("Error parsing mind map data:", error);
+        // Fallback structure in case of error
         data = {
           nodeData: {
             id: 'root',
@@ -165,21 +169,30 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
       }
 
       // Initialize the mind map with data
-      mind.init(data);
-      
-      mindMapRef.current = mind;
-      
-      // Notify parent component that mind map is ready
-      if (onMindMapReady) {
-        onMindMapReady(mind);
+      try {
+        mind.init(data);
+        
+        mindMapRef.current = mind;
+        
+        // Notify parent component that mind map is ready
+        if (onMindMapReady) {
+          onMindMapReady(mind);
+        }
+        
+        // Set a timeout to ensure the mind map is rendered before scaling
+        setTimeout(() => {
+          setIsReady(true);
+        }, 300);
+      } catch (initError) {
+        console.error("Error initializing mind map:", initError);
+        toast({
+          title: "Error loading mind map",
+          description: "There was a problem creating the mind map visualization.",
+          variant: "destructive"
+        });
       }
-      
-      // Set a timeout to ensure the mind map is rendered before scaling
-      setTimeout(() => {
-        setIsReady(true);
-      }, 300);
     }
-  }, [isMapGenerated, onMindMapReady]);
+  }, [isMapGenerated, onMindMapReady, toast]);
 
   if (!isMapGenerated) {
     return null;

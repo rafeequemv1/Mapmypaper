@@ -48,9 +48,45 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     const response = await result.response;
     const text = response.text();
     
-    return parseJsonResponse(text);
+    const parsedData = parseJsonResponse(text);
+    
+    // Ensure proper object structure for the mind map
+    if (typeof parsedData === 'string' || !parsedData.nodeData) {
+      console.error("Invalid mind map data structure:", parsedData);
+      // Return a fallback structure
+      return {
+        nodeData: {
+          id: 'root',
+          topic: 'Document Analysis',
+          children: [
+            {
+              id: 'error',
+              topic: 'Error analyzing document',
+              direction: 0,
+              children: []
+            }
+          ]
+        }
+      };
+    }
+    
+    return parsedData;
   } catch (error) {
     console.error("Gemini API error:", error);
-    throw error;
+    // Return a fallback structure in case of error
+    return {
+      nodeData: {
+        id: 'root',
+        topic: 'Error Processing Document',
+        children: [
+          {
+            id: 'error',
+            topic: 'Could not analyze document content',
+            direction: 0,
+            children: []
+          }
+        ]
+      }
+    };
   }
 };
