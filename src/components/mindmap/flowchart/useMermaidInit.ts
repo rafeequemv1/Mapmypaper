@@ -52,13 +52,18 @@ const useMermaidInit = () => {
       
       // Clean up any orphaned SVG elements
       try {
-        // Remove all mermaid-related SVGs
+        // Get all SVG elements from the document
+        const allSvgElements = document.querySelectorAll('svg');
+        
+        // Filter mermaid-related SVGs for removal
         const selectors = [
           '[id^="mermaid-"]',
           '[id^="flowchart-"]',
+          '[id^="diagram-"]',
           '.mermaid svg'
         ];
         
+        // Remove matching SVG elements
         selectors.forEach(selector => {
           document.querySelectorAll(selector).forEach(el => {
             try {
@@ -70,8 +75,59 @@ const useMermaidInit = () => {
             }
           });
         });
+        
+        // Also clean up any mermaid-related DOM elements by class
+        const mermaidClasses = ['.mermaid', '.mermaid-parent', '.mermaid-wrapper'];
+        mermaidClasses.forEach(cls => {
+          document.querySelectorAll(cls).forEach(el => {
+            // Clear the inner HTML rather than removing the element
+            el.innerHTML = '';
+          });
+        });
+        
+        // Clean up remaining mermaid-generated elements by ID
+        allSvgElements.forEach(svg => {
+          const id = svg.id || '';
+          if (id.startsWith('mermaid-') || id.startsWith('flowchart-') || id.startsWith('diagram-')) {
+            try {
+              if (svg.parentNode) {
+                svg.parentNode.removeChild(svg);
+              }
+            } catch (err) {
+              console.error(`Error removing SVG with ID ${id}:`, err);
+            }
+          }
+        });
+
+        // Clear any remaining mermaid-specific styles
+        const styles = document.querySelectorAll('style');
+        styles.forEach(style => {
+          if (style.innerHTML.includes('mermaid') || style.innerHTML.includes('flowchart')) {
+            try {
+              if (style.parentNode) {
+                style.parentNode.removeChild(style);
+              }
+            } catch (err) {
+              console.error("Error removing mermaid style:", err);
+            }
+          }
+        });
       } catch (err) {
         console.error("Error removing mermaid SVGs:", err);
+      }
+
+      // Attempt to reset event handlers
+      try {
+        const mermaidElements = document.querySelectorAll('.mermaid');
+        mermaidElements.forEach(el => {
+          // Clone and replace to remove event listeners
+          const newEl = el.cloneNode(true);
+          if (el.parentNode) {
+            el.parentNode.replaceChild(newEl, el);
+          }
+        });
+      } catch (cloneErr) {
+        console.error("Error replacing mermaid elements:", cloneErr);
       }
     } catch (error) {
       console.error("Error in mermaid cleanup:", error);
