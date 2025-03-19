@@ -1,5 +1,5 @@
 
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, Network, FileDigit, ChevronDown, GitBranch, Workflow } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -24,8 +24,6 @@ interface HeaderProps {
   showChat: boolean;
   toggleChat: () => void;
   onExportMindMap?: (type: 'svg') => void;
-  onOpenFlowchart?: () => void;
-  onOpenSequenceDiagram?: () => void;
   onOpenSummary?: () => void;
 }
 
@@ -36,8 +34,6 @@ const Header = ({
   showChat, 
   toggleChat,
   onExportMindMap,
-  onOpenFlowchart,
-  onOpenSequenceDiagram,
   onOpenSummary
 }: HeaderProps) => {
   const navigate = useNavigate();
@@ -85,37 +81,6 @@ const Header = ({
             <FileText className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">PDF</span>
           </Toggle>
-        )}
-        
-        {/* Replace individual buttons with a dropdown for visualizations */}
-        {(onOpenFlowchart || onOpenSequenceDiagram) && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
-              >
-                <Network className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">Visualize</span>
-                <ChevronDown className="h-4 w-4 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center">
-              {onOpenFlowchart && (
-                <DropdownMenuItem onClick={onOpenFlowchart}>
-                  <GitBranch className="h-4 w-4 mr-2" />
-                  <span>Flowchart</span>
-                </DropdownMenuItem>
-              )}
-              {onOpenSequenceDiagram && (
-                <DropdownMenuItem onClick={onOpenSequenceDiagram}>
-                  <Workflow className="h-4 w-4 mr-2" />
-                  <span>Sequence Diagram</span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
         )}
         
         {onOpenSummary && (

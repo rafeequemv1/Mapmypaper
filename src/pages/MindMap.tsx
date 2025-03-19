@@ -1,9 +1,6 @@
-
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
-import FlowchartModal from "@/components/mindmap/FlowchartModal";
-import SequenceDiagramModal from "@/components/mindmap/SequenceDiagramModal";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
@@ -12,8 +9,6 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
   const [pdfAvailable, setPdfAvailable] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [showFlowchart, setShowFlowchart] = useState(false);
-  const [showSequenceDiagram, setShowSequenceDiagram] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const { toast } = useToast();
@@ -54,14 +49,6 @@ const MindMap = () => {
 
   const toggleChat = () => {
     setShowChat(prev => !prev);
-  };
-
-  const toggleFlowchart = () => {
-    setShowFlowchart(prev => !prev);
-  };
-  
-  const toggleSequenceDiagram = () => {
-    setShowSequenceDiagram(prev => !prev);
   };
   
   const toggleSummary = () => {
@@ -125,8 +112,6 @@ const MindMap = () => {
         showChat={showChat}
         toggleChat={toggleChat}
         onExportMindMap={handleExportMindMap}
-        onOpenFlowchart={toggleFlowchart}
-        onOpenSequenceDiagram={toggleSequenceDiagram}
         onOpenSummary={toggleSummary}
       />
 
@@ -140,18 +125,6 @@ const MindMap = () => {
           onMindMapReady={handleMindMapReady}
         />
       </div>
-
-      {/* Flowchart Modal */}
-      <FlowchartModal 
-        open={showFlowchart} 
-        onOpenChange={setShowFlowchart} 
-      />
-      
-      {/* Sequence Diagram Modal */}
-      <SequenceDiagramModal
-        open={showSequenceDiagram}
-        onOpenChange={setShowSequenceDiagram}
-      />
       
       {/* Summary Modal */}
       <SummaryModal
