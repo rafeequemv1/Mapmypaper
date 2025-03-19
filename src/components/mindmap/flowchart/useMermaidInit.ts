@@ -26,38 +26,40 @@ const useMermaidInit = () => {
       },
     });
     
-    // Return cleanup function
     return () => {
-      // Reset any global mermaid state that might persist
-      try {
-        // Clear any global mermaid caches or listeners
-        // Using the any type to bypass TypeScript's type checking
-        const mermaidAny = mermaid as any;
-        if (typeof mermaidAny.reset === 'function') {
-          mermaidAny.reset();
-        }
-      } catch (error) {
-        console.error("Error cleaning up mermaid:", error);
-      }
+      // Cleanup function
+      cleanup();
     };
   }, []);
   
-  // Return a cleanup function that can be called explicitly
+  // Explicit cleanup function
   const cleanup = () => {
     try {
-      // Using the any type to bypass TypeScript's type checking
+      // Reset any mermaid global state
       const mermaidAny = mermaid as any;
       if (typeof mermaidAny.reset === 'function') {
         mermaidAny.reset();
       }
       
-      // Force cleanup of any DOM elements created by mermaid
-      const mermaidElements = document.querySelectorAll('.mermaid');
-      mermaidElements.forEach(el => {
-        // Remove any extra SVG elements added by mermaid
-        const svgs = el.querySelectorAll('svg');
-        svgs.forEach(svg => svg.remove());
-      });
+      // Clean up any orphaned SVG elements
+      try {
+        const mermaidSvgs = document.querySelectorAll('[id^="mermaid-"]');
+        mermaidSvgs.forEach(svg => {
+          if (svg.parentNode) {
+            svg.parentNode.removeChild(svg);
+          }
+        });
+        
+        // Also look for flowchart SVGs
+        const flowchartSvgs = document.querySelectorAll('[id^="flowchart-"]');
+        flowchartSvgs.forEach(svg => {
+          if (svg.parentNode) {
+            svg.parentNode.removeChild(svg);
+          }
+        });
+      } catch (err) {
+        console.error("Error removing mermaid SVGs:", err);
+      }
     } catch (error) {
       console.error("Error in mermaid cleanup:", error);
     }

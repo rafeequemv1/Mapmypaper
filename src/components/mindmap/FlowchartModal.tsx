@@ -41,7 +41,16 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         generateFlowchart();
       }
     }
-  }, [open, code, generateFlowchart]);
+    
+    // Clean up when modal is closed
+    return () => {
+      if (!open) {
+        // Cleanup when closing
+        cleanupResources();
+        cleanupMermaid();
+      }
+    };
+  }, [open, code, generateFlowchart, cleanupResources, cleanupMermaid]);
   
   // Cleanup when modal closes
   const handleCloseModal = () => {
@@ -49,11 +58,8 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     cleanupResources();
     cleanupMermaid();
     
-    // Then notify parent that modal should close with a small delay
-    // to ensure cleanup completes first
-    setTimeout(() => {
-      onOpenChange(false);
-    }, 10);
+    // Then notify parent that modal should close
+    onOpenChange(false);
   };
 
   return (
@@ -87,7 +93,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             />
           </div>
           
-          {/* Preview - Now takes up 2/3 of the space on medium screens and up */}
+          {/* Preview - Takes up 2/3 of the space on medium screens and up */}
           <div className="md:col-span-2 flex flex-col">
             <FlowchartPreview
               code={code}

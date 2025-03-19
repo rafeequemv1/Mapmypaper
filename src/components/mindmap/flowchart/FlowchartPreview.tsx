@@ -18,6 +18,7 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
   const previewRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const renderTimeoutRef = useRef<number | null>(null);
+  const svgIdRef = useRef<string>(`flowchart-${Date.now()}`);
 
   // Cleanup function to prevent memory leaks
   const cleanupPreviousRender = useCallback(() => {
@@ -48,6 +49,28 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
     };
   }, [code, cleanupPreviousRender]);
 
+  // Ensure complete cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupPreviousRender();
+      
+      // Find any orphaned SVG elements that might have been created by mermaid
+      // and remove them to prevent the DOM errors
+      try {
+        const svgElements = document.querySelectorAll(`svg[id^="flowchart-"]`);
+        svgElements.forEach(svg => {
+          if (svg.parentNode) {
+            svg.parentNode.removeChild(svg);
+          } else {
+            document.body.removeChild(svg);
+          }
+        });
+      } catch (err) {
+        console.error("Error cleaning up SVG elements:", err);
+      }
+    };
+  }, [cleanupPreviousRender]);
+
   const renderFlowchart = async () => {
     if (!previewRef.current) return;
 
@@ -57,6 +80,7 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
 
       // Create a unique ID for the diagram
       const id = `flowchart-${Date.now()}`;
+      svgIdRef.current = id;
       
       // Parse the flowchart to verify syntax before rendering
       await mermaid.parse(code);

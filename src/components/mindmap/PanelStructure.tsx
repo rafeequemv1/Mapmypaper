@@ -67,7 +67,7 @@ const PanelStructure = ({
     <ResizablePanelGroup direction="horizontal" className="flex-1">
       {/* MindMap panel - always visible */}
       <ResizablePanel 
-        defaultSize={showChat && showPdf ? 40 : (showPdf || showChat ? 70 : 100)}
+        defaultSize={50} 
         minSize={30} 
         id="mindmap-panel"
       >
@@ -95,7 +95,7 @@ const PanelStructure = ({
       {showChat && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={25} minSize={20} id="chat-panel">
+          <ResizablePanel defaultSize={20} minSize={20} id="chat-panel">
             <ChatPanel 
               toggleChat={toggleChat} 
               initialMessages={chatMessages}
