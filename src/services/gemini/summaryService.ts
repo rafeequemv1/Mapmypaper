@@ -23,6 +23,7 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     6. Conclusions: Final interpretations and implications (2-3 bullet points)
     
     Format your response as a JSON object with these section names as keys and the content as values.
+    Make sure all values are strings, not arrays or objects.
     Keep each section concise and focused on the most important information.
     If the document doesn't contain information for a specific section, provide a brief note explaining this.
     
@@ -41,12 +42,19 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     const parsedData = parseJsonResponse(text);
     console.log("Successfully parsed JSON response");
     
-    // Validate the response structure
+    // Validate the response structure and ensure all values are strings
     console.log("Validating response structure");
     const sections = Object.keys(parsedData);
     console.log("Summary data received:", sections);
     
-    return parsedData;
+    // Ensure all values are strings
+    const validatedData: Record<string, string> = {};
+    for (const key of sections) {
+      const value = parsedData[key];
+      validatedData[key] = typeof value === 'string' ? value : String(value || '');
+    }
+    
+    return validatedData;
   } catch (error) {
     console.error("Gemini API summary generation error:", error);
     throw new Error(error instanceof Error ? error.message : "Failed to generate summary");

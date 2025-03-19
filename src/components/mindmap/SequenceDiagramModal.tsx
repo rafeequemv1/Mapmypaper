@@ -22,10 +22,10 @@ interface SequenceDiagramModalProps {
 
 const SequenceDiagramModal = ({ open, onOpenChange }: SequenceDiagramModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
-  const { code, error, isGenerating, generateDiagram, handleCodeChange } = useSequenceDiagramGenerator();
+  const { code, error, isGenerating, generateDiagram, handleCodeChange, cleanupResources } = useSequenceDiagramGenerator();
   
   // Initialize mermaid library
-  useMermaidInit();
+  const { cleanup: cleanupMermaid } = useMermaidInit();
 
   // Generate diagram when modal is opened
   useEffect(() => {
@@ -35,9 +35,30 @@ const SequenceDiagramModal = ({ open, onOpenChange }: SequenceDiagramModalProps)
       }
     }
   }, [open, generateDiagram, code]);
+  
+  // Handle modal close with cleanup
+  const handleCloseModal = () => {
+    // First call the cleanup functions
+    cleanupResources();
+    cleanupMermaid();
+    
+    // Then notify parent that modal should close with a small delay
+    setTimeout(() => {
+      onOpenChange(false);
+    }, 10);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          handleCloseModal();
+        } else {
+          onOpenChange(true);
+        }
+      }}
+    >
       <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Sequence Diagram Editor</DialogTitle>
@@ -70,7 +91,7 @@ const SequenceDiagramModal = ({ open, onOpenChange }: SequenceDiagramModalProps)
         
         <DialogFooter className="flex justify-between sm:justify-between">
           <FlowchartExport previewRef={previewRef} />
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
+          <Button onClick={handleCloseModal}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Move } from "lucide-react";
@@ -17,13 +17,36 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const previewRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const renderTimeoutRef = useRef<number | null>(null);
+
+  // Cleanup function to prevent memory leaks
+  const cleanupPreviousRender = useCallback(() => {
+    // Clear any pending timeouts
+    if (renderTimeoutRef.current !== null) {
+      window.clearTimeout(renderTimeoutRef.current);
+      renderTimeoutRef.current = null;
+    }
+    
+    // Clear the preview area to prevent stacking multiple diagrams
+    if (previewRef.current) {
+      previewRef.current.innerHTML = "";
+    }
+  }, []);
 
   // Render flowchart when code changes
   useEffect(() => {
-    if (previewRef.current) {
+    // Clean up previous render first
+    cleanupPreviousRender();
+    
+    // Add a small timeout to ensure DOM is ready
+    renderTimeoutRef.current = window.setTimeout(() => {
       renderFlowchart();
-    }
-  }, [code]);
+    }, 50);
+    
+    return () => {
+      cleanupPreviousRender();
+    };
+  }, [code, cleanupPreviousRender]);
 
   const renderFlowchart = async () => {
     if (!previewRef.current) return;
@@ -40,7 +63,11 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
       
       // If parse succeeds, render the flowchart
       const { svg } = await mermaid.render(id, code);
-      previewRef.current.innerHTML = svg;
+      
+      // Only update DOM if the component is still mounted
+      if (previewRef.current) {
+        previewRef.current.innerHTML = svg;
+      }
     } catch (err) {
       console.error("Failed to render flowchart:", err);
       
@@ -54,38 +81,38 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
     }
   };
 
-  const zoomIn = () => {
+  const zoomIn = useCallback(() => {
     setScale(prev => Math.min(prev + 0.1, 2));
-  };
+  }, []);
 
-  const zoomOut = () => {
+  const zoomOut = useCallback(() => {
     setScale(prev => Math.max(prev - 0.1, 0.5));
-  };
+  }, []);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 0) { // Left click only
       setIsDragging(true);
       setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
     }
-  };
+  }, [position]);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isDragging) {
       setPosition({
         x: e.clientX - dragStart.x,
         y: e.clientY - dragStart.y
       });
     }
-  };
+  }, [isDragging, dragStart]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
-  const resetView = () => {
+  const resetView = useCallback(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
-  };
+  }, []);
 
   return (
     <div className="flex flex-col h-full">

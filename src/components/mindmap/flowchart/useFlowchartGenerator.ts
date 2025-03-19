@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useCallback, useRef } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/gemini";
@@ -85,12 +86,43 @@ export const useFlowchartGenerator = () => {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const generationAbortController = useRef<AbortController | null>(null);
 
-  const generateFlowchart = async () => {
+  // Cleanup function to abort any pending operations
+  const cleanupResources = useCallback(() => {
+    // Cancel any pending API requests
+    if (generationAbortController.current) {
+      generationAbortController.current.abort();
+      generationAbortController.current = null;
+    }
+    
+    // Reset state if needed
+    setIsGenerating(false);
+    
+    // Clear any errors
+    setError(null);
+    
+    console.log("Flowchart generator resources cleaned up");
+  }, []);
+
+  const generateFlowchart = useCallback(async () => {
     try {
+      // Clean up any previous generation attempt
+      cleanupResources();
+      
+      // Create a new abort controller for this generation
+      generationAbortController.current = new AbortController();
+      
       setIsGenerating(true);
       setError(null);
+      
       const flowchartCode = await generateFlowchartFromPdf();
+      
+      // Check if we've been aborted
+      if (generationAbortController.current.signal.aborted) {
+        console.log("Flowchart generation was aborted");
+        return;
+      }
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
@@ -114,29 +146,36 @@ export const useFlowchartGenerator = () => {
         });
       }
     } catch (err) {
-      console.error("Failed to generate flowchart:", err);
-      setCode(defaultFlowchart);
-      setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate flowchart from PDF content.",
-        variant: "destructive",
-      });
+      // Only show error if we haven't been aborted
+      if (!generationAbortController.current?.signal.aborted) {
+        console.error("Failed to generate flowchart:", err);
+        setCode(defaultFlowchart);
+        setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
+        toast({
+          title: "Generation Failed",
+          description: "Failed to generate flowchart from PDF content.",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setIsGenerating(false);
+      // Only update state if we haven't been aborted
+      if (generationAbortController.current && !generationAbortController.current.signal.aborted) {
+        setIsGenerating(false);
+      }
     }
-  };
+  }, [toast, cleanupResources]);
 
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleCodeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCode(e.target.value);
-  };
+  }, []);
 
   return {
     code,
     error,
     isGenerating,
     generateFlowchart,
-    handleCodeChange
+    handleCodeChange,
+    cleanupResources
   };
 };
 

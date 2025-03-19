@@ -2,31 +2,64 @@
 import { useEffect } from "react";
 import mermaid from "mermaid";
 
-export const useMermaidInit = () => {
-  // Initialize mermaid with safe configuration
+const useMermaidInit = () => {
   useEffect(() => {
+    // Initialize mermaid with specific configuration
     mermaid.initialize({
-      startOnLoad: false,
+      startOnLoad: true,
       theme: "default",
+      logLevel: "error",
       securityLevel: "loose",
       flowchart: {
-        useMaxWidth: false,
-        htmlLabels: true
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: "basis",
       },
+      fontFamily: "Inter, sans-serif",
       sequence: {
         diagramMarginX: 50,
         diagramMarginY: 10,
-        actorMargin: 50,
-        width: 150,
-        height: 65,
         boxMargin: 10,
-        boxTextMargin: 5,
         noteMargin: 10,
-        messageMargin: 35
+        messageMargin: 35,
+        mirrorActors: true,
       },
-      logLevel: 3 // Enables warning logs for debugging
     });
+    
+    // Return cleanup function
+    return () => {
+      // Reset any global mermaid state that might persist
+      try {
+        // Clear any global mermaid caches or listeners
+        if (typeof mermaid.reset === 'function') {
+          mermaid.reset();
+        }
+      } catch (error) {
+        console.error("Error cleaning up mermaid:", error);
+      }
+    };
   }, []);
+  
+  // Return a cleanup function that can be called explicitly
+  const cleanup = () => {
+    try {
+      if (typeof mermaid.reset === 'function') {
+        mermaid.reset();
+      }
+      
+      // Force cleanup of any DOM elements created by mermaid
+      const mermaidElements = document.querySelectorAll('.mermaid');
+      mermaidElements.forEach(el => {
+        // Remove any extra SVG elements added by mermaid
+        const svgs = el.querySelectorAll('svg');
+        svgs.forEach(svg => svg.remove());
+      });
+    } catch (error) {
+      console.error("Error in mermaid cleanup:", error);
+    }
+  };
+  
+  return { cleanup };
 };
 
 export default useMermaidInit;
