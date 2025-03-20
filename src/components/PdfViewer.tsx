@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,9 +16,16 @@ interface PdfViewerProps {
   onTogglePdf?: () => void;
   showPdf?: boolean;
   onExplainText?: (text: string) => void;
+  onRequestOpenChat?: () => void; // New prop to request opening the chat
 }
 
-const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: PdfViewerProps) => {
+const PdfViewer = ({ 
+  className, 
+  onTogglePdf, 
+  showPdf = true, 
+  onExplainText,
+  onRequestOpenChat 
+}: PdfViewerProps) => {
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -90,6 +96,12 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: Pd
   const handleExplain = () => {
     if (selectedText && onExplainText) {
       onExplainText(selectedText);
+      
+      // Request to open chat panel if it's closed
+      if (onRequestOpenChat) {
+        onRequestOpenChat();
+      }
+      
       // Clear selection after sending
       setSelectedText("");
       setPopoverPosition(null);

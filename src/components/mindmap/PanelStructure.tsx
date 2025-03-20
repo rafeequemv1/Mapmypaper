@@ -52,6 +52,13 @@ const PanelStructure = ({
     setTextToExplain(text);
   };
 
+  // Handler to ensure chat is open when explain is clicked
+  const handleRequestOpenChat = () => {
+    if (!showChat) {
+      toggleChat();
+    }
+  };
+
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
       {showPdf && (
@@ -66,6 +73,7 @@ const PanelStructure = ({
               onTogglePdf={togglePdf} 
               showPdf={showPdf} 
               onExplainText={handleExplainText}
+              onRequestOpenChat={handleRequestOpenChat}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
