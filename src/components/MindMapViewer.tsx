@@ -1,14 +1,13 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
-import { MindMapTheme, mindMapThemes } from "./mindmap/ThemeSelect";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
   onMindMapReady?: (mindMap: MindElixirInstance) => void;
-  theme?: MindMapTheme;
 }
 
 // Helper function to format node text with line breaks
@@ -27,43 +26,32 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
-// Define color palette for nodes based on their level
-const getNodeColors = (theme: MindMapTheme, level: number) => {
-  const baseTheme = mindMapThemes[theme];
+// Define a colorful, soft palette for nodes
+const getNodeColors = (level: number) => {
+  // Soft, elegant color palette
+  const palette = [
+    { bg: '#F2FCE2', border: '#67c23a' }, // Soft Green
+    { bg: '#FEF7CD', border: '#E6B422' }, // Soft Yellow
+    { bg: '#FDE1D3', border: '#F97316' }, // Soft Peach
+    { bg: '#E5DEFF', border: '#8B5CF6' }, // Soft Purple
+    { bg: '#FFDEE2', border: '#EC4899' }, // Soft Pink
+    { bg: '#D3E4FD', border: '#0078D7' }, // Soft Blue
+    { bg: '#F1F0FB', border: '#6B7280' }, // Soft Gray
+  ];
   
-  // Create a palette of colors based on the theme
-  const palette = {
-    green: ['#67c23a', '#85cf5e', '#a3db81', '#c2e7a5', '#e0f3ca'],
-    blue: ['#0078D7', '#3393e0', '#66afe9', '#99cbf1', '#cce5f9'],
-    purple: ['#8B5CF6', '#a17ff8', '#b7a2fa', '#cec5fc', '#e4e2fd'],
-    peach: ['#F97316', '#fa8f41', '#fbab6c', '#fcc798', '#fde3c3'],
-    pink: ['#EC4899', '#f06cac', '#f390bf', '#f7b4d3', '#fad8e6'],
-    yellow: ['#EAB308', '#eebd39', '#f1cc6a', '#f5db9c', '#f9eacd'],
-    mint: ['#16A34A', '#44b56c', '#72c88e', '#a0dab0', '#ceecd2'],
-    coral: ['#F43F5E', '#f6637a', '#f88797', '#faabb3', '#fcced0'],
-    aqua: ['#06B6D4', '#38c4dc', '#6ad2e4', '#9ce0ed', '#ceeff5'],
-    lilac: ['#A855F7', '#ba77f9', '#cc99fa', '#ddbbfc', '#eeddfd']
-  };
-  
-  // Get colors for the current theme
-  const colors = palette[theme] || palette.green;
-  
-  // Get color based on level, with a maximum depth
-  const colorIndex = Math.min(level, colors.length - 1);
-  
+  // Get color based on level, with a cycling pattern for depth
+  const colorIndex = level % palette.length;
   return {
-    backgroundColor: level === 0 ? baseTheme.color : colors[colorIndex],
-    color: '#000000', // Always use black text for better readability
-    borderColor: baseTheme.color
+    backgroundColor: level === 0 ? '#F2FCE2' : palette[colorIndex].bg,
+    borderColor: palette[colorIndex].border
   };
 };
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: MindMapViewerProps) => {
+const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
   const { toast } = useToast();
-  const currentTheme = mindMapThemes[theme];
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -81,9 +69,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: Mind
           edit: true,
         },
         theme: {
-          name: theme,
-          background: currentTheme.background,
-          color: currentTheme.color,
+          name: 'elegant',
+          background: '#F9F7F3',
+          color: '#67c23a',
           palette: [],
           cssVar: {},
         },
@@ -92,29 +80,30 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: Mind
         // Add custom style to nodes based on their level
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
           // Get appropriate colors based on node level
-          const { backgroundColor, color, borderColor } = getNodeColors(theme, level);
+          const { backgroundColor, borderColor } = getNodeColors(level);
           
           // Apply custom styling to nodes for a more elegant look
           tpc.style.backgroundColor = backgroundColor;
-          tpc.style.color = color;
+          tpc.style.color = '#333333'; // Soft dark text for better readability
           tpc.style.border = `2px solid ${borderColor}`;
-          tpc.style.borderRadius = '10px';
-          tpc.style.padding = '8px 14px';
-          tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.07)';
+          tpc.style.borderRadius = '12px';
+          tpc.style.padding = '10px 16px';
+          tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
           tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
-          tpc.style.fontSize = level === 0 ? '18px' : '15px';
+          tpc.style.fontSize = level === 0 ? '20px' : '16px';
+          tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
           
           // Add transition for smooth color changes
           tpc.style.transition = 'all 0.3s ease';
           
           // Add hover effect
           tpc.addEventListener('mouseover', () => {
-            tpc.style.boxShadow = '0 5px 15px rgba(0,0,0,0.12)';
+            tpc.style.boxShadow = '0 5px 15px rgba(0,0,0,0.08)';
             tpc.style.transform = 'translateY(-2px)';
           });
           
           tpc.addEventListener('mouseout', () => {
-            tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.07)';
+            tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
             tpc.style.transform = 'translateY(0)';
           });
         }
@@ -249,6 +238,14 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: Mind
         console.log('Node menu shown:', node, e);
       });
       
+      // Add custom styling to connection lines
+      const linkElements = containerRef.current.querySelectorAll('.fne-link');
+      linkElements.forEach((link: Element) => {
+        const linkElement = link as SVGElement;
+        linkElement.setAttribute('stroke-width', '2.5');
+        linkElement.setAttribute('stroke', '#67c23a');
+      });
+      
       mindMapRef.current = mind;
       
       // Notify parent component that mind map is ready
@@ -268,36 +265,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: Mind
         setIsReady(true);
       }, 300);
     }
-  }, [isMapGenerated, onMindMapReady, toast, theme, currentTheme]);
-
-  // Update theme when it changes
-  useEffect(() => {
-    if (mindMapRef.current && theme) {
-      try {
-        const currentTheme = mindMapThemes[theme];
-        
-        // Apply the new theme to the mind map container
-        if (containerRef.current) {
-          containerRef.current.style.background = currentTheme.background;
-          
-          // Use the theme's color for link elements
-          const linkElements = containerRef.current.querySelectorAll('.fne-link');
-          linkElements.forEach((link: Element) => {
-            const linkElement = link as HTMLElement;
-            linkElement.style.stroke = currentTheme.color;
-            linkElement.style.strokeWidth = '2.5px';
-          });
-        }
-        
-        console.log(`Theme updated to: ${theme} (${currentTheme.name})`);
-        
-        // Force a redraw of all nodes to apply new theme
-        mindMapRef.current.refresh();
-      } catch (error) {
-        console.error("Error updating theme:", error);
-      }
-    }
-  }, [theme]);
+  }, [isMapGenerated, onMindMapReady, toast]);
 
   if (!isMapGenerated) {
     return null;
@@ -310,7 +278,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: Mind
           ref={containerRef} 
           className="w-full h-full" 
           style={{ 
-            background: currentTheme.background,
+            background: 'linear-gradient(90deg, #F9F7F3 0%, #F2FCE2 100%)',
             transition: 'background-color 0.5s ease'
           }}
         />
