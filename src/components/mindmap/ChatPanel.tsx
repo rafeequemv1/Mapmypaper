@@ -236,13 +236,11 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
         // Generate a unique ID for the new node
         const newNodeId = `node_${Date.now()}`;
         
-        // Fix: Create a proper node object for addChild instead of passing a string
-        // MindElixir.addChild expects (parent, topic, id?)
-        const newTopic = topic;
-        
-        // Create a new node with the topic
+        // Create a new node object instead of just passing a string
         try {
-          mindMap.addChild(parent, newTopic);
+          // MindElixir expects us to use the addChild method with a parent and topic
+          // The API will create the proper node structure internally
+          mindMap.addChild(parent, topic);
           
           setMessages(prev => [...prev, { 
             role: 'system', 
@@ -368,10 +366,10 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
             mindMap.removeNode(node);
           }
           
-          // Fix: Create a proper node with the original topic
+          // Get the original topic string
           const originalTopic = node.topic || "New Node";
           
-          // Use addChild with correct parameter order (parent, topic)
+          // Use addChild with topic string (the internal API will create the proper node structure)
           mindMap.addChild(newParent, originalTopic);
           
           setMessages(prev => [...prev, { 
