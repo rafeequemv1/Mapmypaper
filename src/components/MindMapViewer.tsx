@@ -6,6 +6,12 @@ import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -56,7 +62,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [selectedText, setSelectedText] = useState<string>("");
-  const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Handle explain button click
@@ -77,7 +83,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       // Clear selection after sending
       setSelectedText("");
-      setPopoverPosition(null);
+      setSelectedNodeId(null);
       
       // Also clear the browser's selection
       if (window.getSelection) {
@@ -271,26 +277,14 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         // When a node is selected, get its text for potential explanation
         if (node && node.topic) {
           setSelectedText(node.topic.replace(/\n/g, ' '));
-          
-          // Calculate position for the popover
-          const tpc = document.querySelector(`[data-nodeid="${node.id}"]`);
-          if (tpc && containerRef.current) {
-            const rect = tpc.getBoundingClientRect();
-            const containerRect = containerRef.current.getBoundingClientRect();
-            
-            const x = rect.left + (rect.width / 2) - containerRect.left;
-            const y = rect.bottom - containerRect.top;
-            
-            console.log("Mind map popover position:", { x, y });
-            setPopoverPosition({ x, y });
-          }
+          setSelectedNodeId(node.id);
         }
       });
       
       // Hide the explanation tooltip when clicking elsewhere
       mind.bus.addListener('unselectNode', () => {
         setSelectedText("");
-        setPopoverPosition(null);
+        setSelectedNodeId(null);
       });
       
       // Fix: Use a type assertion that bypasses the strict type checking
@@ -328,6 +322,51 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
+  // This effect adds the explain button directly to each node when a node is selected
+  useEffect(() => {
+    if (selectedNodeId) {
+      const node = document.querySelector(`[data-nodeid="${selectedNodeId}"]`);
+      if (node) {
+        // We'll use mutation observer to ensure our button is added after any DOM changes
+        setTimeout(() => {
+          // Find or create the explain button container
+          let explainButtonContainer = node.querySelector('.me-explain-button');
+          
+          if (!explainButtonContainer) {
+            explainButtonContainer = document.createElement('div');
+            explainButtonContainer.className = 'me-explain-button absolute bottom-0 right-0 transform translate-x-1/2 translate-y-1/2 z-50';
+            node.appendChild(explainButtonContainer);
+            
+            // Create a simple button element
+            const explainButton = document.createElement('button');
+            explainButton.className = 'bg-white text-primary rounded-full p-1 shadow-md hover:bg-primary hover:text-white transition-colors';
+            explainButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>';
+            explainButton.title = "Explain this concept";
+            
+            explainButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              handleExplain();
+            });
+            
+            explainButtonContainer.appendChild(explainButton);
+          }
+        }, 10);
+      }
+    } else {
+      // Remove all explain buttons when no node is selected
+      document.querySelectorAll('.me-explain-button').forEach(button => {
+        button.remove();
+      });
+    }
+    
+    return () => {
+      // Cleanup: remove all explain buttons when component unmounts
+      document.querySelectorAll('.me-explain-button').forEach(button => {
+        button.remove();
+      });
+    };
+  }, [selectedNodeId]);
+
   if (!isMapGenerated) {
     return null;
   }
@@ -344,27 +383,17 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           }}
         />
         
-        {/* Explain tooltip for mind map nodes */}
-        {selectedText && popoverPosition && (
-          <div 
-            className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
-            style={{ 
-              left: `${popoverPosition.x}px`, 
-              top: `${popoverPosition.y + 10}px`,
-              transform: 'translateX(-50%)'
-            }}
-          >
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="flex items-center gap-1 text-xs"
-              onClick={handleExplain}
-            >
-              <HelpCircle className="h-3 w-3" />
-              Explain
-            </Button>
-          </div>
-        )}
+        {/* We'll rely on the dynamically added button instead of this popover */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="sr-only">Explain Node</div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Click to explain this concept</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
