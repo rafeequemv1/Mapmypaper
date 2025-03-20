@@ -50,7 +50,12 @@ const PanelStructure = ({
     <ResizablePanelGroup direction="horizontal" className="flex-1">
       {showPdf && (
         <>
-          <ResizablePanel defaultSize={30} minSize={20} id="pdf-panel">
+          <ResizablePanel 
+            defaultSize={30} 
+            minSize={20} 
+            id="pdf-panel"
+            order={1}
+          >
             <PdfViewer onTogglePdf={togglePdf} showPdf={showPdf} />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -60,6 +65,7 @@ const PanelStructure = ({
       <ResizablePanel 
         defaultSize={showChat ? 45 : (showPdf ? 70 : 100)} 
         id="mindmap-panel"
+        order={2}
       >
         <MindMapViewer 
           isMapGenerated={isMapGenerated} 
@@ -70,7 +76,12 @@ const PanelStructure = ({
       {showChat && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={25} minSize={20} id="chat-panel">
+          <ResizablePanel 
+            defaultSize={25} 
+            minSize={20} 
+            id="chat-panel"
+            order={3}
+          >
             <ChatPanel toggleChat={toggleChat} />
           </ResizablePanel>
         </>
