@@ -1,95 +1,46 @@
-
-import { useState, useEffect } from "react";
-import { 
-  ResizablePanelGroup, 
-  ResizablePanel,
-  ResizableHandle
-} from "@/components/ui/resizable";
-import MindMapViewer from "@/components/MindMapViewer";
+import React, { useState } from "react";
 import PdfViewer from "@/components/PdfViewer";
-import ChatPanel from "./ChatPanel";
-import MobileChatSheet from "./MobileChatSheet";
-import { useToast } from "@/hooks/use-toast";
-import { MindElixirInstance } from "mind-elixir";
+import MindMapComponent from "@/components/mindmap/MindMapComponent";
+import ChatPanel from "@/components/mindmap/ChatPanel";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady?: (mindMap: MindElixirInstance) => void;
+  onMindMapReady: (mindMap: any) => void;
 }
 
-const PanelStructure = ({ 
-  showPdf, 
+const PanelStructure = ({
+  showPdf,
   showChat,
   toggleChat,
   togglePdf,
-  onMindMapReady
+  onMindMapReady,
 }: PanelStructureProps) => {
-  const { toast } = useToast();
-  const [isMapGenerated, setIsMapGenerated] = useState(false);
-  
-  useEffect(() => {
-    // Set a small delay before generating the map to ensure DOM is ready
-    const timer = setTimeout(() => {
-      setIsMapGenerated(true);
-      
-      // Show toast when mind map is ready
-      toast({
-        title: "Mindmap loaded",
-        description: "Your mindmap is ready to use. Right-click on nodes for options.",
-        position: "bottom-left"
-      });
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [toast]);
+  const [textToExplain, setTextToExplain] = useState("");
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="flex-1">
+    <div className="flex h-full w-full overflow-hidden">
+      {/* PDF Viewer Panel */}
       {showPdf && (
-        <>
-          <ResizablePanel 
-            defaultSize={30} 
-            minSize={20} 
-            id="pdf-panel"
-            order={1}
-          >
-            <PdfViewer onTogglePdf={togglePdf} showPdf={showPdf} />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-        </>
+        <div className="w-1/3 h-full border-r">
+          <PdfViewer className="h-full" onTogglePdf={togglePdf} onExplainText={setTextToExplain} />
+        </div>
       )}
-      
-      <ResizablePanel 
-        defaultSize={showChat ? 45 : (showPdf ? 70 : 100)} 
-        id="mindmap-panel"
-        order={2}
-      >
-        <MindMapViewer 
-          isMapGenerated={isMapGenerated} 
-          onMindMapReady={onMindMapReady}
-        />
-      </ResizablePanel>
-      
+
+      {/* Mind Map Panel (takes remaining width) */}
+      <div className="flex-1 h-full">
+        <MindMapComponent onMindMapReady={onMindMapReady} />
+      </div>
+
+      {/* Chat Panel */}
       {showChat && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel 
-            defaultSize={25} 
-            minSize={20} 
-            id="chat-panel"
-            order={3}
-          >
-            <ChatPanel toggleChat={toggleChat} />
-          </ResizablePanel>
-        </>
+        <div className="w-1/4 h-full">
+          <ChatPanel toggleChat={toggleChat} explainText={textToExplain} />
+        </div>
       )}
-      
-      {/* Mobile chat sheet - always rendered but only visible on mobile */}
-      <MobileChatSheet />
-    </ResizablePanelGroup>
+    </div>
   );
 };
 

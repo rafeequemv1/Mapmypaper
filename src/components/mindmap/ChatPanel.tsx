@@ -10,9 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ChatPanelProps {
   toggleChat: () => void;
+  explainText?: string;
 }
 
-const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -33,21 +34,33 @@ const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
     }
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (inputValue.trim()) {
+  // Process the explain text when it changes
+  useEffect(() => {
+    if (explainText && explainText.trim()) {
+      const explanationPrompt = `Please explain the following text from the document: "${explainText.trim()}"`;
+      setInputValue(explanationPrompt);
+      handleSendMessage(explanationPrompt);
+    }
+  }, [explainText]);
+
+  const handleSendMessage = async (manualPrompt?: string) => {
+    const messageToSend = manualPrompt || inputValue.trim();
+    
+    if (messageToSend) {
       // Add user message
-      const userMessage = inputValue.trim();
-      setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+      setMessages(prev => [...prev, { role: 'user', content: messageToSend }]);
       
-      // Clear input
-      setInputValue('');
+      // Clear input if not from explain function
+      if (!manualPrompt) {
+        setInputValue('');
+      }
       
       // Show typing indicator
       setIsTyping(true);
       
       try {
         // Get response from Gemini
-        const response = await chatWithGeminiAboutPdf(userMessage);
+        const response = await chatWithGeminiAboutPdf(messageToSend);
         
         // Hide typing indicator and add AI response
         setIsTyping(false);
@@ -186,7 +199,7 @@ const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
           <Button 
             className="shrink-0" 
             size="sm" 
-            onClick={handleSendMessage}
+            onClick={() => handleSendMessage()}
             disabled={!inputValue.trim()}
           >
             Send

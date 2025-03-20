@@ -1,10 +1,11 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -15,18 +16,22 @@ interface PdfViewerProps {
   className?: string;
   onTogglePdf?: () => void;
   showPdf?: boolean;
+  onExplainText?: (text: string) => void;
 }
 
-const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) => {
+const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: PdfViewerProps) => {
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [selectedText, setSelectedText] = useState<string>("");
+  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
 
   // Reference to the PDF container to measure its width
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selectionTimeoutRef = useRef<number | null>(null);
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -62,6 +67,55 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
     // Cleanup
     return () => window.removeEventListener('resize', updateContainerWidth);
   }, []);
+
+  // Handle text selection in the PDF
+  useEffect(() => {
+    const handleSelection = () => {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim().length > 0) {
+        const selectedText = selection.toString().trim();
+        setSelectedText(selectedText);
+        
+        // Calculate position for the tooltip
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        // Position the tooltip above the selection
+        setTooltipPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top - 10
+        });
+      } else {
+        // Clear selection state after a short delay to allow for clicks on tooltip
+        if (selectionTimeoutRef.current) {
+          window.clearTimeout(selectionTimeoutRef.current);
+        }
+        
+        selectionTimeoutRef.current = window.setTimeout(() => {
+          setSelectedText("");
+          setTooltipPosition(null);
+        }, 300);
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelection);
+    
+    return () => {
+      document.removeEventListener("selectionchange", handleSelection);
+      if (selectionTimeoutRef.current) {
+        window.clearTimeout(selectionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle explaining selected text
+  const handleExplainText = useCallback(() => {
+    if (selectedText && onExplainText) {
+      onExplainText(selectedText);
+      setSelectedText("");
+      setTooltipPosition(null);
+    }
+  }, [selectedText, onExplainText]);
 
   // Handle successful document load
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -128,7 +182,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
       </div>
       
       <ScrollArea className="flex-1">
-        <div className="min-h-full p-4 flex flex-col items-center bg-muted/10">
+        <div className="min-h-full p-4 flex flex-col items-center bg-muted/10 relative">
           {isLoading ? (
             <div className="flex items-center justify-center h-full w-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -194,6 +248,27 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
                 );
               })}
             </Document>
+          )}
+          
+          {/* Explanation tooltip that appears when text is selected */}
+          {tooltipPosition && selectedText && (
+            <div 
+              className="absolute z-50"
+              style={{
+                left: `${tooltipPosition.x}px`,
+                top: `${tooltipPosition.y}px`,
+                transform: 'translate(-50%, -100%)'
+              }}
+            >
+              <Button 
+                size="sm" 
+                className="flex items-center gap-1 shadow-lg"
+                onClick={handleExplainText}
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                Explain
+              </Button>
+            </div>
           )}
         </div>
       </ScrollArea>
