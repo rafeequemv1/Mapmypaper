@@ -27,6 +27,30 @@ interface HeaderProps {
   onOpenSummary?: () => void;
 }
 
+// Define keyboard shortcuts for the mind map
+const keyboardShortcuts = [
+  { key: "Enter", description: "Insert sibling node" },
+  { key: "Shift + Enter", description: "Insert sibling node before" },
+  { key: "Tab", description: "Insert child node" },
+  { key: "Ctrl + Enter", description: "Insert parent node" },
+  { key: "F1", description: "Center mind map" },
+  { key: "F2", description: "Edit current node" },
+  { key: "↑", description: "Select previous node" },
+  { key: "↓", description: "Select next node" },
+  { key: "← / →", description: "Select nodes on the left/right" },
+  { key: "PageUp / Alt + ↑", description: "Move up" },
+  { key: "PageDown / Alt + ↓", description: "Move down" },
+  { key: "Ctrl + ↑", description: "Use two-sided layout" },
+  { key: "Ctrl + ←", description: "Use left-sided layout" },
+  { key: "Ctrl + →", description: "Use right-sided layout" },
+  { key: "Ctrl + C", description: "Copy" },
+  { key: "Ctrl + V", description: "Paste" },
+  { key: "Ctrl + \"+\"", description: "Zoom in mind map" },
+  { key: "Ctrl + \"-\"", description: "Zoom out mind map" },
+  { key: "Ctrl + 0", description: "Reset size" },
+  { key: "Delete", description: "Remove node" },
+];
+
 const Header = ({ 
   showPdf, 
   togglePdf, 
@@ -138,30 +162,20 @@ const Header = ({
                 <Keyboard className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="p-2 bg-white shadow-md rounded-md w-64 max-h-80 overflow-y-auto">
-              <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
-              <ul className="space-y-1 text-xs">
-                <li className="flex justify-between">
-                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Enter</span>
-                  <span className="text-gray-600">Insert sibling node</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Tab</span>
-                  <span className="text-gray-600">Insert child node</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Delete</span>
-                  <span className="text-gray-600">Remove node</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">F2</span>
-                  <span className="text-gray-600">Edit current node</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + C/V</span>
-                  <span className="text-gray-600">Copy/Paste</span>
-                </li>
-              </ul>
+            <TooltipContent 
+              side="bottom" 
+              className="p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto"
+              sideOffset={5}
+            >
+              <h4 className="text-sm font-medium mb-3">Keyboard Shortcuts</h4>
+              <div className="space-y-2 text-xs">
+                {keyboardShortcuts.map((shortcut, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
+                    <span className="text-gray-600">{shortcut.description}</span>
+                  </div>
+                ))}
+              </div>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
