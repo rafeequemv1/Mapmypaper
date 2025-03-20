@@ -1,12 +1,11 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus, HelpCircle, Camera, Lasso, X } from "lucide-react";
+import { Minus, Plus, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
-import { fabric } from 'fabric';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -27,8 +26,7 @@ const PdfViewer = ({
   onTogglePdf, 
   showPdf = true, 
   onExplainText,
-  onRequestOpenChat,
-  onCaptureSnapshot
+  onRequestOpenChat
 }: PdfViewerProps) => {
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
@@ -37,14 +35,9 @@ const PdfViewer = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedText, setSelectedText] = useState<string>("");
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
-  const [isCapturing, setIsCapturing] = useState<boolean>(false);
-  const [selectionMode, setSelectionMode] = useState<boolean>(false);
-  const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef<HTMLDivElement>(null);
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
   // Load PDF data from sessionStorage
@@ -64,77 +57,6 @@ const PdfViewer = ({
     }
   }, []);
 
-  // Initialize fabric canvas when entering selection mode
-  useEffect(() => {
-    if (selectionMode && canvasRef.current && !fabricCanvas) {
-      const canvas = new fabric.Canvas(canvasRef.current, {
-        selection: true,
-        backgroundColor: 'rgba(0,0,0,0.2)'
-      });
-      
-      // Create selection rectangle
-      const rect = new fabric.Rect({
-        left: 100,
-        top: 100,
-        width: 200,
-        height: 200,
-        fill: 'rgba(0, 123, 255, 0.2)',
-        stroke: 'rgba(0, 123, 255, 0.8)',
-        strokeWidth: 2,
-        strokeUniform: true,
-        cornerColor: 'rgba(0, 123, 255, 0.8)',
-        cornerStrokeColor: 'white',
-        cornerSize: 10,
-        transparentCorners: false,
-        hasRotatingPoint: false
-      });
-      
-      canvas.add(rect);
-      canvas.setActiveObject(rect);
-      
-      // Add mouse up handler to capture area when selection is done
-      canvas.on('mouse:up', () => {
-        const activeObject = canvas.getActiveObject();
-        if (activeObject && !isCapturing) {
-          captureSelectedArea();
-        }
-      });
-      
-      canvas.renderAll();
-      
-      setFabricCanvas(canvas);
-      
-      // Properly size the canvas
-      if (currentPageRef.current) {
-        const { width, height } = currentPageRef.current.getBoundingClientRect();
-        canvas.setWidth(width);
-        canvas.setHeight(height);
-        canvas.renderAll();
-      }
-      
-      return () => {
-        if (canvas) {
-          canvas.dispose();
-        }
-      };
-    }
-  }, [selectionMode, canvasRef]);
-
-  // Update canvas size when window is resized
-  useEffect(() => {
-    const handleResize = () => {
-      if (fabricCanvas && currentPageRef.current && selectionMode) {
-        const { width, height } = currentPageRef.current.getBoundingClientRect();
-        fabricCanvas.setWidth(width);
-        fabricCanvas.setHeight(height);
-        fabricCanvas.renderAll();
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [fabricCanvas, selectionMode]);
-
   // Handle successful document load
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     console.log(`Document loaded with ${numPages} pages`);
@@ -149,155 +71,6 @@ const PdfViewer = ({
 
   const handleZoomOut = () => {
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
-  };
-
-  // Start area selection mode
-  const startAreaSelection = () => {
-    setSelectionMode(true);
-    toast({
-      title: "Selection Mode",
-      description: "Click and drag to select an area. Release to capture.",
-    });
-  };
-
-  // Cancel area selection mode
-  const cancelAreaSelection = () => {
-    setSelectionMode(false);
-    setFabricCanvas(null);
-  };
-
-  // Capture the selected area
-  const captureSelectedArea = async () => {
-    if (!fabricCanvas || !currentPageRef.current) {
-      toast({
-        title: "Snapshot Error",
-        description: "Cannot capture the selected area. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setIsCapturing(true);
-      
-      // Get the active selection object
-      const activeObject = fabricCanvas.getActiveObject();
-      if (!activeObject) {
-        throw new Error("No area selected");
-      }
-
-      // Get the coordinates of the selection
-      const { left, top, width, height } = activeObject;
-      
-      // Use html2canvas to capture the current page
-      const fullCanvas = await html2canvas(currentPageRef.current, {
-        scale: window.devicePixelRatio * 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-      });
-      
-      // Create a new canvas for the cropped image
-      const croppedCanvas = document.createElement('canvas');
-      croppedCanvas.width = width;
-      croppedCanvas.height = height;
-      const ctx = croppedCanvas.getContext('2d');
-      
-      if (!ctx) throw new Error("Could not get canvas context");
-      
-      // Draw only the selected portion to the new canvas
-      ctx.drawImage(
-        fullCanvas,
-        left, top, width, height,
-        0, 0, width, height
-      );
-      
-      // Convert to base64 image
-      const imageData = croppedCanvas.toDataURL('image/png');
-      
-      // Send to parent component
-      if (onCaptureSnapshot) {
-        onCaptureSnapshot(imageData);
-      }
-
-      // Request to open chat panel if it's closed
-      if (onRequestOpenChat) {
-        onRequestOpenChat();
-      }
-
-      // Exit selection mode
-      setSelectionMode(false);
-      setFabricCanvas(null);
-
-      toast({
-        title: "Area Captured",
-        description: "Selected area has been sent to the chat panel.",
-      });
-    } catch (error) {
-      console.error("Error capturing selected area:", error);
-      toast({
-        title: "Snapshot Failed",
-        description: `Failed to capture the selected area: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
-  // Capture entire page
-  const captureFullPage = async () => {
-    if (!currentPageRef.current) {
-      toast({
-        title: "Snapshot Error",
-        description: "Cannot capture the current page. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setIsCapturing(true);
-      toast({
-        title: "Creating Snapshot",
-        description: "Please wait while we capture the current page...",
-      });
-
-      // Use html2canvas to capture the current page
-      const canvas = await html2canvas(currentPageRef.current, {
-        scale: window.devicePixelRatio * 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-      });
-
-      // Convert to base64 image
-      const imageData = canvas.toDataURL('image/png');
-      
-      // Send to parent component
-      if (onCaptureSnapshot) {
-        onCaptureSnapshot(imageData);
-      }
-
-      // Request to open chat panel if it's closed
-      if (onRequestOpenChat) {
-        onRequestOpenChat();
-      }
-
-      toast({
-        title: "Snapshot Created",
-        description: "Image has been sent to the chat panel.",
-      });
-    } catch (error) {
-      console.error("Error capturing snapshot:", error);
-      toast({
-        title: "Snapshot Failed",
-        description: "Failed to capture the page. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsCapturing(false);
-    }
   };
 
   // Text selection handler
@@ -360,7 +133,6 @@ const PdfViewer = ({
                   onClick={handleZoomOut}
                   className="p-1 rounded hover:bg-muted text-muted-foreground"
                   aria-label="Zoom out"
-                  disabled={selectionMode}
                 >
                   <Minus className="h-4 w-4" />
                 </button>
@@ -378,44 +150,11 @@ const PdfViewer = ({
                   onClick={handleZoomIn}
                   className="p-1 rounded hover:bg-muted text-muted-foreground"
                   aria-label="Zoom in"
-                  disabled={selectionMode}
                 >
                   <Plus className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Zoom in</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={captureFullPage}
-                  className="p-1 rounded hover:bg-muted text-muted-foreground"
-                  aria-label="Take full page snapshot"
-                  disabled={isCapturing || selectionMode}
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Take full page snapshot</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={startAreaSelection}
-                  className={`p-1 rounded hover:bg-muted ${selectionMode ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-                  aria-label="Select area to capture"
-                  disabled={isCapturing || selectionMode}
-                >
-                  <Lasso className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Select area to capture</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
@@ -429,7 +168,7 @@ const PdfViewer = ({
         <div 
           className="min-h-full p-4 flex flex-col items-center bg-muted/10" 
           ref={pdfContainerRef}
-          onMouseUp={selectionMode ? undefined : handleTextSelection}
+          onMouseUp={handleTextSelection}
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-full w-full">
@@ -484,32 +223,12 @@ const PdfViewer = ({
                         };
                       }}
                     />
-                    
-                    {/* Selection overlay for the current page */}
-                    {selectionMode && pageNumber === currentPage && (
-                      <div 
-                        className="absolute inset-0 z-10"
-                        ref={canvasContainerRef}
-                      >
-                        <canvas ref={canvasRef} className="absolute inset-0"></canvas>
-                        <div className="absolute top-2 right-2">
-                          <Button 
-                            size="sm" 
-                            variant="secondary"
-                            onClick={cancelAreaSelection}
-                          >
-                            <X className="h-3 w-3 mr-1" />
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </Document>
 
               {/* Explain tooltip that appears when text is selected */}
-              {selectedText && popoverPosition && !selectionMode && (
+              {selectedText && popoverPosition && (
                 <div 
                   className="absolute z-10 bg-background shadow-lg rounded-lg border p-2"
                   style={{ 

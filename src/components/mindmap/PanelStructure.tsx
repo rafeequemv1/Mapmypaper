@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
@@ -12,8 +12,6 @@ interface PanelStructureProps {
   onMindMapReady?: (mindMap: any) => void;
   explainText?: string;
   onExplainText?: (text: string) => void;
-  snapshotImage?: string;
-  onCaptureSnapshot?: (imageData: string) => void;
 }
 
 const PanelStructure: React.FC<PanelStructureProps> = ({ 
@@ -23,9 +21,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   togglePdf, 
   onMindMapReady,
   explainText,
-  onExplainText,
-  snapshotImage,
-  onCaptureSnapshot
+  onExplainText
 }) => {
   return (
     <div className="flex-1 flex h-full overflow-hidden bg-[#F9F7F3]">
@@ -36,7 +32,6 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
             onRequestOpenChat={toggleChat} 
             onTogglePdf={togglePdf}
             onExplainText={onExplainText} 
-            onCaptureSnapshot={onCaptureSnapshot}
           />
         </div>
       )}
@@ -52,7 +47,6 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
           <ChatPanel 
             toggleChat={toggleChat} 
             explainText={explainText}
-            snapshotImage={snapshotImage} 
           />
         </div>
       )}

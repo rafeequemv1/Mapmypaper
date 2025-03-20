@@ -1,31 +1,29 @@
 
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
+import { MessageSquare, X, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
-  snapshotImage?: string;
 }
 
-const ChatPanel = ({ toggleChat, explainText, snapshotImage }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; image?: string }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
-  const [processingImage, setProcessingImage] = useState(false);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -85,58 +83,6 @@ const ChatPanel = ({ toggleChat, explainText, snapshotImage }: ChatPanelProps) =
     
     processExplainText();
   }, [explainText, toast]);
-
-  // Process snapshot image when it changes
-  useEffect(() => {
-    const processSnapshotImage = async () => {
-      if (snapshotImage && !processingImage) {
-        setProcessingImage(true);
-        
-        // Add user message with the image
-        setMessages(prev => [...prev, { 
-          role: 'user', 
-          content: "What can you tell me about this part of the document?",
-          image: snapshotImage
-        }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          // Get response from Gemini Vision
-          const response = await analyzeImageWithGemini(snapshotImage);
-          
-          // Hide typing indicator and add AI response
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { role: 'assistant', content: response }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Image analysis error:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error analyzing that image. Please try again." 
-            }
-          ]);
-          
-          toast({
-            title: "Image Analysis Error",
-            description: "Failed to analyze the image with AI.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingImage(false);
-        }
-      }
-    };
-    
-    processSnapshotImage();
-  }, [snapshotImage, toast]);
 
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
@@ -246,15 +192,6 @@ const ChatPanel = ({ toggleChat, explainText, snapshotImage }: ChatPanelProps) =
                     : 'bg-muted'
                 }`}
               >
-                {message.image && (
-                  <div className="mb-2">
-                    <img 
-                      src={message.image} 
-                      alt="PDF Snapshot" 
-                      className="max-w-full rounded-md shadow-sm"
-                    />
-                  </div>
-                )}
                 {message.content}
                 
                 {message.role === 'assistant' && (
