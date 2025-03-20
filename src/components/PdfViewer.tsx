@@ -18,7 +18,6 @@ interface PdfViewerProps {
   showPdf?: boolean;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
-  onCaptureSnapshot?: (imageData: string) => void;
 }
 
 const PdfViewer = ({ 
@@ -73,33 +72,63 @@ const PdfViewer = ({
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
   };
 
-  // Text selection handler
+  // Text selection handler - Fixed with improved positioning
   const handleTextSelection = () => {
     const selection = window.getSelection();
+    
     if (selection && selection.toString().trim()) {
       const text = selection.toString().trim();
       setSelectedText(text);
       
-      // Get position for the popover
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
+      // Log selection to help debug
+      console.log("Text selected:", text);
       
-      if (pdfContainerRef.current) {
-        const containerRect = pdfContainerRef.current.getBoundingClientRect();
-        setPopoverPosition({
-          x: rect.left + rect.width / 2 - containerRect.left,
-          y: rect.bottom - containerRect.top
-        });
+      try {
+        // Get position for the popover
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        if (pdfContainerRef.current) {
+          const containerRect = pdfContainerRef.current.getBoundingClientRect();
+          const x = rect.left + (rect.width / 2) - containerRect.left;
+          const y = rect.bottom - containerRect.top;
+          
+          console.log("Popover position calculated:", { x, y });
+          console.log("Selection rect:", rect);
+          console.log("Container rect:", containerRect);
+          
+          setPopoverPosition({ x, y });
+        } else {
+          console.error("PDF container ref is null");
+        }
+      } catch (error) {
+        console.error("Error calculating popover position:", error);
+        // Fallback position near the middle of the container
+        if (pdfContainerRef.current) {
+          const containerRect = pdfContainerRef.current.getBoundingClientRect();
+          setPopoverPosition({ 
+            x: containerRect.width / 2, 
+            y: containerRect.height / 2 
+          });
+        }
       }
     } else {
-      setSelectedText("");
-      setPopoverPosition(null);
+      // Only clear when clicking outside of the tooltip
+      setTimeout(() => {
+        const newSelection = window.getSelection();
+        if (!newSelection || !newSelection.toString().trim()) {
+          setSelectedText("");
+          setPopoverPosition(null);
+        }
+      }, 100);
     }
   };
 
   // Handle explain button click
   const handleExplain = () => {
     if (selectedText) {
+      console.log("Sending text to explain:", selectedText);
+      
       // If onExplainText is provided, pass the selected text to parent
       if (onExplainText) {
         onExplainText(selectedText);
@@ -113,6 +142,15 @@ const PdfViewer = ({
       // Clear selection after sending
       setSelectedText("");
       setPopoverPosition(null);
+      
+      // Also clear the browser's selection
+      if (window.getSelection) {
+        if (window.getSelection()?.empty) {
+          window.getSelection()?.empty();
+        } else if (window.getSelection()?.removeAllRanges) {
+          window.getSelection()?.removeAllRanges();
+        }
+      }
     }
   };
 
@@ -166,7 +204,7 @@ const PdfViewer = ({
       
       <ScrollArea className="flex-1">
         <div 
-          className="min-h-full p-4 flex flex-col items-center bg-muted/10" 
+          className="min-h-full p-4 flex flex-col items-center bg-muted/10 relative" 
           ref={pdfContainerRef}
           onMouseUp={handleTextSelection}
         >
@@ -227,13 +265,13 @@ const PdfViewer = ({
                 ))}
               </Document>
 
-              {/* Explain tooltip that appears when text is selected */}
+              {/* Explain tooltip that appears when text is selected - Moved outside the Document component */}
               {selectedText && popoverPosition && (
                 <div 
-                  className="absolute z-10 bg-background shadow-lg rounded-lg border p-2"
+                  className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
                   style={{ 
                     left: `${popoverPosition.x}px`, 
-                    top: `${popoverPosition.y + 5}px`,
+                    top: `${popoverPosition.y + 10}px`,
                     transform: 'translateX(-50%)'
                   }}
                 >
