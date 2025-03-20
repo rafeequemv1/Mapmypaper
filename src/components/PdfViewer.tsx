@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -92,6 +91,15 @@ const PdfViewer = ({
       
       canvas.add(rect);
       canvas.setActiveObject(rect);
+      
+      // Add mouse up handler to capture area when selection is done
+      canvas.on('mouse:up', () => {
+        const activeObject = canvas.getActiveObject();
+        if (activeObject && !isCapturing) {
+          captureSelectedArea();
+        }
+      });
+      
       canvas.renderAll();
       
       setFabricCanvas(canvas);
@@ -148,7 +156,7 @@ const PdfViewer = ({
     setSelectionMode(true);
     toast({
       title: "Selection Mode",
-      description: "Click and drag to select an area to capture",
+      description: "Click and drag to select an area. Release to capture.",
     });
   };
 
@@ -171,11 +179,7 @@ const PdfViewer = ({
 
     try {
       setIsCapturing(true);
-      toast({
-        title: "Creating Snapshot",
-        description: "Please wait while we capture the selected area...",
-      });
-
+      
       // Get the active selection object
       const activeObject = fabricCanvas.getActiveObject();
       if (!activeObject) {
@@ -488,23 +492,14 @@ const PdfViewer = ({
                         ref={canvasContainerRef}
                       >
                         <canvas ref={canvasRef} className="absolute inset-0"></canvas>
-                        <div className="absolute top-2 right-2 flex space-x-2">
+                        <div className="absolute top-2 right-2">
                           <Button 
                             size="sm" 
-                            variant="secondary" 
-                            className="flex items-center gap-1"
+                            variant="secondary"
                             onClick={cancelAreaSelection}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3 w-3 mr-1" />
                             Cancel
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            className="flex items-center gap-1"
-                            onClick={captureSelectedArea}
-                          >
-                            <Camera className="h-3 w-3" />
-                            Capture
                           </Button>
                         </div>
                       </div>

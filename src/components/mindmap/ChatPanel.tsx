@@ -95,7 +95,7 @@ const ChatPanel = ({ toggleChat, explainText, snapshotImage }: ChatPanelProps) =
         // Add user message with the image
         setMessages(prev => [...prev, { 
           role: 'user', 
-          content: "What can you tell me about this image from the document?",
+          content: "What can you tell me about this part of the document?",
           image: snapshotImage
         }]);
         
