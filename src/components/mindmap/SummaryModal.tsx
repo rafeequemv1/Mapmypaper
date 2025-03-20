@@ -75,7 +75,30 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     });
   };
 
-  const renderSummarySection = (title: string, content: string) => {
+  // Helper function to safely format text with bullet points and paragraphs
+  const formatText = (text: string | null | undefined): string => {
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+
+    // Replace bullet points
+    let formatted = text.replace(/•/g, '&bull;');
+    
+    // Convert newlines to <br> tags
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    // Format bullet points with proper indentation
+    formatted = formatted.replace(/- /g, '&bull; ');
+    
+    return formatted;
+  };
+
+  const renderSummarySection = (title: string, content: string | null | undefined) => {
+    // Skip rendering if content is undefined, null, or empty
+    if (!content) {
+      return null;
+    }
+    
     return (
       <div className="relative group mb-5">
         <div className="flex items-start justify-between">
@@ -92,20 +115,6 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         <div className="text-sm" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
       </div>
     );
-  };
-
-  // Helper function to format text with bullet points and paragraphs
-  const formatText = (text: string): string => {
-    // Replace bullet points
-    let formatted = text.replace(/•/g, '&bull;');
-    
-    // Convert newlines to <br> tags
-    formatted = formatted.replace(/\n/g, '<br>');
-    
-    // Format bullet points with proper indentation
-    formatted = formatted.replace(/- /g, '&bull; ');
-    
-    return formatted;
   };
 
   return (
