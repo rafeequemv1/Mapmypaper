@@ -29,7 +29,9 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
       {showPdf && (
         <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden bg-white">
           <PdfViewer 
-            onRequestOpenChat={toggleChat} 
+            onRequestOpenChat={() => {
+              if (!showChat) toggleChat();
+            }} 
             onTogglePdf={togglePdf}
             onExplainText={onExplainText} 
           />

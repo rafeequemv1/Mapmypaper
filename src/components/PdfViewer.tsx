@@ -129,14 +129,15 @@ const PdfViewer = ({
     if (selectedText) {
       console.log("Sending text to explain:", selectedText);
       
+      // Request to open chat panel if it's closed
+      if (onRequestOpenChat) {
+        console.log("Requesting to open chat panel");
+        onRequestOpenChat();
+      }
+      
       // If onExplainText is provided, pass the selected text to parent
       if (onExplainText) {
         onExplainText(selectedText);
-      }
-      
-      // Request to open chat panel if it's closed
-      if (onRequestOpenChat) {
-        onRequestOpenChat();
       }
       
       // Clear selection after sending
