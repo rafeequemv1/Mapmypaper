@@ -160,6 +160,7 @@ const MindMap = () => {
           togglePdf={togglePdf}
           onMindMapReady={handleMindMapReady}
           theme={currentTheme}
+          mindMap={mindMap}
         />
       </div>
       
