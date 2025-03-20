@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -237,14 +236,26 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
         // Generate a unique ID for the new node
         const newNodeId = `node_${Date.now()}`;
         
-        // Fix: Add the new node with the correct number of arguments
-        // MindElixir.addChild expects (parent, topic, id?) - not (parent, id, topic)
-        mindMap.addChild(parent, topic);
+        // Fix: Create a proper node object for addChild instead of passing a string
+        // MindElixir.addChild expects (parent, topic, id?)
+        const newTopic = topic;
         
-        setMessages(prev => [...prev, { 
-          role: 'system', 
-          content: `Added new node "${topic}" to parent "${parentId}".`
-        }]);
+        // Create a new node with the topic
+        try {
+          mindMap.addChild(parent, newTopic);
+          
+          setMessages(prev => [...prev, { 
+            role: 'system', 
+            content: `Added new node "${topic}" to parent "${parentId}".`
+          }]);
+        } catch (error) {
+          console.error("Error adding node:", error);
+          setMessages(prev => [...prev, { 
+            role: 'system', 
+            content: `Error adding node: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }]);
+        }
+        
         return true;
       }
       
@@ -357,9 +368,11 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
             mindMap.removeNode(node);
           }
           
-          // Fix: Add the node to the new parent with correct arguments
+          // Fix: Create a proper node with the original topic
+          const originalTopic = node.topic || "New Node";
+          
           // Use addChild with correct parameter order (parent, topic)
-          mindMap.addChild(newParent, node.topic);
+          mindMap.addChild(newParent, originalTopic);
           
           setMessages(prev => [...prev, { 
             role: 'system', 
