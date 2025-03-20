@@ -4,10 +4,12 @@ import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
+import { MindMapTheme, mindMapThemes } from "./mindmap/ThemeSelect";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
   onMindMapReady?: (mindMap: MindElixirInstance) => void;
+  theme?: MindMapTheme;
 }
 
 // Helper function to format node text with line breaks
@@ -26,11 +28,12 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) => {
+const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
   const { toast } = useToast();
+  const currentTheme = mindMapThemes[theme];
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -48,9 +51,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
           edit: true,
         },
         theme: {
-          name: 'gray',
-          background: '#f5f5f5',
-          color: '#333',
+          name: theme,
+          background: currentTheme.background,
+          color: currentTheme.color,
           palette: [],
           cssVar: {},
         },
@@ -192,7 +195,28 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
         setIsReady(true);
       }, 300);
     }
-  }, [isMapGenerated, onMindMapReady, toast]);
+  }, [isMapGenerated, onMindMapReady, toast, theme, currentTheme]);
+
+  // Update theme when it changes
+  useEffect(() => {
+    if (mindMapRef.current && theme) {
+      try {
+        const currentTheme = mindMapThemes[theme];
+        
+        // Apply the new theme to the mind map container
+        if (containerRef.current) {
+          containerRef.current.style.background = currentTheme.background;
+        }
+        
+        console.log(`Theme updated to: ${theme} (${currentTheme.name})`);
+        
+        // We may need to trigger a re-render of the mind map
+        mindMapRef.current.refresh();
+      } catch (error) {
+        console.error("Error updating theme:", error);
+      }
+    }
+  }, [theme]);
 
   if (!isMapGenerated) {
     return null;
@@ -200,11 +224,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
-      <div className="w-full h-full bg-[#f5f5f5] overflow-hidden relative">
+      <div className="w-full h-full overflow-hidden relative">
         <div 
           ref={containerRef} 
           className="w-full h-full" 
-          style={{ background: '#f5f5f5' }}
+          style={{ background: currentTheme.background }}
         />
       </div>
     </div>

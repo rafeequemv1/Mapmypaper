@@ -1,116 +1,47 @@
-
-import { useState, useEffect } from "react";
-import { 
-  ResizablePanelGroup, 
-  ResizablePanel,
-  ResizableHandle
-} from "@/components/ui/resizable";
+import React from 'react';
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
-import ChatPanel from "./ChatPanel";
-import MobileChatSheet from "./MobileChatSheet";
-import { useToast } from "@/hooks/use-toast";
-import { MindElixirInstance } from "mind-elixir";
+import ChatPanel from "@/components/ChatPanel";
+import { MindMapTheme } from "@/components/mindmap/ThemeSelect";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady?: (mindMap: MindElixirInstance) => void;
+  onMindMapReady?: (mindMap: any) => void;
+  theme?: MindMapTheme;
 }
 
-const PanelStructure = ({ 
+const PanelStructure: React.FC<PanelStructureProps> = ({ 
   showPdf, 
-  showChat,
-  toggleChat,
-  togglePdf,
-  onMindMapReady
-}: PanelStructureProps) => {
-  const { toast } = useToast();
-  const [isMapGenerated, setIsMapGenerated] = useState(false);
-  const [textToExplain, setTextToExplain] = useState("");
-  
-  useEffect(() => {
-    // Set a small delay before generating the map to ensure DOM is ready
-    const timer = setTimeout(() => {
-      setIsMapGenerated(true);
-      
-      // Show toast when mind map is ready
-      toast({
-        title: "Mindmap loaded",
-        description: "Your mindmap is ready to use. Right-click on nodes for options.",
-        position: "bottom-left"
-      });
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  // Handler for text selected in PDF viewer
-  const handleExplainText = (text: string) => {
-    setTextToExplain(text);
-  };
-
-  // Handler to ensure chat is open when explain is clicked
-  const handleRequestOpenChat = () => {
-    if (!showChat) {
-      toggleChat();
-    }
-  };
-
+  showChat, 
+  toggleChat, 
+  togglePdf, 
+  onMindMapReady,
+  theme
+}) => {
   return (
-    <ResizablePanelGroup direction="horizontal" className="flex-1">
+    <div className="flex-1 flex h-full overflow-hidden">
+      {/* PDF Viewer Panel */}
       {showPdf && (
-        <>
-          <ResizablePanel 
-            defaultSize={30} 
-            minSize={20} 
-            id="pdf-panel"
-            order={1}
-          >
-            <PdfViewer 
-              onTogglePdf={togglePdf} 
-              showPdf={showPdf} 
-              onExplainText={handleExplainText}
-              onRequestOpenChat={handleRequestOpenChat}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-        </>
+        <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden">
+          <PdfViewer />
+        </div>
       )}
-      
-      <ResizablePanel 
-        defaultSize={showChat ? 45 : (showPdf ? 70 : 100)} 
-        id="mindmap-panel"
-        order={2}
-      >
-        <MindMapViewer 
-          isMapGenerated={isMapGenerated} 
-          onMindMapReady={onMindMapReady}
-        />
-      </ResizablePanel>
-      
+
+      {/* Mind Map Viewer Panel */}
+      <div className={`flex-1 h-full overflow-hidden ${showPdf ? 'border-r border-gray-200' : ''}`}>
+        <MindMapViewer isMapGenerated={true} onMindMapReady={onMindMapReady} theme={theme} />
+      </div>
+
+      {/* Chat Panel */}
       {showChat && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel 
-            defaultSize={25} 
-            minSize={20} 
-            id="chat-panel"
-            order={3}
-          >
-            <ChatPanel 
-              toggleChat={toggleChat} 
-              explainText={textToExplain}
-            />
-          </ResizablePanel>
-        </>
+        <div className="w-1/4 h-full border-l border-gray-200">
+          <ChatPanel toggleChat={toggleChat} />
+        </div>
       )}
-      
-      {/* Mobile chat sheet - always rendered but only visible on mobile */}
-      <MobileChatSheet />
-    </ResizablePanelGroup>
+    </div>
   );
 };
 

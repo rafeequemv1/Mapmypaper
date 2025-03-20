@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import ThemeSelect, { MindMapTheme } from "./ThemeSelect";
 
 interface HeaderProps {
   showPdf: boolean;
@@ -25,6 +26,8 @@ interface HeaderProps {
   toggleChat: () => void;
   onExportMindMap?: (type: 'svg' | 'png') => void;
   onOpenSummary?: () => void;
+  currentTheme?: MindMapTheme;
+  onThemeChange?: (theme: MindMapTheme) => void;
 }
 
 const Header = ({ 
@@ -34,7 +37,9 @@ const Header = ({
   showChat, 
   toggleChat,
   onExportMindMap,
-  onOpenSummary
+  onOpenSummary,
+  currentTheme = 'gray',
+  onThemeChange,
 }: HeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -93,6 +98,14 @@ const Header = ({
             <FileDigit className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">Summarize</span>
           </Button>
+        )}
+        
+        {/* Theme dropdown */}
+        {onThemeChange && (
+          <ThemeSelect 
+            value={currentTheme} 
+            onValueChange={onThemeChange} 
+          />
         )}
       </div>
       
