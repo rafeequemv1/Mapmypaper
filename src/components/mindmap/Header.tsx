@@ -59,8 +59,20 @@ const Header = ({
         </Button>
       </div>
       
-      {/* Center section - Toggle buttons for research assistant */}
+      {/* Center section - Toggle buttons for PDF and research assistant */}
       <div className="flex items-center justify-center w-1/3 gap-4">
+        {pdfAvailable && (
+          <Toggle 
+            pressed={showPdf} 
+            onPressedChange={togglePdf}
+            aria-label="Toggle PDF"
+            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">PDF</span>
+          </Toggle>
+        )}
+        
         <Toggle 
           pressed={showChat} 
           onPressedChange={toggleChat}

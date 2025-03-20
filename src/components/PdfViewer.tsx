@@ -118,7 +118,7 @@ const PdfViewer = ({
     <div className={`flex flex-col h-full ${className}`}>
       <div className="bg-muted/20 p-2 border-b flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <TooltipProvider>
+          <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
@@ -135,7 +135,7 @@ const PdfViewer = ({
           
           <span className="text-xs">{Math.round(scale * 100)}%</span>
           
-          <TooltipProvider>
+          <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
