@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -12,7 +13,7 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
-  const [currentTheme, setCurrentTheme] = useState<MindMapTheme>('green'); // Changed default theme to green
+  const [currentTheme, setCurrentTheme] = useState<MindMapTheme>('green'); // Default colorful theme
   const { toast } = useToast();
   
   useEffect(() => {

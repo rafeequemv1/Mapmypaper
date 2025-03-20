@@ -29,7 +29,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
       {/* PDF Viewer Panel */}
       {showPdf && (
         <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden">
-          <PdfViewer />
+          <PdfViewer onRequestOpenChat={toggleChat} />
         </div>
       )}
 
@@ -38,9 +38,9 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
         <MindMapViewer isMapGenerated={true} onMindMapReady={onMindMapReady} theme={theme} />
       </div>
 
-      {/* Chat Panel */}
+      {/* Chat Panel - Remove theme styling */}
       {showChat && (
-        <div className="w-1/4 h-full border-l border-gray-200">
+        <div className="w-1/4 h-full border-l border-gray-200 bg-white">
           <ChatPanel toggleChat={toggleChat} />
         </div>
       )}

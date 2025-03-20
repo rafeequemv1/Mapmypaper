@@ -43,6 +43,26 @@ export const mindMapThemes = {
     background: '#FEF7CD',
     color: '#EAB308',
     name: 'Soft Yellow'
+  },
+  mint: {
+    background: '#DCFCE7',
+    color: '#16A34A',
+    name: 'Fresh Mint'
+  },
+  coral: {
+    background: '#FFE4E0',
+    color: '#F43F5E',
+    name: 'Coral'
+  },
+  aqua: {
+    background: '#CFFAFE',
+    color: '#06B6D4',
+    name: 'Aqua'
+  },
+  lilac: {
+    background: '#F3E8FF',
+    color: '#A855F7',
+    name: 'Lilac'
   }
 };
 

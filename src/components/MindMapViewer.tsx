@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -40,7 +39,11 @@ const getNodeColors = (theme: MindMapTheme, level: number) => {
     purple: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'],
     peach: ['#F97316', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5'],
     pink: ['#EC4899', '#F472B6', '#F9A8D4', '#FBCFE8', '#FCE7F3'],
-    yellow: ['#EAB308', '#FACC15', '#FDE047', '#FEF08A', '#FEF9C3']
+    yellow: ['#EAB308', '#FACC15', '#FDE047', '#FEF08A', '#FEF9C3'],
+    mint: ['#16A34A', '#4ADE80', '#86EFAC', '#BBFBD0', '#DCFCE7'],
+    coral: ['#F43F5E', '#FB7185', '#FDA4AF', '#FECDD3', '#FFE4E6'],
+    aqua: ['#06B6D4', '#22D3EE', '#67E8F9', '#A5F3FC', '#CFFAFE'],
+    lilac: ['#A855F7', '#C084FC', '#D8B4FE', '#E9D5FF', '#F3E8FF']
   };
   
   // Get colors for the current theme
@@ -51,12 +54,12 @@ const getNodeColors = (theme: MindMapTheme, level: number) => {
   
   return {
     backgroundColor: level === 0 ? baseTheme.color : colors[colorIndex],
-    color: level <= 1 ? '#fff' : '#333', // White text for first two levels, dark for deeper levels
+    color: '#000000', // Always use black text for better readability
     borderColor: baseTheme.color
   };
 };
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindMapViewerProps) => {
+const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -92,17 +95,27 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindM
           // Get appropriate colors based on node level
           const { backgroundColor, color, borderColor } = getNodeColors(theme, level);
           
-          // Apply custom styling to nodes
+          // Apply custom styling to nodes for a more elegant look
           tpc.style.backgroundColor = backgroundColor;
           tpc.style.color = color;
           tpc.style.border = `2px solid ${borderColor}`;
-          tpc.style.borderRadius = '6px';
-          tpc.style.padding = '5px 10px';
-          tpc.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+          tpc.style.borderRadius = '8px';
+          tpc.style.padding = '6px 12px';
+          tpc.style.boxShadow = '0 2px 10px rgba(0,0,0,0.08)';
           tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
+          tpc.style.fontSize = level === 0 ? '16px' : '14px';
           
           // Add transition for smooth color changes
-          tpc.style.transition = 'background-color 0.3s, color 0.3s, border-color 0.3s';
+          tpc.style.transition = 'background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s';
+          
+          // Add hover effect
+          tpc.addEventListener('mouseover', () => {
+            tpc.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+          });
+          
+          tpc.addEventListener('mouseout', () => {
+            tpc.style.boxShadow = '0 2px 10px rgba(0,0,0,0.08)';
+          });
         }
       };
 
