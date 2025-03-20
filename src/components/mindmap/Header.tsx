@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface HeaderProps {
   showPdf: boolean;
@@ -62,6 +63,7 @@ const Header = ({
 }: HeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const handleBack = () => {
     navigate("/");
@@ -70,6 +72,10 @@ const Header = ({
   const handleUploadClick = () => {
     // Navigate to the upload page
     navigate("/");
+  };
+
+  const toggleShortcuts = () => {
+    setShowShortcuts(prev => !prev);
   };
 
   return (
@@ -151,23 +157,31 @@ const Header = ({
           </DropdownMenu>
         )}
         
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white"
-              >
-                <Keyboard className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent 
-              side="bottom" 
-              className="p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto"
-              sideOffset={5}
+        <div className="relative">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-white"
+            onClick={toggleShortcuts}
+          >
+            <Keyboard className="h-4 w-4" />
+          </Button>
+          
+          {showShortcuts && (
+            <div 
+              className="absolute right-0 top-full mt-2 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
             >
-              <h4 className="text-sm font-medium mb-3">Keyboard Shortcuts</h4>
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0" 
+                  onClick={toggleShortcuts}
+                >
+                  ✕
+                </Button>
+              </div>
               <div className="space-y-2 text-xs">
                 {keyboardShortcuts.map((shortcut, index) => (
                   <div key={index} className="flex justify-between">
@@ -176,9 +190,9 @@ const Header = ({
                   </div>
                 ))}
               </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
