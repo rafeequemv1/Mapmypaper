@@ -1,7 +1,8 @@
+
 import React from 'react';
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
-import ChatPanel from "@/components/ChatPanel";
+import ChatPanel from "@/components/mindmap/ChatPanel";
 import { MindMapTheme } from "@/components/mindmap/ThemeSelect";
 
 interface PanelStructureProps {
