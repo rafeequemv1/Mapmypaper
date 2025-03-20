@@ -33,17 +33,6 @@ export const mindMapThemes = {
     background: '#fff7e6',
     color: '#f97316',
     name: 'Orange Sunset'
-  },
-  soft: {
-    background: '#f8f9fa',
-    color: '#9d7ad2',
-    name: 'Soft Pastels',
-    nodeColors: {
-      root: '#9d7ad2', // Purple center
-      branch1: '#ffdfd3', // Peach/orange nodes
-      branch2: '#d0f0e4', // Mint green nodes 
-      branch3: '#e5d9ff', // Lavender nodes
-    }
   }
 };
 

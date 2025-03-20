@@ -28,39 +28,6 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
-// Helper to get node color based on theme and depth
-const getNodeColor = (theme: MindMapTheme, node: any): string | undefined => {
-  const currentTheme = mindMapThemes[theme];
-  
-  if (theme === 'soft' && currentTheme.nodeColors) {
-    // For soft theme, use specific branch colors
-    if (node.id === 'root') {
-      return currentTheme.nodeColors.root;
-    }
-    
-    // Determine which branch based on node structure or ID pattern
-    // This is a simple example - you might need a more complex logic
-    // based on your mind map structure
-    const nodeId = node.id || '';
-    
-    if (nodeId.includes('bd1')) {
-      return currentTheme.nodeColors.branch1;
-    } else if (nodeId.includes('bd2')) {
-      return currentTheme.nodeColors.branch2;
-    } else if (nodeId.includes('bd3')) {
-      return currentTheme.nodeColors.branch3;
-    } else {
-      // Rotate between branch colors for other nodes
-      const branchKeys = Object.keys(currentTheme.nodeColors).filter(k => k !== 'root');
-      const randomBranch = branchKeys[Math.floor(Math.random() * branchKeys.length)];
-      return currentTheme.nodeColors[randomBranch as keyof typeof currentTheme.nodeColors];
-    }
-  }
-  
-  // Default to theme color if no specific node coloring
-  return currentTheme.color;
-};
-
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
@@ -209,35 +176,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindM
       // Initialize the mind map with data
       mind.init(data);
       
-      // Apply soft theme colors to nodes if using the soft theme
-      if (theme === 'soft' && currentTheme.nodeColors) {
-        // Add custom colors to nodes based on their position/depth
-        mind.bus.addListener('operation', (operation: any) => {
-          if (operation.name === 'finishInit') {
-            // Style all nodes after initialization
-            const applyNodeColors = (node: any) => {
-              const nodeElement = document.querySelector(`[data-nodeid="${node.id}"]`);
-              if (nodeElement) {
-                const topicElement = nodeElement.querySelector('.topic');
-                if (topicElement) {
-                  const backgroundColor = getNodeColor(theme, node);
-                  if (backgroundColor) {
-                    (topicElement as HTMLElement).style.backgroundColor = backgroundColor;
-                  }
-                }
-              }
-              
-              if (node.children && node.children.length > 0) {
-                node.children.forEach(applyNodeColors);
-              }
-            };
-            
-            // Apply colors to all nodes
-            applyNodeColors(data.nodeData);
-          }
-        });
-      }
-      
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       console.log("Mind map instance:", mind);
@@ -284,31 +222,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindM
         // Apply the new theme to the mind map container
         if (containerRef.current) {
           containerRef.current.style.background = currentTheme.background;
-        }
-        
-        // Apply custom node colors for soft theme
-        if (theme === 'soft' && currentTheme.nodeColors) {
-          const applyNodeColors = (node: any) => {
-            const nodeElement = document.querySelector(`[data-nodeid="${node.id}"]`);
-            if (nodeElement) {
-              const topicElement = nodeElement.querySelector('.topic');
-              if (topicElement) {
-                const backgroundColor = getNodeColor(theme, node);
-                if (backgroundColor) {
-                  (topicElement as HTMLElement).style.backgroundColor = backgroundColor;
-                }
-              }
-            }
-            
-            if (node.children && node.children.length > 0) {
-              node.children.forEach(applyNodeColors);
-            }
-          };
-          
-          // Apply colors to current nodes
-          if (mindMapRef.current.nodeData) {
-            applyNodeColors(mindMapRef.current.nodeData);
-          }
         }
         
         console.log(`Theme updated to: ${theme} (${currentTheme.name})`);

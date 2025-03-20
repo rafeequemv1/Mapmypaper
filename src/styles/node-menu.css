@@ -79,33 +79,3 @@
 .map-container * {
   user-select: none;
 }
-
-/* Custom styles for soft theme nodes */
-[data-theme="soft"] .topic {
-  border-radius: 12px !important;
-  padding: 6px 12px !important;
-  font-family: "Comic Sans MS", cursive, sans-serif !important;
-  border: 2px solid rgba(255, 255, 255, 0.7) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-  transition: all 0.3s ease !important;
-}
-
-[data-theme="soft"] .topic:hover {
-  transform: scale(1.05) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Root node styling for soft theme */
-[data-theme="soft"] [data-nodeid="root"] .topic {
-  font-weight: bold !important;
-  font-size: 20px !important;
-  letter-spacing: 0.5px !important;
-  color: white !important;
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2) !important;
-}
-
-/* Connection lines styling for soft theme */
-[data-theme="soft"] .svg-container svg path {
-  stroke-width: 2px !important; 
-  stroke: rgba(0, 0, 0, 0.3) !important;
-}
