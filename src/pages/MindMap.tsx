@@ -11,6 +11,7 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
+  const [explainText, setExplainText] = useState<string>("");
   const { toast } = useToast();
   
   useEffect(() => {
@@ -54,6 +55,13 @@ const MindMap = () => {
   const toggleSummary = () => {
     setShowSummary(prev => !prev);
   };
+
+  const handleExplainText = useCallback((text: string) => {
+    setExplainText(text);
+    if (!showChat) {
+      setShowChat(true);
+    }
+  }, [showChat]);
 
   const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
     setMindMap(mindMap);
@@ -129,6 +137,7 @@ const MindMap = () => {
           toggleChat={toggleChat}
           togglePdf={togglePdf}
           onMindMapReady={handleMindMapReady}
+          explainText={explainText}
         />
       </div>
       

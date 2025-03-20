@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
@@ -10,6 +10,7 @@ interface PanelStructureProps {
   toggleChat: () => void;
   togglePdf: () => void;
   onMindMapReady?: (mindMap: any) => void;
+  explainText?: string;
 }
 
 const PanelStructure: React.FC<PanelStructureProps> = ({ 
@@ -18,13 +19,22 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   toggleChat, 
   togglePdf, 
   onMindMapReady,
+  explainText,
 }) => {
   return (
     <div className="flex-1 flex h-full overflow-hidden bg-[#F9F7F3]">
       {/* PDF Viewer Panel */}
       {showPdf && (
         <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden bg-white">
-          <PdfViewer onRequestOpenChat={toggleChat} onTogglePdf={togglePdf} />
+          <PdfViewer 
+            onRequestOpenChat={toggleChat} 
+            onTogglePdf={togglePdf}
+            onExplainText={(text) => {
+              if (!showChat) {
+                toggleChat();
+              }
+            }} 
+          />
         </div>
       )}
 
@@ -36,7 +46,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
       {/* Chat Panel */}
       {showChat && (
         <div className="w-1/4 h-full border-l border-gray-200 bg-white">
-          <ChatPanel toggleChat={toggleChat} />
+          <ChatPanel toggleChat={toggleChat} explainText={explainText} />
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -94,8 +95,11 @@ const PdfViewer = ({
 
   // Handle explain button click
   const handleExplain = () => {
-    if (selectedText && onExplainText) {
-      onExplainText(selectedText);
+    if (selectedText) {
+      // If onExplainText is provided, pass the selected text to parent
+      if (onExplainText) {
+        onExplainText(selectedText);
+      }
       
       // Request to open chat panel if it's closed
       if (onRequestOpenChat) {
