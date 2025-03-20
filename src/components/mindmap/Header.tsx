@@ -15,6 +15,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
@@ -127,44 +132,117 @@ const Header = ({
           </DropdownMenu>
         )}
         
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white"
-              >
-                <Keyboard className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="p-2 bg-white shadow-md rounded-md w-64 max-h-80 overflow-y-auto">
-              <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
-              <ul className="space-y-1 text-xs">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-white"
+            >
+              <Keyboard className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="p-2 bg-white shadow-md rounded-md w-80 max-h-96 overflow-y-auto">
+            <h4 className="text-sm font-medium mb-3">Keyboard Shortcuts</h4>
+            <div className="space-y-1">
+              <h5 className="text-xs font-semibold text-gray-700 mb-1">Node Operations</h5>
+              <ul className="space-y-1.5 text-xs">
                 <li className="flex justify-between">
                   <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Enter</span>
                   <span className="text-gray-600">Insert sibling node</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Shift + Enter</span>
+                  <span className="text-gray-600">Insert sibling node before</span>
                 </li>
                 <li className="flex justify-between">
                   <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Tab</span>
                   <span className="text-gray-600">Insert child node</span>
                 </li>
                 <li className="flex justify-between">
-                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Delete</span>
-                  <span className="text-gray-600">Remove node</span>
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + Enter</span>
+                  <span className="text-gray-600">Insert parent node</span>
                 </li>
                 <li className="flex justify-between">
                   <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">F2</span>
                   <span className="text-gray-600">Edit current node</span>
                 </li>
                 <li className="flex justify-between">
-                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + C/V</span>
-                  <span className="text-gray-600">Copy/Paste</span>
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Delete</span>
+                  <span className="text-gray-600">Remove node</span>
                 </li>
               </ul>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              
+              <h5 className="text-xs font-semibold text-gray-700 mt-3 mb-1">Navigation</h5>
+              <ul className="space-y-1.5 text-xs">
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">↑</span>
+                  <span className="text-gray-600">Select previous node</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">↓</span>
+                  <span className="text-gray-600">Select next node</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">← / →</span>
+                  <span className="text-gray-600">Select nodes on the left/right</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">PageUp / Alt + ↑</span>
+                  <span className="text-gray-600">Move up</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">PageDown / Alt + ↓</span>
+                  <span className="text-gray-600">Move down</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">F1</span>
+                  <span className="text-gray-600">Center mind map</span>
+                </li>
+              </ul>
+              
+              <h5 className="text-xs font-semibold text-gray-700 mt-3 mb-1">Layout Controls</h5>
+              <ul className="space-y-1.5 text-xs">
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + ↑</span>
+                  <span className="text-gray-600">Use two-sided layout</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + ←</span>
+                  <span className="text-gray-600">Use left-sided layout</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + →</span>
+                  <span className="text-gray-600">Use right-sided layout</span>
+                </li>
+              </ul>
+              
+              <h5 className="text-xs font-semibold text-gray-700 mt-3 mb-1">Other Operations</h5>
+              <ul className="space-y-1.5 text-xs">
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + C</span>
+                  <span className="text-gray-600">Copy</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + V</span>
+                  <span className="text-gray-600">Paste</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + "+"</span>
+                  <span className="text-gray-600">Zoom in mind map</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + "-"</span>
+                  <span className="text-gray-600">Zoom out mind map</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">Ctrl + 0</span>
+                  <span className="text-gray-600">Reset size</span>
+                </li>
+              </ul>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
