@@ -10,9 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ChatPanelProps {
   toggleChat: () => void;
+  explainText?: string;
 }
 
-const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -22,6 +23,7 @@ const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
+  const [processingExplainText, setProcessingExplainText] = useState(false);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -32,6 +34,55 @@ const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
       }
     }
   }, [messages]);
+
+  // Process text to explain when it changes
+  useEffect(() => {
+    const processExplainText = async () => {
+      if (explainText && !processingExplainText) {
+        setProcessingExplainText(true);
+        
+        // Add user message with the selected text
+        const userMessage = `Explain this: "${explainText}"`;
+        setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          // Get response from Gemini
+          const response = await chatWithGeminiAboutPdf(userMessage);
+          
+          // Hide typing indicator and add AI response
+          setIsTyping(false);
+          setMessages(prev => [
+            ...prev, 
+            { role: 'assistant', content: response }
+          ]);
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("Chat error:", error);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: "Sorry, I encountered an error explaining that text. Please try again." 
+            }
+          ]);
+          
+          toast({
+            title: "Explanation Error",
+            description: "Failed to get an explanation from the AI.",
+            variant: "destructive"
+          });
+        } finally {
+          setProcessingExplainText(false);
+        }
+      }
+    };
+    
+    processExplainText();
+  }, [explainText, toast]);
 
   const handleSendMessage = async () => {
     if (inputValue.trim()) {

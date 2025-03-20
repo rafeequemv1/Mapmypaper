@@ -1,10 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -15,14 +16,18 @@ interface PdfViewerProps {
   className?: string;
   onTogglePdf?: () => void;
   showPdf?: boolean;
+  onExplainText?: (text: string) => void;
 }
 
-const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) => {
+const PdfViewer = ({ className, onTogglePdf, showPdf = true, onExplainText }: PdfViewerProps) => {
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [selectedText, setSelectedText] = useState<string>("");
+  const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -55,6 +60,40 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
 
   const handleZoomOut = () => {
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
+  };
+
+  // Text selection handler
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim()) {
+      const text = selection.toString().trim();
+      setSelectedText(text);
+      
+      // Get position for the popover
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      if (pdfContainerRef.current) {
+        const containerRect = pdfContainerRef.current.getBoundingClientRect();
+        setPopoverPosition({
+          x: rect.left + rect.width / 2 - containerRect.left,
+          y: rect.bottom - containerRect.top
+        });
+      }
+    } else {
+      setSelectedText("");
+      setPopoverPosition(null);
+    }
+  };
+
+  // Handle explain button click
+  const handleExplain = () => {
+    if (selectedText && onExplainText) {
+      onExplainText(selectedText);
+      // Clear selection after sending
+      setSelectedText("");
+      setPopoverPosition(null);
+    }
   };
 
   // Create array of page numbers for rendering
@@ -106,7 +145,11 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
       </div>
       
       <ScrollArea className="flex-1">
-        <div className="min-h-full p-4 flex flex-col items-center bg-muted/10">
+        <div 
+          className="min-h-full p-4 flex flex-col items-center bg-muted/10" 
+          ref={pdfContainerRef}
+          onMouseUp={handleTextSelection}
+        >
           {isLoading ? (
             <div className="flex items-center justify-center h-full w-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -117,50 +160,74 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
               <p className="text-xs mt-2">Upload a PDF file to view it here</p>
             </div>
           ) : (
-            <Document
-              file={pdfData}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={(error) => console.error("Error loading PDF:", error)}
-              className="pdf-container"
-              loading={
-                <div className="flex items-center justify-center h-20 w-full">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              }
-            >
-              {pageNumbers.map(pageNumber => (
+            <>
+              <Document
+                file={pdfData}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={(error) => console.error("Error loading PDF:", error)}
+                className="pdf-container relative"
+                loading={
+                  <div className="flex items-center justify-center h-20 w-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                }
+              >
+                {pageNumbers.map(pageNumber => (
+                  <div 
+                    key={`page_${pageNumber}`} 
+                    className="mb-4 shadow-md"
+                    onLoad={() => {
+                      if (pageNumber === 1) setCurrentPage(1);
+                    }}
+                  >
+                    <Page
+                      pageNumber={pageNumber}
+                      scale={scale}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      onRenderSuccess={() => {
+                        const observer = new IntersectionObserver((entries) => {
+                          entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                              setCurrentPage(pageNumber);
+                            }
+                          });
+                        }, { threshold: 0.5 });
+                        
+                        const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`);
+                        if (pageElement) observer.observe(pageElement);
+                        
+                        return () => {
+                          if (pageElement) observer.unobserve(pageElement);
+                        };
+                      }}
+                    />
+                  </div>
+                ))}
+              </Document>
+
+              {/* Explain tooltip that appears when text is selected */}
+              {selectedText && popoverPosition && (
                 <div 
-                  key={`page_${pageNumber}`} 
-                  className="mb-4 shadow-md"
-                  onLoad={() => {
-                    if (pageNumber === 1) setCurrentPage(1);
+                  className="absolute z-10 bg-background shadow-lg rounded-lg border p-2"
+                  style={{ 
+                    left: `${popoverPosition.x}px`, 
+                    top: `${popoverPosition.y + 5}px`,
+                    transform: 'translateX(-50%)'
                   }}
                 >
-                  <Page
-                    pageNumber={pageNumber}
-                    scale={scale}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                    onRenderSuccess={() => {
-                      const observer = new IntersectionObserver((entries) => {
-                        entries.forEach(entry => {
-                          if (entry.isIntersecting) {
-                            setCurrentPage(pageNumber);
-                          }
-                        });
-                      }, { threshold: 0.5 });
-                      
-                      const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`);
-                      if (pageElement) observer.observe(pageElement);
-                      
-                      return () => {
-                        if (pageElement) observer.unobserve(pageElement);
-                      };
-                    }}
-                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex items-center gap-1 text-xs"
+                    onClick={handleExplain}
+                  >
+                    <HelpCircle className="h-3 w-3" />
+                    Explain
+                  </Button>
                 </div>
-              ))}
-            </Document>
+              )}
+            </>
           )}
         </div>
       </ScrollArea>

@@ -29,6 +29,7 @@ const PanelStructure = ({
 }: PanelStructureProps) => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
+  const [textToExplain, setTextToExplain] = useState("");
   
   useEffect(() => {
     // Set a small delay before generating the map to ensure DOM is ready
@@ -46,6 +47,11 @@ const PanelStructure = ({
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Handler for text selected in PDF viewer
+  const handleExplainText = (text: string) => {
+    setTextToExplain(text);
+  };
+
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
       {showPdf && (
@@ -56,7 +62,11 @@ const PanelStructure = ({
             id="pdf-panel"
             order={1}
           >
-            <PdfViewer onTogglePdf={togglePdf} showPdf={showPdf} />
+            <PdfViewer 
+              onTogglePdf={togglePdf} 
+              showPdf={showPdf} 
+              onExplainText={handleExplainText}
+            />
           </ResizablePanel>
           <ResizableHandle withHandle />
         </>
@@ -82,7 +92,10 @@ const PanelStructure = ({
             id="chat-panel"
             order={3}
           >
-            <ChatPanel toggleChat={toggleChat} />
+            <ChatPanel 
+              toggleChat={toggleChat} 
+              explainText={textToExplain}
+            />
           </ResizablePanel>
         </>
       )}
