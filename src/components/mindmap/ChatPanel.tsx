@@ -10,10 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ChatPanelProps {
   toggleChat: () => void;
-  explainText?: string;
 }
 
-const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -34,33 +33,21 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
     }
   }, [messages]);
 
-  // Process the explain text when it changes
-  useEffect(() => {
-    if (explainText && explainText.trim()) {
-      const explanationPrompt = `Please explain the following text from the document: "${explainText.trim()}"`;
-      setInputValue(explanationPrompt);
-      handleSendMessage(explanationPrompt);
-    }
-  }, [explainText]);
-
-  const handleSendMessage = async (manualPrompt?: string) => {
-    const messageToSend = manualPrompt || inputValue.trim();
-    
-    if (messageToSend) {
+  const handleSendMessage = async () => {
+    if (inputValue.trim()) {
       // Add user message
-      setMessages(prev => [...prev, { role: 'user', content: messageToSend }]);
+      const userMessage = inputValue.trim();
+      setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
       
-      // Clear input if not from explain function
-      if (!manualPrompt) {
-        setInputValue('');
-      }
+      // Clear input
+      setInputValue('');
       
       // Show typing indicator
       setIsTyping(true);
       
       try {
         // Get response from Gemini
-        const response = await chatWithGeminiAboutPdf(messageToSend);
+        const response = await chatWithGeminiAboutPdf(userMessage);
         
         // Hide typing indicator and add AI response
         setIsTyping(false);
@@ -199,7 +186,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
           <Button 
             className="shrink-0" 
             size="sm" 
-            onClick={() => handleSendMessage()}
+            onClick={handleSendMessage}
             disabled={!inputValue.trim()}
           >
             Send
