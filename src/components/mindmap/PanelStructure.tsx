@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { 
   ResizablePanelGroup, 
   ResizablePanel,
@@ -48,14 +48,14 @@ const PanelStructure = ({
 
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
-      {showPdf ? (
+      {showPdf && (
         <>
           <ResizablePanel defaultSize={30} minSize={20} id="pdf-panel">
             <PdfViewer onTogglePdf={togglePdf} showPdf={showPdf} />
           </ResizablePanel>
           <ResizableHandle withHandle />
         </>
-      ) : null}
+      )}
       
       <ResizablePanel 
         defaultSize={showChat ? 45 : (showPdf ? 70 : 100)} 
