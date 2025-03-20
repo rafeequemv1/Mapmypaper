@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -23,38 +22,26 @@ const PanelStructure = ({
   const [textToExplain, setTextToExplain] = useState("");
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+    <div className="flex h-full w-full overflow-hidden">
       {/* PDF Viewer Panel */}
       {showPdf && (
-        <>
-          <ResizablePanel defaultSize={30} minSize={20}>
-            <div className="h-full border-r">
-              <PdfViewer className="h-full" onTogglePdf={togglePdf} onExplainText={setTextToExplain} />
-            </div>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-        </>
+        <div className="w-1/3 h-full border-r">
+          <PdfViewer className="h-full" onTogglePdf={togglePdf} onExplainText={setTextToExplain} />
+        </div>
       )}
 
       {/* Mind Map Panel (takes remaining width) */}
-      <ResizablePanel defaultSize={showPdf ? 70 : 100} minSize={30}>
-        <div className="h-full">
-          <MindMapViewer isMapGenerated={true} onMindMapReady={onMindMapReady} />
-        </div>
-      </ResizablePanel>
+      <div className="flex-1 h-full">
+        <MindMapViewer isMapGenerated={true} onMindMapReady={onMindMapReady} />
+      </div>
 
       {/* Chat Panel */}
       {showChat && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={25} minSize={20}>
-            <div className="h-full border-l">
-              <ChatPanel toggleChat={toggleChat} explainText={textToExplain} />
-            </div>
-          </ResizablePanel>
-        </>
+        <div className="w-1/4 h-full">
+          <ChatPanel toggleChat={toggleChat} explainText={textToExplain} />
+        </div>
       )}
-    </ResizablePanelGroup>
+    </div>
   );
 };
 
