@@ -20,7 +20,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   toggleChat, 
   togglePdf, 
   onMindMapReady,
-  theme = 'gray'
+  theme = 'green'
 }) => {
   const currentTheme = mindMapThemes[theme];
   
@@ -28,7 +28,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
     <div className="flex-1 flex h-full overflow-hidden" style={{ background: currentTheme.background }}>
       {/* PDF Viewer Panel */}
       {showPdf && (
-        <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden">
+        <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden bg-white">
           <PdfViewer onRequestOpenChat={toggleChat} />
         </div>
       )}
@@ -38,7 +38,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
         <MindMapViewer isMapGenerated={true} onMindMapReady={onMindMapReady} theme={theme} />
       </div>
 
-      {/* Chat Panel - Remove theme styling */}
+      {/* Chat Panel */}
       {showChat && (
         <div className="w-1/4 h-full border-l border-gray-200 bg-white">
           <ChatPanel toggleChat={toggleChat} />

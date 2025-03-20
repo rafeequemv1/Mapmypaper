@@ -9,20 +9,15 @@ import {
 } from "@/components/ui/select";
 
 export const mindMapThemes = {
-  gray: {
-    background: '#f5f5f5',
-    color: '#333',
-    name: 'Gray (Default)'
+  green: {
+    background: '#F2FCE2', 
+    color: '#67c23a',
+    name: 'Soft Green'
   },
   blue: {
     background: '#E5F4FF',
     color: '#0078D7',
     name: 'Sky Blue'
-  },
-  green: {
-    background: '#F2FCE2', 
-    color: '#67c23a',
-    name: 'Soft Green'
   },
   purple: {
     background: '#E5DEFF',

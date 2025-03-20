@@ -33,21 +33,20 @@ const getNodeColors = (theme: MindMapTheme, level: number) => {
   
   // Create a palette of colors based on the theme
   const palette = {
-    gray: ['#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB', '#F3F4F6'],
-    blue: ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'],
-    green: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'],
-    purple: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'],
-    peach: ['#F97316', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5'],
-    pink: ['#EC4899', '#F472B6', '#F9A8D4', '#FBCFE8', '#FCE7F3'],
-    yellow: ['#EAB308', '#FACC15', '#FDE047', '#FEF08A', '#FEF9C3'],
-    mint: ['#16A34A', '#4ADE80', '#86EFAC', '#BBFBD0', '#DCFCE7'],
-    coral: ['#F43F5E', '#FB7185', '#FDA4AF', '#FECDD3', '#FFE4E6'],
-    aqua: ['#06B6D4', '#22D3EE', '#67E8F9', '#A5F3FC', '#CFFAFE'],
-    lilac: ['#A855F7', '#C084FC', '#D8B4FE', '#E9D5FF', '#F3E8FF']
+    green: ['#67c23a', '#85cf5e', '#a3db81', '#c2e7a5', '#e0f3ca'],
+    blue: ['#0078D7', '#3393e0', '#66afe9', '#99cbf1', '#cce5f9'],
+    purple: ['#8B5CF6', '#a17ff8', '#b7a2fa', '#cec5fc', '#e4e2fd'],
+    peach: ['#F97316', '#fa8f41', '#fbab6c', '#fcc798', '#fde3c3'],
+    pink: ['#EC4899', '#f06cac', '#f390bf', '#f7b4d3', '#fad8e6'],
+    yellow: ['#EAB308', '#eebd39', '#f1cc6a', '#f5db9c', '#f9eacd'],
+    mint: ['#16A34A', '#44b56c', '#72c88e', '#a0dab0', '#ceecd2'],
+    coral: ['#F43F5E', '#f6637a', '#f88797', '#faabb3', '#fcced0'],
+    aqua: ['#06B6D4', '#38c4dc', '#6ad2e4', '#9ce0ed', '#ceeff5'],
+    lilac: ['#A855F7', '#ba77f9', '#cc99fa', '#ddbbfc', '#eeddfd']
   };
   
   // Get colors for the current theme
-  const colors = palette[theme] || palette.gray;
+  const colors = palette[theme] || palette.green;
   
   // Get color based on level, with a maximum depth
   const colorIndex = Math.min(level, colors.length - 1);
@@ -99,22 +98,24 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: Mind
           tpc.style.backgroundColor = backgroundColor;
           tpc.style.color = color;
           tpc.style.border = `2px solid ${borderColor}`;
-          tpc.style.borderRadius = '8px';
-          tpc.style.padding = '6px 12px';
-          tpc.style.boxShadow = '0 2px 10px rgba(0,0,0,0.08)';
+          tpc.style.borderRadius = '10px';
+          tpc.style.padding = '8px 14px';
+          tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.07)';
           tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
-          tpc.style.fontSize = level === 0 ? '16px' : '14px';
+          tpc.style.fontSize = level === 0 ? '18px' : '15px';
           
           // Add transition for smooth color changes
-          tpc.style.transition = 'background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s';
+          tpc.style.transition = 'all 0.3s ease';
           
           // Add hover effect
           tpc.addEventListener('mouseover', () => {
-            tpc.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            tpc.style.boxShadow = '0 5px 15px rgba(0,0,0,0.12)';
+            tpc.style.transform = 'translateY(-2px)';
           });
           
           tpc.addEventListener('mouseout', () => {
-            tpc.style.boxShadow = '0 2px 10px rgba(0,0,0,0.08)';
+            tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.07)';
+            tpc.style.transform = 'translateY(0)';
           });
         }
       };
@@ -284,7 +285,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'green' }: Mind
           linkElements.forEach((link: Element) => {
             const linkElement = link as HTMLElement;
             linkElement.style.stroke = currentTheme.color;
-            linkElement.style.strokeWidth = '2px';
+            linkElement.style.strokeWidth = '2.5px';
           });
         }
         
