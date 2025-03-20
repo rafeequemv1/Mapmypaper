@@ -4,14 +4,6 @@ import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { HelpCircle } from "lucide-react";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "@/components/ui/tooltip";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -61,40 +53,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [selectedText, setSelectedText] = useState<string>("");
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { toast } = useToast();
-
-  // Handle explain button click
-  const handleExplain = () => {
-    if (selectedText) {
-      console.log("Sending mind map text to explain:", selectedText);
-      
-      // Request to open chat panel if it's closed
-      if (onRequestOpenChat) {
-        console.log("Requesting to open chat panel from mind map");
-        onRequestOpenChat();
-      }
-      
-      // If onExplainText is provided, pass the selected text to parent
-      if (onExplainText) {
-        onExplainText(selectedText);
-      }
-      
-      // Clear selection after sending
-      setSelectedText("");
-      setSelectedNodeId(null);
-      
-      // Also clear the browser's selection
-      if (window.getSelection) {
-        if (window.getSelection()?.empty) {
-          window.getSelection()?.empty();
-        } else if (window.getSelection()?.removeAllRanges) {
-          window.getSelection()?.removeAllRanges();
-        }
-      }
-    }
-  };
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -270,29 +229,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Setup event handlers for the node menu
-      mind.bus.addListener('selectNode', (node: any) => {
-        console.log('Node selected:', node);
-        
-        // When a node is selected, get its text for potential explanation
-        if (node && node.topic) {
-          setSelectedText(node.topic.replace(/\n/g, ' '));
-          setSelectedNodeId(node.id);
-        }
-      });
-      
-      // Hide the explanation tooltip when clicking elsewhere
-      mind.bus.addListener('unselectNode', () => {
-        setSelectedText("");
-        setSelectedNodeId(null);
-      });
-      
-      // Fix: Use a type assertion that bypasses the strict type checking
-      // @ts-ignore - Ignore the TypeScript error since we know 'showNodeMenu' is a valid event
-      mind.bus.addListener('showNodeMenu', (node: any, e: MouseEvent) => {
-        console.log('Node menu shown:', node, e);
-      });
-      
       // Add custom styling to connection lines
       const linkElements = containerRef.current.querySelectorAll('.fne-link');
       linkElements.forEach((link: Element) => {
@@ -322,51 +258,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
-  // This effect adds the explain button directly to each node when a node is selected
-  useEffect(() => {
-    if (selectedNodeId) {
-      const node = document.querySelector(`[data-nodeid="${selectedNodeId}"]`);
-      if (node) {
-        // We'll use mutation observer to ensure our button is added after any DOM changes
-        setTimeout(() => {
-          // Find or create the explain button container
-          let explainButtonContainer = node.querySelector('.me-explain-button');
-          
-          if (!explainButtonContainer) {
-            explainButtonContainer = document.createElement('div');
-            explainButtonContainer.className = 'me-explain-button absolute bottom-0 right-0 transform translate-x-1/2 translate-y-1/2 z-50';
-            node.appendChild(explainButtonContainer);
-            
-            // Create a simple button element
-            const explainButton = document.createElement('button');
-            explainButton.className = 'bg-white text-primary rounded-full p-1 shadow-md hover:bg-primary hover:text-white transition-colors';
-            explainButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>';
-            explainButton.title = "Explain this concept";
-            
-            explainButton.addEventListener('click', (e) => {
-              e.stopPropagation();
-              handleExplain();
-            });
-            
-            explainButtonContainer.appendChild(explainButton);
-          }
-        }, 10);
-      }
-    } else {
-      // Remove all explain buttons when no node is selected
-      document.querySelectorAll('.me-explain-button').forEach(button => {
-        button.remove();
-      });
-    }
-    
-    return () => {
-      // Cleanup: remove all explain buttons when component unmounts
-      document.querySelectorAll('.me-explain-button').forEach(button => {
-        button.remove();
-      });
-    };
-  }, [selectedNodeId]);
-
   if (!isMapGenerated) {
     return null;
   }
@@ -382,18 +273,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             transition: 'background-color 0.5s ease'
           }}
         />
-        
-        {/* We'll rely on the dynamically added button instead of this popover */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="sr-only">Explain Node</div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Click to explain this concept</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       </div>
     </div>
   );
