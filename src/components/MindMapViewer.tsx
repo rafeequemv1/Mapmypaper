@@ -51,7 +51,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
         direction: 1 as const,
         draggable: true,
         editable: true,
-        contextMenu: true, // This enables the context menu
+        contextMenu: true, 
         tools: {
           zoom: true,
           create: true,
@@ -64,8 +64,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
           palette: [],
           cssVar: {},
         },
-        nodeMenu: true, // Enable the nodeMenu plugin
-        autoFit: true, // Enable auto-fit for initial rendering
+        nodeMenu: true, // Explicitly enable the nodeMenu
+        autoFit: true,
       };
 
       // Create mind map instance
@@ -167,6 +167,20 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
       // Initialize the mind map with data
       mind.init(data);
       
+      // Enable debug mode for better troubleshooting
+      (window as any).mind = mind;
+      console.log("Mind map instance:", mind);
+      console.log("Node menu plugin:", nodeMenu);
+      
+      // Setup event handlers for the node menu
+      mind.bus.addListener('selectNode', (node: any) => {
+        console.log('Node selected:', node);
+      });
+      
+      mind.bus.addListener('showNodeMenu', (node: any, e: MouseEvent) => {
+        console.log('Node menu shown:', node, e);
+      });
+      
       mindMapRef.current = mind;
       
       // Notify parent component that mind map is ready
@@ -174,12 +188,19 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
         onMindMapReady(mind);
       }
       
+      // Show a toast notification to inform users about right-click functionality
+      toast({
+        title: "Mind Map Ready",
+        description: "Right-click on any node to access the node menu with options.",
+        duration: 5000,
+      });
+      
       // Set a timeout to ensure the mind map is rendered before scaling
       setTimeout(() => {
         setIsReady(true);
       }, 300);
     }
-  }, [isMapGenerated, onMindMapReady]);
+  }, [isMapGenerated, onMindMapReady, toast]);
 
   if (!isMapGenerated) {
     return null;
