@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -195,7 +196,8 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
           }
           
           const data = JSON.parse(savedData);
-          mindMap.initWithData(data);
+          // Fix: Use init() with the data instead of the non-existent initWithData method
+          mindMap.init(data);
           setMessages(prev => [...prev, { 
             role: 'system', 
             content: 'Mind map loaded successfully!'
@@ -235,12 +237,13 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
         // Generate a unique ID for the new node
         const newNodeId = `node_${Date.now()}`;
         
-        // Add the new node
-        mindMap.addChild(parent, newNodeId, topic);
+        // Fix: Add the new node with the correct number of arguments
+        // MindElixir.addChild expects (parent, topic, id?) - not (parent, id, topic)
+        mindMap.addChild(parent, topic);
         
         setMessages(prev => [...prev, { 
           role: 'system', 
-          content: `Added new node "${topic}" with ID "${newNodeId}" to parent "${parentId}".`
+          content: `Added new node "${topic}" to parent "${parentId}".`
         }]);
         return true;
       }
@@ -268,8 +271,12 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
           return true;
         }
         
-        // Update the node topic
-        mindMap.updateNodeTopic(node, newTopic);
+        // Fix: Use the correct method to update node topic
+        // MindElixir doesn't have updateNodeTopic, but can update topic directly
+        if (node.topic) {
+          node.topic = newTopic;
+          mindMap.refresh(); // Refresh to update the view
+        }
         
         setMessages(prev => [...prev, { 
           role: 'system', 
@@ -343,8 +350,6 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
         }
         
         // Move the node to the new parent
-        // Note: This operation might require custom implementation
-        // depending on the mind-elixir API
         try {
           // First remove the node from its current parent
           const currentParent = node.parent;
@@ -352,8 +357,9 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
             mindMap.removeNode(node);
           }
           
-          // Then add it to the new parent
-          mindMap.addChild(newParent, nodeId, node.topic);
+          // Fix: Add the node to the new parent with correct arguments
+          // Use addChild with correct parameter order (parent, topic)
+          mindMap.addChild(newParent, node.topic);
           
           setMessages(prev => [...prev, { 
             role: 'system', 
