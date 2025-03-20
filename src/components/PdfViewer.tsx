@@ -23,6 +23,10 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
+  // Reference to the PDF container to measure its width
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -39,6 +43,24 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // Update container width when window resizes
+  useEffect(() => {
+    const updateContainerWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+    };
+
+    // Initial measurement
+    updateContainerWidth();
+
+    // Set up resize listener
+    window.addEventListener('resize', updateContainerWidth);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', updateContainerWidth);
   }, []);
 
   // Handle successful document load
@@ -64,7 +86,7 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
   );
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full ${className}`} ref={containerRef}>
       <div className="bg-muted/20 p-2 border-b flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <TooltipProvider>
@@ -121,45 +143,56 @@ const PdfViewer = ({ className, onTogglePdf, showPdf = true }: PdfViewerProps) =
               file={pdfData}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={(error) => console.error("Error loading PDF:", error)}
-              className="pdf-container"
+              className="pdf-container max-w-full"
               loading={
                 <div className="flex items-center justify-center h-20 w-full">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               }
             >
-              {pageNumbers.map(pageNumber => (
-                <div 
-                  key={`page_${pageNumber}`} 
-                  className="mb-4 shadow-md"
-                  onLoad={() => {
-                    if (pageNumber === 1) setCurrentPage(1);
-                  }}
-                >
-                  <Page
-                    pageNumber={pageNumber}
-                    scale={scale}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                    onRenderSuccess={() => {
-                      const observer = new IntersectionObserver((entries) => {
-                        entries.forEach(entry => {
-                          if (entry.isIntersecting) {
-                            setCurrentPage(pageNumber);
-                          }
-                        });
-                      }, { threshold: 0.5 });
-                      
-                      const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`);
-                      if (pageElement) observer.observe(pageElement);
-                      
-                      return () => {
-                        if (pageElement) observer.unobserve(pageElement);
-                      };
+              {pageNumbers.map(pageNumber => {
+                // Calculate fitting scale based on container width
+                // Standard US Letter is 8.5 x 11 inches at 72 DPI = 612 x 792 points
+                const standardPageWidth = 612;
+                const padding = 32; // Account for container padding
+                const fitScale = containerWidth ? 
+                  Math.min((containerWidth - padding) / standardPageWidth, scale) : scale;
+                
+                return (
+                  <div 
+                    key={`page_${pageNumber}`} 
+                    className="mb-4 shadow-md max-w-full"
+                    onLoad={() => {
+                      if (pageNumber === 1) setCurrentPage(1);
                     }}
-                  />
-                </div>
-              ))}
+                  >
+                    <Page
+                      pageNumber={pageNumber}
+                      scale={fitScale}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      width={Math.min(containerWidth - padding, standardPageWidth * scale)}
+                      className="max-w-full"
+                      onRenderSuccess={() => {
+                        const observer = new IntersectionObserver((entries) => {
+                          entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                              setCurrentPage(pageNumber);
+                            }
+                          });
+                        }, { threshold: 0.5 });
+                        
+                        const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`);
+                        if (pageElement) observer.observe(pageElement);
+                        
+                        return () => {
+                          if (pageElement) observer.unobserve(pageElement);
+                        };
+                      }}
+                    />
+                  </div>
+                );
+              })}
             </Document>
           )}
         </div>
