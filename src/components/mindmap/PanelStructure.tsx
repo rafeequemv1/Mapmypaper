@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import PdfViewer from "@/components/PdfViewer";
-import MindMapComponent from "@/components/mindmap/MindMapComponent";
+import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 
 interface PanelStructureProps {
@@ -31,7 +32,7 @@ const PanelStructure = ({
 
       {/* Mind Map Panel (takes remaining width) */}
       <div className="flex-1 h-full">
-        <MindMapComponent onMindMapReady={onMindMapReady} />
+        <MindMapViewer isMapGenerated={true} onMindMapReady={onMindMapReady} />
       </div>
 
       {/* Chat Panel */}
