@@ -3,7 +3,7 @@ import React from 'react';
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
-import { MindMapTheme } from "@/components/mindmap/ThemeSelect";
+import { MindMapTheme, mindMapThemes } from "@/components/mindmap/ThemeSelect";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -20,10 +20,12 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   toggleChat, 
   togglePdf, 
   onMindMapReady,
-  theme
+  theme = 'gray'
 }) => {
+  const currentTheme = mindMapThemes[theme];
+  
   return (
-    <div className="flex-1 flex h-full overflow-hidden">
+    <div className="flex-1 flex h-full overflow-hidden" style={{ background: currentTheme.background }}>
       {/* PDF Viewer Panel */}
       {showPdf && (
         <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden">

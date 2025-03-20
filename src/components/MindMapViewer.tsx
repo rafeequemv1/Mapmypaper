@@ -28,6 +28,34 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
+// Define color palette for nodes based on their level
+const getNodeColors = (theme: MindMapTheme, level: number) => {
+  const baseTheme = mindMapThemes[theme];
+  
+  // Create a palette of colors based on the theme
+  const palette = {
+    gray: ['#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB', '#F3F4F6'],
+    blue: ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'],
+    green: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'],
+    purple: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'],
+    peach: ['#F97316', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5'],
+    pink: ['#EC4899', '#F472B6', '#F9A8D4', '#FBCFE8', '#FCE7F3'],
+    yellow: ['#EAB308', '#FACC15', '#FDE047', '#FEF08A', '#FEF9C3']
+  };
+  
+  // Get colors for the current theme
+  const colors = palette[theme] || palette.gray;
+  
+  // Get color based on level, with a maximum depth
+  const colorIndex = Math.min(level, colors.length - 1);
+  
+  return {
+    backgroundColor: level === 0 ? baseTheme.color : colors[colorIndex],
+    color: level <= 1 ? '#fff' : '#333', // White text for first two levels, dark for deeper levels
+    borderColor: baseTheme.color
+  };
+};
+
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
@@ -59,6 +87,23 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindM
         },
         nodeMenu: true, // Explicitly enable the nodeMenu
         autoFit: true,
+        // Add custom style to nodes based on their level
+        beforeRender: (node: any, tpc: HTMLElement, level: number) => {
+          // Get appropriate colors based on node level
+          const { backgroundColor, color, borderColor } = getNodeColors(theme, level);
+          
+          // Apply custom styling to nodes
+          tpc.style.backgroundColor = backgroundColor;
+          tpc.style.color = color;
+          tpc.style.border = `2px solid ${borderColor}`;
+          tpc.style.borderRadius = '6px';
+          tpc.style.padding = '5px 10px';
+          tpc.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+          tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
+          
+          // Add transition for smooth color changes
+          tpc.style.transition = 'background-color 0.3s, color 0.3s, border-color 0.3s';
+        }
       };
 
       // Create mind map instance
@@ -178,8 +223,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindM
       
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
-      console.log("Mind map instance:", mind);
-      console.log("Node menu plugin:", nodeMenu);
       
       // Setup event handlers for the node menu
       mind.bus.addListener('selectNode', (node: any) => {
@@ -222,11 +265,19 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindM
         // Apply the new theme to the mind map container
         if (containerRef.current) {
           containerRef.current.style.background = currentTheme.background;
+          
+          // Use the theme's color for link elements
+          const linkElements = containerRef.current.querySelectorAll('.fne-link');
+          linkElements.forEach((link: Element) => {
+            const linkElement = link as HTMLElement;
+            linkElement.style.stroke = currentTheme.color;
+            linkElement.style.strokeWidth = '2px';
+          });
         }
         
         console.log(`Theme updated to: ${theme} (${currentTheme.name})`);
         
-        // We may need to trigger a re-render of the mind map
+        // Force a redraw of all nodes to apply new theme
         mindMapRef.current.refresh();
       } catch (error) {
         console.error("Error updating theme:", error);
@@ -244,7 +295,10 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, theme = 'gray' }: MindM
         <div 
           ref={containerRef} 
           className="w-full h-full" 
-          style={{ background: currentTheme.background }}
+          style={{ 
+            background: currentTheme.background,
+            transition: 'background-color 0.5s ease'
+          }}
         />
       </div>
     </div>

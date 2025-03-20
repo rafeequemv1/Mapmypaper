@@ -15,24 +15,34 @@ export const mindMapThemes = {
     name: 'Gray (Default)'
   },
   blue: {
-    background: '#e6f7ff',
-    color: '#0066cc',
-    name: 'Blue Ocean'
+    background: '#E5F4FF',
+    color: '#0078D7',
+    name: 'Sky Blue'
   },
   green: {
-    background: '#f0f9eb',
+    background: '#F2FCE2', 
     color: '#67c23a',
-    name: 'Green Forest'
+    name: 'Soft Green'
   },
   purple: {
-    background: '#f5f0ff',
+    background: '#E5DEFF',
     color: '#8B5CF6',
-    name: 'Purple Haze'
+    name: 'Lavender'
   },
-  orange: {
-    background: '#fff7e6',
-    color: '#f97316',
-    name: 'Orange Sunset'
+  peach: {
+    background: '#FDE1D3',
+    color: '#F97316',
+    name: 'Soft Peach'
+  },
+  pink: {
+    background: '#FFDEE2',
+    color: '#EC4899',
+    name: 'Rose'
+  },
+  yellow: {
+    background: '#FEF7CD',
+    color: '#EAB308',
+    name: 'Soft Yellow'
   }
 };
 
