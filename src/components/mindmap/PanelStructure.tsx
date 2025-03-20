@@ -40,7 +40,14 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
 
       {/* Mind Map Viewer Panel */}
       <div className={`flex-1 h-full overflow-hidden ${showPdf ? 'border-r border-gray-200' : ''}`}>
-        <MindMapViewer isMapGenerated={true} onMindMapReady={onMindMapReady} />
+        <MindMapViewer 
+          isMapGenerated={true} 
+          onMindMapReady={onMindMapReady}
+          onExplainText={onExplainText}
+          onRequestOpenChat={() => {
+            if (!showChat) toggleChat();
+          }}
+        />
       </div>
 
       {/* Chat Panel */}

@@ -4,10 +4,14 @@ import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
   onMindMapReady?: (mindMap: MindElixirInstance) => void;
+  onExplainText?: (text: string) => void;
+  onRequestOpenChat?: () => void;
 }
 
 // Helper function to format node text with line breaks
@@ -47,11 +51,44 @@ const getNodeColors = (level: number) => {
   };
 };
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) => {
+const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [selectedText, setSelectedText] = useState<string>("");
+  const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
   const { toast } = useToast();
+
+  // Handle explain button click
+  const handleExplain = () => {
+    if (selectedText) {
+      console.log("Sending mind map text to explain:", selectedText);
+      
+      // Request to open chat panel if it's closed
+      if (onRequestOpenChat) {
+        console.log("Requesting to open chat panel from mind map");
+        onRequestOpenChat();
+      }
+      
+      // If onExplainText is provided, pass the selected text to parent
+      if (onExplainText) {
+        onExplainText(selectedText);
+      }
+      
+      // Clear selection after sending
+      setSelectedText("");
+      setPopoverPosition(null);
+      
+      // Also clear the browser's selection
+      if (window.getSelection) {
+        if (window.getSelection()?.empty) {
+          window.getSelection()?.empty();
+        } else if (window.getSelection()?.removeAllRanges) {
+          window.getSelection()?.removeAllRanges();
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -230,6 +267,30 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
       // Setup event handlers for the node menu
       mind.bus.addListener('selectNode', (node: any) => {
         console.log('Node selected:', node);
+        
+        // When a node is selected, get its text for potential explanation
+        if (node && node.topic) {
+          setSelectedText(node.topic.replace(/\n/g, ' '));
+          
+          // Calculate position for the popover
+          const tpc = document.querySelector(`[data-nodeid="${node.id}"]`);
+          if (tpc && containerRef.current) {
+            const rect = tpc.getBoundingClientRect();
+            const containerRect = containerRef.current.getBoundingClientRect();
+            
+            const x = rect.left + (rect.width / 2) - containerRect.left;
+            const y = rect.bottom - containerRect.top;
+            
+            console.log("Mind map popover position:", { x, y });
+            setPopoverPosition({ x, y });
+          }
+        }
+      });
+      
+      // Hide the explanation tooltip when clicking elsewhere
+      mind.bus.addListener('unselectNode', () => {
+        setSelectedText("");
+        setPopoverPosition(null);
       });
       
       // Fix: Use a type assertion that bypasses the strict type checking
@@ -265,7 +326,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
         setIsReady(true);
       }, 300);
     }
-  }, [isMapGenerated, onMindMapReady, toast]);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   if (!isMapGenerated) {
     return null;
@@ -282,6 +343,28 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
             transition: 'background-color 0.5s ease'
           }}
         />
+        
+        {/* Explain tooltip for mind map nodes */}
+        {selectedText && popoverPosition && (
+          <div 
+            className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
+            style={{ 
+              left: `${popoverPosition.x}px`, 
+              top: `${popoverPosition.y + 10}px`,
+              transform: 'translateX(-50%)'
+            }}
+          >
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="flex items-center gap-1 text-xs"
+              onClick={handleExplain}
+            >
+              <HelpCircle className="h-3 w-3" />
+              Explain
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
