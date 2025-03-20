@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
 const apiKey = "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk";
@@ -101,6 +101,61 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
   } catch (error) {
     console.error("Gemini API chat error:", error);
     return "Sorry, I encountered an error while processing your request. Please try again.";
+  }
+};
+
+// New function to analyze images with Gemini vision capabilities
+export const analyzeImageWithGemini = async (imageData: string): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage for context
+    const pdfText = sessionStorage.getItem('pdfText');
+    const pdfContext = pdfText ? pdfText.slice(0, 5000) : "";
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    // Process image data to ensure proper format
+    // Remove data URL prefix if present (e.g., "data:image/png;base64,")
+    const base64Image = imageData.split(',')[1] || imageData;
+    
+    // Create the content parts including the image
+    const parts = [
+      {
+        text: `You are an AI research assistant helping a user understand content from an academic PDF. 
+        The user has shared a snapshot from the PDF document. 
+        Analyze the image and provide a detailed explanation of what's shown.
+        If there are figures, charts, tables, equations, or diagrams, describe them thoroughly.
+        If there is text content, summarize the key points and explain any technical concepts.
+        Make connections to the broader context of the document if possible.
+        
+        Here's some context from the document (it may be truncated):
+        ${pdfContext}`
+      },
+      {
+        inlineData: {
+          mimeType: "image/png",
+          data: base64Image
+        }
+      }
+    ];
+    
+    // Generate content with the image
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts }],
+      generationConfig: {
+        temperature: 0.2,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 800,
+      },
+    });
+    
+    const response = await result.response;
+    return response.text();
+    
+  } catch (error) {
+    console.error("Gemini API vision error:", error);
+    return "Sorry, I encountered an error while analyzing the image. Please try again.";
   }
 };
 

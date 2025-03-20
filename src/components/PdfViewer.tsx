@@ -2,10 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus, HelpCircle } from "lucide-react";
+import { Minus, Plus, HelpCircle, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import html2canvas from "html2canvas";
+import { useToast } from "@/hooks/use-toast";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -18,6 +19,7 @@ interface PdfViewerProps {
   showPdf?: boolean;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void; // New prop to request opening the chat
+  onCaptureSnapshot?: (imageData: string) => void; // New prop for snapshot capture
 }
 
 const PdfViewer = ({ 
@@ -25,7 +27,8 @@ const PdfViewer = ({
   onTogglePdf, 
   showPdf = true, 
   onExplainText,
-  onRequestOpenChat 
+  onRequestOpenChat,
+  onCaptureSnapshot
 }: PdfViewerProps) => {
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
@@ -34,7 +37,10 @@ const PdfViewer = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedText, setSelectedText] = useState<string>("");
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isCapturing, setIsCapturing] = useState<boolean>(false); // New state for capture process
   const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const currentPageRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -67,6 +73,61 @@ const PdfViewer = ({
 
   const handleZoomOut = () => {
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
+  };
+
+  // Snapshot capture functionality
+  const captureSnapshot = async () => {
+    if (!currentPageRef.current) {
+      toast({
+        title: "Snapshot Error",
+        description: "Cannot capture the current page. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsCapturing(true);
+      toast({
+        title: "Creating Snapshot",
+        description: "Please wait while we capture the current page...",
+      });
+
+      // Use html2canvas to capture the current page
+      const canvas = await html2canvas(currentPageRef.current, {
+        scale: window.devicePixelRatio * 1.5, // Higher quality
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+      });
+
+      // Convert to base64 image
+      const imageData = canvas.toDataURL('image/png');
+      
+      // Send to parent component
+      if (onCaptureSnapshot) {
+        onCaptureSnapshot(imageData);
+      }
+
+      // Request to open chat panel if it's closed
+      if (onRequestOpenChat) {
+        onRequestOpenChat();
+      }
+
+      toast({
+        title: "Snapshot Created",
+        description: "Image has been sent to the chat panel.",
+      });
+    } catch (error) {
+      console.error("Error capturing snapshot:", error);
+      toast({
+        title: "Snapshot Failed",
+        description: "Failed to capture the page. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   // Text selection handler
@@ -153,6 +214,22 @@ const PdfViewer = ({
               <TooltipContent side="bottom">Zoom in</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={captureSnapshot}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground"
+                  aria-label="Take snapshot"
+                  disabled={isCapturing}
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Take snapshot</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         <div className="text-xs text-muted-foreground">
@@ -192,6 +269,7 @@ const PdfViewer = ({
                   <div 
                     key={`page_${pageNumber}`} 
                     className="mb-4 shadow-md"
+                    ref={pageNumber === currentPage ? currentPageRef : null}
                     onLoad={() => {
                       if (pageNumber === 1) setCurrentPage(1);
                     }}

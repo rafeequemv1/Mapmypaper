@@ -11,6 +11,9 @@ interface PanelStructureProps {
   togglePdf: () => void;
   onMindMapReady?: (mindMap: any) => void;
   explainText?: string;
+  onExplainText?: (text: string) => void;
+  snapshotImage?: string;
+  onCaptureSnapshot?: (imageData: string) => void;
 }
 
 const PanelStructure: React.FC<PanelStructureProps> = ({ 
@@ -20,6 +23,9 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   togglePdf, 
   onMindMapReady,
   explainText,
+  onExplainText,
+  snapshotImage,
+  onCaptureSnapshot
 }) => {
   return (
     <div className="flex-1 flex h-full overflow-hidden bg-[#F9F7F3]">
@@ -29,11 +35,8 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
           <PdfViewer 
             onRequestOpenChat={toggleChat} 
             onTogglePdf={togglePdf}
-            onExplainText={(text) => {
-              if (!showChat) {
-                toggleChat();
-              }
-            }} 
+            onExplainText={onExplainText} 
+            onCaptureSnapshot={onCaptureSnapshot}
           />
         </div>
       )}
@@ -46,7 +49,11 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
       {/* Chat Panel */}
       {showChat && (
         <div className="w-1/4 h-full border-l border-gray-200 bg-white">
-          <ChatPanel toggleChat={toggleChat} explainText={explainText} />
+          <ChatPanel 
+            toggleChat={toggleChat} 
+            explainText={explainText}
+            snapshotImage={snapshotImage} 
+          />
         </div>
       )}
     </div>
