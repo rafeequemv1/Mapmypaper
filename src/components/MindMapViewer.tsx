@@ -1,9 +1,9 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
-import ThemeSelect, { MindMapTheme, mindMapThemes } from "@/components/mindmap/ThemeSelect";
 import { Check, Star, Heart, AlertTriangle, Info, Clock, Tag, User, Folder, File } from "lucide-react";
 
 interface MindMapViewerProps {
@@ -43,13 +43,11 @@ const nodeIcons = {
   file: File
 };
 
-// Get node colors based on the selected theme and node level
-const getNodeColors = (level: number, theme: MindMapTheme) => {
-  const { background, color } = mindMapThemes[theme];
-  
+// Get node colors based on node level
+const getNodeColors = (level: number) => {
   return {
-    backgroundColor: background,
-    borderColor: color,
+    backgroundColor: level === 0 ? '#CFFAFE' : '#F2FCE2',
+    borderColor: level === 0 ? '#06B6D4' : '#67c23a',
     textColor: '#333333' // Dark text for better readability across all themes
   };
 };
@@ -58,31 +56,42 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [theme, setTheme] = useState<MindMapTheme>('purple'); // Default theme
   const [showIconMenu, setShowIconMenu] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { toast } = useToast();
-
-  // Effect to handle theme changes for existing mind map
-  useEffect(() => {
-    if (mindMapRef.current && containerRef.current) {
-      // Update background color of the container
-      containerRef.current.style.background = `linear-gradient(90deg, #F9F7F3 0%, ${mindMapThemes[theme].background} 100%)`;
-      
-      // Re-render the mind map to apply new theme
-      mindMapRef.current.refresh();
-    }
-  }, [theme]);
 
   // Function to add an icon to a node
   const addIconToNode = (nodeId: string, iconName: string) => {
     if (!mindMapRef.current) return;
     
-    const node = mindMapRef.current.findNode(nodeId);
-    if (!node) return;
+    // Use the mind map's internal method to find the node
+    const allNodes = mindMapRef.current.getAllDataString();
+    const parsedNodes = JSON.parse(allNodes);
+    
+    // Find the node in the data structure
+    const findNodeInData = (data: any, targetId: string): any => {
+      if (data.id === targetId) {
+        return data;
+      }
+      
+      if (data.children && data.children.length > 0) {
+        for (const child of data.children) {
+          const found = findNodeInData(child, targetId);
+          if (found) return found;
+        }
+      }
+      
+      return null;
+    };
+    
+    const nodeData = findNodeInData(parsedNodes.nodeData, nodeId);
+    if (!nodeData) return;
     
     // Set custom icon data on the node
-    node.data.icon = iconName;
+    nodeData.icon = iconName;
+    
+    // Update the data and refresh
+    mindMapRef.current.refresh();
     
     // Find the node's DOM element and update it
     const nodeEl = document.querySelector(`[data-nodeid="${nodeId}"]`);
@@ -111,8 +120,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         },
         theme: {
           name: 'colorful',
-          background: mindMapThemes[theme].background,
-          color: mindMapThemes[theme].color,
+          background: '#F0F7FF',
+          color: '#06B6D4',
           palette: [],
           cssVar: {},
         },
@@ -120,13 +129,13 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         autoFit: true,
         // Add custom style to nodes based on their level
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
-          // Get appropriate colors based on node level and theme
-          const { backgroundColor, borderColor, textColor } = getNodeColors(level, theme);
+          // Get appropriate colors based on node level
+          const { backgroundColor, borderColor, textColor } = getNodeColors(level);
           
           // Apply custom styling to nodes for a more elegant look
-          tpc.style.backgroundColor = level === 0 ? backgroundColor : mindMapThemes[theme].background;
+          tpc.style.backgroundColor = backgroundColor;
           tpc.style.color = textColor;
-          tpc.style.border = `2px solid ${level === 0 ? borderColor : mindMapThemes[theme].color}`;
+          tpc.style.border = `2px solid ${borderColor}`;
           tpc.style.borderRadius = '12px';
           tpc.style.padding = '10px 16px';
           tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
@@ -286,16 +295,14 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       mind.install(nodeMenu);
       
       // Extend the node menu with custom icon options
-      const originMenu = mind.nodeMenu;
-      if (originMenu) {
-        originMenu.addOption('Add Icon', (nodeEl: HTMLElement) => {
-          const nodeId = nodeEl.getAttribute('data-nodeid');
-          if (nodeId) {
-            setSelectedNodeId(nodeId);
-            setShowIconMenu(true);
-          }
-        });
-      }
+      // Fix: Use the plugin API correctly
+      const menuPlugin = nodeMenu;
+      menuPlugin.addOption('Add Icon', (node: any, evt: MouseEvent) => {
+        if (node && node.id) {
+          setSelectedNodeId(node.id);
+          setShowIconMenu(true);
+        }
+      });
       
       // Get the generated mind map data from sessionStorage or use a default structure
       let data: MindElixirData;
@@ -414,13 +421,14 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       linkElements.forEach((link: Element) => {
         const linkElement = link as SVGElement;
         linkElement.setAttribute('stroke-width', '2.5');
-        linkElement.setAttribute('stroke', mindMapThemes[theme].color);
+        linkElement.setAttribute('stroke', '#67c23a');
       });
       
       mindMapRef.current = mind;
       
       // Add a custom event listener for node clicks to potentially add icons
-      mind.bus.addListener('selectNode', (nodeEle: HTMLElement, nodeObj: any) => {
+      // Fix: Use correct event listener type
+      mind.bus.addListener('selectNode', (node: any) => {
         // Optional: we could show a context menu here
         // Currently handled through the nodeMenu plugin
       });
@@ -442,20 +450,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         setIsReady(true);
       }, 300);
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, theme]);
-
-  const handleThemeChange = (newTheme: MindMapTheme) => {
-    setTheme(newTheme);
-    
-    // Update connection lines color
-    if (containerRef.current) {
-      const linkElements = containerRef.current.querySelectorAll('.fne-link');
-      linkElements.forEach((link: Element) => {
-        const linkElement = link as SVGElement;
-        linkElement.setAttribute('stroke', mindMapThemes[newTheme].color);
-      });
-    }
-  };
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   if (!isMapGenerated) {
     return null;
@@ -468,15 +463,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           ref={containerRef} 
           className="w-full h-full" 
           style={{ 
-            background: `linear-gradient(90deg, #F9F7F3 0%, ${mindMapThemes[theme].background} 100%)`,
-            transition: 'background-color 0.5s ease'
+            background: `linear-gradient(90deg, #F9F7F3 0%, #F2FCE2 100%)`,
           }}
         />
-        
-        {/* Theme selector in the top-right corner */}
-        <div className="absolute top-2 right-2 z-10">
-          <ThemeSelect value={theme} onValueChange={handleThemeChange} />
-        </div>
         
         {/* Icon selection menu */}
         {showIconMenu && selectedNodeId && (
