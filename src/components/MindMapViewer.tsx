@@ -10,8 +10,8 @@ interface MindMapViewerProps {
   onMindMapReady?: (mindMap: MindElixirInstance) => void;
 }
 
-// Modify the EventMap to actually extend the library's EventMap type
-type MindElixirEventMap = {
+// Modify the EventMap to include all the events we need
+interface MindElixirEventMap {
   'operation': any;
   'selectNode': any;
   'expandNode': any;
@@ -177,7 +177,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady }: MindMapViewerProps) =
         console.log('Node selected:', node);
       });
       
-      mind.bus.addListener('showNodeMenu', (node: any, e: MouseEvent) => {
+      // Fix: Cast the event name to keyof MindElixirEventMap to satisfy TypeScript
+      mind.bus.addListener('showNodeMenu' as keyof MindElixirEventMap, (node: any, e: MouseEvent) => {
         console.log('Node menu shown:', node, e);
       });
       
