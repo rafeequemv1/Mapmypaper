@@ -1,11 +1,9 @@
-
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
-import { MindMapTheme, mindMapThemes } from "@/components/mindmap/ThemeSelect";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -13,7 +11,6 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
-  const [currentTheme, setCurrentTheme] = useState<MindMapTheme>('green'); // Default theme
   const { toast } = useToast();
   
   useEffect(() => {
@@ -45,18 +42,6 @@ const MindMap = () => {
     // Execute PDF check immediately
     checkPdfAvailability();
   }, [toast]);
-
-  // Load the last selected theme from localStorage if available
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('mindMapTheme');
-    if (savedTheme && Object.keys(mindMapThemes).includes(savedTheme)) {
-      try {
-        setCurrentTheme(savedTheme as MindMapTheme);
-      } catch (error) {
-        console.error("Error loading saved theme:", error);
-      }
-    }
-  }, []);
 
   const togglePdf = () => {
     setShowPdf(prev => !prev);
@@ -123,19 +108,6 @@ const MindMap = () => {
     }
   }, [mindMap, toast]);
 
-  const handleThemeChange = useCallback((theme: MindMapTheme) => {
-    setCurrentTheme(theme);
-    
-    // Save the theme preference to localStorage
-    localStorage.setItem('mindMapTheme', theme);
-    
-    toast({
-      title: "Theme Changed",
-      description: `Mind map theme updated to ${theme}.`,
-      duration: 2000,
-    });
-  }, [toast]);
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header component with navigation and toggles */}
@@ -147,8 +119,6 @@ const MindMap = () => {
         toggleChat={toggleChat}
         onExportMindMap={handleExportMindMap}
         onOpenSummary={toggleSummary}
-        currentTheme={currentTheme}
-        onThemeChange={handleThemeChange}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -159,7 +129,6 @@ const MindMap = () => {
           toggleChat={toggleChat}
           togglePdf={togglePdf}
           onMindMapReady={handleMindMapReady}
-          theme={currentTheme}
         />
       </div>
       
