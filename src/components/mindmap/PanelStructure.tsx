@@ -4,16 +4,14 @@ import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import { MindMapTheme } from "@/components/mindmap/ThemeSelect";
-import { MindElixirInstance } from "mind-elixir";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady?: (mindMap: MindElixirInstance) => void;
+  onMindMapReady?: (mindMap: any) => void;
   theme?: MindMapTheme;
-  mindMap?: MindElixirInstance | null;
 }
 
 const PanelStructure: React.FC<PanelStructureProps> = ({ 
@@ -22,8 +20,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   toggleChat, 
   togglePdf, 
   onMindMapReady,
-  theme,
-  mindMap
+  theme
 }) => {
   return (
     <div className="flex-1 flex h-full overflow-hidden">
@@ -42,7 +39,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
       {/* Chat Panel */}
       {showChat && (
         <div className="w-1/4 h-full border-l border-gray-200">
-          <ChatPanel toggleChat={toggleChat} mindMap={mindMap} />
+          <ChatPanel toggleChat={toggleChat} />
         </div>
       )}
     </div>
