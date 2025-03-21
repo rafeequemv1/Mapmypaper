@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,9 +16,7 @@ interface ChatPanelProps {
 const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  
-  // Track the last processed requests by storing their timestamp and content hash
-  const processedRequestsRef = useRef<{timestamp: number, contentHash: string}[]>([]);
+  const lastProcessedTextRef = useRef<string | null>(null);
   
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; imageData?: string }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
@@ -28,30 +25,6 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
-  
-  // Helper function to generate a simple hash for content tracking
-  const generateContentHash = (content: string): string => {
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      hash = ((hash << 5) - hash) + content.charCodeAt(i);
-      hash |= 0; // Convert to 32bit integer
-    }
-    return hash.toString();
-  };
-  
-  // Helper function to check if a request was recently processed
-  const wasRecentlyProcessed = (content: string): boolean => {
-    const contentHash = generateContentHash(content);
-    const now = Date.now();
-    
-    // Remove old processed requests (older than 5 seconds)
-    processedRequestsRef.current = processedRequestsRef.current.filter(
-      req => now - req.timestamp < 5000
-    );
-    
-    // Check if this content was recently processed
-    return processedRequestsRef.current.some(req => req.contentHash === contentHash);
-  };
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -66,21 +39,11 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   // Process text to explain when it changes
   useEffect(() => {
     const processExplainText = async () => {
-      if (explainText && !processingExplainText) {
-        // Check if this exact request was processed recently to avoid duplicates
-        if (wasRecentlyProcessed(explainText)) {
-          console.log("Duplicate request detected, ignoring:", explainText.substring(0, 50));
-          return;
-        }
-        
+      // Only process if explainText exists, isn't already being processed, and isn't the same as the last one
+      if (explainText && !processingExplainText && explainText !== lastProcessedTextRef.current) {
         setProcessingExplainText(true);
-        
-        // Add this request to the processed list
-        const contentHash = generateContentHash(explainText);
-        processedRequestsRef.current.push({
-          timestamp: Date.now(),
-          contentHash
-        });
+        // Store current text to prevent duplicate processing
+        lastProcessedTextRef.current = explainText;
         
         // Check if this is an image snippet request
         if (explainText.includes('[IMAGE_SNIPPET]')) {
@@ -226,16 +189,13 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
         
         // Reset processing flag
         setProcessingExplainText(false);
+        
+        // Clear the stored image data after processing
+        sessionStorage.removeItem('selectedImageForChat');
       }
     };
     
     processExplainText();
-    
-    // Return a cleanup function that runs when component unmounts or explainText changes
-    return () => {
-      // Note: We intentionally do NOT clear the image data here anymore
-      // This allows multiple capture requests to work correctly
-    };
   }, [explainText, toast]);
 
   const handleSendMessage = async () => {

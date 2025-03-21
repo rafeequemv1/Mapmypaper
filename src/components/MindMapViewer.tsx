@@ -1,853 +1,348 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import MindElixir from "mind-elixir";
-import { MindElixirInstance, NodeObj } from "mind-elixir/dist/types/index";
-import { useTheme } from "next-themes";
-import { useGlobalStore } from "@/store/globalStore";
-import { ContextMenu } from "@/components/ui/context-menu";
-import MindMapContextMenu from "@/components/mindmap/MindMapContextMenu";
+
+import { useEffect, useRef, useState } from "react";
+import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
+import nodeMenu from "@mind-elixir/node-menu-neo";
+import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
+import MindMapContextMenu from "./mindmap/MindMapContextMenu";
 
 interface MindMapViewerProps {
+  isMapGenerated: boolean;
   onMindMapReady?: (mindMap: MindElixirInstance) => void;
-  explainText?: string;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
 }
 
-const MindMapViewer: React.FC<MindMapViewerProps> = ({
-  onMindMapReady,
-  explainText,
-  onExplainText,
-  onRequestOpenChat,
-}) => {
-  const [mindElixirData, setMindElixirData] = useState(null);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
-  const mindElixir = useRef<MindElixirInstance | null>(null);
-  const container = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
+// Helper function to format node text with line breaks
+const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
+  if (!text) return '';
+  
+  const words = text.split(' ');
+  if (words.length <= wordsPerLine) return text;
+  
+  let result = '';
+  for (let i = 0; i < words.length; i += wordsPerLine) {
+    const chunk = words.slice(i, i + wordsPerLine).join(' ');
+    result += chunk + (i + wordsPerLine < words.length ? '\n' : '');
+  }
+  
+  return result;
+};
+
+// Get node colors based on node level
+const getNodeColors = (level: number) => {
+  return {
+    backgroundColor: level === 0 ? '#CFFAFE' : '#F2FCE2',
+    borderColor: level === 0 ? '#06B6D4' : '#67c23a',
+    textColor: '#333333' // Dark text for better readability across all themes
+  };
+};
+
+const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mindMapRef = useRef<MindElixirInstance | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<any>(null);
   const { toast } = useToast();
-  const [isReadOnly, setIsReadOnly] = useState(false);
-  const globalStore = useGlobalStore();
+
+  // Handle AI expansion of a node
+  const handleAIExpand = async () => {
+    if (!selectedNode || !onExplainText) return;
+    
+    const nodeTopic = selectedNode.nodeObj.topic;
+    
+    // Generate a unique timestamp to ensure image is always treated as new
+    const timestamp = Date.now();
+    sessionStorage.setItem('selectedImageForChat', ''); // Clear any previous image
+    
+    // Send to chat for expansion with a unique identifier to force new processing
+    onExplainText(`Please expand on this mind map node: "${nodeTopic}" [EXPAND_NODE_${timestamp}]`);
+    
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+    
+    toast({
+      title: "AI Expansion Requested",
+      description: `Expanding node: "${nodeTopic}"`,
+      duration: 3000,
+    });
+  };
 
   useEffect(() => {
-    // Load data from local storage on component mount
-    const storedData = localStorage.getItem("mindElixirData");
-    if (storedData) {
-      setMindElixirData(JSON.parse(storedData));
+    if (isMapGenerated && containerRef.current && !mindMapRef.current) {
+      // Initialize the mind map only once when it's generated
+      
+      const options = {
+        el: containerRef.current,
+        direction: 1 as const,
+        draggable: true,
+        editable: true,
+        contextMenu: true, 
+        tools: {
+          zoom: true,
+          create: true,
+          edit: true,
+        },
+        theme: {
+          name: 'colorful',
+          background: '#F0F7FF',
+          color: '#06B6D4',
+          palette: [],
+          cssVar: {},
+        },
+        nodeMenu: true, // Explicitly enable the nodeMenu
+        autoFit: true,
+        // Add custom style to nodes based on their level
+        beforeRender: (node: any, tpc: HTMLElement, level: number) => {
+          // Get appropriate colors based on node level
+          const { backgroundColor, borderColor, textColor } = getNodeColors(level);
+          
+          // Apply custom styling to nodes for a more elegant look
+          tpc.style.backgroundColor = backgroundColor;
+          tpc.style.color = textColor;
+          tpc.style.border = `2px solid ${borderColor}`;
+          tpc.style.borderRadius = '12px';
+          tpc.style.padding = '10px 16px';
+          tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
+          tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
+          tpc.style.fontSize = level === 0 ? '20px' : '16px';
+          tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
+          
+          // Add transition for smooth color changes
+          tpc.style.transition = 'all 0.3s ease';
+          
+          // Add hover effect
+          tpc.addEventListener('mouseover', () => {
+            tpc.style.boxShadow = '0 5px 15px rgba(0,0,0,0.08)';
+            tpc.style.transform = 'translateY(-2px)';
+          });
+          
+          tpc.addEventListener('mouseout', () => {
+            tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
+            tpc.style.transform = 'translateY(0)';
+          });
+        }
+      };
+
+      // Create mind map instance
+      const mind = new MindElixir(options);
+      
+      // Install the node menu plugin before init
+      mind.install(nodeMenu);
+      
+      // Get the generated mind map data from sessionStorage or use a default structure
+      let data: MindElixirData;
+      
+      try {
+        const savedData = sessionStorage.getItem('mindMapData');
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          
+          // Apply line breaks to node topics
+          const formatNodes = (node: any) => {
+            if (node.topic) {
+              node.topic = formatNodeText(node.topic);
+            }
+            
+            if (node.children && node.children.length > 0) {
+              node.children.forEach(formatNodes);
+            }
+            
+            return node;
+          };
+          
+          // Format the root node and all children
+          if (parsedData.nodeData) {
+            formatNodes(parsedData.nodeData);
+          }
+          
+          data = parsedData;
+        } else {
+          data = {
+            nodeData: {
+              id: 'root',
+              topic: 'Mind\nMapping',
+              children: [
+                {
+                  id: 'bd1',
+                  topic: 'Organization',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd1-1', topic: 'Plan' },
+                    { id: 'bd1-2', topic: 'Study' },
+                    { id: 'bd1-3', topic: 'System' },
+                    { id: 'bd1-4', topic: 'Breaks' }
+                  ]
+                },
+                {
+                  id: 'bd2',
+                  topic: 'Learning\nStyle',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd2-1', topic: 'Read' },
+                    { id: 'bd2-2', topic: 'Listen' },
+                    { id: 'bd2-3', topic: 'Summarize' }
+                  ]
+                },
+                {
+                  id: 'bd3',
+                  topic: 'Habits',
+                  direction: 0 as const,
+                  children: []
+                },
+                {
+                  id: 'bd4',
+                  topic: 'Goals',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd4-1', topic: 'Research' },
+                    { id: 'bd4-2', topic: 'Lecture' },
+                    { id: 'bd4-3', topic: 'Conclusions' }
+                  ]
+                },
+                {
+                  id: 'bd5',
+                  topic: 'Motivation',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd5-1', topic: 'Tips' },
+                    { id: 'bd5-2', topic: 'Roadmap' }
+                  ]
+                },
+                {
+                  id: 'bd6',
+                  topic: 'Review',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd6-1', topic: 'Notes' },
+                    { id: 'bd6-2', topic: 'Method' },
+                    { id: 'bd6-3', topic: 'Discuss' }
+                  ]
+                }
+              ]
+            }
+          };
+        }
+      } catch (error) {
+        console.error("Error parsing mind map data:", error);
+        data = {
+          nodeData: {
+            id: 'root',
+            topic: 'Error\nLoading\nMind Map',
+            children: [
+              { id: 'error1', topic: 'There was an error loading the mind map data', direction: 0 as const }
+            ]
+          }
+        };
+      }
+
+      // Initialize the mind map with data
+      mind.init(data);
+      
+      // Enable debug mode for better troubleshooting
+      (window as any).mind = mind;
+      
+      // Set up custom context menu
+      mind.bus.addListener('selectNode', (nodeObj: any, clickEvent: any) => {
+        // Store the selected node for context menu actions
+        setSelectedNode({ nodeObj, clickEvent });
+      });
+      
+      // Add custom styling to connection lines
+      const linkElements = containerRef.current.querySelectorAll('.fne-link');
+      linkElements.forEach((link: Element) => {
+        const linkElement = link as SVGElement;
+        linkElement.setAttribute('stroke-width', '2.5');
+        linkElement.setAttribute('stroke', '#67c23a');
+      });
+      
+      mindMapRef.current = mind;
+      
+      // Notify parent component that mind map is ready
+      if (onMindMapReady) {
+        onMindMapReady(mind);
+      }
+      
+      // Show a toast notification to inform users about right-click functionality
+      toast({
+        title: "Mind Map Ready",
+        description: "Right-click on any node to access the node menu with options.",
+        duration: 5000,
+      });
+      
+      // Set a timeout to ensure the mind map is rendered before scaling
+      setTimeout(() => {
+        setIsReady(true);
+      }, 300);
     }
-  }, []);
-
-  useEffect(() => {
-    // Initialize MindElixir when the component mounts
-    if (!container.current) {
-      return;
-    }
-
-    const options = {
-      el: container.current,
-      newTopicName: "New Node",
-      direction: MindElixir.LEFT,
-      locale: "en",
-      theme: theme === "dark" ? "dark" : "light",
-      readonly: isReadOnly,
-      //   overflowHidden: true,
-      //   primaryColor: "#000000",
-      //   nodeMenu: true,
-      contextMenu: true,
-      contextMenuOption: {
-        name: "copy",
-        onclick: () => {
-          console.log("copy");
-        },
-      },
-      nodeMenuOption: {
-        addChild: "Add Child",
-        deleteNode: "Delete",
-        focusNode: "Focus",
-        expandNode: "Expand",
-        collapseNode: "Collapse",
-      },
-      //   mobileLayout: true,
-      //   draggable: true,
-      keypress: true,
-      before: {
-        addChild: (newNode, node) => {
-          console.log("addChild", newNode, node);
-          return true;
-        },
-        deleteNode: (node, parent, isRoot) => {
-          console.log("deleteNode", node, parent, isRoot);
-          return true;
-        },
-        moveNode: (node, newParent, originParent, sibling) => {
-          console.log("moveNode", node, newParent, originParent, sibling);
-          return true;
-        },
-        //   focusNode: (node) => {
-        //     console.log("focusNode", node);
-        //     return true;
-        //   },
-        //   selectNode: (node) => {
-        //     console.log("selectNode", node);
-        //     return true;
-        //   },
-      },
-      //   validateTopic: (topic) => {
-      //     console.log("validateTopic", topic);
-      //     return true;
-      //   },
-    };
-
-    mindElixir.current = new MindElixir(options);
-
-    if (mindElixirData) {
-      mindElixir.current.load(mindElixirData);
-    } else {
-      mindElixir.current.new("Main Topic");
-    }
-
-    mindElixir.current. bus.addListener("node_click", (node, topic, taskId) => {
-      console.log("node_click", node, topic, taskId);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("contextmenu", (node, topic, taskId) => {
-      console.log("contextmenu", node, topic, taskId);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("operation", (operation) => {
-      console.log("operation", operation);
-      localStorage.setItem(
-        "mindElixirData",
-        JSON.stringify(mindElixir.current.getData())
-      );
-    });
-
-    mindElixir.current. bus.addListener("selectNode", (node) => {
-      console.log("selectNode", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("expandNode", (node) => {
-      console.log("expandNode", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("collapseNode", (node) => {
-      console.log("collapseNode", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("nodeDrop", (node) => {
-      console.log("nodeDrop", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("renameNode", (node) => {
-      console.log("renameNode", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("addChildNode", (node) => {
-      console.log("addChildNode", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("deleteNode", (node) => {
-      console.log("deleteNode", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("moveNode", (node) => {
-      console.log("moveNode", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("linkNodes", (node) => {
-      console.log("linkNodes", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("unlinkNodes", (node) => {
-      console.log("unlinkNodes", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("editorChange", (node) => {
-      console.log("editorChange", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("undo", (node) => {
-      console.log("undo", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("redo", (node) => {
-      console.log("redo", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("showContextMenu", (node) => {
-      console.log("showContextMenu", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("hideContextMenu", (node) => {
-      console.log("hideContextMenu", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("fullscreen", (node) => {
-      console.log("fullscreen", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("zoomIn", (node) => {
-      console.log("zoomIn", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("zoomOut", (node) => {
-      console.log("zoomOut", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("resetZoom", (node) => {
-      console.log("resetZoom", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("focusNode", (node) => {
-      console.log("focusNode", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("expandAll", (node) => {
-      console.log("expandAll", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("collapseAll", (node) => {
-      console.log("collapseAll", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("enableEdit", (node) => {
-      console.log("enableEdit", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("disableEdit", (node) => {
-      console.log("disableEdit", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("screenshot", (node) => {
-      console.log("screenshot", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("exportSvg", (node) => {
-      console.log("exportSvg", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("exportPng", (node) => {
-      console.log("exportPng", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("exportJson", (node) => {
-      console.log("exportJson", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("importJson", (node) => {
-      console.log("importJson", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getJson", (node) => {
-      console.log("getJson", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getData", (node) => {
-      console.log("getData", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodeData", (node) => {
-      console.log("getNodeData", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getRoot", (node) => {
-      console.log("getRoot", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getParent", (node) => {
-      console.log("getParent", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getChildren", (node) => {
-      console.log("getChildren", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getFirstChild", (node) => {
-      console.log("getFirstChild", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getLastChild", (node) => {
-      console.log("getLastChild", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNextSibling", (node) => {
-      console.log("getNextSibling", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getPrevSibling", (node) => {
-      console.log("getPrevSibling", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodes", (node) => {
-      console.log("getNodes", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesData", (node) => {
-      console.log("getNodesData", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithTopic", (node) => {
-      console.log("getNodesDataWithTopic", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithId", (node) => {
-      console.log("getNodesDataWithId", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithTag", (node) => {
-      console.log("getNodesDataWithTag", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithIcon", (node) => {
-      console.log("getNodesDataWithIcon", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithLink", (node) => {
-      console.log("getNodesDataWithLink", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithLabel", (node) => {
-      console.log("getNodesDataWithLabel", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithNote", (node) => {
-      console.log("getNodesDataWithNote", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithImage", (node) => {
-      console.log("getNodesDataWithImage", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithVideo", (node) => {
-      console.log("getNodesDataWithVideo", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithAudio", (node) => {
-      console.log("getNodesDataWithAudio", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithFile", (node) => {
-      console.log("getNodesDataWithFile", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithTask", (node) => {
-      console.log("getNodesDataWithTask", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithProgress", (node) => {
-      console.log("getNodesDataWithProgress", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithPriority", (node) => {
-      console.log("getNodesDataWithPriority", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithDeadline", (node) => {
-      console.log("getNodesDataWithDeadline", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithAssignee", (node) => {
-      console.log("getNodesDataWithAssignee", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithStatus", (node) => {
-      console.log("getNodesDataWithStatus", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomData", (node) => {
-      console.log("getNodesDataWithCustomData", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomStyle", (node) => {
-      console.log("getNodesDataWithCustomStyle", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomClass", (node) => {
-      console.log("getNodesDataWithCustomClass", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomAttribute", (node) => {
-      console.log("getNodesDataWithCustomAttribute", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomEvent", (node) => {
-      console.log("getNodesDataWithCustomEvent", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomMethod", (node) => {
-      console.log("getNodesDataWithCustomMethod", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomProperty", (node) => {
-      console.log("getNodesDataWithCustomProperty", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomVariable", (node) => {
-      console.log("getNodesDataWithCustomVariable", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomConstant", (node) => {
-      console.log("getNodesDataWithCustomConstant", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFunction", (node) => {
-      console.log("getNodesDataWithCustomFunction", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomClassMethod", (node) => {
-      console.log("getNodesDataWithCustomClassMethod", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomClassProperty", (node) => {
-      console.log("getNodesDataWithCustomClassProperty", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomClassVariable", (node) => {
-      console.log("getNodesDataWithCustomClassVariable", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomClassConstant", (node) => {
-      console.log("getNodesDataWithCustomClassConstant", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomClassFunction", (node) => {
-      console.log("getNodesDataWithCustomClassFunction", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomInterface", (node) => {
-      console.log("getNodesDataWithCustomInterface", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomType", (node) => {
-      console.log("getNodesDataWithCustomType", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomEnum", (node) => {
-      console.log("getNodesDataWithCustomEnum", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDecorator", (node) => {
-      console.log("getNodesDataWithCustomDecorator", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomAnnotation", (node) => {
-      console.log("getNodesDataWithCustomAnnotation", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDirective", (node) => {
-      console.log("getNodesDataWithCustomDirective", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomPipe", (node) => {
-      console.log("getNodesDataWithCustomPipe", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomGuard", (node) => {
-      console.log("getNodesDataWithCustomGuard", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomResolver", (node) => {
-      console.log("getNodesDataWithCustomResolver", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomSubscriber", (node) => {
-      console.log("getNodesDataWithCustomSubscriber", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomInterceptor", (node) => {
-      console.log("getNodesDataWithCustomInterceptor", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomMiddleware", (node) => {
-      console.log("getNodesDataWithCustomMiddleware", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFilter", (node) => {
-      console.log("getNodesDataWithCustomFilter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomValidator", (node) => {
-      console.log("getNodesDataWithCustomValidator", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomSerializer", (node) => {
-      console.log("getNodesDataWithCustomSerializer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDeserializer", (node) => {
-      console.log("getNodesDataWithCustomDeserializer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomConverter", (node) => {
-      console.log("getNodesDataWithCustomConverter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFormatter", (node) => {
-      console.log("getNodesDataWithCustomFormatter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomParser", (node) => {
-      console.log("getNodesDataWithCustomParser", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomRenderer", (node) => {
-      console.log("getNodesDataWithCustomRenderer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomComponent", (node) => {
-      console.log("getNodesDataWithCustomComponent", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDirective", (node) => {
-      console.log("getNodesDataWithCustomDirective", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomPipe", (node) => {
-      console.log("getNodesDataWithCustomPipe", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomGuard", (node) => {
-      console.log("getNodesDataWithCustomGuard", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomResolver", (node) => {
-      console.log("getNodesDataWithCustomResolver", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomSubscriber", (node) => {
-      console.log("getNodesDataWithCustomSubscriber", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomInterceptor", (node) => {
-      console.log("getNodesDataWithCustomInterceptor", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomMiddleware", (node) => {
-      console.log("getNodesDataWithCustomMiddleware", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFilter", (node) => {
-      console.log("getNodesDataWithCustomFilter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomValidator", (node) => {
-      console.log("getNodesDataWithCustomValidator", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomSerializer", (node) => {
-      console.log("getNodesDataWithCustomSerializer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDeserializer", (node) => {
-      console.log("getNodesDataWithCustomDeserializer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomConverter", (node) => {
-      console.log("getNodesDataWithCustomConverter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFormatter", (node) => {
-      console.log("getNodesDataWithCustomFormatter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomParser", (node) => {
-      console.log("getNodesDataWithCustomParser", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomRenderer", (node) => {
-      console.log("getNodesDataWithCustomRenderer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomComponent", (node) => {
-      console.log("getNodesDataWithCustomComponent", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDirective", (node) => {
-      console.log("getNodesDataWithCustomDirective", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomPipe", (node) => {
-      console.log("getNodesDataWithCustomPipe", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomGuard", (node) => {
-      console.log("getNodesDataWithCustomGuard", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomResolver", (node) => {
-      console.log("getNodesDataWithCustomResolver", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomSubscriber", (node) => {
-      console.log("getNodesDataWithCustomSubscriber", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomInterceptor", (node) => {
-      console.log("getNodesDataWithCustomInterceptor", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomMiddleware", (node) => {
-      console.log("getNodesDataWithCustomMiddleware", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFilter", (node) => {
-      console.log("getNodesDataWithCustomFilter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomValidator", (node) => {
-      console.log("getNodesDataWithCustomValidator", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomSerializer", (node) => {
-      console.log("getNodesDataWithCustomSerializer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDeserializer", (node) => {
-      console.log("getNodesDataWithCustomDeserializer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomConverter", (node) => {
-      console.log("getNodesDataWithCustomConverter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFormatter", (node) => {
-      console.log("getNodesDataWithCustomFormatter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomParser", (node) => {
-      console.log("getNodesDataWithCustomParser", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomRenderer", (node) => {
-      console.log("getNodesDataWithCustomRenderer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomComponent", (node) => {
-      console.log("getNodesDataWithCustomComponent", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDirective", (node) => {
-      console.log("getNodesDataWithCustomDirective", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomPipe", (node) => {
-      console.log("getNodesDataWithCustomPipe", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomGuard", (node) => {
-      console.log("getNodesDataWithCustomGuard", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomResolver", (node) => {
-      console.log("getNodesDataWithCustomResolver", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomSubscriber", (node) => {
-      console.log("getNodesDataWithCustomSubscriber", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomInterceptor", (node) => {
-      console.log("getNodesDataWithCustomInterceptor", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomMiddleware", (node) => {
-      console.log("getNodesDataWithCustomMiddleware", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFilter", (node) => {
-      console.log("getNodesDataWithCustomFilter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomValidator", (node) => {
-      console.log("getNodesDataWithCustomValidator", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomSerializer", (node) => {
-      console.log("getNodesDataWithCustomSerializer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDeserializer", (node) => {
-      console.log("getNodesDataWithCustomDeserializer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomConverter", (node) => {
-      console.log("getNodesDataWithCustomConverter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomFormatter", (node) => {
-      console.log("getNodesDataWithCustomFormatter", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomParser", (node) => {
-      console.log("getNodesDataWithCustomParser", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomRenderer", (node) => {
-      console.log("getNodesDataWithCustomRenderer", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomComponent", (node) => {
-      console.log("getNodesDataWithCustomComponent", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomDirective", (node) => {
-      console.log("getNodesDataWithCustomDirective", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomPipe", (node) => {
-      console.log("getNodesDataWithCustomPipe", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesDataWithCustomGuard", (node) => {
-      console.log("getNodesDataWithCustomGuard", node);
-      setSelectedNode(node.id);
-    });
-
-    mindElixir.current. bus.addListener("getNodesData
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
+
+  if (!isMapGenerated) {
+    return null;
+  }
+
+  return (
+    <div className="w-full h-full flex-1 flex flex-col">
+      <div className="w-full h-full overflow-hidden relative">
+        <MindMapContextMenu
+          onCopy={() => {
+            if (selectedNode) {
+              navigator.clipboard.writeText(selectedNode.nodeObj.topic);
+              toast({
+                title: "Copied to clipboard",
+                description: `Node text "${selectedNode.nodeObj.topic}" copied`,
+                duration: 2000,
+              });
+            }
+          }}
+          onDelete={() => {
+            if (selectedNode && mindMapRef.current) {
+              mindMapRef.current.removeNode(selectedNode.nodeObj);
+              toast({
+                title: "Node Deleted",
+                description: "The selected node has been removed",
+                duration: 2000,
+              });
+            }
+          }}
+          onAddChild={() => {
+            if (selectedNode && mindMapRef.current) {
+              // Fix TypeScript error by creating a proper NodeObj
+              // Instead of passing a string directly, we pass it to the addChild method
+              mindMapRef.current.addChild(selectedNode.nodeObj, { topic: "New Node" });
+              toast({
+                title: "Child Added",
+                description: "A new child node has been added",
+                duration: 2000,
+              });
+            }
+          }}
+          onAddSibling={() => {
+            if (selectedNode && mindMapRef.current) {
+              // Fix TypeScript error by passing a topic object instead of a string
+              // The insertSibling method expects a Topic object not a string
+              mindMapRef.current.insertSibling(selectedNode.nodeObj, { topic: "New Sibling" });
+              toast({
+                title: "Sibling Added",
+                description: "A new sibling node has been added",
+                duration: 2000,
+              });
+            }
+          }}
+          onAIExpand={handleAIExpand}
+        >
+          <div 
+            ref={containerRef} 
+            className="w-full h-full" 
+            style={{ 
+              background: `linear-gradient(90deg, #F9F7F3 0%, #F2FCE2 100%)`,
+            }}
+          />
+        </MindMapContextMenu>
+      </div>
+    </div>
+  );
+};
+
+export default MindMapViewer;
