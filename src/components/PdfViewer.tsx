@@ -40,11 +40,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
     setError(null);
     
     if (storedPdfUrl) {
-      // If we have a URL, use it directly
+      console.log("Using stored PDF URL:", storedPdfUrl);
       setPdfUrl(storedPdfUrl);
       setIsLoading(false);
     } else if (pdfData) {
-      // If we have data, use it
+      console.log("Using PDF data from sessionStorage");
       setPdfUrl(pdfData);
       setIsLoading(false);
     } else {
@@ -102,7 +102,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
       }`}
     >
       {/* PDF Header */}
-      <div className="flex items-center justify-between p-1.5 border-b">
+      <div className="flex items-center justify-between p-1 border-b">
         <div className="flex items-center">
           <h3 className="text-xs font-medium truncate max-w-[200px]">
             {pdfFileName}
@@ -112,19 +112,19 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 w-7 p-0"
+            className="h-6 w-6 p-0"
             onClick={zoomOut}
             title="Zoom Out"
           >
             <ZoomOut className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-xs w-10 text-center">
+          <span className="text-xs w-8 text-center">
             {Math.round(zoom * 100)}%
           </span>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 w-7 p-0"
+            className="h-6 w-6 p-0"
             onClick={zoomIn}
             title="Zoom In"
           >
@@ -133,7 +133,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 w-7 p-0"
+            className="h-6 w-6 p-0"
             onClick={toggleFullscreen}
             title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
           >
@@ -147,7 +147,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0"
+              className="h-6 w-6 p-0"
               onClick={onTogglePdf}
               title="Close PDF"
             >
@@ -183,11 +183,18 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
               height: `${100 / zoom}%`,
             }}
           >
-            <iframe
-              src={pdfUrl}
+            <object
+              data={pdfUrl}
+              type="application/pdf"
               className="w-full h-full"
               title="PDF Viewer"
-            />
+            >
+              <iframe
+                src={pdfUrl}
+                className="w-full h-full"
+                title="PDF Viewer"
+              />
+            </object>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
