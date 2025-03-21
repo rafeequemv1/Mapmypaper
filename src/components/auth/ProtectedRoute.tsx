@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  // In demo mode, we allow access to all routes
+  // With auth removed, we simply render the children without any protection
   return <>{children}</>;
 };
 

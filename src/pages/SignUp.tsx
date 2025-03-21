@@ -1,29 +1,8 @@
 
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import SignUpForm from "@/components/auth/SignUpForm";
 import { Brain } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 
 const SignUp = () => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (user && !loading) {
-      navigate("/mindmap");
-    }
-  }, [user, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100 flex flex-col">
       {/* Header */}
