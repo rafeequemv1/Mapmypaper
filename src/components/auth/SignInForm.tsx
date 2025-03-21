@@ -40,20 +40,11 @@ const SignInForm = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      const { error } = await signIn(values.email, values.password);
-      
-      if (error) {
-        toast({
-          title: "Sign in failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
+      await signIn(values.email, values.password);
       
       toast({
-        title: "Signed in successfully",
-        description: "Welcome to MapMyPaper!",
+        title: "Demo mode",
+        description: "Authentication is currently disabled. Redirecting to main page.",
       });
       
       navigate("/mindmap");
@@ -106,7 +97,7 @@ const SignInForm = () => {
           />
           
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign In with Email"}
+            {isLoading ? "Signing in..." : "Sign In (Demo Mode)"}
           </Button>
         </form>
       </Form>

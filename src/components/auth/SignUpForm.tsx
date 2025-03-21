@@ -45,20 +45,11 @@ const SignUpForm = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      const { error } = await signUp(values.email, values.password);
-      
-      if (error) {
-        toast({
-          title: "Sign up failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
+      await signUp(values.email, values.password);
       
       toast({
-        title: "Signed up successfully",
-        description: "Please check your email for verification instructions.",
+        title: "Demo mode",
+        description: "Authentication is currently disabled. Redirecting to sign-in page.",
       });
       
       navigate("/sign-in");
@@ -125,7 +116,7 @@ const SignUpForm = () => {
           />
           
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Sign Up with Email"}
+            {isLoading ? "Creating account..." : "Sign Up (Demo Mode)"}
           </Button>
         </form>
       </Form>
