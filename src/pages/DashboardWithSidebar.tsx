@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Search, Plus, Trash2 } from "lucide-react";
+import { Search, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 
 interface MindMap {
   id: string;
@@ -41,7 +42,7 @@ interface MindMap {
   updated_at: string;
 }
 
-const Dashboard = () => {
+const DashboardWithSidebar = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -99,11 +100,6 @@ const Dashboard = () => {
 
   // Navigation handlers
   const handleCreateNew = () => {
-    // Changed to navigate directly to root path where PDF upload is
-    navigate("/");
-  };
-
-  const handleGoHome = () => {
     navigate("/");
   };
 
@@ -205,144 +201,139 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] flex flex-col">
-      {/* Header */}
-      <header className="border-b border-[#eaeaea] dark:border-[#333] bg-white dark:bg-[#111] p-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleGoHome}
-            className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-[#222]"
-          >
-            <Brain className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-medium text-black dark:text-white">
-            MapMyPaper - Dashboard
-          </h1>
-        </div>
-        <Button
-          onClick={handleCreateNew}
-          className="bg-black text-white dark:bg-white dark:text-black"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          New Mind Map
-        </Button>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 container mx-auto p-4 md:p-6">
-        {/* Search and filters */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search your mind maps..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white dark:bg-[#222] text-black dark:text-white border-[#eaeaea] dark:border-[#444]"
-            />
-          </div>
-        </div>
-
-        {/* Mind Maps Grid */}
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black dark:border-white"></div>
-          </div>
-        ) : paginatedMindMaps.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {paginatedMindMaps.map((mindMap) => (
-              <Card
-                key={mindMap.id}
-                className="bg-white dark:bg-[#222] border-[#eaeaea] dark:border-[#444] hover:shadow-md transition-shadow"
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-black dark:text-white truncate">
-                    {mindMap.title}
-                  </CardTitle>
-                  <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">
-                    {formatDate(mindMap.updated_at)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="py-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                    {mindMap.description || "No description provided"}
-                  </p>
-                  {mindMap.pdf_filename && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate">
-                      File: {mindMap.pdf_filename}
-                    </p>
-                  )}
-                </CardContent>
-                <CardFooter className="pt-2 flex justify-between">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleLoadMindMap(mindMap.id)}
-                    className="text-black border-black dark:text-white dark:border-white"
-                  >
-                    Open
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => confirmDelete(mindMap.id)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-64 text-center">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              {searchQuery
-                ? "No mind maps matching your search"
-                : "You don't have any saved mind maps yet"}
-            </p>
+    <div className="flex h-screen">
+      <DashboardSidebar />
+      <div className="flex-1 overflow-auto">
+        <div className="bg-gray-50 dark:bg-[#0a0a0a] min-h-screen">
+          {/* Header */}
+          <header className="border-b border-[#eaeaea] dark:border-[#333] bg-white dark:bg-[#111] p-3 flex items-center justify-between">
+            <h1 className="text-lg font-medium text-black dark:text-white">
+              Your Mind Maps
+            </h1>
             <Button
               onClick={handleCreateNew}
               className="bg-black text-white dark:bg-white dark:text-black"
             >
               <Plus className="mr-1 h-4 w-4" />
-              Create Your First Mind Map
+              New Mind Map
             </Button>
-          </div>
-        )}
+          </header>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination className="mt-8">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+          {/* Main Content */}
+          <div className="container mx-auto p-4 md:p-6">
+            {/* Search and filters */}
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search your mind maps..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-white dark:bg-[#222] text-black dark:text-white border-[#eaeaea] dark:border-[#444]"
                 />
-              </PaginationItem>
-              {Array.from({ length: totalPages }).map((_, index) => (
-                <PaginationItem key={index}>
-                  <PaginationLink
-                    isActive={currentPage === index + 1}
-                    onClick={() => setCurrentPage(index + 1)}
+              </div>
+            </div>
+
+            {/* Mind Maps Grid */}
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black dark:border-white"></div>
+              </div>
+            ) : paginatedMindMaps.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {paginatedMindMaps.map((mindMap) => (
+                  <Card
+                    key={mindMap.id}
+                    className="bg-white dark:bg-[#222] border-[#eaeaea] dark:border-[#444] hover:shadow-md transition-shadow"
                   >
-                    {index + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg text-black dark:text-white truncate">
+                        {mindMap.title}
+                      </CardTitle>
+                      <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">
+                        {formatDate(mindMap.updated_at)}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="py-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                        {mindMap.description || "No description provided"}
+                      </p>
+                      {mindMap.pdf_filename && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate">
+                          File: {mindMap.pdf_filename}
+                        </p>
+                      )}
+                    </CardContent>
+                    <CardFooter className="pt-2 flex justify-between">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleLoadMindMap(mindMap.id)}
+                        className="text-black border-black dark:text-white dark:border-white"
+                      >
+                        Open
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => confirmDelete(mindMap.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-center">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  {searchQuery
+                    ? "No mind maps matching your search"
+                    : "You don't have any saved mind maps yet"}
+                </p>
+                <Button
+                  onClick={handleCreateNew}
+                  className="bg-black text-white dark:bg-white dark:text-black"
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Create Your First Mind Map
+                </Button>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }).map((_, index) => (
+                    <PaginationItem key={index}>
+                      <PaginationLink
+                        isActive={currentPage === index + 1}
+                        onClick={() => setCurrentPage(index + 1)}
+                      >
+                        {index + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -377,4 +368,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default DashboardWithSidebar;
