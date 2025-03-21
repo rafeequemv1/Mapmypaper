@@ -1,22 +1,17 @@
 
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit } from "lucide-react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Brain, FileText, MessageSquare, Download, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
 
 interface HeaderProps {
   showPdf: boolean;
@@ -24,177 +19,116 @@ interface HeaderProps {
   pdfAvailable: boolean;
   showChat: boolean;
   toggleChat: () => void;
-  onExportMindMap?: (type: 'svg' | 'png') => void;
-  onOpenSummary?: () => void;
+  onExportMindMap: (type: 'svg' | 'png') => void;
+  onOpenSummary: () => void;
 }
 
-// Define keyboard shortcuts for the mind map
-const keyboardShortcuts = [
-  { key: "Enter", description: "Insert sibling node" },
-  { key: "Shift + Enter", description: "Insert sibling node before" },
-  { key: "Tab", description: "Insert child node" },
-  { key: "Ctrl + Enter", description: "Insert parent node" },
-  { key: "F1", description: "Center mind map" },
-  { key: "F2", description: "Edit current node" },
-  { key: "↑", description: "Select previous node" },
-  { key: "↓", description: "Select next node" },
-  { key: "← / →", description: "Select nodes on the left/right" },
-  { key: "PageUp / Alt + ↑", description: "Move up" },
-  { key: "PageDown / Alt + ↓", description: "Move down" },
-  { key: "Ctrl + ↑", description: "Use two-sided layout" },
-  { key: "Ctrl + ←", description: "Use left-sided layout" },
-  { key: "Ctrl + →", description: "Use right-sided layout" },
-  { key: "Ctrl + C", description: "Copy" },
-  { key: "Ctrl + V", description: "Paste" },
-  { key: "Ctrl + \"+\"", description: "Zoom in mind map" },
-  { key: "Ctrl + \"-\"", description: "Zoom out mind map" },
-  { key: "Ctrl + 0", description: "Reset size" },
-  { key: "Delete", description: "Remove node" },
-];
-
-const Header = ({ 
-  showPdf, 
-  togglePdf, 
-  pdfAvailable, 
-  showChat, 
+const Header = ({
+  showPdf,
+  togglePdf,
+  pdfAvailable,
+  showChat,
   toggleChat,
   onExportMindMap,
   onOpenSummary,
 }: HeaderProps) => {
   const navigate = useNavigate();
+  const { signOut, user } = useAuth();
   const { toast } = useToast();
-  const [showShortcuts, setShowShortcuts] = useState(false);
-
-  const handleBack = () => {
-    navigate("/");
-  };
-
-  const handleUploadClick = () => {
-    // Navigate to the upload page
-    navigate("/");
-  };
-
-  const toggleShortcuts = () => {
-    setShowShortcuts(prev => !prev);
-  };
+  
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully"
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error signing out",
+        variant: "destructive"
+      });
+    }
+  }, [signOut, navigate, toast]);
 
   return (
-    <div className="py-2 px-4 border-b bg-white shadow-sm flex items-center">
-      <div className="flex items-center gap-2 w-1/3">
-        <Brain className="h-5 w-5 text-primary" />
-        <h1 className="text-base font-medium text-primary">PaperMind</h1>
-        
-        <Button variant="ghost" size="sm" className="text-gray-600 ml-2" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+    <header className="border-b bg-background p-3 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Brain className="h-5 w-5" />
         </Button>
+        <h1 className="text-lg font-medium hidden md:block">Mind Map</h1>
       </div>
       
-      {/* Center section - Toggle buttons for PDF and research assistant */}
-      <div className="flex items-center justify-center w-1/3 gap-4">
+      <div className="flex items-center gap-2">
         {pdfAvailable && (
-          <Toggle 
-            pressed={showPdf} 
-            onPressedChange={togglePdf}
-            aria-label="Toggle PDF"
-            className="bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-md px-4 py-1 h-auto"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">PDF</span>
-          </Toggle>
-        )}
-        
-        <Toggle 
-          pressed={showChat} 
-          onPressedChange={toggleChat}
-          aria-label="Toggle research assistant"
-          className="bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-md px-4 py-1 h-auto"
-        >
-          <MessageSquare className="h-4 w-4 mr-2" />
-          <span className="text-sm font-medium">Research Assistant</span>
-        </Toggle>
-        
-        {onOpenSummary && (
           <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onOpenSummary}
-            className="bg-[#8B5CF6] hover:bg-[#7c4deb] text-white border-none rounded-md px-4 py-1 h-auto"
+            variant={showPdf ? "default" : "outline"} 
+            size="sm"
+            onClick={togglePdf}
+            className="hidden md:flex"
           >
-            <FileDigit className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Summarize</span>
+            <FileText className="mr-1 h-4 w-4" />
+            PDF
           </Button>
         )}
-      </div>
-      
-      {/* Actions on the right */}
-      <div className="flex items-center justify-end gap-4 w-1/3">
+        
         <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-gray-600"
-          onClick={handleUploadClick}
+          variant={showChat ? "default" : "outline"} 
+          size="sm"
+          onClick={toggleChat}
         >
-          <Upload className="h-4 w-4 mr-1" />
-          <span className="hidden sm:inline">Upload PDF</span>
+          <MessageSquare className="mr-1 h-4 w-4" />
+          <span className="hidden md:inline">Chat</span>
         </Button>
         
-        {onExportMindMap && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-gray-600">
-                <Download className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
-                Download as SVG
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onExportMindMap('png')}>
-                Download as PNG
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={onOpenSummary}
+        >
+          Summary
+        </Button>
         
-        <div className="relative">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-gray-600"
-            onClick={toggleShortcuts}
-          >
-            <Keyboard className="h-4 w-4" />
-          </Button>
-          
-          {showShortcuts && (
-            <div 
-              className="absolute right-0 top-full mt-2 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
-            >
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 w-6 p-0" 
-                  onClick={toggleShortcuts}
-                >
-                  ✕
-                </Button>
-              </div>
-              <div className="space-y-2 text-xs">
-                {keyboardShortcuts.map((shortcut, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
-                    <span className="text-gray-600">{shortcut.description}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <Download className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
+              Export as SVG
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onExportMindMap('png')}>
+              Export as PNG
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <User className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {user && (
+              <>
+                <div className="px-2 py-1.5 text-sm">
+                  {user.email}
+                </div>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-    </div>
+    </header>
   );
 };
 

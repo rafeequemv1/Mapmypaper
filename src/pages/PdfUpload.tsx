@@ -1,15 +1,16 @@
-
 import { useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, FileText, Upload, BookOpen, Lightbulb, GraduationCap, Network } from "lucide-react";
+import { Brain, FileText, GraduationCap, Network, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -69,6 +70,16 @@ const PdfUpload = () => {
   }, [toast]);
 
   const handleGenerateMindmap = useCallback(async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to generate a mind map",
+        variant: "destructive",
+      });
+      navigate("/sign-in");
+      return;
+    }
+    
     if (!selectedFile) {
       toast({
         title: "No file selected",
@@ -127,7 +138,7 @@ const PdfUpload = () => {
       });
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast]);
+  }, [selectedFile, navigate, toast, user]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -138,12 +149,44 @@ const PdfUpload = () => {
             <Brain className="h-6 w-6 text-white" />
             <h1 className="text-xl font-medium text-white">PaperMind</h1>
           </div>
-          <nav>
-            <ul className="flex gap-8 text-white/80">
+          <nav className="flex items-center">
+            <ul className="flex gap-8 text-white/80 mr-6">
               <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
               <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
               <li><a href="#get-started" className="hover:text-white transition-colors">Get Started</a></li>
             </ul>
+            {user ? (
+              <Button 
+                variant="outline" 
+                className="border-white text-white hover:bg-white hover:text-[#222222]"
+                onClick={() => navigate("/mindmap")}
+              >
+                Dashboard
+              </Button>
+            ) : (
+              <div className="flex gap-3">
+                <Button 
+                  variant="ghost" 
+                  className="text-white hover:bg-white/10"
+                  asChild
+                >
+                  <Link to="/sign-in">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Sign In
+                  </Link>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-white text-white hover:bg-white hover:text-[#222222]"
+                  asChild
+                >
+                  <Link to="/sign-up">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Sign Up
+                  </Link>
+                </Button>
+              </div>
+            )}
           </nav>
         </div>
       </header>
