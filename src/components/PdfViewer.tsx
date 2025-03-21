@@ -182,6 +182,11 @@ const PdfViewer = ({
     // Clear any previous selection
     setSelectionBox(null);
     
+    // Clear any text selection when in snip mode
+    if (window.getSelection) {
+      window.getSelection()?.empty();
+    }
+    
     if (pdfContainerRef.current) {
       const containerRect = pdfContainerRef.current.getBoundingClientRect();
       const x = e.clientX - containerRect.left;
@@ -194,6 +199,11 @@ const PdfViewer = ({
   
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isSelectionMode || !selectionStart) return;
+    
+    // Ensure text isn't selected during snip operation
+    if (window.getSelection) {
+      window.getSelection()?.empty();
+    }
     
     if (pdfContainerRef.current) {
       const containerRect = pdfContainerRef.current.getBoundingClientRect();
@@ -316,7 +326,8 @@ const PdfViewer = ({
 
   // Toggle selection mode on/off
   const toggleSelectionMode = () => {
-    setIsSelectionMode(!isSelectionMode);
+    const newSelectionMode = !isSelectionMode;
+    setIsSelectionMode(newSelectionMode);
     
     // Clear any selections when toggling
     setSelectionStart(null);
@@ -327,12 +338,21 @@ const PdfViewer = ({
     
     // Clear any browser text selection
     if (window.getSelection) {
-      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.empty();
+    }
+    
+    // Add CSS class to PDF container to disable text selection when in snip mode
+    if (pdfContainerRef.current) {
+      if (newSelectionMode) {
+        pdfContainerRef.current.classList.add('disable-text-selection');
+      } else {
+        pdfContainerRef.current.classList.remove('disable-text-selection');
+      }
     }
     
     toast({
-      title: !isSelectionMode ? "Selection mode activated" : "Selection mode deactivated",
-      description: !isSelectionMode 
+      title: newSelectionMode ? "Selection mode activated" : "Selection mode deactivated",
+      description: newSelectionMode 
         ? "Click and drag to select an area of the PDF" 
         : "Returned to normal mode",
     });
@@ -452,7 +472,7 @@ const PdfViewer = ({
       
       <ScrollArea className="flex-1">
         <div 
-          className="min-h-full p-4 flex flex-col items-center bg-muted/10 relative" 
+          className={`min-h-full p-4 flex flex-col items-center bg-muted/10 relative ${isSelectionMode ? 'disable-text-selection' : ''}`}
           ref={pdfContainerRef}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}

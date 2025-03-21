@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -98,4 +99,24 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Disable text selection styles for PDF viewer in selection mode */
+.disable-text-selection {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+.disable-text-selection * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+/* Force disable text selection in the PDF text layer when in selection mode */
+.disable-text-selection .react-pdf__Page__textContent {
+  pointer-events: none !important;
 }
