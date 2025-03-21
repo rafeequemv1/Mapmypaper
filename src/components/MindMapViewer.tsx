@@ -37,34 +37,6 @@ const getNodeColors = (level: number) => {
   };
 };
 
-// Apply saved styles to node
-const applyNodeStyles = (node: any, tpc: HTMLElement) => {
-  if (node.style) {
-    Object.entries(node.style).forEach(([property, value]) => {
-      switch (property) {
-        case 'backgroundColor':
-          tpc.style.backgroundColor = value as string;
-          break;
-        case 'borderColor':
-          tpc.style.borderColor = value as string;
-          break;
-        case 'textColor':
-          tpc.style.color = value as string;
-          break;
-        case 'fontSize':
-          tpc.style.fontSize = value as string;
-          break;
-        case 'borderWidth':
-          tpc.style.borderWidth = value as string;
-          break;
-        case 'borderRadius':
-          tpc.style.borderRadius = value as string;
-          break;
-      }
-    });
-  }
-};
-
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
@@ -124,12 +96,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
             tpc.style.transform = 'translateY(0)';
           });
-          
-          // Apply any saved styles from previous edits
-          applyNodeStyles(node, tpc);
-          
-          // Add data-nodeid attribute for easier targeting with chat commands
-          tpc.setAttribute('data-nodeid', node.id);
         }
       };
 
@@ -261,16 +227,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       mindMapRef.current = mind;
       
-      // Listen for mind map changes and save to sessionStorage
-      mind.bus.addListener('operation', (operation: any) => {
-        try {
-          const data = mind.getData();
-          sessionStorage.setItem('mindMapData', JSON.stringify(data));
-        } catch (error) {
-          console.error("Error saving mind map data:", error);
-        }
-      });
-      
       // Notify parent component that mind map is ready
       if (onMindMapReady) {
         onMindMapReady(mind);
@@ -279,8 +235,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Show a toast notification to inform users about right-click functionality
       toast({
         title: "Mind Map Ready",
-        description: "Right-click on any node to access the node menu with options. You can also use chat commands to edit the mind map - type /help in chat to learn more.",
-        duration: 7000,
+        description: "Right-click on any node to access the node menu with options.",
+        duration: 5000,
       });
       
       // Set a timeout to ensure the mind map is rendered before scaling

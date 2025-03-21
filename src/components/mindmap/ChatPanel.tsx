@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image, Send } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,27 +7,18 @@ import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
-import { processMindMapCommand } from "@/utils/mindMapOperations";
 
 interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
-  mindMap?: any;
 }
 
-const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant' | 'system'; content: string; imageData?: string }[]>([
-    { 
-      role: 'assistant', 
-      content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded or use mind map commands starting with "/" to modify your mind map.' 
-    },
-    {
-      role: 'system',
-      content: 'Type /help to see available mind map commands.'
-    }
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; imageData?: string }[]>([
+    { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -165,25 +156,7 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
       // Clear input
       setInputValue('');
       
-      // Check if the message is a mind map command (starts with /)
-      if (userMessage.startsWith('/')) {
-        try {
-          const result = processMindMapCommand(mindMap, userMessage);
-          setMessages(prev => [...prev, { role: 'system', content: result }]);
-        } catch (error) {
-          console.error("Error processing mind map command:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'system', 
-              content: `Error processing command: ${error instanceof Error ? error.message : "Unknown error"}` 
-            }
-          ]);
-        }
-        return;
-      }
-      
-      // If not a command, process as a normal chat message
+      // Show typing indicator
       setIsTyping(true);
       
       try {
@@ -252,19 +225,6 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
     });
   };
 
-  // Determine message style based on role
-  const getMessageStyle = (role: 'user' | 'assistant' | 'system') => {
-    switch (role) {
-      case 'user':
-        return 'bg-primary text-primary-foreground ml-auto';
-      case 'system':
-        return 'bg-secondary text-secondary-foreground';
-      case 'assistant':
-      default:
-        return 'bg-muted';
-    }
-  };
-
   // Custom renderer components for markdown
   const MarkdownContent = ({ content }: { content: string }) => {
     return (
@@ -325,7 +285,11 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
           {messages.map((message, i) => (
             <div key={i} className="group relative">
               <div 
-                className={`max-w-[90%] rounded-lg p-3 ${getMessageStyle(message.role)}`}
+                className={`max-w-[90%] rounded-lg p-3 ${
+                  message.role === 'user' 
+                    ? 'bg-primary text-primary-foreground ml-auto' 
+                    : 'bg-muted'
+                }`}
               >
                 {message.role === 'user' ? (
                   <>
@@ -344,7 +308,7 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
                   <MarkdownContent content={message.content} />
                 )}
                 
-                {(message.role === 'assistant' || message.role === 'system') && (
+                {message.role === 'assistant' && (
                   <Button 
                     variant="ghost" 
                     size="icon" 
@@ -379,7 +343,7 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
         <div className="flex gap-2">
           <Textarea
             className="flex-1 min-h-10 max-h-32 resize-none"
-            placeholder="Ask about the document or type /help for mind map commands..."
+            placeholder="Ask about the document..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -390,7 +354,6 @@ const ChatPanel = ({ toggleChat, explainText, mindMap }: ChatPanelProps) => {
             onClick={handleSendMessage}
             disabled={!inputValue.trim()}
           >
-            <Send className="h-4 w-4 mr-1" />
             Send
           </Button>
         </div>

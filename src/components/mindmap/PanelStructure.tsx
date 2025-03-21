@@ -3,17 +3,15 @@ import React from 'react';
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
-import { MindElixirInstance } from "mind-elixir";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady?: (mindMap: MindElixirInstance) => void;
+  onMindMapReady?: (mindMap: any) => void;
   explainText?: string;
   onExplainText?: (text: string) => void;
-  mindMap?: MindElixirInstance;
 }
 
 const PanelStructure: React.FC<PanelStructureProps> = ({ 
@@ -23,8 +21,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   togglePdf, 
   onMindMapReady,
   explainText,
-  onExplainText,
-  mindMap
+  onExplainText
 }) => {
   // Calculate panel sizes with increased PDF panel width
   const pdfPanelSize = 40; // Increased from 30% to 40%
@@ -67,7 +64,6 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
             <ChatPanel 
               toggleChat={toggleChat} 
               explainText={explainText}
-              mindMap={mindMap}
             />
           </div>
         )}
