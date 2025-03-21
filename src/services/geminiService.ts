@@ -91,7 +91,14 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
     Here's an excerpt from the document they're referring to (it may be truncated):
     ${pdfText.slice(0, 15000)}
     
-    Provide a helpful, concise, and accurate response based solely on the document content.
+    Provide a helpful, well-structured response based solely on the document content.
+    Structure your answer with:
+    - Clear headings using markdown (# for main headings, ## for subheadings)
+    - Bullet points (using * or -) for lists
+    - Numbered lists (1., 2., etc.) for sequential items
+    - Use **bold** for emphasis on important points
+    - Organize information logically with appropriate paragraph breaks
+    
     If you can't answer based on the provided text, be honest about your limitations.
     `;
     

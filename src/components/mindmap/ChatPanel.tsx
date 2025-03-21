@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -162,6 +163,35 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
     });
   };
 
+  // Custom renderer components for markdown
+  const MarkdownContent = ({ content }: { content: string }) => {
+    return (
+      <ReactMarkdown
+        className="prose prose-sm dark:prose-invert max-w-none"
+        components={{
+          h1: ({ node, ...props }) => <h1 className="text-xl font-bold mt-3 mb-2" {...props} />,
+          h2: ({ node, ...props }) => <h2 className="text-lg font-bold mt-3 mb-1.5" {...props} />,
+          h3: ({ node, ...props }) => <h3 className="text-base font-semibold mt-2 mb-1" {...props} />,
+          h4: ({ node, ...props }) => <h4 className="text-sm font-semibold mt-2 mb-1" {...props} />,
+          p: ({ node, ...props }) => <p className="text-sm my-1.5" {...props} />,
+          ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-1.5" {...props} />,
+          ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-1.5" {...props} />,
+          li: ({ node, ...props }) => <li className="text-sm my-0.5" {...props} />,
+          strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
+          em: ({ node, ...props }) => <em className="italic" {...props} />,
+          blockquote: ({ node, ...props }) => <blockquote className="border-l-2 border-gray-300 pl-3 italic text-gray-700 dark:text-gray-300 my-2" {...props} />,
+          code: ({ node, inline, ...props }) => 
+            inline 
+              ? <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props} />
+              : <pre className="bg-gray-200 dark:bg-gray-800 p-2 rounded text-sm my-2 overflow-x-auto" {...props} />,
+          a: ({ node, ...props }) => <a className="text-blue-600 dark:text-blue-400 underline" {...props} />,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full border-l">
       {/* Chat panel header */}
@@ -186,13 +216,17 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
           {messages.map((message, i) => (
             <div key={i} className="group relative">
               <div 
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-[90%] rounded-lg p-3 ${
                   message.role === 'user' 
                     ? 'bg-primary text-primary-foreground ml-auto' 
                     : 'bg-muted'
                 }`}
               >
-                {message.content}
+                {message.role === 'user' ? (
+                  <div className="text-sm">{message.content}</div>
+                ) : (
+                  <MarkdownContent content={message.content} />
+                )}
                 
                 {message.role === 'assistant' && (
                   <Button 
