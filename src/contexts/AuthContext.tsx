@@ -28,8 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Auth state changed:", _event, !!session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event, !!session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -70,10 +70,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Starting Google sign-in process");
       
+      // Using the origin from the window object to ensure correct redirect
+      const origin = window.location.origin;
+      console.log("Current origin for redirect:", origin);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/mindmap`,
+          redirectTo: `${origin}/mindmap`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -81,7 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       
-      console.log("Google sign-in initiated", error ? "with error" : "successfully");
+      if (error) {
+        console.error("Google sign-in error details:", error);
+      } else {
+        console.log("Google sign-in initiated successfully");
+      }
       
       return { error: error as Error | null };
     } catch (error) {
