@@ -1,8 +1,9 @@
+
 import { useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, FileText, GraduationCap, Network, LogIn, UserPlus } from "lucide-react";
+import { Brain, FileText, GraduationCap, Network, LogIn, UserPlus, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { useAuth } from "@/contexts/AuthContext";
