@@ -7,6 +7,7 @@ import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { generateMindMapFromText } from "@/services/geminiService";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -15,6 +16,7 @@ const MindMap = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
+  const [isGeneratingMindMap, setIsGeneratingMindMap] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -44,12 +46,12 @@ const MindMap = () => {
             });
           } else if (mindmapData) {
             // Store the PDF data and filename in sessionStorage
-            sessionStorage.setItem('pdfData', mindmapData.pdf_data);
+            sessionStorage.setItem('pdfText', mindmapData.pdf_data);
             sessionStorage.setItem('pdfFileName', mindmapData.pdf_filename);
             
             // Store the mindmap data in sessionStorage
             if (mindmapData.mindmap_data) {
-              sessionStorage.setItem('mindmapData', JSON.stringify(mindmapData.mindmap_data));
+              sessionStorage.setItem('mindMapData', JSON.stringify(mindmapData.mindmap_data));
             }
             
             setPdfAvailable(true);
@@ -64,20 +66,21 @@ const MindMap = () => {
         }
         
         // If no mindmap ID or couldn't load from database, check sessionStorage
-        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
-        const hasPdfData = !!pdfData;
+        const pdfText = sessionStorage.getItem('pdfText');
+        const pdfUrl = sessionStorage.getItem('pdfUrl');
+        const hasPdfData = !!(pdfText || pdfUrl);
         
-        console.log("PDF check on mount - available:", hasPdfData, "PDF data length:", pdfData ? pdfData.length : 0);
+        console.log("PDF check on mount - available:", hasPdfData);
         
         setPdfAvailable(hasPdfData);
-        
-        // Keep PDF panel visible if data is available
         setShowPdf(hasPdfData);
         
-        // Ensure PDF data is stored with the consistent key name
-        if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
-          sessionStorage.setItem('pdfData', sessionStorage.getItem('uploadedPdfData')!);
+        // If we have PDF data but no mindmap data, generate it
+        const mindMapData = sessionStorage.getItem('mindMapData');
+        if (hasPdfData && !mindMapData && !isGeneratingMindMap) {
+          generateMindMapData();
         }
+        
       } catch (error) {
         console.error("Error checking PDF availability:", error);
         setPdfAvailable(false);
@@ -88,6 +91,48 @@ const MindMap = () => {
     // Execute PDF check immediately
     checkPdfAvailability();
   }, [toast, user]);
+
+  // Function to generate mind map data from PDF text
+  const generateMindMapData = async () => {
+    try {
+      setIsGeneratingMindMap(true);
+      
+      const pdfText = sessionStorage.getItem('pdfText');
+      if (!pdfText) {
+        toast({
+          title: "Error",
+          description: "No PDF text available to generate mindmap",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      toast({
+        title: "Generating Mind Map",
+        description: "Please wait while we analyze your PDF..."
+      });
+      
+      await generateMindMapFromText(pdfText);
+      
+      toast({
+        title: "Success",
+        description: "Mind map generated successfully!"
+      });
+      
+      // Force reload the page to show the new mind map
+      window.location.reload();
+      
+    } catch (error) {
+      console.error("Error generating mind map data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate mind map from PDF",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingMindMap(false);
+    }
+  };
 
   const togglePdf = () => {
     setShowPdf(prev => !prev);
@@ -250,18 +295,28 @@ const MindMap = () => {
         onOpenSummary={toggleSummary}
       />
 
-      {/* Main Content - Panels for PDF, MindMap, and Chat */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <PanelStructure 
-          showPdf={showPdf && pdfAvailable}
-          showChat={showChat}
-          toggleChat={toggleChat}
-          togglePdf={togglePdf}
-          onMindMapReady={handleMindMapReady}
-          explainText={explainText}
-          onExplainText={handleExplainText}
-        />
-      </div>
+      {isGeneratingMindMap ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black mx-auto mb-4"></div>
+            <h2 className="text-xl font-semibold mb-2">Generating Mind Map</h2>
+            <p className="text-gray-600">Analyzing your PDF and creating a visual knowledge map...</p>
+          </div>
+        </div>
+      ) : (
+        /* Main Content - Panels for PDF, MindMap, and Chat */
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <PanelStructure 
+            showPdf={showPdf && pdfAvailable}
+            showChat={showChat}
+            toggleChat={toggleChat}
+            togglePdf={togglePdf}
+            onMindMapReady={handleMindMapReady}
+            explainText={explainText}
+            onExplainText={handleExplainText}
+          />
+        </div>
+      )}
       
       {/* Summary Modal */}
       <SummaryModal

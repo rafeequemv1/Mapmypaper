@@ -6,12 +6,14 @@ import { useNavigate, Link } from "react-router-dom";
 import { Sparkles, Upload, Brain, ChevronRight, LogOut } from "lucide-react";
 import VideoDialog from "@/components/ui/video-dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const PdfUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -25,27 +27,60 @@ const PdfUpload = () => {
 
     try {
       setIsUploading(true);
-      // This is a mock - in a real app, you'd upload the file to a server
-      // Simulate upload delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Store PDF file details in sessionStorage for the mindmap page
+      // Store only PDF file name in sessionStorage for the mindmap page
       sessionStorage.setItem("pdfFileName", selectedFile.name);
       
-      // Read the file as base64
+      // Read the file as text instead of base64 to reduce size
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && event.target.result) {
-          // Store the PDF data
-          sessionStorage.setItem("pdfData", event.target.result as string);
-          // Navigate to mindmap page
-          navigate("/mindmap");
+          try {
+            // Extract text only from PDF content to reduce storage size
+            const pdfText = event.target.result as string;
+            const truncatedText = pdfText.substring(0, 1000000); // Limit to 1MB
+            sessionStorage.setItem("pdfText", truncatedText);
+            
+            // For PDF viewer, use a smaller chunk or URL
+            try {
+              // Create a URL for the PDF file instead of storing the data
+              const pdfUrl = URL.createObjectURL(selectedFile);
+              sessionStorage.setItem("pdfUrl", pdfUrl);
+            } catch (urlError) {
+              console.warn("Could not create object URL, falling back to truncated data");
+              sessionStorage.setItem("pdfData", pdfText.substring(0, 500000));
+            }
+            
+            // Navigate to mindmap page
+            navigate("/mindmap");
+          } catch (storageError) {
+            console.error("Storage error:", storageError);
+            toast({
+              title: "Storage Error",
+              description: "The PDF is too large. Try a smaller file or extract key sections.",
+              variant: "destructive"
+            });
+          }
         }
       };
-      reader.readAsDataURL(selectedFile);
+      reader.onerror = () => {
+        toast({
+          title: "Error",
+          description: "Failed to read the PDF file.",
+          variant: "destructive"
+        });
+        setIsUploading(false);
+      };
+      
+      // Read as text instead of DataURL to reduce size
+      reader.readAsText(selectedFile);
       
     } catch (error) {
       console.error("Error uploading file:", error);
+      toast({
+        title: "Upload Failed",
+        description: "There was a problem processing your PDF.",
+        variant: "destructive"
+      });
     } finally {
       setIsUploading(false);
     }

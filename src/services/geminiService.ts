@@ -9,8 +9,8 @@ export const getGeminiApiKey = () => apiKey;
 // Process text with Gemini to generate mindmap data
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
-    // Store the PDF text in sessionStorage for chat functionality
-    sessionStorage.setItem('pdfText', pdfText);
+    // Use the existing PDF text from sessionStorage
+    // No need to store it again as we're already storing it in PdfUpload.tsx
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -59,7 +59,12 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       // Find and extract JSON if it's surrounded by markdown code blocks or other text
       const jsonMatch = text.match(/```(?:json)?([\s\S]*?)```/) || text.match(/({[\s\S]*})/);
       const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
-      return JSON.parse(jsonString);
+      const mindMapData = JSON.parse(jsonString);
+      
+      // Store the mindmap data in sessionStorage
+      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+      
+      return mindMapData;
     } catch (parseError) {
       console.error("Failed to parse Gemini response as JSON:", parseError);
       throw new Error("Failed to generate mind map. The AI response format was invalid.");

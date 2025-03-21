@@ -140,6 +140,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       let data: MindElixirData;
       
       try {
+        // First try to get the data from sessionStorage
         const savedData = sessionStorage.getItem('mindMapData');
         if (savedData) {
           const parsedData = JSON.parse(savedData);
