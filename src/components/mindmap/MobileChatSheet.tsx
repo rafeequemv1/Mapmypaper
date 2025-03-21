@@ -96,29 +96,36 @@ const MobileChatSheet = () => {
   // Custom renderer components for markdown
   const MarkdownContent = ({ content }: { content: string }) => {
     return (
-      <ReactMarkdown
-        className="prose prose-sm dark:prose-invert max-w-none"
-        components={{
-          h1: ({ node, ...props }) => <h1 className="text-xl font-bold mt-3 mb-2" {...props} />,
-          h2: ({ node, ...props }) => <h2 className="text-lg font-bold mt-3 mb-1.5" {...props} />,
-          h3: ({ node, ...props }) => <h3 className="text-base font-semibold mt-2 mb-1" {...props} />,
-          h4: ({ node, ...props }) => <h4 className="text-sm font-semibold mt-2 mb-1" {...props} />,
-          p: ({ node, ...props }) => <p className="text-sm my-1.5" {...props} />,
-          ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-1.5" {...props} />,
-          ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-1.5" {...props} />,
-          li: ({ node, ...props }) => <li className="text-sm my-0.5" {...props} />,
-          strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
-          em: ({ node, ...props }) => <em className="italic" {...props} />,
-          blockquote: ({ node, ...props }) => <blockquote className="border-l-2 border-gray-300 pl-3 italic text-gray-700 dark:text-gray-300 my-2" {...props} />,
-          code: ({ node, inline, ...props }) => 
-            inline 
-              ? <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props} />
-              : <pre className="bg-gray-200 dark:bg-gray-800 p-2 rounded text-sm my-2 overflow-x-auto" {...props} />,
-          a: ({ node, ...props }) => <a className="text-blue-600 dark:text-blue-400 underline" {...props} />,
-        }}
-      >
-        {content}
-      </ReactMarkdown>
+      <div className="prose prose-sm dark:prose-invert max-w-none">
+        <ReactMarkdown
+          components={{
+            h1: ({ children }) => <h1 className="text-xl font-bold mt-3 mb-2">{children}</h1>,
+            h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-1.5">{children}</h2>,
+            h3: ({ children }) => <h3 className="text-base font-semibold mt-2 mb-1">{children}</h3>,
+            h4: ({ children }) => <h4 className="text-sm font-semibold mt-2 mb-1">{children}</h4>,
+            p: ({ children }) => <p className="text-sm my-1.5">{children}</p>,
+            ul: ({ children }) => <ul className="list-disc pl-5 my-1.5">{children}</ul>,
+            ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5">{children}</ol>,
+            li: ({ children }) => <li className="text-sm my-0.5">{children}</li>,
+            strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+            em: ({ children }) => <em className="italic">{children}</em>,
+            blockquote: ({ children }) => <blockquote className="border-l-2 border-gray-300 pl-3 italic text-gray-700 dark:text-gray-300 my-2">{children}</blockquote>,
+            code: ({ children, className }) => {
+              const match = /language-(\w+)/.exec(className || '');
+              return match ? (
+                <pre className="bg-gray-200 dark:bg-gray-800 p-2 rounded text-sm my-2 overflow-x-auto">
+                  <code className={className}>{children}</code>
+                </pre>
+              ) : (
+                <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded text-sm">{children}</code>
+              );
+            },
+            a: ({ children, href }) => <a href={href} className="text-blue-600 dark:text-blue-400 underline">{children}</a>,
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
     );
   };
 
