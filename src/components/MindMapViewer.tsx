@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -308,9 +307,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           }}
           onAddChild={() => {
             if (selectedNode && mindMapRef.current) {
-              // Fix TypeScript error by creating a proper NodeObj
-              // Instead of passing a string directly, we pass it to the addChild method
-              mindMapRef.current.addChild(selectedNode.nodeObj, { topic: "New Node" });
+              mindMapRef.current.addChild(selectedNode.nodeObj, "New Node");
               toast({
                 title: "Child Added",
                 description: "A new child node has been added",
@@ -320,9 +317,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           }}
           onAddSibling={() => {
             if (selectedNode && mindMapRef.current) {
-              // Fix TypeScript error by passing a topic object instead of a string
-              // The insertSibling method expects a Topic object not a string
-              mindMapRef.current.insertSibling(selectedNode.nodeObj, { topic: "New Sibling" });
+              mindMapRef.current.insertSibling(selectedNode.nodeObj, "New Sibling");
               toast({
                 title: "Sibling Added",
                 description: "A new sibling node has been added",
