@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -245,14 +246,14 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
             code: ({ children, className }) => {
               const match = /language-(\w+)/.exec(className || '');
               return match ? (
-                <pre className="bg-gray-200 dark:bg-gray-800 p-2 rounded text-sm my-2 overflow-x-auto">
+                <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-sm my-2 overflow-x-auto">
                   <code className={className}>{children}</code>
                 </pre>
               ) : (
-                <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded text-sm">{children}</code>
+                <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm">{children}</code>
               );
             },
-            a: ({ children, href }) => <a href={href} className="text-blue-600 dark:text-blue-400 underline">{children}</a>,
+            a: ({ children, href }) => <a href={href} className="text-black dark:text-white underline">{children}</a>,
           }}
         >
           {content}
@@ -262,17 +263,17 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full border-l">
+    <div className="flex flex-col h-full">
       {/* Chat panel header */}
-      <div className="flex items-center justify-between p-3 border-b bg-secondary/30">
+      <div className="flex items-center justify-between p-3 border-b border-[#eaeaea] dark:border-[#333] bg-[#f9f9f9] dark:bg-[#191919]">
         <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4" />
-          <h3 className="font-medium text-sm">Research Assistant</h3>
+          <MessageSquare className="h-4 w-4 text-black dark:text-white" />
+          <h3 className="font-medium text-sm text-black dark:text-white">Research Assistant</h3>
         </div>
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-8 w-8" 
+          className="h-8 w-8 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-[#222]" 
           onClick={toggleChat}
         >
           <X className="h-4 w-4" />
@@ -287,8 +288,8 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
               <div 
                 className={`max-w-[90%] rounded-lg p-3 ${
                   message.role === 'user' 
-                    ? 'bg-primary text-primary-foreground ml-auto' 
-                    : 'bg-muted'
+                    ? 'bg-black text-white dark:bg-white dark:text-black ml-auto' 
+                    : 'bg-gray-100 text-black dark:bg-[#222] dark:text-white'
                 }`}
               >
                 {message.role === 'user' ? (
@@ -299,7 +300,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
                         <img 
                           src={message.imageData} 
                           alt="Selected PDF snippet" 
-                          className="rounded-md border border-primary/30"
+                          className="rounded-md border border-white/30 dark:border-black/30"
                         />
                       </div>
                     )}
@@ -312,7 +313,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#333]"
                     onClick={() => copyToClipboard(message.content, i)}
                   >
                     {copiedMessageId === i ? (
@@ -327,11 +328,11 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
           ))}
           
           {isTyping && (
-            <div className="max-w-[80%] rounded-lg p-3 bg-muted">
+            <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 dark:bg-[#222]">
               <div className="flex gap-1">
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-black/50 dark:bg-white/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-black/50 dark:bg-white/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-black/50 dark:bg-white/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
               </div>
             </div>
           )}
@@ -339,17 +340,17 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
       </ScrollArea>
       
       {/* Input area */}
-      <div className="p-3 border-t">
+      <div className="p-3 border-t border-[#eaeaea] dark:border-[#333]">
         <div className="flex gap-2">
           <Textarea
-            className="flex-1 min-h-10 max-h-32 resize-none"
+            className="flex-1 min-h-10 max-h-32 resize-none bg-white border-[#eaeaea] text-black dark:bg-[#111] dark:border-[#333] dark:text-white"
             placeholder="Ask about the document..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
           />
           <Button 
-            className="shrink-0" 
+            className="shrink-0 bg-black text-white dark:bg-white dark:text-black" 
             size="sm" 
             onClick={handleSendMessage}
             disabled={!inputValue.trim()}

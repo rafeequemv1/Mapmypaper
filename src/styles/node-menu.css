@@ -12,6 +12,15 @@
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* Dark mode for node menu */
+@media (prefers-color-scheme: dark) {
+  .mind-elixir-node-menu {
+    background-color: #222;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+  }
+}
+
 .mind-elixir-node-menu button {
   display: block;
   padding: 8px 15px;
@@ -25,14 +34,32 @@
   transition: background-color 0.2s;
 }
 
+@media (prefers-color-scheme: dark) {
+  .mind-elixir-node-menu button {
+    color: #f1f1f1;
+  }
+}
+
 .mind-elixir-node-menu button:hover {
   background-color: #f0f0f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mind-elixir-node-menu button:hover {
+    background-color: #333;
+  }
 }
 
 .mind-elixir-node-menu hr {
   margin: 6px 0;
   border: none;
   border-top: 1px solid #e8e8e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mind-elixir-node-menu hr {
+    border-top: 1px solid #444;
+  }
 }
 
 /* Style for node contextmenu */
@@ -46,15 +73,36 @@
   user-select: none;
 }
 
+@media (prefers-color-scheme: dark) {
+  .mind-elixir-contextmenu {
+    background-color: #222;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+  }
+}
+
 .mind-elixir-contextmenu-item {
   padding: 8px 15px;
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.2s;
+  color: #333;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mind-elixir-contextmenu-item {
+    color: #f1f1f1;
+  }
 }
 
 .mind-elixir-contextmenu-item:hover {
   background-color: #f0f0f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mind-elixir-contextmenu-item:hover {
+    background-color: #333;
+  }
 }
 
 /* Custom menu item icons */
@@ -83,4 +131,15 @@
 /* Add positioning context to mind map nodes */
 .me-node {
   position: relative !important;
+}
+
+/* Node selection styles for black and white theme */
+.me-node.selected > .me-wrapper {
+  box-shadow: 0 0 0 2px black !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .me-node.selected > .me-wrapper {
+    box-shadow: 0 0 0 2px white !important;
+  }
 }

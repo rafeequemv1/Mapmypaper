@@ -53,12 +53,12 @@ const Header = ({
   }, [navigate]);
 
   return (
-    <header className="border-b bg-background p-3 flex items-center justify-between">
+    <header className="border-b border-[#eaeaea] dark:border-[#333] bg-white dark:bg-[#111] p-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={handleGoHome}>
+        <Button variant="ghost" size="icon" onClick={handleGoHome} className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-[#222]">
           <Brain className="h-5 w-5" />
         </Button>
-        <h1 className="text-lg font-medium truncate max-w-xs md:max-w-md" title={documentTitle}>
+        <h1 className="text-lg font-medium truncate max-w-xs md:max-w-md text-black dark:text-white" title={documentTitle}>
           {documentTitle}
         </h1>
       </div>
@@ -69,7 +69,11 @@ const Header = ({
             variant={showPdf ? "default" : "outline"} 
             size="sm"
             onClick={togglePdf}
-            className="hidden md:flex"
+            className={`hidden md:flex ${
+              showPdf 
+                ? "bg-black text-white dark:bg-white dark:text-black" 
+                : "text-black border-black dark:text-white dark:border-white"
+            }`}
           >
             <FileText className="mr-1 h-4 w-4" />
             PDF
@@ -80,6 +84,11 @@ const Header = ({
           variant={showChat ? "default" : "outline"} 
           size="sm"
           onClick={toggleChat}
+          className={
+            showChat 
+              ? "bg-black text-white dark:bg-white dark:text-black" 
+              : "text-black border-black dark:text-white dark:border-white"
+          }
         >
           <MessageSquare className="mr-1 h-4 w-4" />
           <span className="hidden md:inline">Chat</span>
@@ -89,27 +98,43 @@ const Header = ({
           variant="outline" 
           size="sm"
           onClick={onOpenSummary}
+          className="text-black border-black dark:text-white dark:border-white"
         >
           Summary
         </Button>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="text-black border-black dark:text-white dark:border-white"
+            >
               <Download className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
+          <DropdownMenuContent align="end" className="bg-white dark:bg-[#222] border-[#eaeaea] dark:border-[#333]">
+            <DropdownMenuItem 
+              onClick={() => onExportMindMap('svg')}
+              className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-[#333] cursor-pointer"
+            >
               Export as SVG
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onExportMindMap('png')}>
+            <DropdownMenuItem 
+              onClick={() => onExportMindMap('png')}
+              className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-[#333] cursor-pointer"
+            >
               Export as PNG
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         
-        <Button variant="outline" size="icon" onClick={handleGoHome}>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={handleGoHome}
+          className="text-black border-black dark:text-white dark:border-white"
+        >
           <User className="h-4 w-4" />
         </Button>
       </div>

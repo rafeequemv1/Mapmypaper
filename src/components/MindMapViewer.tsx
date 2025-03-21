@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
@@ -28,13 +28,21 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
-// Get node colors based on node level
-const getNodeColors = (level: number) => {
-  return {
-    backgroundColor: level === 0 ? '#CFFAFE' : '#F2FCE2',
-    borderColor: level === 0 ? '#06B6D4' : '#67c23a',
-    textColor: '#333333' // Dark text for better readability across all themes
-  };
+// Get node colors based on node level - Updated for black and white theme
+const getNodeColors = (level: number, isDarkMode: boolean) => {
+  if (isDarkMode) {
+    return {
+      backgroundColor: level === 0 ? '#333' : '#222',
+      borderColor: level === 0 ? '#fff' : '#aaa',
+      textColor: '#ffffff'
+    };
+  } else {
+    return {
+      backgroundColor: level === 0 ? '#000' : '#f3f3f3',
+      borderColor: level === 0 ? '#000' : '#000',
+      textColor: level === 0 ? '#fff' : '#000'
+    };
+  }
 };
 
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
@@ -42,6 +50,23 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
   const { toast } = useToast();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Check for dark mode
+  useEffect(() => {
+    // Check if the user prefers dark mode
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setIsDarkMode(prefersDarkMode);
+    
+    // Listen for changes in color scheme preference
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsDarkMode(e.matches);
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -59,41 +84,47 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           edit: true,
         },
         theme: {
-          name: 'colorful',
-          background: '#F0F7FF',
-          color: '#06B6D4',
+          name: 'custom',
+          background: isDarkMode ? '#111' : '#f9f9f9',
+          color: isDarkMode ? '#ffffff' : '#000000',
           palette: [],
           cssVar: {},
         },
         nodeMenu: true, // Explicitly enable the nodeMenu
         autoFit: true,
-        // Add custom style to nodes based on their level
+        // Add custom style to nodes based on their level - Updated for black and white theme
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
-          // Get appropriate colors based on node level
-          const { backgroundColor, borderColor, textColor } = getNodeColors(level);
+          // Get appropriate colors based on node level and dark mode
+          const { backgroundColor, borderColor, textColor } = getNodeColors(level, isDarkMode);
           
           // Apply custom styling to nodes for a more elegant look
           tpc.style.backgroundColor = backgroundColor;
           tpc.style.color = textColor;
           tpc.style.border = `2px solid ${borderColor}`;
-          tpc.style.borderRadius = '12px';
+          tpc.style.borderRadius = '8px';
           tpc.style.padding = '10px 16px';
-          tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
+          tpc.style.boxShadow = isDarkMode 
+            ? '0 3px 10px rgba(0,0,0,0.4)' 
+            : '0 3px 10px rgba(0,0,0,0.05)';
           tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
           tpc.style.fontSize = level === 0 ? '20px' : '16px';
-          tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
+          tpc.style.fontFamily = "'system-ui', '-apple-system', 'Segoe UI', sans-serif";
           
           // Add transition for smooth color changes
           tpc.style.transition = 'all 0.3s ease';
           
           // Add hover effect
           tpc.addEventListener('mouseover', () => {
-            tpc.style.boxShadow = '0 5px 15px rgba(0,0,0,0.08)';
+            tpc.style.boxShadow = isDarkMode 
+              ? '0 5px 15px rgba(0,0,0,0.6)' 
+              : '0 5px 15px rgba(0,0,0,0.15)';
             tpc.style.transform = 'translateY(-2px)';
           });
           
           tpc.addEventListener('mouseout', () => {
-            tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
+            tpc.style.boxShadow = isDarkMode 
+              ? '0 3px 10px rgba(0,0,0,0.4)' 
+              : '0 3px 10px rgba(0,0,0,0.05)';
             tpc.style.transform = 'translateY(0)';
           });
         }
@@ -133,6 +164,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           
           data = parsedData;
         } else {
+          // Default mind map with black and white theme
           data = {
             nodeData: {
               id: 'root',
@@ -217,12 +249,12 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Add custom styling to connection lines
+      // Add custom styling to connection lines - Updated for black and white theme
       const linkElements = containerRef.current.querySelectorAll('.fne-link');
       linkElements.forEach((link: Element) => {
         const linkElement = link as SVGElement;
         linkElement.setAttribute('stroke-width', '2.5');
-        linkElement.setAttribute('stroke', '#67c23a');
+        linkElement.setAttribute('stroke', isDarkMode ? '#888' : '#555');
       });
       
       mindMapRef.current = mind;
@@ -244,7 +276,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         setIsReady(true);
       }, 300);
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, isDarkMode]);
 
   if (!isMapGenerated) {
     return null;
@@ -257,7 +289,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           ref={containerRef} 
           className="w-full h-full" 
           style={{ 
-            background: `linear-gradient(90deg, #F9F7F3 0%, #F2FCE2 100%)`,
+            background: isDarkMode 
+              ? 'linear-gradient(90deg, #111 0%, #141414 100%)' 
+              : 'linear-gradient(90deg, #f9f9f9 0%, #f3f3f3 100%)',
           }}
         />
       </div>

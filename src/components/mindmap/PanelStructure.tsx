@@ -29,11 +29,11 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   const chatPanelSize = 25; // Decreased chat panel slightly
 
   return (
-    <div className="flex-1 flex h-full overflow-hidden bg-[#F9F7F3]">
+    <div className="flex-1 flex h-full overflow-hidden bg-[#f9f9f9] dark:bg-[#121212]">
       <div className="w-full h-full flex">
         {/* PDF Viewer Panel */}
         {showPdf && (
-          <div className="w-[40%] h-full bg-white flex flex-col"> {/* Increased from 30% to 40% */}
+          <div className="w-[40%] h-full bg-white dark:bg-[#191919] flex flex-col border-r border-[#eaeaea] dark:border-[#333]"> 
             <PdfViewer 
               className="w-full h-full"
               onRequestOpenChat={() => {
@@ -47,7 +47,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
         )}
 
         {/* Mind Map Viewer Panel */}
-        <div className={`${showPdf ? 'w-[35%]' : 'w-[75%]'} ${showChat ? '' : 'flex-1'} h-full`}> {/* Adjusted from 40% to 35% */}
+        <div className={`${showPdf ? 'w-[35%]' : 'w-[75%]'} ${showChat ? '' : 'flex-1'} h-full`}> 
           <MindMapViewer 
             isMapGenerated={true} 
             onMindMapReady={onMindMapReady}
@@ -60,7 +60,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
 
         {/* Chat Panel */}
         {showChat && (
-          <div className="w-[25%] h-full bg-white"> {/* Reduced from 30% to 25% */}
+          <div className="w-[25%] h-full bg-white dark:bg-[#191919] border-l border-[#eaeaea] dark:border-[#333]"> 
             <ChatPanel 
               toggleChat={toggleChat} 
               explainText={explainText}
