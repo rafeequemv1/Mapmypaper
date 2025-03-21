@@ -23,30 +23,31 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   explainText,
   onExplainText
 }) => {
-  // Calculate panel sizes
-  const pdfPanelSize = 30;
-  const mindMapPanelSize = showPdf ? 40 : 70;
-  const chatPanelSize = 30;
+  // Calculate panel sizes with increased PDF panel width
+  const pdfPanelSize = 40; // Increased from 30% to 40%
+  const mindMapPanelSize = showPdf ? 35 : 75; // Adjusted mindmap size
+  const chatPanelSize = 25; // Decreased chat panel slightly
 
   return (
     <div className="flex-1 flex h-full overflow-hidden bg-[#F9F7F3]">
       <div className="w-full h-full flex">
         {/* PDF Viewer Panel */}
         {showPdf && (
-          <div className="w-[30%] h-full bg-white flex flex-col">
+          <div className="w-[40%] h-full bg-white flex flex-col"> {/* Increased from 30% to 40% */}
             <PdfViewer 
               className="w-full h-full"
               onRequestOpenChat={() => {
                 if (!showChat) toggleChat();
               }} 
               onTogglePdf={togglePdf}
-              onExplainText={onExplainText} 
+              onExplainText={onExplainText}
+              defaultZoom={1.0} // Set default zoom to 100%
             />
           </div>
         )}
 
         {/* Mind Map Viewer Panel */}
-        <div className={`${showPdf ? 'w-[40%]' : 'w-[70%]'} ${showChat ? '' : 'flex-1'} h-full`}>
+        <div className={`${showPdf ? 'w-[35%]' : 'w-[75%]'} ${showChat ? '' : 'flex-1'} h-full`}> {/* Adjusted from 40% to 35% */}
           <MindMapViewer 
             isMapGenerated={true} 
             onMindMapReady={onMindMapReady}
@@ -59,7 +60,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
 
         {/* Chat Panel */}
         {showChat && (
-          <div className="w-[30%] h-full bg-white">
+          <div className="w-[25%] h-full bg-white"> {/* Reduced from 30% to 25% */}
             <ChatPanel 
               toggleChat={toggleChat} 
               explainText={explainText}

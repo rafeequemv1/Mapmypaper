@@ -18,6 +18,7 @@ interface PdfViewerProps {
   showPdf?: boolean;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
+  defaultZoom?: number; // Add new prop for default zoom
 }
 
 const PdfViewer = ({ 
@@ -25,12 +26,13 @@ const PdfViewer = ({
   onTogglePdf, 
   showPdf = true, 
   onExplainText,
-  onRequestOpenChat
+  onRequestOpenChat,
+  defaultZoom = 1.0 // Default to 100% zoom
 }: PdfViewerProps) => {
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
+  const [scale, setScale] = useState<number>(defaultZoom); // Use the defaultZoom prop
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedText, setSelectedText] = useState<string>("");
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
@@ -102,6 +104,9 @@ const PdfViewer = ({
     setNumPages(numPages);
     setIsLoading(false);
     
+    // Reset zoom to defaultZoom after document loads
+    setScale(defaultZoom);
+    
     // Trigger container width measurement after document loads
     setTimeout(() => {
       if (pdfContainerRef.current) {
@@ -115,8 +120,8 @@ const PdfViewer = ({
   // Improved auto-fit PDF to container width with better centering
   const handleScaleToFit = () => {
     if (pdfContainerRef.current && containerWidth > 0) {
-      // Add padding to ensure the PDF has some margin
-      const padding = 40;
+      // Minimal padding to reduce empty space
+      const padding = 20;
       const availableWidth = Math.max(containerWidth - padding, 200);
       
       // Default PDF width is 595.28 points (8.5" × 72dpi)
@@ -129,22 +134,10 @@ const PdfViewer = ({
         newScale,
       });
       
-      // Keep scale between 0.5 and 2.0 for readability
-      setScale(Math.min(Math.max(newScale, 0.5), 2.0));
+      // Keep scale between 0.5 and 3.0 for readability
+      setScale(Math.min(Math.max(newScale, 0.5), 3.0));
     }
   };
-
-  // Auto-fit on first load and container width changes with debounce
-  useEffect(() => {
-    if (containerWidth > 0 && numPages > 0) {
-      // Add a slight delay to ensure accurate measurements
-      const timeoutId = setTimeout(() => {
-        handleScaleToFit();
-      }, 200);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [containerWidth, numPages]);
 
   // Handle zoom in/out
   const handleZoomIn = () => {
@@ -539,7 +532,7 @@ const PdfViewer = ({
       
       <ScrollArea className="flex-1">
         <div 
-          className={`min-h-full p-4 flex flex-col items-center bg-muted/10 relative ${isSelectionMode ? 'disable-text-selection' : ''}`}
+          className={`min-h-full p-2 flex flex-col items-center bg-muted/10 relative ${isSelectionMode ? 'disable-text-selection' : ''}`}
           ref={pdfContainerRef}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -560,7 +553,7 @@ const PdfViewer = ({
                 file={pdfData}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={(error) => console.error("Error loading PDF:", error)}
-                className="pdf-container"
+                className="pdf-container w-full"
                 loading={
                   <div className="flex items-center justify-center h-20 w-full">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -582,7 +575,7 @@ const PdfViewer = ({
                       renderTextLayer={true}
                       renderAnnotationLayer={true}
                       className="pdf-page"
-                      width={containerWidth > 40 ? containerWidth - 40 : undefined}
+                      width={undefined} // Remove the width constraint to allow natural rendering at scale
                       onRenderSuccess={() => {
                         const observer = new IntersectionObserver((entries) => {
                           entries.forEach(entry => {
