@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { Copy, Clipboard, Trash, PlusCircle, Edit, Lightbulb } from "lucide-react";
 
 interface MindMapContextMenuProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface MindMapContextMenuProps {
   onDelete?: () => void;
   onAddChild?: () => void;
   onAddSibling?: () => void;
+  onAIExpand?: () => void;
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -17,7 +19,8 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onPaste,
   onDelete,
   onAddChild,
-  onAddSibling
+  onAddSibling,
+  onAIExpand
 }) => {
   const handleCopy = () => {
     if (onCopy) {
@@ -52,23 +55,34 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-64">
-        <ContextMenuItem onClick={handleCopy}>
+        <ContextMenuItem onClick={handleCopy} className="flex items-center gap-2">
+          <Copy className="h-4 w-4" />
           Copy
         </ContextMenuItem>
-        <ContextMenuItem onClick={handlePaste}>
+        <ContextMenuItem onClick={handlePaste} className="flex items-center gap-2">
+          <Clipboard className="h-4 w-4" />
           Paste
         </ContextMenuItem>
-        <ContextMenuItem onClick={handleDelete}>
+        <ContextMenuItem onClick={handleDelete} className="flex items-center gap-2">
+          <Trash className="h-4 w-4" />
           Delete
         </ContextMenuItem>
         {onAddChild && (
-          <ContextMenuItem onClick={onAddChild}>
+          <ContextMenuItem onClick={onAddChild} className="flex items-center gap-2">
+            <PlusCircle className="h-4 w-4" />
             Add Child Node
           </ContextMenuItem>
         )}
         {onAddSibling && (
-          <ContextMenuItem onClick={onAddSibling}>
+          <ContextMenuItem onClick={onAddSibling} className="flex items-center gap-2">
+            <Edit className="h-4 w-4" />
             Add Sibling Node
+          </ContextMenuItem>
+        )}
+        {onAIExpand && (
+          <ContextMenuItem onClick={onAIExpand} className="flex items-center gap-2">
+            <Lightbulb className="h-4 w-4" />
+            AI Expand
           </ContextMenuItem>
         )}
       </ContextMenuContent>
