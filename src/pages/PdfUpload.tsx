@@ -6,6 +6,7 @@ import PdfToText from "react-pdftotext";
 import { Brain, FileText, Upload, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
+import { MindMapDemo } from "@/components/ui/MindMapDemo";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -152,15 +153,20 @@ const PdfUpload = () => {
         </div>
       </header>
 
-      {/* Hero Section with Centered Dropzone */}
-      <section className="flex-1 flex flex-col items-center justify-center px-4 py-16 md:py-24">
-        <div className="max-w-3xl mx-auto text-center mb-12">
+      {/* Hero Section with Title, Subtitle, MindMap Demo, and Dropzone */}
+      <section className="flex-1 flex flex-col items-center px-4 py-16 md:py-24">
+        <div className="max-w-5xl mx-auto text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent mb-6 leading-tight">
             Transform Your Research Papers Into Visual Knowledge
           </h1>
-          <p className="text-lg text-slate-700 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-700 max-w-2xl mx-auto mb-8">
             Upload your academic papers and instantly generate interactive mind maps powered by AI. Visualize complex concepts and accelerate your research.
           </p>
+          
+          {/* Mind Map Demo */}
+          <div className="w-full max-w-3xl mx-auto mb-12">
+            <MindMapDemo />
+          </div>
         </div>
         
         {/* Centered Dropzone */}
