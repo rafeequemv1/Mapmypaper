@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -106,7 +105,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
-      // Initialize the mind map only once when it's generated
       
       const options = {
         el: containerRef.current,
@@ -375,7 +373,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           }}
           onAddChild={() => {
             if (selectedNode && mindMapRef.current) {
-              // Create a proper NodeObj with id and topic properties
+              // Create a node object with id and topic properties
               const childId = `child_${Date.now()}`;
               mindMapRef.current.addChild(selectedNode.nodeObj, { 
                 id: childId, 
@@ -390,7 +388,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           }}
           onAddSibling={() => {
             if (selectedNode && mindMapRef.current) {
-              // Create a proper Topic object with id
+              // Create a node object with id and topic properties
               const siblingId = `sibling_${Date.now()}`;
               mindMapRef.current.insertSibling(selectedNode.nodeObj, { 
                 id: siblingId, 
