@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Maximize2, Minimize2, ZoomIn, ZoomOut, MessageSquare, X, Loader2 } from "lucide-react";
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, MessageSquare, X, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PdfViewerProps {
@@ -26,20 +26,22 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   const [zoom, setZoom] = useState(defaultZoom);
   const [selectedText, setSelectedText] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     // Try to get PDF data from different sources
-    const pdfUrl = sessionStorage.getItem("pdfUrl");
+    const storedPdfUrl = sessionStorage.getItem("pdfUrl");
     const pdfData = sessionStorage.getItem("pdfData");
     const pdfFileName = sessionStorage.getItem("pdfFileName") || "Document";
     
     setPdfFileName(pdfFileName);
     setIsLoading(true);
+    setError(null);
     
-    if (pdfUrl) {
+    if (storedPdfUrl) {
       // If we have a URL, use it directly
-      setPdfUrl(pdfUrl);
+      setPdfUrl(storedPdfUrl);
       setIsLoading(false);
     } else if (pdfData) {
       // If we have data, use it
@@ -47,6 +49,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
       setIsLoading(false);
     } else {
       console.error("No PDF data or URL found in sessionStorage");
+      setError("Could not load PDF. Please try uploading again.");
       toast({
         title: "Error",
         description: "Could not load PDF. Please try uploading again.",
@@ -164,6 +167,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           <div className="flex flex-col items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
             <p className="text-gray-500">Loading PDF...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
+            <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
+            <p className="text-gray-700 font-medium">{error}</p>
+            <p className="text-gray-500 mt-2">Try uploading the PDF again or use a different document.</p>
           </div>
         ) : pdfUrl ? (
           <div

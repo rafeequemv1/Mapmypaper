@@ -37,40 +37,60 @@ const PdfUpload = () => {
 
     try {
       setIsUploading(true);
-      // Store only PDF file name in sessionStorage for the mindmap page
+      
+      // Store PDF file name in sessionStorage
       sessionStorage.setItem("pdfFileName", selectedFile.name);
       
-      // Use URL.createObjectURL for viewing PDFs instead of storing the entire file content
+      // Create a blob URL for viewing PDF instead of storing the entire file
       const pdfUrl = URL.createObjectURL(selectedFile);
       sessionStorage.setItem("pdfUrl", pdfUrl);
       
-      // For text extraction, use a more efficient approach
+      // Extract text using a smaller chunk approach
       const reader = new FileReader();
-      reader.onload = (event) => {
+      
+      reader.onload = async (event) => {
         if (event.target && event.target.result) {
           try {
-            // Extract a limited portion of text for AI processing
-            const pdfText = event.target.result as string;
-            // Limit to first 2MB for text processing - adjust as needed
-            const maxSize = 2 * 1024 * 1024; 
-            const truncatedText = pdfText.length > maxSize ? pdfText.substring(0, maxSize) : pdfText;
+            // Instead of storing the full text, we'll extract key portions
+            // and process them in chunks
+            const fullText = event.target.result as string;
             
+            // Function to extract small chunks of text and combine
+            const processTextInChunks = (text: string, chunkSize = 3000, maxChunks = 5) => {
+              // Take first paragraph (usually abstract or intro)
+              const firstPortion = text.slice(0, chunkSize);
+              
+              // Take a few samples from throughout the document
+              const samples = [];
+              const textLength = text.length;
+              
+              for (let i = 1; i < maxChunks; i++) {
+                const startPos = Math.floor((textLength / maxChunks) * i);
+                samples.push(text.slice(startPos, startPos + chunkSize));
+              }
+              
+              return [firstPortion, ...samples].join("\n\n[...]\n\n");
+            };
+            
+            // Process text in manageable chunks
+            const processedText = processTextInChunks(fullText);
+            
+            // Store the processed text
             try {
-              sessionStorage.setItem("pdfText", truncatedText);
-              // Navigate to mindmap page
+              sessionStorage.setItem("pdfText", processedText);
               navigate("/mindmap");
             } catch (storageError) {
               console.error("Storage error:", storageError);
-              // If we hit storage limits, try a smaller portion
+              // Fallback to even smaller text
               try {
-                // Try with just 1MB
-                const smallerText = pdfText.substring(0, 1024 * 1024);
-                sessionStorage.setItem("pdfText", smallerText);
+                // Take just the beginning for minimal processing
+                const minimalText = fullText.slice(0, 10000);
+                sessionStorage.setItem("pdfText", minimalText);
                 navigate("/mindmap");
               } catch (finalError) {
                 toast({
-                  title: "Storage Error",
-                  description: "The PDF is too large for browser storage. Please try a smaller file.",
+                  title: "PDF Too Complex",
+                  description: "This PDF contains too much text. Try a simpler document or extract key sections manually.",
                   variant: "destructive"
                 });
                 setIsUploading(false);
