@@ -5,12 +5,14 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
+import FlowchartModal from "@/components/mindmap/FlowchartModal";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
   const [pdfAvailable, setPdfAvailable] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showFlowchart, setShowFlowchart] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
   const { toast } = useToast();
@@ -56,6 +58,10 @@ const MindMap = () => {
   const toggleSummary = () => {
     setShowSummary(prev => !prev);
   };
+  
+  const toggleFlowchart = () => {
+    setShowFlowchart(prev => !prev);
+  };
 
   const handleExplainText = useCallback((text: string) => {
     setExplainText(text);
@@ -66,7 +72,13 @@ const MindMap = () => {
 
   const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
     setMindMap(mindMap);
-  }, []);
+    
+    // Notify user about the new mind map chat commands
+    toast({
+      title: "Mind Map Commands Available",
+      description: "You can now edit the mind map through chat. Type /help in chat to see available commands.",
+    });
+  }, [toast]);
 
   const handleExportMindMap = useCallback(async (type: 'svg' | 'png') => {
     if (!mindMap) {
@@ -128,6 +140,7 @@ const MindMap = () => {
         toggleChat={toggleChat}
         onExportMindMap={handleExportMindMap}
         onOpenSummary={toggleSummary}
+        onOpenFlowchart={toggleFlowchart}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -140,6 +153,7 @@ const MindMap = () => {
           onMindMapReady={handleMindMapReady}
           explainText={explainText}
           onExplainText={handleExplainText}
+          mindMap={mindMap}
         />
       </div>
       
@@ -148,6 +162,14 @@ const MindMap = () => {
         open={showSummary}
         onOpenChange={setShowSummary}
       />
+      
+      {/* Flowchart Modal */}
+      {showFlowchart && (
+        <FlowchartModal
+          open={showFlowchart}
+          onOpenChange={setShowFlowchart}
+        />
+      )}
     </div>
   );
 };

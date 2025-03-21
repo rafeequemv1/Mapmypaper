@@ -19,6 +19,7 @@ interface HeaderProps {
   toggleChat: () => void;
   onExportMindMap: (type: 'svg' | 'png') => void;
   onOpenSummary: () => void;
+  onOpenFlowchart?: () => void;
 }
 
 const Header = ({
