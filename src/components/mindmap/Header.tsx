@@ -79,12 +79,12 @@ const Header = ({
   };
 
   return (
-    <div className="py-2 px-4 border-b bg-[#222222] flex items-center">
+    <div className="py-2 px-4 border-b bg-white shadow-sm flex items-center">
       <div className="flex items-center gap-2 w-1/3">
-        <Brain className="h-5 w-5 text-white" />
-        <h1 className="text-base font-medium text-white">PaperMind</h1>
+        <Brain className="h-5 w-5 text-primary" />
+        <h1 className="text-base font-medium text-primary">PaperMind</h1>
         
-        <Button variant="ghost" size="sm" className="text-white ml-2" onClick={handleBack}>
+        <Button variant="ghost" size="sm" className="text-gray-600 ml-2" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
       </div>
@@ -96,7 +96,7 @@ const Header = ({
             pressed={showPdf} 
             onPressedChange={togglePdf}
             aria-label="Toggle PDF"
-            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+            className="bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-md px-4 py-1 h-auto"
           >
             <FileText className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">PDF</span>
@@ -107,7 +107,7 @@ const Header = ({
           pressed={showChat} 
           onPressedChange={toggleChat}
           aria-label="Toggle research assistant"
-          className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
+          className="bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-md px-4 py-1 h-auto"
         >
           <MessageSquare className="h-4 w-4 mr-2" />
           <span className="text-sm font-medium">Research Assistant</span>
@@ -131,7 +131,7 @@ const Header = ({
         <Button 
           variant="ghost" 
           size="sm" 
-          className="text-white"
+          className="text-gray-600"
           onClick={handleUploadClick}
         >
           <Upload className="h-4 w-4 mr-1" />
@@ -141,7 +141,7 @@ const Header = ({
         {onExportMindMap && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-white">
+              <Button variant="ghost" size="sm" className="text-gray-600">
                 <Download className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Export</span>
               </Button>
@@ -161,7 +161,7 @@ const Header = ({
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-white"
+            className="text-gray-600"
             onClick={toggleShortcuts}
           >
             <Keyboard className="h-4 w-4" />
