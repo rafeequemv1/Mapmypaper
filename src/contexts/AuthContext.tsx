@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +15,6 @@ type AuthContextType = {
     error: Error | null;
     data: User | null;
   }>;
-  signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -65,48 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signInWithGoogle = async () => {
-    try {
-      setOauthError(null);
-      console.log("Starting Google sign-in process");
-      
-      // Get current URL and remove any trailing slashes
-      const currentUrl = window.location.origin.replace(/\/$/, '');
-      // Use the exact current URL as the base for the redirect
-      const redirectUrl = `${currentUrl}/mindmap`;
-      
-      console.log("Using redirect URL:", redirectUrl);
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
-      
-      if (error) {
-        console.error("Google sign-in error details:", error);
-      } else {
-        console.log("Google sign-in initiated successfully");
-      }
-      
-      return { error: error as Error | null };
-    } catch (error) {
-      console.error("Google sign-in exception:", error);
-      return { error: error as Error };
-    }
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
