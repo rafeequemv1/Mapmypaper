@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,12 +67,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      setOauthError(null);
       console.log("Starting Google sign-in process");
       
-      // Determine the current app URL for the redirect
-      // The URL should be the application URL, not an external domain
-      const appUrl = window.location.origin;
-      const redirectUrl = `${appUrl}/mindmap`;
+      // Get current URL and remove any trailing slashes
+      const currentUrl = window.location.origin.replace(/\/$/, '');
+      // Use the exact current URL as the base for the redirect
+      const redirectUrl = `${currentUrl}/mindmap`;
+      
       console.log("Using redirect URL:", redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
