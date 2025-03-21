@@ -31,7 +31,7 @@ const SignIn = () => {
         <div className="max-w-7xl mx-auto flex items-center">
           <a href="/" className="flex items-center gap-2">
             <Brain className="h-6 w-6 text-indigo-600" />
-            <h1 className="text-xl font-medium">PaperMind</h1>
+            <h1 className="text-xl font-medium">MapMyPaper</h1>
           </a>
         </div>
       </header>
