@@ -16,6 +16,7 @@ interface ChatPanelProps {
 const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const lastProcessedTextRef = useRef<string | null>(null);
   
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; imageData?: string }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
@@ -38,8 +39,11 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   // Process text to explain when it changes
   useEffect(() => {
     const processExplainText = async () => {
-      if (explainText && !processingExplainText) {
+      // Only process if explainText exists, isn't already being processed, and isn't the same as the last one
+      if (explainText && !processingExplainText && explainText !== lastProcessedTextRef.current) {
         setProcessingExplainText(true);
+        // Store current text to prevent duplicate processing
+        lastProcessedTextRef.current = explainText;
         
         // Check if this is an image snippet request
         if (explainText.includes('[IMAGE_SNIPPET]')) {
@@ -97,7 +101,54 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
               variant: "destructive"
             });
           }
-        } else {
+        } 
+        // Check if this is a node expansion request
+        else if (explainText.includes('[EXPAND_NODE_')) {
+          // Extract the node topic from the request
+          const nodeTopic = explainText.split('Please expand on this mind map node: "')[1]?.split('"')[0] || '';
+          
+          // Add user message
+          setMessages(prev => [
+            ...prev, 
+            { role: 'user', content: `Please suggest subtopics for this mind map node: "${nodeTopic}"` }
+          ]);
+          
+          // Show typing indicator
+          setIsTyping(true);
+          
+          try {
+            // Get response from Gemini
+            const response = await chatWithGeminiAboutPdf(
+              `Generate 3-5 brief subtopics for a mind map node titled "${nodeTopic}". 
+               Format as a bulleted list with short phrases (2-4 words each).`
+            );
+            
+            // Hide typing indicator and add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev, 
+              { role: 'assistant', content: response }
+            ]);
+          } catch (error) {
+            // Handle errors
+            setIsTyping(false);
+            console.error("Node expansion error:", error);
+            setMessages(prev => [
+              ...prev, 
+              { 
+                role: 'assistant', 
+                content: "Sorry, I encountered an error expanding that node. Please try again." 
+              }
+            ]);
+            
+            toast({
+              title: "Expansion Error",
+              description: "Failed to get node expansion suggestions.",
+              variant: "destructive"
+            });
+          }
+        }
+        else {
           // Regular text explanation
           // Add user message with the selected text
           const userMessage = `Explain this: "${explainText}"`;
@@ -237,7 +288,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
             h4: ({ children }) => <h4 className="text-sm font-semibold mt-2 mb-1">{children}</h4>,
             p: ({ children }) => <p className="text-sm my-1.5">{children}</p>,
             ul: ({ children }) => <ul className="list-disc pl-5 my-1.5">{children}</ul>,
-            ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5">{children}</ol>,
+            ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5">{children}</ul>,
             li: ({ children }) => <li className="text-sm my-0.5">{children}</li>,
             strong: ({ children }) => <strong className="font-bold">{children}</strong>,
             em: ({ children }) => <em className="italic">{children}</em>,
