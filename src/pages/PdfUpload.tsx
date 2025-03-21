@@ -26,7 +26,22 @@ const PdfUpload = () => {
       // This is a mock - in a real app, you'd upload the file to a server
       // Simulate upload delay
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      navigate("/mindmap");
+      
+      // Store PDF file details in sessionStorage for the mindmap page
+      sessionStorage.setItem("pdfFileName", selectedFile.name);
+      
+      // Read the file as base64
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target && event.target.result) {
+          // Store the PDF data
+          sessionStorage.setItem("pdfData", event.target.result as string);
+          // Navigate to mindmap page
+          navigate("/mindmap");
+        }
+      };
+      reader.readAsDataURL(selectedFile);
+      
     } catch (error) {
       console.error("Error uploading file:", error);
     } finally {
