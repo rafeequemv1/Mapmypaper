@@ -288,7 +288,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
             h4: ({ children }) => <h4 className="text-sm font-semibold mt-2 mb-1">{children}</h4>,
             p: ({ children }) => <p className="text-sm my-1.5">{children}</p>,
             ul: ({ children }) => <ul className="list-disc pl-5 my-1.5">{children}</ul>,
-            ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5">{children}</ul>,
+            ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5">{children}</ol>,
             li: ({ children }) => <li className="text-sm my-0.5">{children}</li>,
             strong: ({ children }) => <strong className="font-bold">{children}</strong>,
             em: ({ children }) => <em className="italic">{children}</em>,
