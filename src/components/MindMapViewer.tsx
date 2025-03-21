@@ -1,9 +1,9 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
-import MindMapContextMenu from "./mindmap/MindMapContextMenu";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -41,32 +41,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<any>(null);
   const { toast } = useToast();
-
-  // Handle AI expansion of a node
-  const handleAIExpand = async () => {
-    if (!selectedNode || !onExplainText) return;
-    
-    const nodeTopic = selectedNode.nodeObj.topic;
-    
-    // Generate a unique timestamp to ensure image is always treated as new
-    const timestamp = Date.now();
-    sessionStorage.setItem('selectedImageForChat', ''); // Clear any previous image
-    
-    // Send to chat for expansion with a unique identifier to force new processing
-    onExplainText(`Please expand on this mind map node: "${nodeTopic}" [EXPAND_NODE_${timestamp}]`);
-    
-    if (onRequestOpenChat) {
-      onRequestOpenChat();
-    }
-    
-    toast({
-      title: "AI Expansion Requested",
-      description: `Expanding node: "${nodeTopic}"`,
-      duration: 3000,
-    });
-  };
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -242,12 +217,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Set up custom context menu
-      mind.bus.addListener('selectNode', (nodeObj: any, clickEvent: any) => {
-        // Store the selected node for context menu actions
-        setSelectedNode({ nodeObj, clickEvent });
-      });
-      
       // Add custom styling to connection lines
       const linkElements = containerRef.current.querySelectorAll('.fne-link');
       linkElements.forEach((link: Element) => {
@@ -284,57 +253,13 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   return (
     <div className="w-full h-full flex-1 flex flex-col">
       <div className="w-full h-full overflow-hidden relative">
-        <MindMapContextMenu
-          onCopy={() => {
-            if (selectedNode) {
-              navigator.clipboard.writeText(selectedNode.nodeObj.topic);
-              toast({
-                title: "Copied to clipboard",
-                description: `Node text "${selectedNode.nodeObj.topic}" copied`,
-                duration: 2000,
-              });
-            }
+        <div 
+          ref={containerRef} 
+          className="w-full h-full" 
+          style={{ 
+            background: `linear-gradient(90deg, #F9F7F3 0%, #F2FCE2 100%)`,
           }}
-          onDelete={() => {
-            if (selectedNode && mindMapRef.current) {
-              mindMapRef.current.removeNode(selectedNode.nodeObj);
-              toast({
-                title: "Node Deleted",
-                description: "The selected node has been removed",
-                duration: 2000,
-              });
-            }
-          }}
-          onAddChild={() => {
-            if (selectedNode && mindMapRef.current) {
-              mindMapRef.current.addChild(selectedNode.nodeObj, "New Node");
-              toast({
-                title: "Child Added",
-                description: "A new child node has been added",
-                duration: 2000,
-              });
-            }
-          }}
-          onAddSibling={() => {
-            if (selectedNode && mindMapRef.current) {
-              mindMapRef.current.insertSibling(selectedNode.nodeObj, "New Sibling");
-              toast({
-                title: "Sibling Added",
-                description: "A new sibling node has been added",
-                duration: 2000,
-              });
-            }
-          }}
-          onAIExpand={handleAIExpand}
-        >
-          <div 
-            ref={containerRef} 
-            className="w-full h-full" 
-            style={{ 
-              background: `linear-gradient(90deg, #F9F7F3 0%, #F2FCE2 100%)`,
-            }}
-          />
-        </MindMapContextMenu>
+        />
       </div>
     </div>
   );
