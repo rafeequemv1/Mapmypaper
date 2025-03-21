@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, Link } from "react-router-dom";
@@ -91,113 +92,113 @@ const PdfUpload = () => {
         <div className="w-full max-w-4xl mx-auto py-16 px-4 space-y-12">
           {/* Hero Section */}
           <section className="text-center space-y-8">
-            <h1 className="text-5xl font-bold tracking-tighter">Transform PDFs into Interactive Mind Maps</h1>
+            <h1 className="text-5xl font-bold tracking-tighter">Transform Research Papers into Visual Knowledge</h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Upload your PDF documents and instantly generate beautiful, interactive mind maps to visualize complex information.
+              Visualize complex academic content as interactive mind maps. Boost comprehension, increase retention, and save valuable research time.
             </p>
+            
+            {/* Upload Section - Moved to the top as requested */}
+            <section id="upload" className="bg-gray-50 rounded-lg p-8 shadow-sm">
+              <div className="max-w-md mx-auto space-y-6">
+                <h2 className="text-2xl font-semibold text-center">Upload Your Research Paper</h2>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="pdf-upload"
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                        <p className="mb-1 text-sm text-gray-600">
+                          <span className="font-semibold">Click to upload</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500">PDF research papers accepted</p>
+                      </div>
+                      <Input
+                        id="pdf-upload"
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </label>
+                    {selectedFile && (
+                      <p className="text-sm text-gray-600">
+                        Selected: {selectedFile.name}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={!selectedFile || isUploading}
+                    className="w-full bg-black text-white hover:bg-gray-800"
+                  >
+                    {isUploading ? (
+                      <span className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 animate-pulse" />
+                        Processing...
+                      </span>
+                    ) : (
+                      "Generate Mind Map"
+                    )}
+                  </Button>
+                </form>
+              </div>
+            </section>
             
             <div className="flex justify-center gap-4">
               <VideoDialog 
                 videoUrl="https://www.youtube.com/watch?v=2eVkAsHy0KM"
                 title="How It Works"
-                description="Watch a quick demo of our mind map generation capabilities"
+                description="See how our tool transforms research papers into interactive visual maps"
                 triggerText="Watch Demo"
               />
               <Button 
                 className="bg-black text-white hover:bg-gray-800 flex items-center gap-2"
-                onClick={() => document.getElementById('upload')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                Get Started <ChevronRight className="h-4 w-4" />
+                Explore Features <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
-          </section>
-
-          {/* Upload Section */}
-          <section id="upload" className="bg-gray-50 rounded-lg p-8 shadow-sm">
-            <div className="max-w-md mx-auto space-y-6">
-              <h2 className="text-2xl font-semibold text-center">Upload Your PDF</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="pdf-upload"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                      <p className="mb-1 text-sm text-gray-600">
-                        <span className="font-semibold">Click to upload</span> or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500">PDF files accepted</p>
-                    </div>
-                    <Input
-                      id="pdf-upload"
-                      type="file"
-                      accept=".pdf"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                  </label>
-                  {selectedFile && (
-                    <p className="text-sm text-gray-600">
-                      Selected: {selectedFile.name}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  type="submit"
-                  disabled={!selectedFile || isUploading}
-                  className="w-full bg-black text-white hover:bg-gray-800"
-                >
-                  {isUploading ? (
-                    <span className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 animate-pulse" />
-                      Generating...
-                    </span>
-                  ) : (
-                    "Create Mind Map"
-                  )}
-                </Button>
-              </form>
             </div>
           </section>
 
           {/* Features Section */}
           <section id="features" className="space-y-8">
-            <h2 className="text-3xl font-bold text-center">Key Features</h2>
+            <h2 className="text-3xl font-bold text-center">Accelerate Your Research</h2>
             <div className="grid md:grid-cols-3 gap-8">
               <div className="p-6 border border-gray-100 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="text-xl font-semibold mb-3">Instant Visualization</h3>
-                <p className="text-gray-600">Transform complex documents into clear, navigable mind maps in seconds.</p>
+                <h3 className="text-xl font-semibold mb-3">Visual Learning</h3>
+                <p className="text-gray-600">Convert dense text into visual maps that leverage your brain's natural pattern recognition abilities.</p>
               </div>
               <div className="p-6 border border-gray-100 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="text-xl font-semibold mb-3">AI-Powered Analysis</h3>
-                <p className="text-gray-600">Our algorithms identify key concepts and relationships automatically.</p>
+                <h3 className="text-xl font-semibold mb-3">Enhanced Retention</h3>
+                <p className="text-gray-600">Increase information retention by 40% through spatial relationships and visual connections.</p>
               </div>
               <div className="p-6 border border-gray-100 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="text-xl font-semibold mb-3">Interactive Navigation</h3>
-                <p className="text-gray-600">Explore connections, expand nodes, and dive deeper into the content.</p>
+                <h3 className="text-xl font-semibold mb-3">Time Efficiency</h3>
+                <p className="text-gray-600">Process research papers 3x faster by identifying key concepts and relationships instantly.</p>
               </div>
             </div>
           </section>
 
           {/* How It Works Section */}
           <section id="how-it-works" className="space-y-8">
-            <h2 className="text-3xl font-bold text-center">How It Works</h2>
+            <h2 className="text-3xl font-bold text-center">Research Paper to Mind Map in Minutes</h2>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-4">1</div>
-                <h3 className="text-xl font-semibold mb-2">Upload Your PDF</h3>
-                <p className="text-gray-600">Select any PDF document you want to analyze.</p>
+                <h3 className="text-xl font-semibold mb-2">Upload Your Paper</h3>
+                <p className="text-gray-600">Select any research paper or academic PDF you're studying.</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-4">2</div>
-                <h3 className="text-xl font-semibold mb-2">AI Processing</h3>
-                <p className="text-gray-600">Our algorithms analyze the content and structure.</p>
+                <h3 className="text-xl font-semibold mb-2">AI Analysis</h3>
+                <p className="text-gray-600">Our algorithms extract key concepts, relationships, and structure.</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-4">3</div>
-                <h3 className="text-xl font-semibold mb-2">Explore Your Mind Map</h3>
-                <p className="text-gray-600">Navigate through the interactive visualization.</p>
+                <h3 className="text-xl font-semibold mb-2">Interactive Mind Map</h3>
+                <p className="text-gray-600">Explore complex academic concepts through an intuitive visual interface.</p>
               </div>
             </div>
           </section>
@@ -213,7 +214,7 @@ const PdfUpload = () => {
                 <Brain className="h-6 w-6" />
                 <span className="font-semibold text-lg">MapMyPaper</span>
               </div>
-              <p className="text-gray-400">Transform your PDFs into interactive mind maps instantly.</p>
+              <p className="text-gray-400">Accelerate your research comprehension with visual learning.</p>
             </div>
             
             <div>

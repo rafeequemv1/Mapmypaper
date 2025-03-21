@@ -43,7 +43,8 @@ const SignInForm = () => {
           title: "Welcome back!",
           description: "You have successfully signed in.",
         });
-        navigate("/mindmap");
+        // Changed redirection to main landing page
+        navigate("/");
       }
     } catch (error) {
       toast({
