@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -206,19 +207,31 @@ const MindMap = () => {
       }
     };
     
-    // Add event listener to mindMap for data changes
+    // Add event listener for operation events
     if (mindMap) {
-      mindMap.on('operation', () => {
+      // Fix: Use the appropriate event handling method
+      // Instead of using mindMap.on, we'll use a different approach
+      
+      // Create a separate function that we can add and remove as an event listener
+      const handleOperation = () => {
         saveMindMapData();
-      });
-    }
-    
-    return () => {
-      // Clean up event listener
-      if (mindMap) {
-        mindMap.removeEventListener('operation');
+      };
+      
+      // Store the handler reference in a data attribute for cleanup
+      const container = mindMap.container as HTMLElement;
+      if (container) {
+        container.dataset.operationHandler = 'true';
+        container.addEventListener('operation', handleOperation);
       }
-    };
+      
+      return () => {
+        // Clean up event listener
+        if (container) {
+          container.removeEventListener('operation', handleOperation);
+          delete container.dataset.operationHandler;
+        }
+      };
+    }
   }, [mindMap, user]);
 
   return (
