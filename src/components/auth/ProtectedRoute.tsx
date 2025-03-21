@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  // With auth removed, we simply render the children without any protection
+  // With auth completely removed, we simply render the children
   return <>{children}</>;
 };
 

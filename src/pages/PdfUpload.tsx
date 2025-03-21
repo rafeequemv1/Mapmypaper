@@ -2,23 +2,19 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, FileText, GraduationCap, Network, LogIn, UserPlus, BookOpen } from "lucide-react";
+import { Brain, FileText, GraduationCap, Network, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
-import { useAuth } from "@/contexts/AuthContext";
+
 const PdfUpload = () => {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
-  const {
-    user
-  } = useAuth();
+  const { toast } = useToast();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -71,16 +67,8 @@ const PdfUpload = () => {
       }
     }
   }, [toast]);
+
   const handleGenerateMindmap = useCallback(async () => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to generate a mind map",
-        variant: "destructive"
-      });
-      navigate("/sign-in");
-      return;
-    }
     if (!selectedFile) {
       toast({
         title: "No file selected",
@@ -89,12 +77,14 @@ const PdfUpload = () => {
       });
       return;
     }
+    
     setIsProcessing(true);
     setExtractionError(null);
     toast({
       title: "Processing PDF",
       description: "Extracting text and generating mind map..."
     });
+    
     try {
       // First, read the PDF as DataURL for viewing later
       const reader = new FileReader();
@@ -135,8 +125,10 @@ const PdfUpload = () => {
       });
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast, user]);
-  return <div className="min-h-screen flex flex-col">
+  }, [selectedFile, navigate, toast]);
+
+  return (
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="py-4 px-8 border-b bg-[#222222]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -150,16 +142,9 @@ const PdfUpload = () => {
               <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
               <li><a href="#get-started" className="hover:text-white transition-colors">Get Started</a></li>
             </ul>
-            {user ? <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#222222]" onClick={() => navigate("/mindmap")}>
-                Dashboard
-              </Button> : <div className="flex gap-3">
-                <Button variant="ghost" className="text-white hover:bg-white/10" asChild>
-                  
-                </Button>
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#222222]" asChild>
-                  
-                </Button>
-              </div>}
+            <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#222222]" onClick={() => navigate("/mindmap")}>
+              Dashboard
+            </Button>
           </nav>
         </div>
       </header>
@@ -338,6 +323,8 @@ const PdfUpload = () => {
           </div>
         </div>
       </footer>
-    </div>;
+    </div>
+  );
 };
+
 export default PdfUpload;

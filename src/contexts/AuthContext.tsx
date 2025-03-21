@@ -1,7 +1,7 @@
 
 import { createContext, useContext } from 'react';
 
-// Simple context with no authentication
+// Empty context with no authentication
 type AuthContextType = {
   user: null;
   loading: false;
@@ -13,6 +13,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // Simply render children without any auth checks
   return (
     <AuthContext.Provider value={{ user: null, loading: false }}>
       {children}
@@ -21,9 +22,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return { user: null, loading: false };
 }
