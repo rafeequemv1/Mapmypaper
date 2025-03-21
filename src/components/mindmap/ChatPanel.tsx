@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
+  // Track the last processed requests by storing their timestamp and content hash
+  const processedRequestsRef = useRef<{timestamp: number, contentHash: string}[]>([]);
+  
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; imageData?: string }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
@@ -24,6 +28,30 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
+  
+  // Helper function to generate a simple hash for content tracking
+  const generateContentHash = (content: string): string => {
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      hash = ((hash << 5) - hash) + content.charCodeAt(i);
+      hash |= 0; // Convert to 32bit integer
+    }
+    return hash.toString();
+  };
+  
+  // Helper function to check if a request was recently processed
+  const wasRecentlyProcessed = (content: string): boolean => {
+    const contentHash = generateContentHash(content);
+    const now = Date.now();
+    
+    // Remove old processed requests (older than 5 seconds)
+    processedRequestsRef.current = processedRequestsRef.current.filter(
+      req => now - req.timestamp < 5000
+    );
+    
+    // Check if this content was recently processed
+    return processedRequestsRef.current.some(req => req.contentHash === contentHash);
+  };
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -39,7 +67,20 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   useEffect(() => {
     const processExplainText = async () => {
       if (explainText && !processingExplainText) {
+        // Check if this exact request was processed recently to avoid duplicates
+        if (wasRecentlyProcessed(explainText)) {
+          console.log("Duplicate request detected, ignoring:", explainText.substring(0, 50));
+          return;
+        }
+        
         setProcessingExplainText(true);
+        
+        // Add this request to the processed list
+        const contentHash = generateContentHash(explainText);
+        processedRequestsRef.current.push({
+          timestamp: Date.now(),
+          contentHash
+        });
         
         // Check if this is an image snippet request
         if (explainText.includes('[IMAGE_SNIPPET]')) {
@@ -97,7 +138,54 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
               variant: "destructive"
             });
           }
-        } else {
+        } 
+        // Check if this is a node expansion request
+        else if (explainText.includes('[EXPAND_NODE_')) {
+          // Extract the node topic from the request
+          const nodeTopic = explainText.split('Please expand on this mind map node: "')[1]?.split('"')[0] || '';
+          
+          // Add user message
+          setMessages(prev => [
+            ...prev, 
+            { role: 'user', content: `Please suggest subtopics for this mind map node: "${nodeTopic}"` }
+          ]);
+          
+          // Show typing indicator
+          setIsTyping(true);
+          
+          try {
+            // Get response from Gemini
+            const response = await chatWithGeminiAboutPdf(
+              `Generate 3-5 brief subtopics for a mind map node titled "${nodeTopic}". 
+               Format as a bulleted list with short phrases (2-4 words each).`
+            );
+            
+            // Hide typing indicator and add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev, 
+              { role: 'assistant', content: response }
+            ]);
+          } catch (error) {
+            // Handle errors
+            setIsTyping(false);
+            console.error("Node expansion error:", error);
+            setMessages(prev => [
+              ...prev, 
+              { 
+                role: 'assistant', 
+                content: "Sorry, I encountered an error expanding that node. Please try again." 
+              }
+            ]);
+            
+            toast({
+              title: "Expansion Error",
+              description: "Failed to get node expansion suggestions.",
+              variant: "destructive"
+            });
+          }
+        }
+        else {
           // Regular text explanation
           // Add user message with the selected text
           const userMessage = `Explain this: "${explainText}"`;
@@ -138,13 +226,16 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
         
         // Reset processing flag
         setProcessingExplainText(false);
-        
-        // Clear the stored image data after processing
-        sessionStorage.removeItem('selectedImageForChat');
       }
     };
     
     processExplainText();
+    
+    // Return a cleanup function that runs when component unmounts or explainText changes
+    return () => {
+      // Note: We intentionally do NOT clear the image data here anymore
+      // This allows multiple capture requests to work correctly
+    };
   }, [explainText, toast]);
 
   const handleSendMessage = async () => {
