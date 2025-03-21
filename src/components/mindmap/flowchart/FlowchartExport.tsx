@@ -1,5 +1,4 @@
 
-import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -53,9 +52,9 @@ const FlowchartExport = ({ previewRef }: FlowchartExportProps) => {
 
   return (
     <div className="flex gap-2">
-      <Button onClick={exportSvg} variant="outline" size="sm">
-        <Download className="h-4 w-4 mr-1" />
-        Export SVG
+      <Button onClick={exportSvg} variant="ghost" size="sm" className="h-7">
+        <Download className="h-3.5 w-3.5 mr-1" />
+        <span className="text-xs">Export</span>
       </Button>
     </div>
   );

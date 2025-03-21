@@ -102,9 +102,9 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
       }`}
     >
       {/* PDF Header */}
-      <div className="flex items-center justify-between p-2 border-b">
+      <div className="flex items-center justify-between p-1.5 border-b">
         <div className="flex items-center">
-          <h3 className="text-sm font-medium truncate max-w-[200px]">
+          <h3 className="text-xs font-medium truncate max-w-[200px]">
             {pdfFileName}
           </h3>
         </div>
@@ -112,46 +112,46 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
             onClick={zoomOut}
             title="Zoom Out"
           >
-            <ZoomOut className="h-4 w-4" />
+            <ZoomOut className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-xs w-12 text-center">
+          <span className="text-xs w-10 text-center">
             {Math.round(zoom * 100)}%
           </span>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
             onClick={zoomIn}
             title="Zoom In"
           >
-            <ZoomIn className="h-4 w-4" />
+            <ZoomIn className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
             onClick={toggleFullscreen}
             title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? (
-              <Minimize2 className="h-4 w-4" />
+              <Minimize2 className="h-3.5 w-3.5" />
             ) : (
-              <Maximize2 className="h-4 w-4" />
+              <Maximize2 className="h-3.5 w-3.5" />
             )}
           </Button>
           {isFullscreen && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               onClick={onTogglePdf}
               title="Close PDF"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
@@ -165,14 +165,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
       >
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
-            <p className="text-gray-500">Loading PDF...</p>
+            <Loader2 className="h-7 w-7 animate-spin text-gray-400 mb-2" />
+            <p className="text-gray-500 text-sm">Loading PDF...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
-            <p className="text-gray-700 font-medium">{error}</p>
-            <p className="text-gray-500 mt-2">Try uploading the PDF again or use a different document.</p>
+            <AlertCircle className="h-7 w-7 text-red-500 mb-2" />
+            <p className="text-gray-700 font-medium text-sm">{error}</p>
+            <p className="text-gray-500 mt-2 text-xs">Try uploading the PDF again or use a different document.</p>
           </div>
         ) : pdfUrl ? (
           <div
@@ -191,7 +191,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">No PDF available. Please upload a document.</p>
+            <p className="text-gray-500 text-sm">No PDF available. Please upload a document.</p>
           </div>
         )}
 
@@ -200,10 +200,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           <div className="absolute bottom-4 right-4">
             <Button
               onClick={handleExplainText}
-              className="shadow-lg flex items-center gap-2"
+              className="shadow-lg flex items-center gap-1.5 text-xs"
+              size="sm"
             >
-              <MessageSquare className="h-4 w-4" />
-              Explain Selection
+              <MessageSquare className="h-3.5 w-3.5" />
+              Explain
             </Button>
           </div>
         )}
