@@ -34,6 +34,7 @@ const PdfViewer = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedText, setSelectedText] = useState<string>("");
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef<HTMLDivElement>(null);
@@ -56,11 +57,34 @@ const PdfViewer = ({
     }
   }, []);
 
+  // Handle window resize and adjust container width
+  useEffect(() => {
+    const updateContainerWidth = () => {
+      if (pdfContainerRef.current) {
+        setContainerWidth(pdfContainerRef.current.clientWidth);
+      }
+    };
+
+    // Initial measurement
+    updateContainerWidth();
+    
+    // Listen for resize events
+    window.addEventListener('resize', updateContainerWidth);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', updateContainerWidth);
+  }, []);
+
   // Handle successful document load
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     console.log(`Document loaded with ${numPages} pages`);
     setNumPages(numPages);
     setIsLoading(false);
+    
+    // Update container width measurement after document loads
+    if (pdfContainerRef.current) {
+      setContainerWidth(pdfContainerRef.current.clientWidth);
+    }
   };
 
   // Handle zoom in/out
@@ -71,6 +95,25 @@ const PdfViewer = ({
   const handleZoomOut = () => {
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
   };
+
+  // Auto-fit PDF to container width
+  const handleScaleToFit = () => {
+    if (pdfContainerRef.current && containerWidth > 0) {
+      // Reduce by 40px to account for padding
+      const availableWidth = containerWidth - 40;
+      // Default PDF width is 595.28 points (8.5" × 72dpi)
+      const defaultPdfWidth = 595.28;
+      const newScale = availableWidth / defaultPdfWidth;
+      setScale(newScale);
+    }
+  };
+
+  // Auto-fit on first load and container width changes
+  useEffect(() => {
+    if (containerWidth > 0 && numPages > 0) {
+      handleScaleToFit();
+    }
+  }, [containerWidth, numPages]);
 
   // Text selection handler - Fixed with improved positioning
   const handleTextSelection = () => {
@@ -196,6 +239,21 @@ const PdfViewer = ({
               <TooltipContent side="bottom">Zoom in</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={handleScaleToFit}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground text-xs"
+                  aria-label="Fit to width"
+                >
+                  Fit
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Fit to width</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         <div className="text-xs text-muted-foreground">
@@ -224,7 +282,7 @@ const PdfViewer = ({
                 file={pdfData}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={(error) => console.error("Error loading PDF:", error)}
-                className="pdf-container relative"
+                className="pdf-container w-full"
                 loading={
                   <div className="flex items-center justify-center h-20 w-full">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -234,7 +292,7 @@ const PdfViewer = ({
                 {pageNumbers.map(pageNumber => (
                   <div 
                     key={`page_${pageNumber}`} 
-                    className="mb-4 shadow-md relative"
+                    className="mb-4 shadow-md relative max-w-full"
                     ref={pageNumber === currentPage ? currentPageRef : null}
                     onLoad={() => {
                       if (pageNumber === 1) setCurrentPage(1);
@@ -245,6 +303,8 @@ const PdfViewer = ({
                       scale={scale}
                       renderTextLayer={true}
                       renderAnnotationLayer={true}
+                      className="max-w-full"
+                      width={containerWidth > 40 ? containerWidth - 40 : undefined}
                       onRenderSuccess={() => {
                         const observer = new IntersectionObserver((entries) => {
                           entries.forEach(entry => {
@@ -296,3 +356,4 @@ const PdfViewer = ({
 };
 
 export default PdfViewer;
+
