@@ -1,10 +1,11 @@
-
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -14,12 +15,54 @@ const MindMap = () => {
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
   const { toast } = useToast();
+  const { user } = useAuth();
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
-    const checkPdfAvailability = () => {
+    const checkPdfAvailability = async () => {
       try {
-        // Check if PDF data exists in either storage key
+        // First check URL parameters for a mindmap ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const mindmapId = urlParams.get('id');
+        
+        if (mindmapId && user) {
+          // If we have a mindmap ID, try to load it from the database
+          const { data: mindmapData, error } = await supabase
+            .from('user_mindmaps')
+            .select('pdf_data, pdf_filename, mindmap_data')
+            .eq('id', mindmapId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (error) {
+            console.error("Error fetching mindmap:", error);
+            toast({
+              title: "Error",
+              description: "Failed to load saved mindmap",
+              variant: "destructive"
+            });
+          } else if (mindmapData) {
+            // Store the PDF data and filename in sessionStorage
+            sessionStorage.setItem('pdfData', mindmapData.pdf_data);
+            sessionStorage.setItem('pdfFileName', mindmapData.pdf_filename);
+            
+            // Store the mindmap data in sessionStorage
+            if (mindmapData.mindmap_data) {
+              sessionStorage.setItem('mindmapData', JSON.stringify(mindmapData.mindmap_data));
+            }
+            
+            setPdfAvailable(true);
+            setShowPdf(true);
+            
+            toast({
+              title: "Success",
+              description: "Loaded saved mindmap"
+            });
+            return;
+          }
+        }
+        
+        // If no mindmap ID or couldn't load from database, check sessionStorage
         const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
         const hasPdfData = !!pdfData;
         
@@ -43,7 +86,7 @@ const MindMap = () => {
     
     // Execute PDF check immediately
     checkPdfAvailability();
-  }, [toast]);
+  }, [toast, user]);
 
   const togglePdf = () => {
     setShowPdf(prev => !prev);
@@ -116,6 +159,67 @@ const MindMap = () => {
       });
     }
   }, [mindMap, toast]);
+
+  // Save mindmap data when it changes
+  useEffect(() => {
+    const saveMindMapData = async () => {
+      if (!mindMap || !user) return;
+      
+      try {
+        const pdfFilename = sessionStorage.getItem('pdfFileName');
+        if (!pdfFilename) return;
+        
+        // Get the mind map data
+        const mindmapData = mindMap.getData();
+        
+        // Check if this PDF already has a record
+        const { data: existingMindmap, error } = await supabase
+          .from('user_mindmaps')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('pdf_filename', pdfFilename)
+          .maybeSingle();
+          
+        if (error) {
+          console.error('Error checking for existing mindmap:', error);
+          return;
+        }
+        
+        if (existingMindmap) {
+          // Update existing record
+          const { error: updateError } = await supabase
+            .from('user_mindmaps')
+            .update({
+              mindmap_data: mindmapData,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingMindmap.id);
+            
+          if (updateError) {
+            console.error('Error updating mindmap data:', updateError);
+          } else {
+            console.log('Mindmap data saved successfully');
+          }
+        }
+      } catch (error) {
+        console.error('Error saving mindmap data:', error);
+      }
+    };
+    
+    // Add event listener to mindMap for data changes
+    if (mindMap) {
+      mindMap.on('operation', () => {
+        saveMindMapData();
+      });
+    }
+    
+    return () => {
+      // Clean up event listener
+      if (mindMap) {
+        mindMap.removeEventListener('operation');
+      }
+    };
+  }, [mindMap, user]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">

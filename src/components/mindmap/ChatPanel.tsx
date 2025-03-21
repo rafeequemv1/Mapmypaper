@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -17,6 +18,7 @@ interface ChatPanelProps {
 const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
   
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; imageData?: string }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
@@ -25,7 +27,107 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
+  const [currentMindmapId, setCurrentMindmapId] = useState<string | null>(null);
   
+  // Load existing chat history if user is logged in and a mindmap exists
+  useEffect(() => {
+    const loadExistingChat = async () => {
+      if (!user) return;
+      
+      try {
+        const pdfFilename = sessionStorage.getItem('pdfFileName');
+        const pdfData = sessionStorage.getItem('pdfData');
+        
+        if (!pdfFilename || !pdfData) return;
+        
+        // Check if this PDF is already stored in the database
+        const { data: existingMindmaps, error } = await supabase
+          .from('user_mindmaps')
+          .select('id, chat_history, mindmap_data')
+          .eq('user_id', user.id)
+          .eq('pdf_filename', pdfFilename)
+          .maybeSingle();
+          
+        if (error) {
+          console.error('Error checking for existing mindmap:', error);
+          return;
+        }
+        
+        // If this PDF already exists in database and has chat history
+        if (existingMindmaps && existingMindmaps.chat_history) {
+          console.log('Found existing chat history for this PDF');
+          setCurrentMindmapId(existingMindmaps.id);
+          
+          // Load chat history
+          const savedMessages = existingMindmaps.chat_history as Array<{ role: 'user' | 'assistant'; content: string; imageData?: string }>;
+          if (Array.isArray(savedMessages) && savedMessages.length > 0) {
+            setMessages(savedMessages);
+          }
+        } else {
+          // This is a new PDF or it doesn't have chat history yet
+          console.log('No existing chat history found. Creating new record.');
+          if (existingMindmaps) {
+            // PDF exists but no chat history
+            setCurrentMindmapId(existingMindmaps.id);
+          } else {
+            // Create a new record for this PDF
+            const { data: newMindmap, error: insertError } = await supabase
+              .from('user_mindmaps')
+              .insert({
+                user_id: user.id,
+                title: pdfFilename,
+                pdf_filename: pdfFilename,
+                pdf_data: pdfData,
+                chat_history: messages,
+              })
+              .select('id')
+              .single();
+              
+            if (insertError) {
+              console.error('Error creating new mindmap record:', insertError);
+              return;
+            }
+            
+            if (newMindmap) {
+              setCurrentMindmapId(newMindmap.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error in loadExistingChat:', error);
+      }
+    };
+    
+    loadExistingChat();
+  }, [user]);
+
+  // Save chat history to database when messages change
+  useEffect(() => {
+    const saveChatHistory = async () => {
+      if (!user || !currentMindmapId || messages.length <= 1) return;
+      
+      try {
+        const { error } = await supabase
+          .from('user_mindmaps')
+          .update({
+            chat_history: messages,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentMindmapId);
+          
+        if (error) {
+          console.error('Error saving chat history:', error);
+        } else {
+          console.log('Chat history saved successfully');
+        }
+      } catch (error) {
+        console.error('Error in saveChatHistory:', error);
+      }
+    };
+    
+    saveChatHistory();
+  }, [messages, user, currentMindmapId]);
+
   useEffect(() => {
     // Scroll to bottom when messages change
     if (scrollAreaRef.current) {
@@ -170,9 +272,6 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
           ...prev, 
           { role: 'assistant', content: response }
         ]);
-        
-        // Store chat history in Supabase if needed in the future
-        // Currently not implemented as we need to set up authentication first
       } catch (error) {
         // Handle errors
         setIsTyping(false);

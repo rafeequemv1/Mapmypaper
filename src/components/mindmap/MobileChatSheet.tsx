@@ -1,15 +1,18 @@
 
 import { MessageSquare, Copy, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import ReactMarkdown from "react-markdown";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const MobileChatSheet = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
@@ -17,6 +20,73 @@ const MobileChatSheet = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
+  const [currentMindmapId, setCurrentMindmapId] = useState<string | null>(null);
+  
+  // Load existing chat history if user is logged in and a mindmap exists
+  useEffect(() => {
+    const loadExistingChat = async () => {
+      if (!user) return;
+      
+      try {
+        const pdfFilename = sessionStorage.getItem('pdfFileName');
+        
+        if (!pdfFilename) return;
+        
+        // Check if this PDF is already stored in the database
+        const { data: existingMindmaps, error } = await supabase
+          .from('user_mindmaps')
+          .select('id, chat_history')
+          .eq('user_id', user.id)
+          .eq('pdf_filename', pdfFilename)
+          .maybeSingle();
+          
+        if (error) {
+          console.error('Error checking for existing mindmap:', error);
+          return;
+        }
+        
+        // If this PDF already exists in database and has chat history
+        if (existingMindmaps && existingMindmaps.chat_history) {
+          setCurrentMindmapId(existingMindmaps.id);
+          
+          // Load chat history
+          const savedMessages = existingMindmaps.chat_history as Array<{ role: 'user' | 'assistant'; content: string }>;
+          if (Array.isArray(savedMessages) && savedMessages.length > 0) {
+            setMessages(savedMessages);
+          }
+        }
+      } catch (error) {
+        console.error('Error in loadExistingChat:', error);
+      }
+    };
+    
+    loadExistingChat();
+  }, [user]);
+  
+  // Save chat history to database when messages change
+  useEffect(() => {
+    const saveChatHistory = async () => {
+      if (!user || !currentMindmapId || messages.length <= 1) return;
+      
+      try {
+        const { error } = await supabase
+          .from('user_mindmaps')
+          .update({
+            chat_history: messages,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentMindmapId);
+          
+        if (error) {
+          console.error('Error saving chat history:', error);
+        }
+      } catch (error) {
+        console.error('Error in saveChatHistory:', error);
+      }
+    };
+    
+    saveChatHistory();
+  }, [messages, user, currentMindmapId]);
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
