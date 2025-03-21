@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Link } from "react-router-dom";
+import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -28,7 +29,7 @@ const formSchema = z.object({
 });
 
 const SignUpForm = () => {
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +71,18 @@ const SignUpForm = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      toast({
+        title: "Sign up with Google failed",
+        description: "An error occurred. Please try again later.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -129,6 +142,26 @@ const SignUpForm = () => {
           </Button>
         </form>
       </Form>
+      
+      <div className="flex items-center gap-4">
+        <Separator className="flex-1" />
+        <span className="text-muted-foreground text-sm">OR</span>
+        <Separator className="flex-1" />
+      </div>
+      
+      <Button 
+        type="button" 
+        variant="outline" 
+        className="w-full flex items-center gap-2"
+        onClick={handleGoogleSignUp}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+          <g transform="matrix(1, 0, 0, 1, 0, 0)">
+            <path d="M21.35,11.1H12v3.2h5.59c-0.8,2.4-3.06,4.1-5.59,4.1c-3.31,0-6-2.69-6-6s2.69-6,6-6c1.39,0,2.78,0.47,3.93,1.67 l2.3-2.3C16.32,3.87,14.18,3,12,3C7.03,3,3,7.03,3,12s4.03,9,9,9s9-4.03,9-9C21,11.64,20.92,11.36,21.35,11.1z" fill="#4285F4"></path>
+          </g>
+        </svg>
+        Sign up with Google
+      </Button>
       
       <div className="text-center">
         <p className="text-sm text-muted-foreground">
