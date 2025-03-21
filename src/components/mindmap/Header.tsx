@@ -1,15 +1,13 @@
 
 import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Brain, FileText, MessageSquare, Download, LogOut, User } from "lucide-react";
+import { Brain, FileText, MessageSquare, Download, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -33,7 +31,6 @@ const Header = ({
   onOpenSummary,
 }: HeaderProps) => {
   const navigate = useNavigate();
-  const { signOut, user } = useAuth();
   const { toast } = useToast();
   const [documentTitle, setDocumentTitle] = useState<string>("Document Analysis");
   
@@ -51,25 +48,14 @@ const Header = ({
     }
   }, []);
   
-  const handleSignOut = useCallback(async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Signed out successfully"
-      });
-      navigate("/");
-    } catch (error) {
-      toast({
-        title: "Error signing out",
-        variant: "destructive"
-      });
-    }
-  }, [signOut, navigate, toast]);
+  const handleGoHome = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
 
   return (
     <header className="border-b bg-background p-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="icon" onClick={handleGoHome}>
           <Brain className="h-5 w-5" />
         </Button>
         <h1 className="text-lg font-medium truncate max-w-xs md:max-w-md" title={documentTitle}>
@@ -123,27 +109,9 @@ const Header = ({
           </DropdownMenuContent>
         </DropdownMenu>
         
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-              <User className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {user && (
-              <>
-                <div className="px-2 py-1.5 text-sm">
-                  {user.email}
-                </div>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuItem onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="outline" size="icon" onClick={handleGoHome}>
+          <User className="h-4 w-4" />
+        </Button>
       </div>
     </header>
   );
