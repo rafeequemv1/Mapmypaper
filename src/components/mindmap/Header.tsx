@@ -59,7 +59,7 @@ const Header = ({
           <Brain className="h-5 w-5" />
         </Button>
         <h1 className="text-lg font-medium truncate max-w-xs md:max-w-md text-black dark:text-white" title={documentTitle}>
-          {documentTitle}
+          MapMyPaper - {documentTitle}
         </h1>
       </div>
       

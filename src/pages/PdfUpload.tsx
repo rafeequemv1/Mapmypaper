@@ -2,8 +2,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
-import { Sparkles, Upload, Brain, Github, Twitter, ChevronRight } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Sparkles, Upload, Brain, ChevronRight } from "lucide-react";
 import VideoDialog from "@/components/ui/video-dialog";
 
 const PdfUpload = () => {
@@ -35,18 +35,17 @@ const PdfUpload = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-white font-sans">
       {/* Black Top Bar */}
       <header className="w-full bg-black text-white py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Brain className="h-6 w-6" />
-            <span className="font-semibold text-lg">MindMap Generator</span>
+            <span className="font-semibold text-lg">MapMyPaper</span>
           </div>
-          <nav className="hidden md:flex space-x-6">
-            <a href="#features" className="hover:text-gray-300 transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-gray-300 transition-colors">How It Works</a>
-            <a href="#about" className="hover:text-gray-300 transition-colors">About</a>
+          <nav className="flex space-x-6">
+            <Link to="/sign-in" className="hover:text-gray-300 transition-colors">Sign In</Link>
+            <Link to="/sign-up" className="hover:text-gray-300 transition-colors">Sign Up</Link>
           </nav>
         </div>
       </header>
@@ -68,7 +67,10 @@ const PdfUpload = () => {
                 description="Watch a quick demo of our mind map generation capabilities"
                 triggerText="Watch Demo"
               />
-              <Button className="bg-black text-white hover:bg-gray-800 flex items-center gap-2">
+              <Button 
+                className="bg-black text-white hover:bg-gray-800 flex items-center gap-2"
+                onClick={() => document.getElementById('upload')?.scrollIntoView({ behavior: 'smooth' })}
+              >
                 Get Started <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -89,7 +91,7 @@ const PdfUpload = () => {
                       <p className="mb-1 text-sm text-gray-600">
                         <span className="font-semibold">Click to upload</span> or drag and drop
                       </p>
-                      <p className="text-xs text-gray-500">PDF (MAX. 10MB)</p>
+                      <p className="text-xs text-gray-500">PDF files accepted</p>
                     </div>
                     <Input
                       id="pdf-upload"
@@ -116,7 +118,7 @@ const PdfUpload = () => {
                       Generating...
                     </span>
                   ) : (
-                    "Generate Mind Map"
+                    "Create Mind Map"
                   )}
                 </Button>
               </form>
@@ -173,7 +175,7 @@ const PdfUpload = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <Brain className="h-6 w-6" />
-                <span className="font-semibold text-lg">MindMap Generator</span>
+                <span className="font-semibold text-lg">MapMyPaper</span>
               </div>
               <p className="text-gray-400">Transform your PDFs into interactive mind maps instantly.</p>
             </div>
@@ -183,25 +185,17 @@ const PdfUpload = () => {
               <ul className="space-y-2">
                 <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Features</a></li>
                 <li><a href="#how-it-works" className="text-gray-400 hover:text-white transition-colors">How It Works</a></li>
-                <li><a href="#about" className="text-gray-400 hover:text-white transition-colors">About</a></li>
               </ul>
             </div>
             
             <div>
-              <h3 className="font-semibold text-lg mb-4">Connect</h3>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <Github className="h-6 w-6" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <Twitter className="h-6 w-6" />
-                </a>
-              </div>
+              <h3 className="font-semibold text-lg mb-4">Contact</h3>
+              <p className="text-gray-400">support@mapmypaper.com</p>
             </div>
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; {new Date().getFullYear()} MindMap Generator. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} MapMyPaper. All rights reserved.</p>
           </div>
         </div>
       </footer>
