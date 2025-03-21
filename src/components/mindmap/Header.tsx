@@ -1,5 +1,5 @@
 
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,21 @@ const Header = ({
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const { toast } = useToast();
+  const [documentTitle, setDocumentTitle] = useState<string>("Document Analysis");
+  
+  // Extract document title from sessionStorage
+  useEffect(() => {
+    try {
+      // Try to get the file name from session storage
+      const pdfFileName = sessionStorage.getItem('pdfFileName');
+      if (pdfFileName) {
+        // If filename exists, use it
+        setDocumentTitle(pdfFileName);
+      }
+    } catch (error) {
+      console.error("Error retrieving document title:", error);
+    }
+  }, []);
   
   const handleSignOut = useCallback(async () => {
     try {
@@ -57,7 +72,9 @@ const Header = ({
         <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
           <Brain className="h-5 w-5" />
         </Button>
-        <h1 className="text-lg font-medium hidden md:block">Mind Map</h1>
+        <h1 className="text-lg font-medium truncate max-w-xs md:max-w-md" title={documentTitle}>
+          {documentTitle}
+        </h1>
       </div>
       
       <div className="flex items-center gap-2">

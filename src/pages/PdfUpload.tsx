@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +36,8 @@ const PdfUpload = () => {
       const file = e.dataTransfer.files[0];
       if (file.type === "application/pdf") {
         setSelectedFile(file);
+        // Store the filename in sessionStorage
+        sessionStorage.setItem('pdfFileName', file.name);
         toast({
           title: "PDF uploaded successfully",
           description: `File: ${file.name}`,
@@ -56,6 +57,8 @@ const PdfUpload = () => {
       const file = e.target.files[0];
       if (file.type === "application/pdf") {
         setSelectedFile(file);
+        // Store the filename in sessionStorage
+        sessionStorage.setItem('pdfFileName', file.name);
         toast({
           title: "PDF uploaded successfully",
           description: `File: ${file.name}`,
