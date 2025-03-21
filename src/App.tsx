@@ -7,26 +7,35 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<PdfUpload />} />
-          <Route path="/mindmap" element={<MindMap />} />
-          {/* Redirect sign-in and sign-up to home */}
-          <Route path="/sign-in" element={<Navigate to="/" replace />} />
-          <Route path="/sign-up" element={<Navigate to="/" replace />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<PdfUpload />} />
+            <Route path="/mindmap" element={
+              <ProtectedRoute>
+                <MindMap />
+              </ProtectedRoute>
+            } />
+            <Route path="/sign-in" element={<SignIn />} />
+            <Route path="/sign-up" element={<SignUp />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
