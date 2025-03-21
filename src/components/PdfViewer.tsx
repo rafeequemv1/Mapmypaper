@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -44,6 +45,7 @@ const PdfViewer = ({
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
   const [selectionBox, setSelectionBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [isCapturing, setIsCapturing] = useState<boolean>(false);
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -229,10 +231,14 @@ const PdfViewer = ({
       return;
     }
     
-    if (!selectionStart || !selectionEnd || !selectionBox) return;
+    if (!selectionStart || !selectionEnd || !selectionBox || isCapturing) return;
     
     // Only process if selection has some size
     if (selectionBox.width > 10 && selectionBox.height > 10) {
+      // Set capturing state immediately to prevent multiple captures
+      setIsCapturing(true);
+      
+      // Capture immediately
       captureSelection();
     } else {
       // Clear selection if it's too small
@@ -244,7 +250,10 @@ const PdfViewer = ({
   
   // Capture the selected area using html2canvas
   const captureSelection = async () => {
-    if (!selectionBox || !pdfContainerRef.current) return;
+    if (!selectionBox || !pdfContainerRef.current) {
+      setIsCapturing(false);
+      return;
+    }
     
     try {
       // Capture the entire PDF container
@@ -288,12 +297,6 @@ const PdfViewer = ({
         onRequestOpenChat();
       }
       
-      // Find any text in the selection area for context
-      let selectedTextInArea = "";
-      if (window.getSelection) {
-        window.getSelection()?.removeAllRanges();
-      }
-      
       // Store the image in sessionStorage for the chat to access
       sessionStorage.setItem('selectedImageForChat', imageData);
       
@@ -321,6 +324,17 @@ const PdfViewer = ({
       setSelectionStart(null);
       setSelectionEnd(null);
       setSelectionBox(null);
+      setIsCapturing(false);
+      
+      // Clear any browser text selection
+      if (window.getSelection) {
+        window.getSelection()?.empty();
+      }
+      
+      // Remove CSS class to re-enable text selection
+      if (pdfContainerRef.current) {
+        pdfContainerRef.current.classList.remove('disable-text-selection');
+      }
     }
   };
 
@@ -455,6 +469,7 @@ const PdfViewer = ({
                     ? 'bg-primary text-primary-foreground' 
                     : 'hover:bg-muted text-muted-foreground'}`}
                   aria-label="Area selection mode"
+                  disabled={isCapturing}
                 >
                   <Scissors className="h-3 w-3" />
                   Snip
