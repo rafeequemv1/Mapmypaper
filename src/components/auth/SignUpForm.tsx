@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Link } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
+import { AlertCircle } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -34,6 +35,7 @@ const SignUpForm = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,13 +79,21 @@ const SignUpForm = () => {
 
   const handleGoogleSignUp = async () => {
     try {
+      setOauthError(null);
       setIsGoogleLoading(true);
+      
+      console.log("Starting Google sign-in process");
       await signInWithGoogle();
+      console.log("Google sign-in process initiated");
+      
       // Note: We don't need to navigate as the OAuth redirect will handle this
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      setOauthError(error?.message || "Failed to connect to Google. Please check your network and try again.");
+      
       toast({
         title: "Sign up with Google failed",
-        description: "An error occurred. Please try again later.",
+        description: error?.message || "An error occurred. Please try again later.",
         variant: "destructive",
       });
     } finally {
@@ -97,6 +107,17 @@ const SignUpForm = () => {
         <h1 className="text-3xl font-bold">Create an Account</h1>
         <p className="text-gray-500">Join MapMyPaper today</p>
       </div>
+      
+      {oauthError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md flex items-start gap-2">
+          <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">OAuth Error</p>
+            <p className="text-sm">{oauthError}</p>
+            <p className="text-sm mt-1">Please check that pop-ups aren't blocked and your network connection is stable.</p>
+          </div>
+        </div>
+      )}
       
       <Button 
         type="button" 
