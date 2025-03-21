@@ -99,7 +99,6 @@ const Dashboard = () => {
 
   // Navigation handlers
   const handleCreateNew = () => {
-    // Changed to navigate directly to root path where PDF upload is
     navigate("/");
   };
 
