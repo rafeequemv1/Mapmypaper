@@ -1,15 +1,17 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, Link } from "react-router-dom";
-import { Sparkles, Upload, Brain, ChevronRight } from "lucide-react";
+import { Sparkles, Upload, Brain, ChevronRight, LogOut } from "lucide-react";
 import VideoDialog from "@/components/ui/video-dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PdfUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -49,6 +51,15 @@ const PdfUpload = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-white font-sans">
       {/* Black Top Bar */}
@@ -59,8 +70,20 @@ const PdfUpload = () => {
             <span className="font-semibold text-lg">MapMyPaper</span>
           </div>
           <nav className="flex space-x-6">
-            <Link to="/sign-in" className="hover:text-gray-300 transition-colors">Sign In</Link>
-            <Link to="/sign-up" className="hover:text-gray-300 transition-colors">Sign Up</Link>
+            {user ? (
+              <>
+                <Link to="/dashboard" className="hover:text-gray-300 transition-colors">Dashboard</Link>
+                <button onClick={handleLogout} className="hover:text-gray-300 transition-colors flex items-center">
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/sign-in" className="hover:text-gray-300 transition-colors">Sign In</Link>
+                <Link to="/sign-up" className="hover:text-gray-300 transition-colors">Sign Up</Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
