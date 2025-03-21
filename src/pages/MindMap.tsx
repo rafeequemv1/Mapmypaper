@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -42,7 +43,7 @@ const MindMap = () => {
     
     // Execute PDF check immediately
     checkPdfAvailability();
-  }, []);
+  }, [toast]);
 
   const togglePdf = () => {
     setShowPdf(prev => !prev);
