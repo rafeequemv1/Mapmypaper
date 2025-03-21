@@ -154,16 +154,10 @@ const PdfUpload = () => {
                 Dashboard
               </Button> : <div className="flex gap-3">
                 <Button variant="ghost" className="text-white hover:bg-white/10" asChild>
-                  <Link to="/sign-in">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Sign In
-                  </Link>
+                  
                 </Button>
                 <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#222222]" asChild>
-                  <Link to="/sign-up">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Sign Up
-                  </Link>
+                  
                 </Button>
               </div>}
           </nav>
