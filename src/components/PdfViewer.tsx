@@ -301,21 +301,12 @@ const PdfViewer = ({
     }
     
     try {
-      // Show toast immediately to give feedback
-      toast({
-        title: "Capturing area...",
-        description: "Processing your selection",
-      });
-      
       // Capture the entire PDF container
       const canvas = await html2canvas(pdfContainerRef.current, {
         logging: false,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: "#ffffff",
-        // Optimize html2canvas performance
-        scale: 1.5, // Better quality but faster than 2.0
-        imageTimeout: 0, // No timeout
+        backgroundColor: "#ffffff"
       });
       
       // Create a new canvas for the cropped area
