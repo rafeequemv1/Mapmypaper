@@ -15,7 +15,7 @@ type AuthContextType = {
     error: Error | null;
     data: User | null;
   }>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", _event, !!session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", !!session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -65,12 +67,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/mindmap`
-      }
-    });
+    try {
+      console.log("Starting Google sign-in process");
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/mindmap`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+      
+      console.log("Google sign-in initiated", error ? "with error" : "successfully");
+      
+      return { error: error as Error | null };
+    } catch (error) {
+      console.error("Google sign-in exception:", error);
+      return { error: error as Error };
+    }
   };
 
   const signOut = async () => {

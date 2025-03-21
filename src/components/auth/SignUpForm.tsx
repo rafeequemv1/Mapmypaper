@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -83,12 +82,24 @@ const SignUpForm = () => {
       setIsGoogleLoading(true);
       
       console.log("Starting Google sign-in process");
-      await signInWithGoogle();
-      console.log("Google sign-in process initiated");
+      const { error } = await signInWithGoogle();
       
-      // Note: We don't need to navigate as the OAuth redirect will handle this
+      if (error) {
+        console.error("Google sign-in error (returned):", error);
+        setOauthError(error?.message || "Failed to connect to Google. Please check your network and try again.");
+        
+        toast({
+          title: "Sign up with Google failed",
+          description: error?.message || "An error occurred. Please try again later.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("Google sign-in process initiated successfully");
+      // We don't navigate here as OAuth will handle the redirect
     } catch (error: any) {
-      console.error("Google sign-in error:", error);
+      console.error("Google sign-in error (caught):", error);
       setOauthError(error?.message || "Failed to connect to Google. Please check your network and try again.");
       
       toast({
@@ -97,7 +108,10 @@ const SignUpForm = () => {
         variant: "destructive",
       });
     } finally {
-      setIsGoogleLoading(false);
+      // We keep the loading state until redirect happens or until error occurs
+      if (oauthError) {
+        setIsGoogleLoading(false);
+      }
     }
   };
 
@@ -114,7 +128,10 @@ const SignUpForm = () => {
           <div>
             <p className="font-medium">OAuth Error</p>
             <p className="text-sm">{oauthError}</p>
-            <p className="text-sm mt-1">Please check that pop-ups aren't blocked and your network connection is stable.</p>
+            <p className="text-sm mt-1">
+              Please check that pop-ups aren't blocked, your network connection is stable, and that 
+              the Google OAuth is properly configured in your Supabase project.
+            </p>
           </div>
         </div>
       )}

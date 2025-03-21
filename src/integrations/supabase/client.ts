@@ -11,6 +11,11 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    storage: localStorage
+    storage: localStorage,
+    detectSessionInUrl: true, // Important for OAuth redirect handling
+    flowType: 'pkce' // Use PKCE flow for added security
   }
 });
+
+// Log when Supabase client is initialized
+console.log("Supabase client initialized");
