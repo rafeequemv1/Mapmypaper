@@ -1,11 +1,11 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus, HelpCircle } from "lucide-react";
+import { Minus, Plus, HelpCircle, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import html2canvas from "html2canvas";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -39,6 +39,11 @@ const PdfViewer = ({
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
+  const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
+  const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
+  const [selectionBox, setSelectionBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
 
   // Load PDF data from sessionStorage
   useEffect(() => {
@@ -117,6 +122,9 @@ const PdfViewer = ({
 
   // Text selection handler - Fixed with improved positioning
   const handleTextSelection = () => {
+    // Only process text selection when not in area selection mode
+    if (isSelectionMode) return;
+    
     const selection = window.getSelection();
     
     if (selection && selection.toString().trim()) {
@@ -165,6 +173,169 @@ const PdfViewer = ({
         }
       }, 100);
     }
+  };
+
+  // Handle mouse events for area selection
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isSelectionMode) return;
+    
+    // Clear any previous selection
+    setSelectionBox(null);
+    
+    if (pdfContainerRef.current) {
+      const containerRect = pdfContainerRef.current.getBoundingClientRect();
+      const x = e.clientX - containerRect.left;
+      const y = e.clientY - containerRect.top;
+      
+      setSelectionStart({ x, y });
+      setSelectionEnd({ x, y }); // Initialize end to same as start
+    }
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isSelectionMode || !selectionStart) return;
+    
+    if (pdfContainerRef.current) {
+      const containerRect = pdfContainerRef.current.getBoundingClientRect();
+      const x = e.clientX - containerRect.left;
+      const y = e.clientY - containerRect.top;
+      
+      setSelectionEnd({ x, y });
+      
+      // Calculate selection box
+      const left = Math.min(selectionStart.x, x);
+      const top = Math.min(selectionStart.y, y);
+      const width = Math.abs(x - selectionStart.x);
+      const height = Math.abs(y - selectionStart.y);
+      
+      setSelectionBox({ left, top, width, height });
+    }
+  };
+  
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!isSelectionMode) {
+      // If not in selection mode, process text selection
+      handleTextSelection();
+      return;
+    }
+    
+    if (!selectionStart || !selectionEnd || !selectionBox) return;
+    
+    // Only process if selection has some size
+    if (selectionBox.width > 10 && selectionBox.height > 10) {
+      captureSelection();
+    } else {
+      // Clear selection if it's too small
+      setSelectionStart(null);
+      setSelectionEnd(null);
+      setSelectionBox(null);
+    }
+  };
+  
+  // Capture the selected area using html2canvas
+  const captureSelection = async () => {
+    if (!selectionBox || !pdfContainerRef.current) return;
+    
+    try {
+      // Capture the entire PDF container
+      const canvas = await html2canvas(pdfContainerRef.current, {
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff"
+      });
+      
+      // Create a new canvas for the cropped area
+      const croppedCanvas = document.createElement('canvas');
+      const ctx = croppedCanvas.getContext('2d');
+      
+      if (!ctx) {
+        throw new Error("Could not get canvas context");
+      }
+      
+      // Set dimensions for the cropped canvas
+      croppedCanvas.width = selectionBox.width;
+      croppedCanvas.height = selectionBox.height;
+      
+      // Draw only the selected portion to the new canvas
+      ctx.drawImage(
+        canvas, 
+        selectionBox.left, 
+        selectionBox.top, 
+        selectionBox.width, 
+        selectionBox.height,
+        0, 
+        0, 
+        selectionBox.width, 
+        selectionBox.height
+      );
+      
+      // Convert the cropped canvas to a data URL
+      const imageData = croppedCanvas.toDataURL('image/png');
+      
+      // Request to open chat panel if it's closed
+      if (onRequestOpenChat) {
+        onRequestOpenChat();
+      }
+      
+      // Find any text in the selection area for context
+      let selectedTextInArea = "";
+      if (window.getSelection) {
+        window.getSelection()?.removeAllRanges();
+      }
+      
+      // Store the image in sessionStorage for the chat to access
+      sessionStorage.setItem('selectedImageForChat', imageData);
+      
+      // Add text query to explain the image
+      if (onExplainText) {
+        onExplainText(`[IMAGE_SNIPPET] Please explain this part of the document I've snipped.`);
+      }
+      
+      // Show success toast
+      toast({
+        title: "Area captured",
+        description: "The selected area has been sent to the chat for explanation",
+      });
+      
+    } catch (error) {
+      console.error("Error capturing selection:", error);
+      toast({
+        title: "Capture failed",
+        description: "Could not capture the selected area",
+        variant: "destructive"
+      });
+    } finally {
+      // Exit selection mode and reset
+      setIsSelectionMode(false);
+      setSelectionStart(null);
+      setSelectionEnd(null);
+      setSelectionBox(null);
+    }
+  };
+
+  // Toggle selection mode on/off
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    
+    // Clear any selections when toggling
+    setSelectionStart(null);
+    setSelectionEnd(null);
+    setSelectionBox(null);
+    setSelectedText("");
+    setPopoverPosition(null);
+    
+    // Clear any browser text selection
+    if (window.getSelection) {
+      window.getSelection()?.removeAllRanges();
+    }
+    
+    toast({
+      title: !isSelectionMode ? "Selection mode activated" : "Selection mode deactivated",
+      description: !isSelectionMode 
+        ? "Click and drag to select an area of the PDF" 
+        : "Returned to normal mode",
+    });
   };
 
   // Handle explain button click
@@ -254,6 +425,24 @@ const PdfViewer = ({
               <TooltipContent side="bottom">Fit to width</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={toggleSelectionMode}
+                  className={`p-1 rounded text-xs flex items-center gap-1 ${isSelectionMode 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'hover:bg-muted text-muted-foreground'}`}
+                  aria-label="Area selection mode"
+                >
+                  <Scissors className="h-3 w-3" />
+                  Snip
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Select area to explain</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         <div className="text-xs text-muted-foreground">
@@ -265,7 +454,9 @@ const PdfViewer = ({
         <div 
           className="min-h-full p-4 flex flex-col items-center bg-muted/10 relative" 
           ref={pdfContainerRef}
-          onMouseUp={handleTextSelection}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-full w-full">
@@ -326,8 +517,21 @@ const PdfViewer = ({
                 ))}
               </Document>
 
-              {/* Explain tooltip that appears when text is selected - Moved outside the Document component */}
-              {selectedText && popoverPosition && (
+              {/* Selection box overlay */}
+              {isSelectionMode && selectionBox && (
+                <div 
+                  className="absolute border-2 border-primary bg-primary/10 pointer-events-none"
+                  style={{
+                    left: `${selectionBox.left}px`,
+                    top: `${selectionBox.top}px`,
+                    width: `${selectionBox.width}px`,
+                    height: `${selectionBox.height}px`
+                  }}
+                />
+              )}
+
+              {/* Explain tooltip that appears when text is selected */}
+              {selectedText && popoverPosition && !isSelectionMode && (
                 <div 
                   className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
                   style={{ 
@@ -356,4 +560,3 @@ const PdfViewer = ({
 };
 
 export default PdfViewer;
-

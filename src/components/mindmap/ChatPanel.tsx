@@ -1,11 +1,10 @@
-
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 
@@ -18,7 +17,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; imageData?: string }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -42,43 +41,106 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
       if (explainText && !processingExplainText) {
         setProcessingExplainText(true);
         
-        // Add user message with the selected text
-        const userMessage = `Explain this: "${explainText}"`;
-        setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          // Get response from Gemini
-          const response = await chatWithGeminiAboutPdf(userMessage);
+        // Check if this is an image snippet request
+        if (explainText.includes('[IMAGE_SNIPPET]')) {
+          const imageData = sessionStorage.getItem('selectedImageForChat');
           
-          // Hide typing indicator and add AI response
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { role: 'assistant', content: response }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Chat error:", error);
+          if (!imageData) {
+            // Handle missing image data
+            setMessages(prev => [
+              ...prev, 
+              { role: 'user', content: 'Please explain this PDF snippet I selected.' },
+              { role: 'assistant', content: 'Sorry, I couldn\'t find the image data for the selected area.' }
+            ]);
+            setProcessingExplainText(false);
+            return;
+          }
+          
+          // Add user message with the image
           setMessages(prev => [
             ...prev, 
             { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error explaining that text. Please try again." 
+              role: 'user', 
+              content: 'Please explain this PDF snippet I selected.',
+              imageData: imageData
             }
           ]);
           
-          toast({
-            title: "Explanation Error",
-            description: "Failed to get an explanation from the AI.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingExplainText(false);
+          // Show typing indicator
+          setIsTyping(true);
+          
+          try {
+            // Get response from Gemini vision
+            const response = await analyzeImageWithGemini(imageData);
+            
+            // Hide typing indicator and add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev, 
+              { role: 'assistant', content: response }
+            ]);
+          } catch (error) {
+            // Handle errors
+            setIsTyping(false);
+            console.error("Image analysis error:", error);
+            setMessages(prev => [
+              ...prev, 
+              { 
+                role: 'assistant', 
+                content: "Sorry, I encountered an error analyzing that image. Please try again." 
+              }
+            ]);
+            
+            toast({
+              title: "Analysis Error",
+              description: "Failed to analyze the image snippet.",
+              variant: "destructive"
+            });
+          }
+        } else {
+          // Regular text explanation
+          // Add user message with the selected text
+          const userMessage = `Explain this: "${explainText}"`;
+          setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+          
+          // Show typing indicator
+          setIsTyping(true);
+          
+          try {
+            // Get response from Gemini
+            const response = await chatWithGeminiAboutPdf(userMessage);
+            
+            // Hide typing indicator and add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev, 
+              { role: 'assistant', content: response }
+            ]);
+          } catch (error) {
+            // Handle errors
+            setIsTyping(false);
+            console.error("Chat error:", error);
+            setMessages(prev => [
+              ...prev, 
+              { 
+                role: 'assistant', 
+                content: "Sorry, I encountered an error explaining that text. Please try again." 
+              }
+            ]);
+            
+            toast({
+              title: "Explanation Error",
+              description: "Failed to get an explanation from the AI.",
+              variant: "destructive"
+            });
+          }
         }
+        
+        // Reset processing flag
+        setProcessingExplainText(false);
+        
+        // Clear the stored image data after processing
+        sessionStorage.removeItem('selectedImageForChat');
       }
     };
     
@@ -230,7 +292,18 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
                 }`}
               >
                 {message.role === 'user' ? (
-                  <div className="text-sm">{message.content}</div>
+                  <>
+                    <div className="text-sm">{message.content}</div>
+                    {message.imageData && (
+                      <div className="mt-2 max-w-[300px]">
+                        <img 
+                          src={message.imageData} 
+                          alt="Selected PDF snippet" 
+                          className="rounded-md border border-primary/30"
+                        />
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <MarkdownContent content={message.content} />
                 )}
