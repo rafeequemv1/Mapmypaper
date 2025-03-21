@@ -70,18 +70,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Starting Google sign-in process");
       
-      // Using the origin from the window object to ensure correct redirect
-      const origin = window.location.origin;
-      console.log("Current origin for redirect:", origin);
+      // Get the current window location
+      const currentOrigin = window.location.origin;
+      console.log("Current app origin:", currentOrigin);
       
-      // Add additional debug logging
-      console.log("Browser details:", navigator.userAgent);
+      // Get the current hostname for debugging
+      const currentHostname = window.location.hostname;
+      console.log("Current hostname:", currentHostname);
       
-      // Make sure we're explicitly setting all Google OAuth options
+      // Use the current origin for redirect, not a hardcoded domain
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${origin}/mindmap`,
+          redirectTo: `${currentOrigin}/mindmap`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
