@@ -1,8 +1,6 @@
 
-"use client";
-
 import { cn } from "@/lib/utils";
-import { Link, LinkProps } from "react-router-dom";
+import { Link } from "react-router-dom";
 import React, { useState, createContext, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -10,7 +8,7 @@ import { Menu, X } from "lucide-react";
 interface Links {
   label: string;
   href: string;
-  icon: React.JSX.Element | React.ReactNode;
+  icon: React.ReactNode;
 }
 
 interface SidebarContextProps {
@@ -72,11 +70,11 @@ export const Sidebar = ({
   );
 };
 
-export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
+export const SidebarBody = (props: React.ComponentProps<"div">) => {
   return (
     <>
       <DesktopSidebar {...props} />
-      <MobileSidebar {...(props as React.ComponentProps<"div">)} />
+      <MobileSidebar {...props} />
     </>
   );
 };
@@ -162,7 +160,6 @@ export const SidebarLink = ({
 }: {
   link: Links;
   className?: string;
-  props?: LinkProps;
 }) => {
   const { open, animate } = useSidebar();
   return (
