@@ -2,7 +2,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Brain, FileText, MessageSquare, Download, User, Save, Grid } from "lucide-react";
+import { Brain, FileText, MessageSquare, Download, User, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -140,10 +140,6 @@ const Header = ({
     }
   }, [title, description, user, toast]);
 
-  const handleOpenDashboard = useCallback(() => {
-    navigate("/dashboard");
-  }, [navigate]);
-
   return (
     <header className="border-b border-[#eaeaea] dark:border-[#333] bg-white dark:bg-[#111] p-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -203,16 +199,6 @@ const Header = ({
         >
           <Save className="mr-1 h-4 w-4" />
           Save
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={handleOpenDashboard}
-          className="text-black border-black dark:text-white dark:border-white hidden sm:flex"
-        >
-          <Grid className="mr-1 h-4 w-4" />
-          Dashboard
         </Button>
         
         <DropdownMenu>
