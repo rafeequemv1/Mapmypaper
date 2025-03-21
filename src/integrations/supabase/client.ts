@@ -16,9 +16,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     storage: localStorage,
     detectSessionInUrl: true, // Important for OAuth redirect handling
-    flowType: 'pkce', // Use PKCE flow for added security
-    // Explicitly set the redirect URL to help with Google OAuth
-    redirectTo: `${origin}/mindmap`
+    flowType: 'pkce' // Use PKCE flow for added security
   }
 });
 
