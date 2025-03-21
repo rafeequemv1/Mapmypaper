@@ -1,10 +1,8 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, Link } from "react-router-dom";
 import { Sparkles, Upload, Brain, ChevronRight, LogOut } from "lucide-react";
-import VideoDialog from "@/components/ui/video-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -143,7 +141,7 @@ const PdfUpload = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white font-sans">
       {/* Black Top Bar */}
-      <header className="w-full bg-black text-white py-4 px-6">
+      <header className="w-full bg-black text-white py-3 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Brain className="h-6 w-6" />
@@ -226,13 +224,7 @@ const PdfUpload = () => {
               </div>
             </section>
             
-            <div className="flex justify-center gap-4">
-              <VideoDialog 
-                videoUrl="https://www.youtube.com/watch?v=2eVkAsHy0KM"
-                title="How It Works"
-                description="See how our tool transforms research papers into interactive visual maps"
-                triggerText="Watch Demo"
-              />
+            <div className="flex justify-center">
               <Button 
                 className="bg-black text-white hover:bg-gray-800 flex items-center gap-2"
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
