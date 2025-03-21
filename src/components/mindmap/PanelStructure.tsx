@@ -3,7 +3,6 @@ import React from 'react';
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -24,7 +23,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   explainText,
   onExplainText
 }) => {
-  // Fixed panel sizes
+  // Calculate panel sizes
   const pdfPanelSize = 30;
   const mindMapPanelSize = showPdf ? 40 : 70;
   const chatPanelSize = 30;
@@ -34,8 +33,9 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
       <div className="w-full h-full flex">
         {/* PDF Viewer Panel */}
         {showPdf && (
-          <div className="w-[30%] h-full bg-white">
+          <div className="w-[30%] h-full bg-white flex flex-col">
             <PdfViewer 
+              className="w-full h-full"
               onRequestOpenChat={() => {
                 if (!showChat) toggleChat();
               }} 

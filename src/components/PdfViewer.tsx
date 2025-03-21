@@ -76,9 +76,7 @@ const PdfViewer = ({
     };
     
     // Create a ResizeObserver for more accurate width tracking
-    const resizeObserver = new ResizeObserver(() => {
-      updateContainerWidth();
-    });
+    const resizeObserver = new ResizeObserver(updateContainerWidth);
     
     // Observe the container element
     resizeObserver.observe(pdfContainerRef.current);
@@ -89,7 +87,6 @@ const PdfViewer = ({
     // Also listen for window resize events as a fallback
     window.addEventListener('resize', updateContainerWidth);
     
-    // Cleanup
     return () => {
       if (pdfContainerRef.current) {
         resizeObserver.unobserve(pdfContainerRef.current);
@@ -115,10 +112,12 @@ const PdfViewer = ({
     }, 100);
   };
 
-  // Improved auto-fit PDF to container width
+  // Improved auto-fit PDF to container width with better centering
   const handleScaleToFit = () => {
     if (pdfContainerRef.current && containerWidth > 0) {
-      const availableWidth = Math.max(containerWidth - 40, 200); // Ensure minimum width and account for padding
+      // Add padding to ensure the PDF has some margin
+      const padding = 40;
+      const availableWidth = Math.max(containerWidth - padding, 200);
       
       // Default PDF width is 595.28 points (8.5" × 72dpi)
       const defaultPdfWidth = 595.28;
@@ -130,7 +129,8 @@ const PdfViewer = ({
         newScale,
       });
       
-      setScale(Math.min(Math.max(newScale, 0.5), 2.0)); // Keep scale between 0.5 and 2.0
+      // Keep scale between 0.5 and 2.0 for readability
+      setScale(Math.min(Math.max(newScale, 0.5), 2.0));
     }
   };
 
@@ -560,7 +560,7 @@ const PdfViewer = ({
                 file={pdfData}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={(error) => console.error("Error loading PDF:", error)}
-                className="pdf-container w-full"
+                className="pdf-container"
                 loading={
                   <div className="flex items-center justify-center h-20 w-full">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
