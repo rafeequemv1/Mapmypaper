@@ -29,13 +29,48 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
-// Get node colors based on node level
-const getNodeColors = (level: number) => {
+// Color palette for different node levels
+const getNodeColors = (level: number, direction: number) => {
+  // Root node color (center)
+  if (level === 0) {
+    return {
+      backgroundColor: '#646FA5',
+      borderColor: '#4B5580',
+      textColor: '#FFFFFF'
+    };
+  }
+  
+  // Colors for different branches based on direction
+  const colorSchemes = [
+    // Left side branches (direction 0)
+    [
+      { bg: '#FF9A8B', border: '#F76F58', text: '#333333' }, // Level 1 (reddish)
+      { bg: '#FF8E9E', border: '#FF5A76', text: '#333333' }, // Level 2 (pinkish)
+      { bg: '#FFAAA7', border: '#FF7A76', text: '#333333' }  // Level 3+ (salmon)
+    ],
+    // Right side branches (direction 1)
+    [
+      { bg: '#A6DCF7', border: '#65B7E7', text: '#333333' }, // Level 1 (light blue)
+      { bg: '#81D8D0', border: '#50B7AD', text: '#333333' }, // Level 2 (turquoise)
+      { bg: '#FFC988', border: '#FFA544', text: '#333333' }  // Level 3+ (orange)
+    ]
+  ];
+  
+  // Determine which color scheme to use based on direction
+  const dirIndex = direction % 2;
+  const levelIndex = Math.min(level - 1, colorSchemes[dirIndex].length - 1);
+  
   return {
-    backgroundColor: level === 0 ? '#CFFAFE' : '#F2FCE2',
-    borderColor: level === 0 ? '#06B6D4' : '#67c23a',
-    textColor: '#333333' // Dark text for better readability across all themes
+    backgroundColor: colorSchemes[dirIndex][levelIndex].bg,
+    borderColor: colorSchemes[dirIndex][levelIndex].border,
+    textColor: colorSchemes[dirIndex][levelIndex].text
   };
+};
+
+// Get connection line color based on direction
+const getConnectionColor = (direction: number) => {
+  const colors = ['#F05E6B', '#FF9A3C', '#3D92C4', '#5BC3A4'];
+  return colors[direction % colors.length];
 };
 
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
@@ -86,17 +121,20 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         },
         theme: {
           name: 'colorful',
-          background: '#F0F7FF',
-          color: '#06B6D4',
+          background: '#F5F5F7',
+          color: '#5B5B5B',
           palette: [],
           cssVar: {},
         },
         nodeMenu: true, // Explicitly enable the nodeMenu
         autoFit: true,
-        // Add custom style to nodes based on their level
+        // Add custom style to nodes based on their level and direction
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
-          // Get appropriate colors based on node level
-          const { backgroundColor, borderColor, textColor } = getNodeColors(level);
+          // Get direction of the node
+          const direction = node.direction || 0;
+          
+          // Get appropriate colors based on node level and direction
+          const { backgroundColor, borderColor, textColor } = getNodeColors(level, direction);
           
           // Apply custom styling to nodes for a more elegant look
           tpc.style.backgroundColor = backgroundColor;
@@ -104,7 +142,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           tpc.style.border = `2px solid ${borderColor}`;
           tpc.style.borderRadius = '12px';
           tpc.style.padding = '10px 16px';
-          tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
+          tpc.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
           tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
           tpc.style.fontSize = level === 0 ? '20px' : '16px';
           tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
@@ -114,13 +152,13 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           
           // Add hover effect
           tpc.addEventListener('mouseover', () => {
-            tpc.style.boxShadow = '0 5px 15px rgba(0,0,0,0.08)';
-            tpc.style.transform = 'translateY(-2px)';
+            tpc.style.boxShadow = '0 6px 20px rgba(0,0,0,0.15)';
+            tpc.style.transform = 'translateY(-3px) scale(1.02)';
           });
           
           tpc.addEventListener('mouseout', () => {
-            tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
-            tpc.style.transform = 'translateY(0)';
+            tpc.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            tpc.style.transform = 'translateY(0) scale(1.0)';
           });
         }
       };
@@ -249,13 +287,42 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         setSelectedNode({ nodeObj, clickEvent });
       });
       
-      // Add custom styling to connection lines
-      const linkElements = containerRef.current.querySelectorAll('.fne-link');
-      linkElements.forEach((link: Element) => {
-        const linkElement = link as SVGElement;
-        linkElement.setAttribute('stroke-width', '2.5');
-        linkElement.setAttribute('stroke', '#67c23a');
-      });
+      // Customize connection lines based on direction
+      const customizeConnections = () => {
+        if (!containerRef.current) return;
+        
+        // Get all connection lines
+        const linkElements = containerRef.current.querySelectorAll('.fne-link');
+        
+        linkElements.forEach((link: Element) => {
+          const linkElement = link as SVGElement;
+          const parent = linkElement.parentElement;
+          
+          if (parent) {
+            // Try to determine the direction from the parent node's data
+            const nodeId = parent.getAttribute('data-nodeid');
+            const node = nodeId ? mind.nodeData[nodeId] : null;
+            
+            if (node) {
+              const direction = node.direction || 0;
+              const color = getConnectionColor(direction);
+              
+              linkElement.setAttribute('stroke', color);
+              linkElement.setAttribute('stroke-width', '3');
+            } else {
+              // Default color if direction can't be determined
+              linkElement.setAttribute('stroke', '#888');
+              linkElement.setAttribute('stroke-width', '2.5');
+            }
+          }
+        });
+      };
+      
+      // Apply custom connection styling after initialization
+      setTimeout(customizeConnections, 300);
+      
+      // Update connections when map changes
+      mind.bus.addListener('operation', customizeConnections);
       
       mindMapRef.current = mind;
       
@@ -308,9 +375,12 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           }}
           onAddChild={() => {
             if (selectedNode && mindMapRef.current) {
-              // Fix TypeScript error by creating a proper NodeObj
-              // Instead of passing a string directly, we pass it to the addChild method
-              mindMapRef.current.addChild(selectedNode.nodeObj, { topic: "New Node" });
+              // Create a proper NodeObj with id and topic properties
+              const childId = `child_${Date.now()}`;
+              mindMapRef.current.addChild(selectedNode.nodeObj, { 
+                id: childId, 
+                topic: "New Node" 
+              });
               toast({
                 title: "Child Added",
                 description: "A new child node has been added",
@@ -320,9 +390,12 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           }}
           onAddSibling={() => {
             if (selectedNode && mindMapRef.current) {
-              // Fix TypeScript error by passing a topic object instead of a string
-              // The insertSibling method expects a Topic object not a string
-              mindMapRef.current.insertSibling(selectedNode.nodeObj, { topic: "New Sibling" });
+              // Create a proper Topic object with id
+              const siblingId = `sibling_${Date.now()}`;
+              mindMapRef.current.insertSibling(selectedNode.nodeObj, { 
+                id: siblingId, 
+                topic: "New Sibling" 
+              });
               toast({
                 title: "Sibling Added",
                 description: "A new sibling node has been added",
@@ -336,7 +409,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             ref={containerRef} 
             className="w-full h-full" 
             style={{ 
-              background: `linear-gradient(90deg, #F9F7F3 0%, #F2FCE2 100%)`,
+              background: `linear-gradient(135deg, #F9F7F3 0%, #F0F8FF 100%)`,
             }}
           />
         </MindMapContextMenu>
