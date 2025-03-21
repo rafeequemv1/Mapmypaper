@@ -70,8 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Starting Google sign-in process");
       
-      // Get the current application URL
-      const redirectUrl = window.location.origin + '/mindmap';
+      // Determine the current app URL for the redirect
+      // The URL should be the application URL, not an external domain
+      const appUrl = window.location.origin;
+      const redirectUrl = `${appUrl}/mindmap`;
       console.log("Using redirect URL:", redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
