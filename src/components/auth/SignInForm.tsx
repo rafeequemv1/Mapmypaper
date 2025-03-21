@@ -29,6 +29,7 @@ const SignInForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,7 +55,7 @@ const SignInForm = () => {
       
       toast({
         title: "Signed in successfully",
-        description: "Welcome back!",
+        description: "Welcome to MapMyPaper!",
       });
       
       navigate("/mindmap");
@@ -71,13 +72,17 @@ const SignInForm = () => {
 
   const handleGoogleSignIn = async () => {
     try {
+      setIsGoogleLoading(true);
       await signInWithGoogle();
+      // Note: We don't need to navigate as the OAuth redirect will handle this
     } catch (error) {
       toast({
         title: "Sign in with Google failed",
         description: "An error occurred. Please try again later.",
         variant: "destructive",
       });
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -85,7 +90,32 @@ const SignInForm = () => {
     <div className="w-full max-w-md mx-auto p-6 space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-bold">Sign In</h1>
-        <p className="text-gray-500">Enter your credentials to access your account</p>
+        <p className="text-gray-500">Welcome back to MapMyPaper</p>
+      </div>
+      
+      <Button 
+        type="button" 
+        variant="outline" 
+        className="w-full flex items-center gap-2"
+        onClick={handleGoogleSignIn}
+        disabled={isGoogleLoading}
+      >
+        {isGoogleLoading ? (
+          <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+            <g transform="matrix(1, 0, 0, 1, 0, 0)">
+              <path d="M21.35,11.1H12v3.2h5.59c-0.8,2.4-3.06,4.1-5.59,4.1c-3.31,0-6-2.69-6-6s2.69-6,6-6c1.39,0,2.78,0.47,3.93,1.67 l2.3-2.3C16.32,3.87,14.18,3,12,3C7.03,3,3,7.03,3,12s4.03,9,9,9s9-4.03,9-9C21,11.64,20.92,11.36,21.35,11.1z" fill="#4285F4"></path>
+            </g>
+          </svg>
+        )}
+        {isGoogleLoading ? "Connecting..." : "Sign in with Google"}
+      </Button>
+      
+      <div className="flex items-center gap-4">
+        <Separator className="flex-1" />
+        <span className="text-muted-foreground text-sm">OR</span>
+        <Separator className="flex-1" />
       </div>
       
       <Form {...form}>
@@ -119,30 +149,10 @@ const SignInForm = () => {
           />
           
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign In"}
+            {isLoading ? "Signing in..." : "Sign In with Email"}
           </Button>
         </form>
       </Form>
-      
-      <div className="flex items-center gap-4">
-        <Separator className="flex-1" />
-        <span className="text-muted-foreground text-sm">OR</span>
-        <Separator className="flex-1" />
-      </div>
-      
-      <Button 
-        type="button" 
-        variant="outline" 
-        className="w-full flex items-center gap-2"
-        onClick={handleGoogleSignIn}
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
-          <g transform="matrix(1, 0, 0, 1, 0, 0)">
-            <path d="M21.35,11.1H12v3.2h5.59c-0.8,2.4-3.06,4.1-5.59,4.1c-3.31,0-6-2.69-6-6s2.69-6,6-6c1.39,0,2.78,0.47,3.93,1.67 l2.3-2.3C16.32,3.87,14.18,3,12,3C7.03,3,3,7.03,3,12s4.03,9,9,9s9-4.03,9-9C21,11.64,20.92,11.36,21.35,11.1z" fill="#4285F4"></path>
-          </g>
-        </svg>
-        Sign in with Google
-      </Button>
       
       <div className="text-center">
         <p className="text-sm text-muted-foreground">
