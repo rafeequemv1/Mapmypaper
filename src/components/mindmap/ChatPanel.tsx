@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; imageData?: string }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; imageData?: string; isProcessing?: boolean }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -56,82 +57,130 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
             return;
           }
           
-          // Add user message with the image
+          // CHANGED: Immediately add user message with the image
+          // and add a placeholder assistant message that's "processing"
           setMessages(prev => [
             ...prev, 
             { 
               role: 'user', 
               content: 'Please explain this PDF snippet I selected.',
               imageData: imageData
+            },
+            {
+              role: 'assistant',
+              content: 'Analyzing the selected area...',
+              isProcessing: true
             }
           ]);
           
-          // Show typing indicator
-          setIsTyping(true);
-          
           try {
-            // Get response from Gemini vision
-            const response = await analyzeImageWithGemini(imageData);
-            
-            // Hide typing indicator and add AI response
-            setIsTyping(false);
-            setMessages(prev => [
-              ...prev, 
-              { role: 'assistant', content: response }
-            ]);
+            // Process image in the background
+            analyzeImageWithGemini(imageData).then(response => {
+              // Replace the processing message with the actual response
+              setMessages(prev => {
+                const newMessages = [...prev];
+                // Find the processing message and replace it
+                const processingIndex = newMessages.findIndex(m => m.isProcessing);
+                if (processingIndex !== -1) {
+                  newMessages[processingIndex] = { 
+                    role: 'assistant', 
+                    content: response
+                  };
+                }
+                return newMessages;
+              });
+            }).catch(error => {
+              // Handle errors by updating the processing message
+              console.error("Image analysis error:", error);
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const processingIndex = newMessages.findIndex(m => m.isProcessing);
+                if (processingIndex !== -1) {
+                  newMessages[processingIndex] = { 
+                    role: 'assistant', 
+                    content: "Sorry, I encountered an error analyzing that image. Please try again."
+                  };
+                }
+                return newMessages;
+              });
+              
+              toast({
+                title: "Analysis Error",
+                description: "Failed to analyze the image snippet.",
+                variant: "destructive"
+              });
+            });
           } catch (error) {
-            // Handle errors
-            setIsTyping(false);
-            console.error("Image analysis error:", error);
-            setMessages(prev => [
-              ...prev, 
-              { 
-                role: 'assistant', 
-                content: "Sorry, I encountered an error analyzing that image. Please try again." 
+            // Handle immediate errors
+            console.error("Image analysis setup error:", error);
+            setMessages(prev => {
+              const newMessages = [...prev];
+              const processingIndex = newMessages.findIndex(m => m.isProcessing);
+              if (processingIndex !== -1) {
+                newMessages[processingIndex] = { 
+                  role: 'assistant', 
+                  content: "Sorry, I encountered an error analyzing that image. Please try again."
+                };
               }
-            ]);
-            
-            toast({
-              title: "Analysis Error",
-              description: "Failed to analyze the image snippet.",
-              variant: "destructive"
+              return newMessages;
             });
           }
         } else {
           // Regular text explanation
           // Add user message with the selected text
           const userMessage = `Explain this: "${explainText}"`;
-          setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-          
-          // Show typing indicator
-          setIsTyping(true);
+          setMessages(prev => [
+            ...prev, 
+            { role: 'user', content: userMessage },
+            { role: 'assistant', content: 'Analyzing the selected text...', isProcessing: true }
+          ]);
           
           try {
-            // Get response from Gemini
-            const response = await chatWithGeminiAboutPdf(userMessage);
-            
-            // Hide typing indicator and add AI response
-            setIsTyping(false);
-            setMessages(prev => [
-              ...prev, 
-              { role: 'assistant', content: response }
-            ]);
+            // Process in the background
+            chatWithGeminiAboutPdf(userMessage).then(response => {
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const processingIndex = newMessages.findIndex(m => m.isProcessing);
+                if (processingIndex !== -1) {
+                  newMessages[processingIndex] = { 
+                    role: 'assistant', 
+                    content: response
+                  };
+                }
+                return newMessages;
+              });
+            }).catch(error => {
+              console.error("Chat error:", error);
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const processingIndex = newMessages.findIndex(m => m.isProcessing);
+                if (processingIndex !== -1) {
+                  newMessages[processingIndex] = { 
+                    role: 'assistant', 
+                    content: "Sorry, I encountered an error explaining that text. Please try again."
+                  };
+                }
+                return newMessages;
+              });
+              
+              toast({
+                title: "Explanation Error",
+                description: "Failed to get an explanation from the AI.",
+                variant: "destructive"
+              });
+            });
           } catch (error) {
-            // Handle errors
-            setIsTyping(false);
-            console.error("Chat error:", error);
-            setMessages(prev => [
-              ...prev, 
-              { 
-                role: 'assistant', 
-                content: "Sorry, I encountered an error explaining that text. Please try again." 
+            console.error("Chat setup error:", error);
+            setMessages(prev => {
+              const newMessages = [...prev];
+              const processingIndex = newMessages.findIndex(m => m.isProcessing);
+              if (processingIndex !== -1) {
+                newMessages[processingIndex] = { 
+                  role: 'assistant', 
+                  content: "Sorry, I encountered an error explaining that text. Please try again."
+                };
               }
-            ]);
-            
-            toast({
-              title: "Explanation Error",
-              description: "Failed to get an explanation from the AI.",
-              variant: "destructive"
+              return newMessages;
             });
           }
         }
@@ -151,43 +200,64 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
     if (inputValue.trim()) {
       // Add user message
       const userMessage = inputValue.trim();
-      setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+      
+      // CHANGED: Add placeholder message immediately
+      setMessages(prev => [
+        ...prev, 
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: 'Thinking...', isProcessing: true }
+      ]);
       
       // Clear input
       setInputValue('');
       
-      // Show typing indicator
-      setIsTyping(true);
-      
       try {
-        // Get response from Gemini
-        const response = await chatWithGeminiAboutPdf(userMessage);
-        
-        // Hide typing indicator and add AI response
-        setIsTyping(false);
-        setMessages(prev => [
-          ...prev, 
-          { role: 'assistant', content: response }
-        ]);
-        
-        // Store chat history in Supabase if needed in the future
-        // Currently not implemented as we need to set up authentication first
+        // Get response from Gemini in the background
+        chatWithGeminiAboutPdf(userMessage).then(response => {
+          // Update the placeholder message with the actual response
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const processingIndex = newMessages.findIndex(m => m.isProcessing);
+            if (processingIndex !== -1) {
+              newMessages[processingIndex] = { 
+                role: 'assistant', 
+                content: response
+              };
+            }
+            return newMessages;
+          });
+        }).catch(error => {
+          console.error("Chat error:", error);
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const processingIndex = newMessages.findIndex(m => m.isProcessing);
+            if (processingIndex !== -1) {
+              newMessages[processingIndex] = { 
+                role: 'assistant', 
+                content: "Sorry, I encountered an error. Please try again."
+              };
+            }
+            return newMessages;
+          });
+          
+          toast({
+            title: "Chat Error",
+            description: "Failed to get a response from the AI.",
+            variant: "destructive"
+          });
+        });
       } catch (error) {
-        // Handle errors
-        setIsTyping(false);
-        console.error("Chat error:", error);
-        setMessages(prev => [
-          ...prev, 
-          { 
-            role: 'assistant', 
-            content: "Sorry, I encountered an error. Please try again." 
+        console.error("Chat setup error:", error);
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const processingIndex = newMessages.findIndex(m => m.isProcessing);
+          if (processingIndex !== -1) {
+            newMessages[processingIndex] = { 
+              role: 'assistant', 
+              content: "Sorry, I encountered an error. Please try again."
+            };
           }
-        ]);
-        
-        toast({
-          title: "Chat Error",
-          description: "Failed to get a response from the AI.",
-          variant: "destructive"
+          return newMessages;
         });
       }
     }
@@ -226,7 +296,21 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   };
 
   // Custom renderer components for markdown
-  const MarkdownContent = ({ content }: { content: string }) => {
+  const MarkdownContent = ({ content, isProcessing }: { content: string; isProcessing?: boolean }) => {
+    // Show pulsing animation for processing messages
+    if (isProcessing) {
+      return (
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
+          <div className="flex gap-1">
+            <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
+            <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
+          </div>
+          {content}
+        </div>
+      );
+    }
+    
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none">
         <ReactMarkdown
@@ -305,10 +389,13 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
                     )}
                   </>
                 ) : (
-                  <MarkdownContent content={message.content} />
+                  <MarkdownContent 
+                    content={message.content} 
+                    isProcessing={message.isProcessing}
+                  />
                 )}
                 
-                {message.role === 'assistant' && (
+                {message.role === 'assistant' && !message.isProcessing && (
                   <Button 
                     variant="ghost" 
                     size="icon" 
@@ -325,16 +412,6 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
               </div>
             </div>
           ))}
-          
-          {isTyping && (
-            <div className="max-w-[80%] rounded-lg p-3 bg-muted">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
-              </div>
-            </div>
-          )}
         </div>
       </ScrollArea>
       
