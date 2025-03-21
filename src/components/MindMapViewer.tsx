@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
+import MindElixir, { MindElixirInstance, MindElixirData, Topic } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
@@ -378,7 +378,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
               mindMapRef.current.addChild(selectedNode.nodeObj, { 
                 id: childId, 
                 topic: "New Node" 
-              });
+              } as Topic); // Cast to Topic type to satisfy TypeScript
               toast({
                 title: "Child Added",
                 description: "A new child node has been added",
@@ -393,7 +393,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
               mindMapRef.current.insertSibling(selectedNode.nodeObj, { 
                 id: siblingId, 
                 topic: "New Sibling" 
-              });
+              } as Topic); // Cast to Topic type to satisfy TypeScript
               toast({
                 title: "Sibling Added",
                 description: "A new sibling node has been added",
