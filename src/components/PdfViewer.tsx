@@ -1,6 +1,7 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Maximize2, Minimize2, ZoomIn, ZoomOut, MessageSquare, X } from "lucide-react";
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, MessageSquare, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PdfViewerProps {
@@ -24,22 +25,26 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoom, setZoom] = useState(defaultZoom);
   const [selectedText, setSelectedText] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     // Try to get PDF data from different sources
-    const pdfData = sessionStorage.getItem("pdfData");
     const pdfUrl = sessionStorage.getItem("pdfUrl");
+    const pdfData = sessionStorage.getItem("pdfData");
     const pdfFileName = sessionStorage.getItem("pdfFileName") || "Document";
     
     setPdfFileName(pdfFileName);
+    setIsLoading(true);
     
     if (pdfUrl) {
       // If we have a URL, use it directly
       setPdfUrl(pdfUrl);
+      setIsLoading(false);
     } else if (pdfData) {
       // If we have data, use it
       setPdfUrl(pdfData);
+      setIsLoading(false);
     } else {
       console.error("No PDF data or URL found in sessionStorage");
       toast({
@@ -47,7 +52,15 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
         description: "Could not load PDF. Please try uploading again.",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
+
+    // Clean up function to revoke object URL on unmount
+    return () => {
+      if (pdfUrl && pdfUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
   }, [toast]);
 
   const toggleFullscreen = () => {
@@ -147,7 +160,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
         ref={containerRef}
         onMouseUp={handleTextSelection}
       >
-        {pdfUrl ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
+            <p className="text-gray-500">Loading PDF...</p>
+          </div>
+        ) : pdfUrl ? (
           <div
             style={{
               transform: `scale(${zoom})`,
@@ -164,7 +182,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">Loading PDF...</p>
+            <p className="text-gray-500">No PDF available. Please upload a document.</p>
           </div>
         )}
 

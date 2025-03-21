@@ -17,7 +17,17 @@ const PdfUpload = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      // Check file size - limit to 20MB
+      if (file.size > 20 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Please select a PDF smaller than 20MB.",
+          variant: "destructive"
+        });
+        return;
+      }
+      setSelectedFile(file);
     }
   };
 
@@ -30,38 +40,54 @@ const PdfUpload = () => {
       // Store only PDF file name in sessionStorage for the mindmap page
       sessionStorage.setItem("pdfFileName", selectedFile.name);
       
-      // Read the file as text instead of base64 to reduce size
+      // Use URL.createObjectURL for viewing PDFs instead of storing the entire file content
+      const pdfUrl = URL.createObjectURL(selectedFile);
+      sessionStorage.setItem("pdfUrl", pdfUrl);
+      
+      // For text extraction, use a more efficient approach
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && event.target.result) {
           try {
-            // Extract text only from PDF content to reduce storage size
+            // Extract a limited portion of text for AI processing
             const pdfText = event.target.result as string;
-            const truncatedText = pdfText.substring(0, 1000000); // Limit to 1MB
-            sessionStorage.setItem("pdfText", truncatedText);
+            // Limit to first 2MB for text processing - adjust as needed
+            const maxSize = 2 * 1024 * 1024; 
+            const truncatedText = pdfText.length > maxSize ? pdfText.substring(0, maxSize) : pdfText;
             
-            // For PDF viewer, use a smaller chunk or URL
             try {
-              // Create a URL for the PDF file instead of storing the data
-              const pdfUrl = URL.createObjectURL(selectedFile);
-              sessionStorage.setItem("pdfUrl", pdfUrl);
-            } catch (urlError) {
-              console.warn("Could not create object URL, falling back to truncated data");
-              sessionStorage.setItem("pdfData", pdfText.substring(0, 500000));
+              sessionStorage.setItem("pdfText", truncatedText);
+              // Navigate to mindmap page
+              navigate("/mindmap");
+            } catch (storageError) {
+              console.error("Storage error:", storageError);
+              // If we hit storage limits, try a smaller portion
+              try {
+                // Try with just 1MB
+                const smallerText = pdfText.substring(0, 1024 * 1024);
+                sessionStorage.setItem("pdfText", smallerText);
+                navigate("/mindmap");
+              } catch (finalError) {
+                toast({
+                  title: "Storage Error",
+                  description: "The PDF is too large for browser storage. Please try a smaller file.",
+                  variant: "destructive"
+                });
+                setIsUploading(false);
+              }
             }
-            
-            // Navigate to mindmap page
-            navigate("/mindmap");
-          } catch (storageError) {
-            console.error("Storage error:", storageError);
+          } catch (error) {
+            console.error("PDF processing error:", error);
             toast({
-              title: "Storage Error",
-              description: "The PDF is too large. Try a smaller file or extract key sections.",
+              title: "Processing Error",
+              description: "Failed to process the PDF. Please try a different file.",
               variant: "destructive"
             });
+            setIsUploading(false);
           }
         }
       };
+      
       reader.onerror = () => {
         toast({
           title: "Error",
@@ -71,7 +97,7 @@ const PdfUpload = () => {
         setIsUploading(false);
       };
       
-      // Read as text instead of DataURL to reduce size
+      // Read as text for better memory efficiency
       reader.readAsText(selectedFile);
       
     } catch (error) {
@@ -81,7 +107,6 @@ const PdfUpload = () => {
         description: "There was a problem processing your PDF.",
         variant: "destructive"
       });
-    } finally {
       setIsUploading(false);
     }
   };
