@@ -6,17 +6,19 @@ import { Brain, FileText, GraduationCap, Network, LogIn, UserPlus, BookOpen } fr
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { useAuth } from "@/contexts/AuthContext";
-
 const PdfUpload = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -26,12 +28,10 @@ const PdfUpload = () => {
       setDragActive(false);
     }
   }, []);
-
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type === "application/pdf") {
@@ -40,18 +40,17 @@ const PdfUpload = () => {
         sessionStorage.setItem('pdfFileName', file.name);
         toast({
           title: "PDF uploaded successfully",
-          description: `File: ${file.name}`,
+          description: `File: ${file.name}`
         });
       } else {
         toast({
           title: "Invalid file type",
           description: "Please upload a PDF file",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     }
   }, [toast]);
-
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -61,50 +60,45 @@ const PdfUpload = () => {
         sessionStorage.setItem('pdfFileName', file.name);
         toast({
           title: "PDF uploaded successfully",
-          description: `File: ${file.name}`,
+          description: `File: ${file.name}`
         });
       } else {
         toast({
           title: "Invalid file type",
           description: "Please upload a PDF file",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     }
   }, [toast]);
-
   const handleGenerateMindmap = useCallback(async () => {
     if (!user) {
       toast({
         title: "Authentication required",
         description: "Please sign in to generate a mind map",
-        variant: "destructive",
+        variant: "destructive"
       });
       navigate("/sign-in");
       return;
     }
-    
     if (!selectedFile) {
       toast({
         title: "No file selected",
         description: "Please upload a PDF file first",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setIsProcessing(true);
     setExtractionError(null);
-    
     toast({
       title: "Processing PDF",
-      description: "Extracting text and generating mind map...",
+      description: "Extracting text and generating mind map..."
     });
-
     try {
       // First, read the PDF as DataURL for viewing later
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         const base64data = e.target?.result as string;
         // Store PDF data under both keys for compatibility
         sessionStorage.setItem('pdfData', base64data);
@@ -112,24 +106,23 @@ const PdfUpload = () => {
         console.log("PDF data stored, length:", base64data.length);
       };
       reader.readAsDataURL(selectedFile);
-      
+
       // Extract text from PDF
       const extractedText = await PdfToText(selectedFile);
-      
       if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
-      
+
       // Process the text with Gemini to generate mind map data
       const mindMapData = await generateMindMapFromText(extractedText);
-      
+
       // Store the generated mind map data in sessionStorage
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
-      
+
       // Navigate to the mind map view
       toast({
         title: "Success",
-        description: "Mind map generated successfully!",
+        description: "Mind map generated successfully!"
       });
       navigate("/mindmap");
     } catch (error) {
@@ -138,20 +131,18 @@ const PdfUpload = () => {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to process PDF",
-        variant: "destructive",
+        variant: "destructive"
       });
       setIsProcessing(false);
     }
   }, [selectedFile, navigate, toast, user]);
-
-  return (
-    <div className="min-h-screen flex flex-col">
+  return <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="py-4 px-8 border-b bg-[#222222]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="h-6 w-6 text-white" />
-            <h1 className="text-xl font-medium text-white">PaperMind</h1>
+            <h1 className="text-xl font-medium text-white">MapMyPaper</h1>
           </div>
           <nav className="flex items-center">
             <ul className="flex gap-8 text-white/80 mr-6">
@@ -159,38 +150,22 @@ const PdfUpload = () => {
               <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
               <li><a href="#get-started" className="hover:text-white transition-colors">Get Started</a></li>
             </ul>
-            {user ? (
-              <Button 
-                variant="outline" 
-                className="border-white text-white hover:bg-white hover:text-[#222222]"
-                onClick={() => navigate("/mindmap")}
-              >
+            {user ? <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#222222]" onClick={() => navigate("/mindmap")}>
                 Dashboard
-              </Button>
-            ) : (
-              <div className="flex gap-3">
-                <Button 
-                  variant="ghost" 
-                  className="text-white hover:bg-white/10"
-                  asChild
-                >
+              </Button> : <div className="flex gap-3">
+                <Button variant="ghost" className="text-white hover:bg-white/10" asChild>
                   <Link to="/sign-in">
                     <LogIn className="mr-2 h-4 w-4" />
                     Sign In
                   </Link>
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-white text-white hover:bg-white hover:text-[#222222]"
-                  asChild
-                >
+                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#222222]" asChild>
                   <Link to="/sign-up">
                     <UserPlus className="mr-2 h-4 w-4" />
                     Sign Up
                   </Link>
                 </Button>
-              </div>
-            )}
+              </div>}
           </nav>
         </div>
       </header>
@@ -206,10 +181,7 @@ const PdfUpload = () => {
               Upload your academic papers and transform them into interactive mind maps using AI. Visualize complex concepts, enhance comprehension, and accelerate your research.
             </p>
             <a href="#get-started" className="inline-block">
-              <Button size="lg" className="mt-2 bg-indigo-600 hover:bg-indigo-700">
-                Get Started Now
-                <GraduationCap className="ml-2 h-5 w-5" />
-              </Button>
+              
             </a>
           </div>
           
@@ -222,23 +194,8 @@ const PdfUpload = () => {
               </p>
               
               {/* Simple Dropzone */}
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
-                  dragActive ? "border-indigo-500 bg-indigo-50" : "border-slate-300"
-                } cursor-pointer flex flex-col items-center justify-center gap-4`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
+              <div className={`border-2 border-dashed rounded-lg p-8 transition-colors ${dragActive ? "border-indigo-500 bg-indigo-50" : "border-slate-300"} cursor-pointer flex flex-col items-center justify-center gap-4`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}>
+                <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
                 <FileText className="h-12 w-12 text-indigo-500" />
                 <p className="text-center text-slate-700">
                   Drag & drop your PDF here<br />or click to browse
@@ -246,8 +203,7 @@ const PdfUpload = () => {
               </div>
               
               {/* Selected File Info */}
-              {selectedFile && (
-                <div className="p-4 bg-slate-50 rounded-lg flex items-center justify-between">
+              {selectedFile && <div className="p-4 bg-slate-50 rounded-lg flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <FileText className="h-5 w-5 text-indigo-600" />
                     <div>
@@ -257,23 +213,15 @@ const PdfUpload = () => {
                       </p>
                     </div>
                   </div>
-                </div>
-              )}
+                </div>}
               
               {/* Generate Button */}
-              <Button 
-                onClick={handleGenerateMindmap} 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 mt-4" 
-                disabled={!selectedFile || isProcessing}
-                size="lg"
-              >
+              <Button onClick={handleGenerateMindmap} className="w-full bg-indigo-600 hover:bg-indigo-700 mt-4" disabled={!selectedFile || isProcessing} size="lg">
                 {isProcessing ? "Processing..." : "Generate Mindmap with AI"}
                 <Brain className="ml-2 h-5 w-5" />
               </Button>
               
-              {extractionError && (
-                <p className="text-red-500 text-sm mt-2">{extractionError}</p>
-              )}
+              {extractionError && <p className="text-red-500 text-sm mt-2">{extractionError}</p>}
             </div>
           </div>
         </div>
@@ -375,7 +323,7 @@ const PdfUpload = () => {
             Upload your academic paper now and experience the power of visual knowledge mapping.
           </p>
           <a href="#get-started">
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-indigo-600">
+            <Button size="lg" variant="outline" className="border-white hover:bg-white text-slate-950">
               Get Started Now
             </Button>
           </a>
@@ -396,8 +344,6 @@ const PdfUpload = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default PdfUpload;
