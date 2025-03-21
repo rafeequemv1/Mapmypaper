@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +71,6 @@ const PdfUpload = () => {
           <nav className="flex space-x-6">
             {user ? (
               <>
-                <Link to="/dashboard" className="hover:text-gray-300 transition-colors">Dashboard</Link>
                 <button onClick={handleLogout} className="hover:text-gray-300 transition-colors flex items-center">
                   <LogOut className="h-4 w-4 mr-1" />
                   Logout
