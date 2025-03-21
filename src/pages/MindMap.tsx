@@ -207,29 +207,32 @@ const MindMap = () => {
       }
     };
     
-    // Add event listener for operation events
-    if (mindMap) {
-      // Fix: Use the appropriate event handling method
-      // Instead of using mindMap.on, we'll use a different approach
+    // Fix: The mind-elixir library doesn't have an 'on' method directly on the instance
+    // Instead, we need to check if mind-elixir dispatches custom events to the container
+    if (mindMap && mindMap.container) {
+      const container = mindMap.container as HTMLElement;
       
-      // Create a separate function that we can add and remove as an event listener
+      // Define our handler function
       const handleOperation = () => {
+        console.log('Mind map operation detected, saving data...');
         saveMindMapData();
       };
       
-      // Store the handler reference in a data attribute for cleanup
-      const container = mindMap.container as HTMLElement;
-      if (container) {
-        container.dataset.operationHandler = 'true';
-        container.addEventListener('operation', handleOperation);
-      }
+      // Listen for various events that might indicate a change in the mind map
+      // The 'operation' event is a custom event that mind-elixir might dispatch
+      container.addEventListener('operation', handleOperation);
+      
+      // Additionally, listen for more standard mutation events
+      container.addEventListener('nodeclick', handleOperation);
+      container.addEventListener('mtop-select', handleOperation); // Menu operations
+      container.addEventListener('editNodeEnd', handleOperation); // When editing node text completes
       
       return () => {
-        // Clean up event listener
-        if (container) {
-          container.removeEventListener('operation', handleOperation);
-          delete container.dataset.operationHandler;
-        }
+        // Clean up event listeners
+        container.removeEventListener('operation', handleOperation);
+        container.removeEventListener('nodeclick', handleOperation);
+        container.removeEventListener('mtop-select', handleOperation);
+        container.removeEventListener('editNodeEnd', handleOperation);
       };
     }
   }, [mindMap, user]);
