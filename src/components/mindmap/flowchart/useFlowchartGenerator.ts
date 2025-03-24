@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -90,15 +91,27 @@ export const useFlowchartGenerator = () => {
     try {
       setIsGenerating(true);
       setError(null);
+      
+      // Get PDF text from sessionStorage
+      const pdfText = sessionStorage.getItem('pdfText');
+      if (!pdfText) {
+        throw new Error("No PDF text found. Please upload a PDF first.");
+      }
+      
+      console.log("Generating flowchart from PDF text, length:", pdfText.length);
+      
       const flowchartCode = await generateFlowchartFromPdf();
+      console.log("Raw flowchart code generated:", flowchartCode.substring(0, 500) + "...");
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
+      console.log("Cleaned flowchart code:", cleanedCode.substring(0, 500) + "...");
       
       // Check if the flowchart code is valid
       try {
         await mermaid.parse(cleanedCode);
         setCode(cleanedCode);
+        console.log("Flowchart code successfully parsed by mermaid");
         toast({
           title: "Flowchart Generated",
           description: "A flowchart has been created based on your PDF content.",
