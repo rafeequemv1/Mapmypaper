@@ -76,7 +76,13 @@ const PdfUpload = () => {
             // Store the processed text
             try {
               sessionStorage.setItem("pdfText", processedText);
-              navigate("/mindmap");
+              
+              // Add a brief delay to ensure storage is complete before navigating
+              setTimeout(() => {
+                console.log("Navigating to /mindmap");
+                navigate("/mindmap");
+              }, 100);
+              
             } catch (storageError) {
               console.error("Storage error:", storageError);
               // Fallback to even smaller text
@@ -84,7 +90,12 @@ const PdfUpload = () => {
                 // Take just the beginning for minimal processing
                 const minimalText = fullText.slice(0, 10000);
                 sessionStorage.setItem("pdfText", minimalText);
-                navigate("/mindmap");
+                
+                setTimeout(() => {
+                  console.log("Navigating to /mindmap with minimal text");
+                  navigate("/mindmap");
+                }, 100);
+                
               } catch (finalError) {
                 toast({
                   title: "PDF Too Complex",
