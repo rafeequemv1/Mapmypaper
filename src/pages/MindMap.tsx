@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -8,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { generateMindMapFromText } from "@/services/geminiService";
+import { useNavigate } from "react-router-dom";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -19,6 +19,7 @@ const MindMap = () => {
   const [isGeneratingMindMap, setIsGeneratingMindMap] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -71,14 +72,31 @@ const MindMap = () => {
         const hasPdfData = !!(pdfText || pdfUrl);
         
         console.log("PDF check on mount - available:", hasPdfData);
+        console.log("PDF text length:", pdfText ? pdfText.length : 0);
+        
+        if (!hasPdfData) {
+          console.log("No PDF data found. Redirecting to upload page.");
+          toast({
+            title: "No PDF Found",
+            description: "Please upload a PDF document first.",
+            variant: "destructive"
+          });
+          
+          // Navigate back to the upload page after a short delay
+          setTimeout(() => navigate('/'), 500);
+          return;
+        }
         
         setPdfAvailable(hasPdfData);
         setShowPdf(hasPdfData);
         
         // If we have PDF data but no mindmap data, generate it
         const mindMapData = sessionStorage.getItem('mindMapData');
-        if (hasPdfData && !mindMapData && !isGeneratingMindMap) {
+        if (hasPdfData && !mindMapData) {
+          console.log("PDF data found but no mindmap data. Generating mindmap...");
           generateMindMapData();
+        } else if (mindMapData) {
+          console.log("Both PDF and mindmap data found. Ready to display.");
         }
         
       } catch (error) {
@@ -90,7 +108,7 @@ const MindMap = () => {
     
     // Execute PDF check immediately
     checkPdfAvailability();
-  }, [toast, user]);
+  }, [toast, user, navigate]);
 
   // Function to generate mind map data from PDF text
   const generateMindMapData = async () => {
@@ -99,6 +117,7 @@ const MindMap = () => {
       
       const pdfText = sessionStorage.getItem('pdfText');
       if (!pdfText) {
+        console.error("No PDF text available to generate mindmap");
         toast({
           title: "Error",
           description: "No PDF text available to generate mindmap",
@@ -107,28 +126,52 @@ const MindMap = () => {
         return;
       }
       
+      console.log(`Generating mindmap from PDF text (length: ${pdfText.length})`);
+      
       toast({
         title: "Generating Mind Map",
         description: "Please wait while we analyze your PDF..."
       });
       
-      await generateMindMapFromText(pdfText);
+      // Call the Gemini service to generate the mind map
+      const mindMapData = await generateMindMapFromText(pdfText);
+      console.log("Mind map data generated:", mindMapData);
       
       toast({
         title: "Success",
         description: "Mind map generated successfully!"
       });
       
-      // Force reload the page to show the new mind map
-      window.location.reload();
-      
     } catch (error) {
       console.error("Error generating mind map data:", error);
       toast({
         title: "Error",
-        description: "Failed to generate mind map from PDF",
+        description: `Failed to generate mind map: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
+      
+      // Create a default mind map data structure
+      const defaultMindMap = {
+        nodeData: {
+          id: 'root',
+          topic: 'Document Overview',
+          children: [
+            {
+              id: 'error1',
+              topic: 'Error generating mind map',
+              direction: 0,
+              children: [
+                {id: 'error1-1', topic: 'Please try uploading a clearer document'}
+              ]
+            }
+          ]
+        }
+      };
+      
+      // Store the default mind map in sessionStorage
+      sessionStorage.setItem('mindMapData', JSON.stringify(defaultMindMap));
+      console.log("Stored default mind map due to generation error");
+      
     } finally {
       setIsGeneratingMindMap(false);
     }

@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -9,8 +10,12 @@ export const getGeminiApiKey = () => apiKey;
 // Process text with Gemini to generate mindmap data
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
-    // Use the existing PDF text from sessionStorage
-    // No need to store it again as we're already storing it in PdfUpload.tsx
+    if (!pdfText || pdfText.trim() === '') {
+      console.error("No PDF text provided to generateMindMapFromText");
+      throw new Error("No PDF text content available. Please upload a PDF first.");
+    }
+    
+    console.log(`Generating mindmap from PDF text (length: ${pdfText.length})`);
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -50,23 +55,35 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     ${pdfText.slice(0, 15000)}
     `;
 
+    console.log("Sending request to Gemini API for mindmap generation");
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    console.log("Received response from Gemini API");
     
     // Try to parse the JSON response
     try {
       // Find and extract JSON if it's surrounded by markdown code blocks or other text
       const jsonMatch = text.match(/```(?:json)?([\s\S]*?)```/) || text.match(/({[\s\S]*})/);
       const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
+      
+      console.log("Attempting to parse JSON response, first 100 chars:", jsonString.substring(0, 100));
       const mindMapData = JSON.parse(jsonString);
       
+      // Validate the structure contains nodeData
+      if (!mindMapData.nodeData) {
+        console.error("Invalid mindmap structure - missing nodeData:", mindMapData);
+        throw new Error("Generated mindmap has invalid structure");
+      }
+      
+      console.log("Successfully parsed JSON response, storing in sessionStorage");
       // Store the mindmap data in sessionStorage
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
       
       return mindMapData;
     } catch (parseError) {
       console.error("Failed to parse Gemini response as JSON:", parseError);
+      console.error("Raw response text:", text.substring(0, 500) + "...");
       throw new Error("Failed to generate mind map. The AI response format was invalid.");
     }
   } catch (error) {
@@ -225,10 +242,13 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const pdfText = sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
+      console.error("No PDF text available for flowchart generation");
       return `flowchart TD
         A[Error] --> B[No PDF Content]
         B --> C[Please upload a PDF first]`;
     }
+    
+    console.log(`Generating flowchart from PDF text (length: ${pdfText.length})`);
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -263,9 +283,11 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     Generate ONLY valid Mermaid flowchart code, nothing else.
     `;
     
+    console.log("Sending request to Gemini API for flowchart generation");
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text().trim();
+    console.log("Received response from Gemini API for flowchart");
     
     // Remove markdown code blocks if present
     const mermaidCode = text

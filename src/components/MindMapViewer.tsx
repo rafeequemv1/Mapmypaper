@@ -71,6 +71,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
       // Initialize the mind map only once when it's generated
+      console.log("Initializing mind map...");
       
       const options = {
         el: containerRef.current,
@@ -142,8 +143,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       try {
         // First try to get the data from sessionStorage
         const savedData = sessionStorage.getItem('mindMapData');
+        console.log("Retrieved mind map data from sessionStorage:", savedData ? "yes" : "no");
+        
         if (savedData) {
           const parsedData = JSON.parse(savedData);
+          console.log("Successfully parsed mind map data");
           
           // Apply line breaks to node topics
           const formatNodes = (node: any) => {
@@ -161,10 +165,13 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           // Format the root node and all children
           if (parsedData.nodeData) {
             formatNodes(parsedData.nodeData);
+            data = parsedData;
+          } else {
+            console.error("Invalid mind map data structure:", parsedData);
+            throw new Error("Invalid mind map data structure");
           }
-          
-          data = parsedData;
         } else {
+          console.log("No saved mind map data found, using default");
           // Default mind map with black and white theme
           data = {
             nodeData: {
@@ -233,6 +240,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         }
       } catch (error) {
         console.error("Error parsing mind map data:", error);
+        // Use default data on error
         data = {
           nodeData: {
             id: 'root',
@@ -245,6 +253,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       }
 
       // Initialize the mind map with data
+      console.log("Initializing mind map with data");
       mind.init(data);
       
       // Enable debug mode for better troubleshooting

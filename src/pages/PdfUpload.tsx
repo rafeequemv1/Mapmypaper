@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ const PdfUpload = () => {
             // Instead of storing the full text, we'll extract key portions
             // and process them in chunks
             const fullText = event.target.result as string;
+            console.log("PDF text extracted, length:", fullText.length);
             
             // Function to extract small chunks of text and combine
             const processTextInChunks = (text: string, chunkSize = 3000, maxChunks = 5) => {
@@ -72,16 +74,18 @@ const PdfUpload = () => {
             
             // Process text in manageable chunks
             const processedText = processTextInChunks(fullText);
+            console.log("Processed text length:", processedText.length);
             
             // Store the processed text
             try {
               sessionStorage.setItem("pdfText", processedText);
+              console.log("PDF text stored in sessionStorage");
               
               // Add a brief delay to ensure storage is complete before navigating
               setTimeout(() => {
                 console.log("Navigating to /mindmap");
                 navigate("/mindmap");
-              }, 100);
+              }, 200);
               
             } catch (storageError) {
               console.error("Storage error:", storageError);
@@ -90,11 +94,12 @@ const PdfUpload = () => {
                 // Take just the beginning for minimal processing
                 const minimalText = fullText.slice(0, 10000);
                 sessionStorage.setItem("pdfText", minimalText);
+                console.log("Minimal PDF text stored in sessionStorage");
                 
                 setTimeout(() => {
                   console.log("Navigating to /mindmap with minimal text");
                   navigate("/mindmap");
-                }, 100);
+                }, 200);
                 
               } catch (finalError) {
                 toast({
