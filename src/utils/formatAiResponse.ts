@@ -32,16 +32,26 @@ export const formatAIResponse = (content: string): string => {
   let formattedContent = addEmojis(content);
   
   // Process citations - format as small circular badges with just the page number
-  // Format improved for numeric citations: [citation:page123] -> small circular badge with just the number
+  // Improved format for numeric page citations [citation:page123] -> small circular badge with just the number 123
   formattedContent = formattedContent.replace(
     /\[citation:page(\d+)\]/g, 
-    '<span class="citation" data-citation="page$1" role="button" tabindex="0"><sup class="inline-flex items-center justify-center w-5 h-5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 cursor-pointer">$1</sup></span>'
+    '<span class="citation" data-citation="page$1" role="button" tabindex="0" title="Click to navigate to page $1"><sup class="inline-flex items-center justify-center w-5 h-5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 cursor-pointer">$1</sup></span>'
   );
   
-  // Standard citation format as fallback - now showing page numbers in circles
+  // Standard citation format as fallback - showing citation text in circles
   formattedContent = formattedContent.replace(
     /\[citation:([^\]]+)\]/g, 
-    '<span class="citation" data-citation="$1" role="button" tabindex="0"><sup class="inline-flex items-center justify-center w-5 h-5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 cursor-pointer">$1</sup></span>'
+    (match, citation) => {
+      // Extract page number if present in the citation text
+      const pageMatch = citation.match(/page\s*(\d+)/i);
+      if (pageMatch) {
+        const pageNum = pageMatch[1];
+        return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 cursor-pointer">${pageNum}</sup></span>`;
+      }
+      // If no page number found, just show the first few characters
+      const shortCite = citation.length > 3 ? citation.substring(0, 3) : citation;
+      return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 cursor-pointer">${shortCite}</sup></span>`;
+    }
   );
   
   // Replace markdown headers with concise styling

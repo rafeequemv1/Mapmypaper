@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -18,6 +17,12 @@ const MindMap = () => {
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
   const { toast } = useToast();
+  
+  // Keep track of modal redirect sources to handle sequenceDiagram -> flowchart
+  const handleSequenceToFlowchart = useCallback(() => {
+    setShowFlowchart(true);
+    // The FlowchartModal component will handle showing the sequence diagram tab
+  }, []);
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -245,10 +250,11 @@ const MindMap = () => {
         onOpenChange={setShowFlowchart}
       />
 
-      {/* Sequence Diagram Modal */}
+      {/* Sequence Diagram Modal - now redirects to Flowchart with sequence tab */}
       <SequenceDiagramModal
         open={showSequenceDiagram}
         onOpenChange={setShowSequenceDiagram}
+        onSwitchToFlowchart={handleSequenceToFlowchart}
       />
     </div>
   );

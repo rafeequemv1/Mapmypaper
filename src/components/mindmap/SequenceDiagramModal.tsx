@@ -1,77 +1,47 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import FlowchartEditor from "./flowchart/FlowchartEditor";
-import FlowchartPreview from "./flowchart/FlowchartPreview";
-import FlowchartExport from "./flowchart/FlowchartExport";
-import useMermaidInit from "./flowchart/useMermaidInit";
-import useSequenceDiagramGenerator, { defaultSequenceDiagram } from "./flowchart/useSequenceDiagramGenerator";
+import { useToast } from "@/hooks/use-toast";
 
 interface SequenceDiagramModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSwitchToFlowchart: () => void;
 }
 
-const SequenceDiagramModal = ({ open, onOpenChange }: SequenceDiagramModalProps) => {
-  const previewRef = useRef<HTMLDivElement>(null);
-  const { code, error, isGenerating, generateDiagram, handleCodeChange } = useSequenceDiagramGenerator();
-  
-  // Initialize mermaid library
-  useMermaidInit();
+const SequenceDiagramModal = ({ open, onOpenChange, onSwitchToFlowchart }: SequenceDiagramModalProps) => {
+  const { toast } = useToast();
 
-  // Generate diagram when modal is opened
+  // Redirect to flowchart modal with sequence diagram tab when opened
   useEffect(() => {
     if (open) {
-      if (code === defaultSequenceDiagram) {
-        generateDiagram();
-      }
+      toast({
+        title: "Redirecting",
+        description: "Sequence diagrams are now available directly in the diagram editor.",
+      });
+      // Close this modal and open the flowchart modal
+      onOpenChange(false);
+      setTimeout(() => {
+        onSwitchToFlowchart();
+      }, 100);
     }
-  }, [open, generateDiagram, code]);
+  }, [open, onOpenChange, onSwitchToFlowchart, toast]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Sequence Diagram Editor</DialogTitle>
+          <DialogTitle>Redirecting...</DialogTitle>
           <DialogDescription>
-            Create and edit sequence diagrams using Mermaid syntax. The initial diagram is generated based on your PDF content.
+            Sequence diagrams are now available directly in the diagram editor.
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 overflow-hidden">
-          {/* Code editor */}
-          <div className="flex flex-col">
-            <FlowchartEditor
-              code={code}
-              error={error}
-              isGenerating={isGenerating}
-              onCodeChange={handleCodeChange}
-              onRegenerate={generateDiagram}
-            />
-          </div>
-          
-          {/* Preview - Now takes up 2/3 of the space on medium screens and up */}
-          <div className="md:col-span-2 flex flex-col">
-            <FlowchartPreview
-              code={code}
-              error={error}
-              isGenerating={isGenerating}
-            />
-          </div>
-        </div>
-        
-        <DialogFooter className="flex justify-between sm:justify-between">
-          <FlowchartExport previewRef={previewRef} />
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
