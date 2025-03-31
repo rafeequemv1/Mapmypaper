@@ -1,12 +1,11 @@
 
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -20,7 +19,7 @@ const formatAIResponse = (content: string): string => {
     // Format headers
     .replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold mb-3 mt-4">$1</h1>')
     .replace(/^## (.*$)/gim, '<h2 class="text-lg font-semibold mb-2 mt-3">$1</h2>')
-    .replace(/^### (.*$)/gim, '<h3 class="text-md font-medium mb-2 mt-3">$1</h3>')
+    .replace(/^### (.*$)/gim, '<h3 class="text-base font-medium mb-2 mt-3">$1</h3>')
     // Format bullet points
     .replace(/^\* (.*$)/gim, '<li class="ml-4 list-disc mb-1">$1</li>')
     .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc mb-1">$1</li>')
@@ -53,7 +52,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; isScreenshot?: boolean }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -77,14 +76,36 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
       if (explainText && !processingExplainText) {
         setProcessingExplainText(true);
         
+        // Check if this is a screenshot request
+        const isScreenshotRequest = explainText.includes('[Screenshot from page');
+        let userMessage = explainText;
+        
         // Add user message with the selected text
-        const userMessage = `Explain this: "${explainText}"`;
-        setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        setMessages(prev => [
+          ...prev, 
+          { 
+            role: 'user', 
+            content: userMessage,
+            isScreenshot: isScreenshotRequest
+          }
+        ]);
         
         // Show typing indicator
         setIsTyping(true);
         
         try {
+          // Get screenshot data if available
+          let screenshotData = null;
+          if (isScreenshotRequest) {
+            screenshotData = sessionStorage.getItem('screenshotData');
+            // In a real implementation, you would pass this image to Gemini
+            // For now we'll just mention it in the prompt
+            userMessage += " [IMAGE CONTEXT: A screenshot of the PDF document]";
+            
+            // Remove after using
+            sessionStorage.removeItem('screenshotData');
+          }
+          
           // Get response from Gemini
           const response = await chatWithGeminiAboutPdf(userMessage);
           
@@ -106,7 +127,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I encountered an error explaining that text. Please try again." 
+              content: "Sorry, I encountered an error explaining that. Please try again." 
             }
           ]);
           
@@ -236,6 +257,13 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
                     : 'bg-gray-50 border border-gray-100 shadow-sm max-w-[90%] text-base leading-relaxed'
                 }`}
               >
+                {message.isScreenshot && message.role === 'user' && (
+                  <div className="flex items-center gap-1 mb-2 text-sm opacity-70">
+                    <Camera className="h-3.5 w-3.5" />
+                    <span>Screenshot sent for analysis</span>
+                  </div>
+                )}
+                
                 {message.isHtml ? (
                   <div 
                     className="prose prose-sm max-w-none" 

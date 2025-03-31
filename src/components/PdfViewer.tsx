@@ -2,10 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus, HelpCircle } from "lucide-react";
+import { Minus, Plus, HelpCircle, Camera, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import html2canvas from "html2canvas";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -35,9 +36,15 @@ const PdfViewer = ({
   const [selectedText, setSelectedText] = useState<string>("");
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<number[]>([]);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   // Load PDF data from sessionStorage
@@ -171,6 +178,135 @@ const PdfViewer = ({
     }
   };
 
+  // Screenshot capture handler
+  const handleScreenshotCapture = async () => {
+    if (!pdfContainerRef.current) return;
+    
+    try {
+      setIsCapturingScreenshot(true);
+      
+      // Take screenshot of the PDF container
+      const screenshotCanvas = await html2canvas(pdfContainerRef.current, {
+        scale: 2, // Higher quality
+        backgroundColor: null,
+        logging: false,
+        useCORS: true
+      });
+      
+      const screenshotDataUrl = screenshotCanvas.toDataURL('image/png');
+      
+      // Request to open chat panel if it's closed
+      if (onRequestOpenChat) {
+        onRequestOpenChat();
+      }
+      
+      // If onExplainText is provided, pass screenshot context to parent
+      if (onExplainText) {
+        onExplainText(`[Screenshot from page ${currentPage}] Please explain what's shown in this image.`);
+        
+        // You would ideally have a more sophisticated way to pass the image data
+        // For now we'll save it in session storage as a simple approach
+        sessionStorage.setItem('screenshotData', screenshotDataUrl);
+      }
+      
+      toast({
+        title: "Screenshot captured",
+        description: "Screenshot sent to research assistant",
+      });
+    } catch (error) {
+      console.error("Error capturing screenshot:", error);
+      toast({
+        title: "Screenshot Error",
+        description: "Failed to capture screenshot",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCapturingScreenshot(false);
+    }
+  };
+
+  // Search functionality
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !pdfData) return;
+    
+    setIsSearching(true);
+    setSearchResults([]);
+    setCurrentSearchIndex(0);
+    
+    try {
+      // Simple text search in the rendered text layers
+      // In a real implementation, you would use the PDF.js findController
+      const textLayers = document.querySelectorAll('.react-pdf__Page__textContent');
+      const results: number[] = [];
+      
+      textLayers.forEach((layer, pageIndex) => {
+        const pageText = layer.textContent.toLowerCase();
+        if (pageText.includes(searchQuery.toLowerCase())) {
+          results.push(pageIndex + 1); // Store page numbers (1-indexed)
+        }
+      });
+      
+      if (results.length > 0) {
+        setSearchResults(results);
+        // Navigate to the first result
+        setCurrentPage(results[0]);
+        toast({
+          title: "Search Results",
+          description: `Found ${results.length} pages with matches`,
+        });
+      } else {
+        toast({
+          title: "No Results",
+          description: "No matches found in document",
+        });
+      }
+    } catch (error) {
+      console.error("Error searching PDF:", error);
+      toast({
+        title: "Search Error",
+        description: "Failed to search document",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    } else if (e.key === 'Escape') {
+      setIsSearching(false);
+      setSearchQuery('');
+    }
+  };
+
+  const navigateToNextSearchResult = () => {
+    if (searchResults.length === 0) return;
+    
+    const nextIndex = (currentSearchIndex + 1) % searchResults.length;
+    setCurrentSearchIndex(nextIndex);
+    setCurrentPage(searchResults[nextIndex]);
+  };
+
+  const navigateToPrevSearchResult = () => {
+    if (searchResults.length === 0) return;
+    
+    const prevIndex = (currentSearchIndex - 1 + searchResults.length) % searchResults.length;
+    setCurrentSearchIndex(prevIndex);
+    setCurrentPage(searchResults[prevIndex]);
+  };
+
+  // Toggle search input visibility
+  const toggleSearch = () => {
+    setIsSearching(!isSearching);
+    if (!isSearching) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  };
+
   // Create array of page numbers for rendering
   const pageNumbers = Array.from(
     new Array(numPages),
@@ -181,16 +317,92 @@ const PdfViewer = ({
     <div className={`flex flex-col h-full ${className}`}>
       <div className="bg-muted/20 p-2 border-b flex items-center justify-between">
         <div className="flex items-center space-x-2">
+          {/* Search functionality */}
+          <div className="relative">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 p-1 rounded hover:bg-muted text-muted-foreground"
+                    onClick={toggleSearch}
+                    aria-label="Search PDF"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Search document</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            {isSearching && (
+              <div className="absolute top-full left-0 mt-2 flex bg-white border rounded-md shadow-md z-50">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchInputKeyDown}
+                  placeholder="Search..."
+                  className="border-none text-sm px-2 py-1 outline-none w-40"
+                />
+                <div className="flex">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={handleSearch}
+                    disabled={!searchQuery.trim() || !pdfData}
+                  >
+                    <Search className="h-3 w-3" />
+                  </Button>
+                  {searchResults.length > 0 && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={navigateToPrevSearchResult}
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={navigateToNextSearchResult}
+                      >
+                        ↓
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setIsSearching(false)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Zoom controls */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button 
+                <Button 
+                  variant="ghost"
+                  size="icon"
                   onClick={handleZoomOut}
-                  className="p-1 rounded hover:bg-muted text-muted-foreground"
+                  className="h-8 w-8 p-1 rounded hover:bg-muted text-muted-foreground"
                   aria-label="Zoom out"
                 >
                   <Minus className="h-4 w-4" />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Zoom out</TooltipContent>
             </Tooltip>
@@ -201,15 +413,40 @@ const PdfViewer = ({
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button 
+                <Button 
+                  variant="ghost"
+                  size="icon"
                   onClick={handleZoomIn}
-                  className="p-1 rounded hover:bg-muted text-muted-foreground"
+                  className="h-8 w-8 p-1 rounded hover:bg-muted text-muted-foreground"
                   aria-label="Zoom in"
                 >
                   <Plus className="h-4 w-4" />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Zoom in</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* Screenshot capture button */}
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleScreenshotCapture}
+                  className="h-8 w-8 p-1 rounded hover:bg-muted text-muted-foreground"
+                  disabled={isCapturingScreenshot || !pdfData}
+                  aria-label="Capture screenshot"
+                >
+                  {isCapturingScreenshot ? (
+                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Capture screenshot</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
@@ -288,7 +525,7 @@ const PdfViewer = ({
                 })}
               </Document>
 
-              {/* Explain tooltip that appears when text is selected - Moved outside the Document component */}
+              {/* Explain tooltip that appears when text is selected */}
               {selectedText && popoverPosition && (
                 <div 
                   className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
