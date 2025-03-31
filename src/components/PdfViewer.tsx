@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +32,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [showTooltip, setShowTooltip] = useState<boolean>(false);
     const [tooltipPosition, setTooltipPosition] = useState<{x: number, y: number}>({x: 0, y: 0});
     const [scale, setScale] = useState<number>(1);
-    const [width, setWidth] = useState<number>(95); // Increase default width for better fit
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [searchResults, setSearchResults] = useState<string[]>([]);
     const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(-1);
@@ -132,7 +132,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           results.push(`page${pageIndex + 1}`);
         }
         
-        // Highlight text in the PDF with yellow background
+        // Highlight text in the PDF with more visible yellow background
         if (layer.childNodes) {
           layer.childNodes.forEach(node => {
             if (node.nodeType === Node.TEXT_NODE && node.textContent) {
@@ -140,7 +140,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               if (parent && parent.textContent) {
                 const nodeText = parent.textContent;
                 if (nodeText.toLowerCase().includes(searchQuery.toLowerCase())) {
-                  parent.style.backgroundColor = 'rgba(255, 255, 0, 0.5)'; // More visible yellow highlight
+                  parent.style.backgroundColor = 'rgba(255, 255, 0, 0.7)'; // Brighter yellow highlight
                   parent.classList.add('pdf-search-highlight');
                 }
               }
@@ -261,20 +261,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Adjust width based on slider value (reverse the slider value)
-    useEffect(() => {
-      // Update scale based on width to keep content fitting
-      // This makes the document scale down proportionally when width is decreased
-      const calculateScale = () => {
-        // Base scale of 1 when width is 90%
-        // Scale down proportionally as width decreases
-        const newScale = (width / 90) * scale;
-        setScale(newScale);
-      };
-      
-      calculateScale();
-    }, [width]);
-
     // Zoom handlers
     const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
@@ -282,12 +268,12 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     return (
       <div className="h-full flex flex-col bg-gray-50">
-        {/* PDF Toolbar */}
+        {/* PDF Toolbar - Simplified with only one set of zoom controls */}
         <div className="bg-white border-b p-2 flex flex-wrap items-center gap-2">
-          {/* Zoom Controls */}
+          {/* Zoom Controls - Single set */}
           <div className="flex items-center gap-1">
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon" 
               className="h-8 w-8" 
               onClick={zoomOut}
@@ -298,7 +284,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               {Math.round(scale * 100)}%
             </span>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon" 
               className="h-8 w-8" 
               onClick={zoomIn}
@@ -306,7 +292,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               <ZoomIn className="h-4 w-4" />
             </Button>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon" 
               className="h-8 w-8" 
               onClick={resetZoom}
@@ -374,7 +360,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           </div>
         )}
 
-        {/* PDF Content */}
+        {/* PDF Content - Improved responsive fit */}
         {pdfData ? (
           <TooltipProvider>
             <ScrollArea className="flex-1" ref={pdfContainerRef}>
@@ -414,9 +400,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   {Array.from(new Array(numPages), (_, index) => (
                     <div
                       key={`page_${index + 1}`}
-                      className="my-4 shadow-md mx-auto bg-white transition-colors duration-300"
+                      className="mb-4 shadow-md bg-white transition-colors duration-300"
                       ref={setPageRef(index)}
-                      style={{ width: '100%', maxWidth: '800px' }}
+                      style={{ width: '100%' }}
                       data-page-number={index + 1}
                     >
                       <Page
@@ -425,7 +411,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         renderAnnotationLayer={false}
                         onRenderSuccess={onPageRenderSuccess}
                         scale={scale}
-                        width={Math.min(800, window.innerWidth - 40)}
+                        width={pdfContainerRef.current?.clientWidth ? pdfContainerRef.current.clientWidth - 32 : undefined}
+                        className="mx-auto"
                       />
                       <div className="text-center text-xs text-gray-500 py-1">
                         Page {index + 1} of {numPages}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -44,17 +45,17 @@ const MindMap = () => {
     checkPdfAvailability();
   }, [toast]);
 
-  const togglePdf = () => {
+  const togglePdf = useCallback(() => {
     setShowPdf(prev => !prev);
-  };
+  }, []);
 
-  const toggleChat = () => {
+  const toggleChat = useCallback(() => {
     setShowChat(prev => !prev);
-  };
+  }, []);
   
-  const toggleSummary = () => {
+  const toggleSummary = useCallback(() => {
     setShowSummary(prev => !prev);
-  };
+  }, []);
 
   const handleExplainText = useCallback((text: string) => {
     setExplainText(text);
@@ -64,7 +65,49 @@ const MindMap = () => {
   }, [showChat]);
 
   const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
+    // Set up the mind map instance with proper line breaks for the root node
     setMindMap(mindMap);
+    
+    // Add event listener for when the mind map is ready to modify the root node text style
+    if (mindMap.container) {
+      const observer = new MutationObserver((mutations) => {
+        // Look for the root node element
+        const rootNodeElement = document.querySelector('.mind-elixir-root');
+        if (rootNodeElement && rootNodeElement.textContent) {
+          // Apply line breaks to the root node text (roughly every 3-4 words)
+          const rootText = rootNodeElement.textContent;
+          const words = rootText.split(' ');
+          let formattedText = '';
+          let lineLength = 0;
+          
+          words.forEach((word, i) => {
+            formattedText += word + ' ';
+            lineLength += word.length + 1;
+            
+            // Add a line break after 3-4 words (roughly 15-20 characters)
+            if (lineLength > 15 && i < words.length - 1) {
+              formattedText += '<br>';
+              lineLength = 0;
+            }
+          });
+          
+          // Apply the formatted text with line breaks
+          if (rootNodeElement instanceof HTMLElement) {
+            rootNodeElement.innerHTML = formattedText;
+          }
+          
+          // Disconnect observer after modification
+          observer.disconnect();
+        }
+      });
+      
+      // Start observing the mind map container
+      observer.observe(mindMap.container, { 
+        childList: true, 
+        subtree: true,
+        characterData: true 
+      });
+    }
   }, []);
 
   const handleExportMindMap = useCallback(async (type: 'svg' | 'png') => {

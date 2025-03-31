@@ -12,10 +12,10 @@ export const formatAIResponse = (content: string): string => {
     '<span class="citation" data-citation="page$1" role="button" tabindex="0"><sup class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-medium hover:bg-blue-200 cursor-pointer">$1</sup></span>'
   );
   
-  // Standard citation format as fallback
+  // Standard citation format as fallback - now showing page numbers instead of "ref"
   formattedContent = formattedContent.replace(
     /\[citation:([^\]]+)\]/g, 
-    '<span class="citation" data-citation="$1" role="button" tabindex="0"><sup class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-medium hover:bg-blue-200 cursor-pointer">ref</sup></span>'
+    '<span class="citation" data-citation="$1" role="button" tabindex="0"><sup class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-medium hover:bg-blue-200 cursor-pointer">$1</sup></span>'
   );
   
   // Replace markdown headers with concise styling
