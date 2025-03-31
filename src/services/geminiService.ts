@@ -70,7 +70,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
   }
 };
 
-// New function to chat with Gemini about PDF content
+// Chat with Gemini about PDF content with citation support
 export const chatWithGeminiAboutPdf = async (message: string): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage
@@ -91,7 +91,17 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
     Here's an excerpt from the document they're referring to (it may be truncated):
     ${pdfText.slice(0, 15000)}
     
-    Provide a helpful, concise, and accurate response based solely on the document content.
+    Provide a helpful, detailed, and accurate response based solely on the document content.
+    
+    IMPORTANT FORMATTING GUIDELINES:
+    1. Use proper markdown formatting with clear headings (# for main headings, ## for subheadings).
+    2. Format your response with **bold text** for emphasis and *italics* for technical terms.
+    3. Use bullet points (- or *) and numbered lists (1., 2., etc.) for better organization.
+    4. When referencing specific parts of the document, include a citation in this format: [citation:pageX] where X is the page number or section identifier.
+    5. For multi-paragraph responses, use proper paragraph breaks.
+    6. For important quotes or excerpts, use blockquotes (> text).
+    7. Structure your response with a clear hierarchy: Start with a brief overview, then provide detailed information.
+    
     If you can't answer based on the provided text, be honest about your limitations.
     `;
     

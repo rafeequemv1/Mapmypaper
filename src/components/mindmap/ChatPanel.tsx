@@ -6,19 +6,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
-import { formatAIResponse } from "@/utils/formatAiResponse";
+import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
+  onScrollToPdfPosition?: (position: string) => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; }[]>([
-    { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
+    { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -86,6 +87,20 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
     
     processExplainText();
   }, [explainText, toast]);
+
+  // Activate citations in messages when they are rendered
+  useEffect(() => {
+    const messageContainers = document.querySelectorAll('.ai-message-content');
+    
+    messageContainers.forEach(container => {
+      activateCitations(container as HTMLElement, (citation) => {
+        console.log("Citation clicked:", citation);
+        if (onScrollToPdfPosition) {
+          onScrollToPdfPosition(citation);
+        }
+      });
+    });
+  }, [messages, onScrollToPdfPosition]);
 
   const handleSendMessage = async () => {
     if (inputValue.trim()) {

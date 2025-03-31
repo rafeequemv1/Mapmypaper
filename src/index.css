@@ -181,6 +181,16 @@
     @apply text-blue-600 underline hover:text-blue-800 font-medium;
   }
   
+  /* Citation styling */
+  .citation {
+    @apply inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer transition-colors;
+    text-decoration: none !important;
+  }
+  
+  .citation:focus {
+    @apply outline-none ring-2 ring-blue-300;
+  }
+  
   /* New class for AI message container */
   .ai-message {
     @apply bg-gray-50 border border-gray-100 shadow-sm rounded-lg p-4 max-w-[95%] relative;

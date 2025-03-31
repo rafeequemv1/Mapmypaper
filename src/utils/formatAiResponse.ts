@@ -1,16 +1,28 @@
 
 /**
  * Formats AI responses with enhanced typography and structure
- * Converts markdown syntax to properly styled HTML
+ * Converts markdown syntax to properly styled HTML and adds citation support
  */
 export const formatAIResponse = (content: string): string => {
+  // Process citations first to avoid conflicts with other formatting
+  // Format: [citation:page123] -> clickable citation link
+  let formattedContent = content.replace(
+    /\[citation:([^\]]+)\]/g, 
+    '<span class="citation" data-citation="$1" role="button" tabindex="0">[$1]</span>'
+  );
+  
   // Replace markdown headers with properly styled HTML headers
-  let formattedContent = content
+  formattedContent = formattedContent
     // Format headers with enhanced styling and proper hierarchy
     .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-4 mt-6 pb-2 border-b border-gray-200 text-blue-800">$1</h1>')
     .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mb-3 mt-5 text-blue-700">$1</h2>')
     .replace(/^### (.*$)/gim, '<h3 class="text-lg font-medium mb-2 mt-4 text-indigo-600">$1</h3>')
-    .replace(/^#### (.*$)/gim, '<h4 class="text-base font-medium mb-2 mt-3 text-indigo-500">$4</h4>')
+    .replace(/^#### (.*$)/gim, '<h4 class="text-base font-medium mb-2 mt-3 text-indigo-500">$1</h4>')
+    
+    // Format bold, italics and strikethrough with enhanced styling
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em class="italic text-gray-800">$1</em>')
+    .replace(/~~(.*?)~~/g, '<del class="line-through text-gray-500">$1</del>')
     
     // Format lists with proper indentation and styling
     .replace(/^\* (.*$)/gim, '<ul class="my-3 ml-5 space-y-2 list-disc"><li class="mb-1 pl-1">$1</li></ul>')
@@ -20,11 +32,6 @@ export const formatAIResponse = (content: string): string => {
     // Format code blocks with improved styling
     .replace(/```(.+?)```/gs, '<pre class="bg-gray-100 p-3 rounded my-3 overflow-x-auto text-sm font-mono shadow-sm">$1</pre>')
     .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-pink-600 font-mono">$1</code>')
-    
-    // Format bold, italics and strikethrough with enhanced styling
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em class="italic text-gray-800">$1</em>')
-    .replace(/~~(.*?)~~/g, '<del class="line-through text-gray-500">$1</del>')
     
     // Format links with accessible styling
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 underline hover:text-blue-800 font-medium">$1</a>')
@@ -58,4 +65,33 @@ export const formatAIResponse = (content: string): string => {
     .replace(/<\/ol>\s*<ol class="my-3 ml-5 space-y-2 list-decimal">/g, '');
   
   return formattedContent;
+};
+
+/**
+ * Adds event listeners to citation elements in the message content
+ * @param container - The container element with citation elements
+ * @param onCitationClick - Callback function when a citation is clicked
+ */
+export const activateCitations = (container: HTMLElement, onCitationClick: (citation: string) => void): void => {
+  const citations = container.querySelectorAll('.citation');
+  
+  citations.forEach(citation => {
+    const citationElement = citation as HTMLElement;
+    const citationData = citationElement.dataset.citation;
+    
+    if (citationData) {
+      // Add click event listener to the citation
+      citationElement.addEventListener('click', () => {
+        onCitationClick(citationData);
+      });
+      
+      // Add keyboard event listener for accessibility
+      citationElement.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onCitationClick(citationData);
+        }
+      });
+    }
+  });
 };

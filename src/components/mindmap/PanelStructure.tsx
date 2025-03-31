@@ -1,88 +1,98 @@
 
-import React from 'react';
-import MindMapViewer from "@/components/MindMapViewer";
+import { useState, useEffect } from "react";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";
-import ChatPanel from "@/components/mindmap/ChatPanel";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import MindMapViewer from "@/components/MindMapViewer";
+import ChatPanel from "./ChatPanel";
+import MobileChatSheet from "./MobileChatSheet";
+import { useMobile } from "@/hooks/use-mobile";
+import { MindElixirInstance } from "mind-elixir";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady?: (mindMap: any) => void;
+  onMindMapReady: (mindMap: MindElixirInstance) => void;
   explainText?: string;
-  onExplainText?: (text: string) => void;
+  onExplainText: (text: string) => void;
 }
 
-const PanelStructure: React.FC<PanelStructureProps> = ({ 
-  showPdf, 
-  showChat, 
-  toggleChat, 
-  togglePdf, 
+const PanelStructure = ({
+  showPdf,
+  showChat,
+  toggleChat,
+  togglePdf,
   onMindMapReady,
   explainText,
   onExplainText
-}) => {
+}: PanelStructureProps) => {
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [pdfViewerRef, setPdfViewerRef] = useState<any>(null);
+  const isMobile = useMobile();
+  
+  // Function to handle citation clicks and scroll PDF to that position
+  const handleScrollToPdfPosition = (position: string) => {
+    if (!pdfViewerRef) return;
+    
+    console.log("Scrolling to position:", position);
+    
+    // Parse the position string (could be page number, section name, etc.)
+    // Example: "page5" -> Scroll to page 5
+    if (position.toLowerCase().startsWith('page')) {
+      const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);
+      if (!isNaN(pageNumber) && pageNumber > 0) {
+        console.log("Scrolling to page:", pageNumber);
+        pdfViewerRef.scrollToPage(pageNumber);
+        
+        // Ensure PDF panel is visible on mobile
+        if (!showPdf && !isMobile) {
+          togglePdf();
+        }
+      }
+    }
+  };
+
   return (
-    <ResizablePanelGroup 
-      direction="horizontal" 
-      className="flex-1 h-full overflow-hidden bg-[#F9F7F3]"
-    >
-      {/* PDF Viewer Panel */}
-      {showPdf && (
-        <>
-          <ResizablePanel 
-            defaultSize={30} 
-            minSize={20} 
-            maxSize={50}
-            className="h-full overflow-hidden bg-white"
-          >
-            <PdfViewer 
-              onRequestOpenChat={() => {
-                if (!showChat) toggleChat();
-              }} 
-              onTogglePdf={togglePdf}
-              onExplainText={onExplainText} 
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-        </>
-      )}
+    <div className="h-full">
+      <ResizablePanelGroup direction="horizontal">
+        {/* Left Panel - PDF Viewer (Conditionally Rendered) */}
+        {showPdf && (
+          <>
+            <ResizablePanel defaultSize={35} minSize={20}>
+              <PdfViewer 
+                onTextSelected={onExplainText} 
+                onPdfLoaded={() => setPdfLoaded(true)}
+                ref={setPdfViewerRef}
+              />
+            </ResizablePanel>
+            <ResizableHandle />
+          </>
+        )}
 
-      {/* Mind Map Viewer Panel */}
-      <ResizablePanel 
-        defaultSize={showChat ? (showPdf ? 40 : 70) : 100} 
-        className="h-full overflow-hidden"
-      >
-        <MindMapViewer 
-          isMapGenerated={true} 
-          onMindMapReady={onMindMapReady}
-          onExplainText={onExplainText}
-          onRequestOpenChat={() => {
-            if (!showChat) toggleChat();
-          }}
-        />
-      </ResizablePanel>
+        {/* Middle Panel - Mind Map */}
+        <ResizablePanel defaultSize={showChat ? 40 : 65} minSize={30}>
+          <MindMapViewer onMindMapReady={onMindMapReady} />
+        </ResizablePanel>
 
-      {/* Chat Panel */}
-      {showChat && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel 
-            defaultSize={30} 
-            minSize={20} 
-            maxSize={50}
-            className="h-full bg-white"
-          >
-            <ChatPanel 
-              toggleChat={toggleChat} 
-              explainText={explainText}
-            />
-          </ResizablePanel>
-        </>
-      )}
-    </ResizablePanelGroup>
+        {/* Right Panel - Chat (Conditionally Rendered) */}
+        {showChat && !isMobile && (
+          <>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={25} minSize={20}>
+              <ChatPanel 
+                toggleChat={toggleChat} 
+                explainText={explainText}
+                onScrollToPdfPosition={handleScrollToPdfPosition} 
+              />
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
+      
+      {/* Mobile Chat Sheet */}
+      {isMobile && <MobileChatSheet onScrollToPdfPosition={handleScrollToPdfPosition} />}
+    </div>
   );
 };
 
