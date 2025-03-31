@@ -214,8 +214,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           name: '✨ Generate Summary',
           onclick: () => {
             // Get the node and its children
-            const nodeData = mind.getAllDataWithChildren(node.id);
-            generateNodeSummary(nodeData);
+            // Fix: Use the node directly instead of trying to get all data with children
+            generateNodeSummary(node);
           }
         });
         
