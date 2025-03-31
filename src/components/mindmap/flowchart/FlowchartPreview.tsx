@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Move } from "lucide-react";
@@ -10,19 +10,20 @@ interface FlowchartPreviewProps {
   error: string | null;
   isGenerating: boolean;
   theme?: "default" | "forest" | "dark" | "neutral";
+  previewRef: React.RefObject<HTMLDivElement>;
 }
 
 const FlowchartPreview = ({ 
   code, 
   error, 
   isGenerating, 
-  theme = "forest"
+  theme = "forest",
+  previewRef
 }: FlowchartPreviewProps) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const previewRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Render flowchart when code or theme changes
@@ -35,7 +36,10 @@ const FlowchartPreview = ({
     return () => {
       if (previewRef.current) {
         try {
-          previewRef.current.innerHTML = '';
+          // Safely clean up the preview container
+          while (previewRef.current.firstChild) {
+            previewRef.current.removeChild(previewRef.current.firstChild);
+          }
         } catch (error) {
           console.error("Failed to clean up preview container:", error);
         }
@@ -47,8 +51,10 @@ const FlowchartPreview = ({
     if (!previewRef.current) return;
 
     try {
-      // Clear the preview area before rendering a new chart
-      previewRef.current.innerHTML = "";
+      // Safely clear the preview area before rendering a new chart
+      while (previewRef.current.firstChild) {
+        previewRef.current.removeChild(previewRef.current.firstChild);
+      }
 
       // Create a unique ID for the diagram
       const id = `flowchart-${Date.now()}`;

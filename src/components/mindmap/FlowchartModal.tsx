@@ -45,11 +45,11 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     if (open) {
       if (code === defaultFlowchart && diagramType === 'flowchart') {
         generateFlowchart();
-      } else if (diagramType === 'sequence' && sequenceDiagramGenerator.code === sequenceDiagramGenerator.defaultSequenceDiagram) {
+      } else if (diagramType === 'sequence' && sequenceDiagramGenerator.code === '') {
         sequenceDiagramGenerator.generateDiagram();
       }
     }
-  }, [open, diagramType, generateFlowchart, code]);
+  }, [open, diagramType, generateFlowchart, code, sequenceDiagramGenerator]);
 
   // Handle code change based on active diagram type
   const handleActiveDiagramCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -148,7 +148,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               error={activeError}
               isGenerating={activeIsGenerating}
               theme={theme}
-              ref={previewRef}
+              previewRef={previewRef}
             />
           </div>
         </div>
