@@ -1,5 +1,4 @@
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google-generative-ai";
 import { toast } from "@/hooks/use-toast";
 
 // Initialize the API
@@ -37,10 +36,17 @@ export const generateSummaryFromText = async (text: string) => {
  */
 export const generateMindMapFromText = async (text: string, detailLevel: 'basic' | 'detailed' | 'advanced' = 'detailed') => {
   try {
+    // Check if API key is valid
+    if (!import.meta.env.VITE_GOOGLE_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY === "MISSING_API_KEY") {
+      console.error("Missing valid Google API key");
+      throw new Error("Missing valid Google API key. Please add your API key in environment variables.");
+    }
+
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     // Check if we have valid text to analyze
     if (!text || text.trim().length < 100) {
+      console.error("Not enough text to analyze, length:", text?.length || 0);
       throw new Error("Not enough text to analyze. Please check the PDF extraction.");
     }
 
@@ -91,6 +97,7 @@ export const generateMindMapFromText = async (text: string, detailLevel: 'basic'
       Ensure you identify the main topic, key concepts, and their relationships. 
       Each node must have a unique "id" and descriptive "topic".
       Direction values alternate between 0 and 1 for visual layout.
+      The output must be valid JSON and nothing else - no explanations, no preamble, just the JSON object.
       
       DOCUMENT TEXT:
       ${text.substring(0, 50000)}
@@ -102,35 +109,43 @@ export const generateMindMapFromText = async (text: string, detailLevel: 'basic'
     const response = await result.response;
     const mindMapJson = response.text();
 
+    console.log("Received response from Gemini, processing JSON...");
+    
     // Extract JSON from the response
     const jsonMatch = mindMapJson.match(/\{[\s\S]*\}/);
     
     if (!jsonMatch) {
+      console.error("Could not extract valid JSON from API response");
       throw new Error("Could not extract valid JSON from the API response");
     }
     
     try {
       // Parse and validate the JSON
-      const parsedJson = JSON.parse(jsonMatch[0]);
+      const jsonText = jsonMatch[0];
+      console.log("Attempting to parse JSON, length:", jsonText.length);
+      const parsedJson = JSON.parse(jsonText);
       
       // Ensure the JSON has the expected structure
       if (!parsedJson.nodeData || !parsedJson.nodeData.children) {
+        console.error("Invalid mind map structure", parsedJson);
         throw new Error("Invalid mind map structure");
       }
       
-      console.log("Mind map generated successfully");
+      console.log("Mind map generated successfully, node count:", 
+                 parsedJson.nodeData.children.length);
       
       // Store the mind map in session storage for later use
       sessionStorage.setItem('mindMapData', JSON.stringify(parsedJson));
       
       return parsedJson;
     } catch (parseError) {
-      console.error("Error parsing mind map JSON:", parseError, jsonMatch[0]);
+      console.error("Error parsing mind map JSON:", parseError);
+      console.error("JSON content:", jsonMatch[0]);
       throw new Error("Failed to parse mind map data");
     }
   } catch (error) {
     console.error("Error generating mind map:", error);
-    throw new Error("Failed to generate mind map from document. Please try again.");
+    throw new Error(`Failed to generate mind map from document: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
@@ -439,4 +454,3 @@ export const generateStructuredSummary = async () => {
     throw new Error("Failed to generate document summary");
   }
 };
-

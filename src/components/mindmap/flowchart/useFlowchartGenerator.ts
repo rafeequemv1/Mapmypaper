@@ -118,7 +118,7 @@ export const useFlowchartGenerator = () => {
         throw new Error("No PDF text found. Please upload a PDF first.");
       }
       
-      console.log("Generating flowchart from PDF text using text analysis approach");
+      console.log("Generating flowchart from PDF text, length:", pdfText.length);
       toast({
         title: "Generating Flowchart",
         description: "Analyzing your document content..."

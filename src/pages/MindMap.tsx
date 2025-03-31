@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -18,6 +20,7 @@ const MindMap = () => {
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
   const [isGeneratingMindMap, setIsGeneratingMindMap] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [detailLevel, setDetailLevel] = useState<'basic' | 'detailed' | 'advanced'>('detailed');
   const { toast } = useToast();
   const { user } = useAuth();
@@ -116,6 +119,7 @@ const MindMap = () => {
   const generateMindMapData = async () => {
     try {
       setIsGeneratingMindMap(true);
+      setGenerationError(null);
       
       const pdfText = sessionStorage.getItem('pdfText');
       if (!pdfText) {
@@ -125,6 +129,7 @@ const MindMap = () => {
           description: "No PDF text available to generate mindmap",
           variant: "destructive"
         });
+        setGenerationError("No PDF text available to generate mindmap");
         return;
       }
       
@@ -152,9 +157,12 @@ const MindMap = () => {
       
     } catch (error) {
       console.error("Error generating mind map data:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      setGenerationError(errorMessage);
       toast({
         title: "Error",
-        description: `Failed to generate mind map: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to generate mind map: ${errorMessage}`,
         variant: "destructive"
       });
       
@@ -264,6 +272,11 @@ const MindMap = () => {
     }
   }, [mindMap, toast]);
 
+  const retryMindMapGeneration = useCallback(() => {
+    setGenerationError(null);
+    generateMindMapData();
+  }, []);
+
   // Save mindmap data when it changes
   useEffect(() => {
     const saveMindMapData = async () => {
@@ -367,6 +380,42 @@ const MindMap = () => {
             >
               Cancel and show default map
             </button>
+          </div>
+        </div>
+      ) : generationError ? (
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-md w-full">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                Failed to generate mind map: {generationError}
+              </AlertDescription>
+            </Alert>
+            <div className="text-center">
+              <p className="mb-4 text-gray-700">
+                There was an error generating your mind map. This could be due to:
+              </p>
+              <ul className="text-left text-gray-600 list-disc pl-5 mb-6">
+                <li>The PDF text could not be properly analyzed</li>
+                <li>The API key might be missing or invalid</li>
+                <li>The document might be too complex or in an unsupported format</li>
+              </ul>
+              <div className="flex justify-center space-x-4">
+                <button 
+                  onClick={retryMindMapGeneration}
+                  className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
+                >
+                  Retry Generation
+                </button>
+                <button 
+                  onClick={() => navigate('/')}
+                  className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-50"
+                >
+                  Upload New PDF
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
