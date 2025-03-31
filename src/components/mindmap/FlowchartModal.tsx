@@ -8,13 +8,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import FlowchartEditor from "./flowchart/FlowchartEditor";
 import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 import useMindmapGenerator from "./flowchart/useMindmapGenerator";
-import { GitBranch, Sigma, Settings } from "lucide-react";
+import { GitBranch, Sigma } from "lucide-react";
 import ApiKeyModal from "./ApiKeyModal";
 import { checkGeminiAPIKey } from "@/services/geminiService";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +31,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // State for diagram type and theme
   const [diagramType, setDiagramType] = useState<'flowchart' | 'mindmap'>('flowchart');
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
-  const [hideEditor, setHideEditor] = useState(true);
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
   const [hasValidApiKey, setHasValidApiKey] = useState(false);
   const { toast } = useToast();
@@ -40,25 +38,21 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // Initialize mermaid library
   useMermaidInit();
 
-  // Check if API key exists and is valid
+  // Check if API key exists and is valid - use the hardcoded key
   useEffect(() => {
     if (open) {
-      const checkApiKey = async () => {
+      const setupApiKey = async () => {
         const isValid = await checkGeminiAPIKey();
         setHasValidApiKey(isValid);
         
         if (!isValid) {
-          toast({
-            title: "API Key Required",
-            description: "A valid Google Gemini API key is required to generate diagrams.",
-          });
           setApiKeyModalOpen(true);
         }
       };
       
-      checkApiKey();
+      setupApiKey();
     }
-  }, [open, toast]);
+  }, [open]);
 
   // Currently active diagram code, error and generator based on diagram type
   const activeCode = diagramType === 'flowchart' ? code : mindmapGenerator.code;
@@ -69,21 +63,14 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   useEffect(() => {
     if (open && hasValidApiKey) {
       if (code === defaultFlowchart && diagramType === 'flowchart') {
+        console.log("Initiating flowchart generation");
         generateFlowchart();
       } else if (diagramType === 'mindmap' && mindmapGenerator.code === mindmapGenerator.defaultMindmap) {
+        console.log("Initiating mindmap generation");
         mindmapGenerator.generateMindmap();
       }
     }
   }, [open, diagramType, hasValidApiKey, generateFlowchart, code, mindmapGenerator]);
-
-  // Handle code change based on active diagram type
-  const handleActiveDiagramCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (diagramType === 'flowchart') {
-      handleCodeChange(e);
-    } else {
-      mindmapGenerator.handleCodeChange(e);
-    }
-  };
 
   // Handle regenerate based on active diagram type
   const handleRegenerateActiveDiagram = () => {
@@ -105,11 +92,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     const currentIndex = themes.indexOf(theme);
     const nextIndex = (currentIndex + 1) % themes.length;
     setTheme(themes[nextIndex]);
-  };
-
-  // Toggle editor visibility
-  const toggleEditor = () => {
-    setHideEditor(!hideEditor);
   };
 
   return (
@@ -146,11 +128,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setApiKeyModalOpen(true)}
-                className="flex items-center gap-1"
+                onClick={handleRegenerateActiveDiagram}
+                disabled={activeIsGenerating}
               >
-                <Settings className="h-4 w-4" />
-                API Key
+                Regenerate
               </Button>
             </div>
           </div>

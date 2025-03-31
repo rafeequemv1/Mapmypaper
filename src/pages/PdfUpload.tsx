@@ -3,9 +3,9 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, Upload, Key } from "lucide-react";
+import { Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { generateMindMapFromText, checkGeminiAPIKey } from "@/services/geminiService";
+import { generateMindMapFromText, checkGeminiAPIKey, saveGeminiAPIKey } from "@/services/geminiService";
 import ApiKeyModal from "@/components/mindmap/ApiKeyModal";
 
 const PdfUpload = () => {
@@ -16,17 +16,16 @@ const PdfUpload = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
-  const [hasValidApiKey, setHasValidApiKey] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check if API key exists and is valid
+  // Setup the default API key on component mount
   useEffect(() => {
-    const checkApiKey = async () => {
-      const isValid = await checkGeminiAPIKey();
-      setHasValidApiKey(isValid);
+    const setupApiKey = async () => {
+      saveGeminiAPIKey("AIzaSyDWXTmFBjvvpiws05s571DVsxlhmvezTbQ");
+      await checkGeminiAPIKey();
     };
     
-    checkApiKey();
+    setupApiKey();
   }, []);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -90,13 +89,6 @@ const PdfUpload = () => {
       });
       return;
     }
-    
-    // Check if we have a valid API key
-    const isValid = await checkGeminiAPIKey();
-    if (!isValid) {
-      setApiKeyModalOpen(true);
-      return;
-    }
 
     setIsProcessing(true);
     setExtractionError(null);
@@ -124,6 +116,9 @@ const PdfUpload = () => {
       if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
+      
+      // Store the extracted text for later use
+      sessionStorage.setItem('extractedPdfText', extractedText);
       
       // Process the text with Gemini to generate mind map data
       const mindMapData = await generateMindMapFromText(extractedText);
@@ -200,23 +195,11 @@ const PdfUpload = () => {
               </div>
             )}
             
-            {/* API Key Button */}
-            {!hasValidApiKey && (
-              <Button
-                variant="outline"
-                onClick={() => setApiKeyModalOpen(true)} 
-                className="w-full mb-4 flex items-center justify-center gap-2"
-              >
-                <Key className="h-4 w-4" />
-                Set Gemini API Key
-              </Button>
-            )}
-            
             {/* Generate Button */}
             <Button 
               onClick={handleGenerateMindmap} 
               className="w-full bg-[#333] hover:bg-[#444] text-white" 
-              disabled={!selectedFile || isProcessing || !hasValidApiKey}
+              disabled={!selectedFile || isProcessing}
               size="lg"
             >
               {isProcessing ? "Processing..." : "Generate Mind Map"}
@@ -237,10 +220,6 @@ const PdfUpload = () => {
         open={apiKeyModalOpen} 
         onOpenChange={(open) => {
           setApiKeyModalOpen(open);
-          // If modal is closed, check if we now have a valid API key
-          if (!open) {
-            checkGeminiAPIKey().then(setHasValidApiKey);
-          }
         }}
       />
     </>

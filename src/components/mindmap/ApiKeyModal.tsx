@@ -19,74 +19,19 @@ const ApiKeyModal = ({ open, onOpenChange }: ApiKeyModalProps) => {
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // Check for existing key in localStorage and set default key
+  // Automatically save the default key when the component mounts
   useEffect(() => {
     if (open) {
-      const storedKey = localStorage.getItem("GOOGLE_API_KEY");
-      if (storedKey) {
-        setApiKey(storedKey);
-      } else {
-        // Set default API key
-        setApiKey("AIzaSyDWXTmFBjvvpiws05s571DVsxlhmvezTbQ");
-        
-        // Automatically save and validate the default key
-        setTimeout(() => {
-          handleSave();
-        }, 500);
-      }
-    }
-  }, [open]);
-
-  const handleSave = async () => {
-    if (!apiKey.trim()) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter a Google Gemini API key",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsValidating(true);
-    
-    try {
-      // Temporarily save the key
-      saveGeminiAPIKey(apiKey);
+      // Set default API key
+      setApiKey("AIzaSyDWXTmFBjvvpiws05s571DVsxlhmvezTbQ");
       
-      // Validate the key with a test request
-      const isValid = await checkGeminiAPIKey();
-      
-      if (isValid) {
-        setIsSaving(true);
-        // Save the API key permanently
-        saveGeminiAPIKey(apiKey);
-        
-        toast({
-          title: "API Key Saved",
-          description: "Your Google Gemini API key has been saved successfully.",
-        });
-        
-        // Close the modal
+      // Automatically save the default key
+      saveGeminiAPIKey("AIzaSyDWXTmFBjvvpiws05s571DVsxlhmvezTbQ");
+      setTimeout(() => {
         onOpenChange(false);
-      } else {
-        toast({
-          title: "Invalid API Key",
-          description: "The provided API key is invalid. Please check and try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error validating API key:", error);
-      toast({
-        title: "Validation Error",
-        description: "Failed to validate the API key. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsValidating(false);
-      setIsSaving(false);
+      }, 500);
     }
-  };
+  }, [open, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,48 +42,14 @@ const ApiKeyModal = ({ open, onOpenChange }: ApiKeyModalProps) => {
             Google Gemini API Key
           </DialogTitle>
           <DialogDescription>
-            The API key is pre-filled and will be used for generating research paper flowcharts.
+            Using pre-configured API key for generating research paper flowcharts.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="api-key">API Key</Label>
-            <Input
-              id="api-key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              autoComplete="off"
-              disabled={isSaving || isValidating}
-            />
-          </div>
-          
-          <div className="text-sm text-gray-500">
-            <p>Your API key is stored locally in your browser and is never sent to our servers.</p>
-          </div>
+        <div className="text-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+          <p className="mt-2">Setting up default API key...</p>
         </div>
-        
-        <DialogFooter>
-          <Button
-            type="submit"
-            onClick={handleSave}
-            disabled={isSaving || isValidating}
-            className="w-full sm:w-auto"
-          >
-            {isValidating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Validating
-              </>
-            ) : isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving
-              </>
-            ) : (
-              "Save API Key"
-            )}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
