@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Maximize2, Minimize2, ZoomIn, ZoomOut, MessageSquare, X, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { explainTextWithGemini } from "@/services/geminiService";
 
 interface PdfViewerProps {
   className?: string;
@@ -81,7 +82,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
 
   const handleExplainText = () => {
     if (selectedText && onExplainText) {
-      onExplainText(selectedText);
+      // First try to get an explanation from the Gemini API
+      if (selectedText.length > 10) {
+        explainTextWithGemini(selectedText)
+          .then((explanation) => {
+            onExplainText(explanation);
+          })
+          .catch((error) => {
+            console.error("Error explaining text:", error);
+            // Fall back to just passing the selected text
+            onExplainText(selectedText);
+          });
+      } else {
+        // For very short text, just pass it directly
+        onExplainText(selectedText);
+      }
     } else if (onRequestOpenChat) {
       onRequestOpenChat();
     }

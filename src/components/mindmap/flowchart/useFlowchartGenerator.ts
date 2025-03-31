@@ -118,15 +118,17 @@ export const useFlowchartGenerator = () => {
         throw new Error("No PDF text found. Please upload a PDF first.");
       }
       
-      console.log("Generating flowchart from PDF text, length:", pdfText.length, "detail level:", detailLevel);
+      console.log("Generating flowchart from PDF text using text analysis approach");
+      toast({
+        title: "Generating Flowchart",
+        description: "Analyzing your document content..."
+      });
       
       // Pass the detail level to the API
       const flowchartCode = await generateFlowchartFromPdf(detailLevel);
-      console.log("Raw flowchart code generated:", flowchartCode.substring(0, 500) + "...");
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
-      console.log("Cleaned flowchart code:", cleanedCode.substring(0, 500) + "...");
       
       // Check if the flowchart code is valid
       try {
@@ -135,7 +137,7 @@ export const useFlowchartGenerator = () => {
         console.log("Flowchart code successfully parsed by mermaid");
         toast({
           title: "Flowchart Generated",
-          description: "A flowchart has been created based on your PDF content.",
+          description: "Your flowchart has been created based on document analysis.",
         });
       } catch (parseError) {
         console.error("Mermaid parse error:", parseError);
@@ -154,7 +156,7 @@ export const useFlowchartGenerator = () => {
           console.log("Simplified flowchart parsed successfully");
           toast({
             title: "Simplified Flowchart Generated", 
-            description: "A simplified flowchart was created due to complexity in the PDF content.",
+            description: "A simplified flowchart was created due to complexity in the document content.",
           });
         } catch (fallbackError) {
           // If all else fails, use the default flowchart
@@ -173,7 +175,7 @@ export const useFlowchartGenerator = () => {
       setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
       toast({
         title: "Generation Failed",
-        description: "Failed to generate flowchart from PDF content.",
+        description: "Failed to generate flowchart from document content.",
         variant: "destructive",
       });
     } finally {

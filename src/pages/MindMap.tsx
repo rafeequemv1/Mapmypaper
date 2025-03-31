@@ -139,10 +139,16 @@ const MindMap = () => {
       const mindMapData = await generateMindMapFromText(pdfText, detailLevel);
       console.log("Mind map data generated:", mindMapData);
       
-      toast({
-        title: "Success",
-        description: "Mind map generated successfully!"
-      });
+      // Store the mind map data in sessionStorage
+      if (mindMapData && mindMapData.nodeData) {
+        sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+        toast({
+          title: "Success",
+          description: "Mind map generated successfully!"
+        });
+      } else {
+        throw new Error("Invalid mind map data structure");
+      }
       
     } catch (error) {
       console.error("Error generating mind map data:", error);
