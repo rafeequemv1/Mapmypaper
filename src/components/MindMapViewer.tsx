@@ -4,6 +4,8 @@ import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -67,7 +69,7 @@ const stringToColor = (str: string): string => {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  // Define a palette of vibrant colors
+  // Define a vibrant color palette
   const colors = [
     '#E57373', '#F06292', '#BA68C8', '#9575CD', 
     '#7986CB', '#64B5F6', '#4FC3F7', '#4DD0E1', 
@@ -83,6 +85,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summary, setSummary] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -127,7 +131,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           
           const bgColor = lightenColor(baseColor, 80);
           
-          // Apply custom styling to nodes for a more elegant and colorful look
+          // Apply colorful styling to nodes
           tpc.style.backgroundColor = level === 0 ? '#E5DEFF' : bgColor;
           tpc.style.color = level === 0 ? '#8B5CF6' : baseColor.replace('#', '').substring(0, 6);
           tpc.style.border = `2px solid ${level === 0 ? '#8B5CF6' : baseColor}`;
@@ -140,6 +144,46 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           
           // Add transition for smooth color changes
           tpc.style.transition = 'all 0.3s ease';
+          
+          // Add tags based on node content
+          const addTags = (topic: string, element: HTMLElement) => {
+            const topicLower = topic.toLowerCase();
+            const tags = [];
+            
+            if (topicLower.includes('important')) tags.push({ text: 'Important', color: '#ef4444' });
+            if (topicLower.includes('review')) tags.push({ text: 'Review', color: '#f97316' });
+            if (topicLower.includes('todo')) tags.push({ text: 'Todo', color: '#3b82f6' });
+            if (topicLower.includes('done')) tags.push({ text: 'Done', color: '#22c55e' });
+            if (topicLower.includes('chapter') || topicLower.includes('section')) tags.push({ text: 'Section', color: '#8b5cf6' });
+            if (topicLower.includes('concept')) tags.push({ text: 'Concept', color: '#06b6d4' });
+            
+            if (tags.length > 0) {
+              // Create a tag container
+              const tagContainer = document.createElement('div');
+              tagContainer.style.display = 'flex';
+              tagContainer.style.flexWrap = 'wrap';
+              tagContainer.style.gap = '4px';
+              tagContainer.style.marginTop = '6px';
+              
+              // Add tags
+              tags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.textContent = tag.text;
+                tagElement.style.fontSize = '10px';
+                tagElement.style.fontWeight = 'bold';
+                tagElement.style.padding = '2px 6px';
+                tagElement.style.borderRadius = '4px';
+                tagElement.style.backgroundColor = tag.color;
+                tagElement.style.color = 'white';
+                tagContainer.appendChild(tagElement);
+              });
+              
+              element.appendChild(tagContainer);
+            }
+          };
+          
+          // Add tags to nodes
+          addTags(topic, tpc);
           
           // Add hover effect
           tpc.addEventListener('mouseover', () => {
@@ -157,8 +201,28 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Create mind map instance
       const mind = new MindElixir(options);
       
-      // Install the node menu plugin before init
-      mind.install(nodeMenu);
+      // Install the node menu plugin with additional summary option
+      const customNodeMenu = nodeMenu;
+      
+      // Add summary option to node menu
+      const originalMenus = customNodeMenu.menus;
+      customNodeMenu.menus = (node: any, mind: MindElixirInstance) => {
+        const menus = originalMenus(node, mind);
+        
+        // Add summary option
+        menus.push({
+          name: '✨ Generate Summary',
+          onclick: () => {
+            // Get the node and its children
+            const nodeData = mind.getAllDataWithChildren(node.id);
+            generateNodeSummary(nodeData);
+          }
+        });
+        
+        return menus;
+      };
+      
+      mind.install(customNodeMenu);
       
       // Get the generated mind map data from sessionStorage or use a default structure
       let data: MindElixirData;
@@ -272,13 +336,44 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Add custom styling to connection lines
+      // Add custom styling to connection lines with arrows
       const linkElements = containerRef.current.querySelectorAll('.fne-link');
       linkElements.forEach((link: Element) => {
         const linkElement = link as SVGElement;
         linkElement.setAttribute('stroke-width', '2.5');
         linkElement.setAttribute('stroke', '#8B5CF6');
+        linkElement.setAttribute('marker-end', 'url(#arrowhead)');
       });
+      
+      // Add arrowhead definition to SVG
+      const svg = containerRef.current.querySelector('svg');
+      if (svg) {
+        // Create a defs element if it doesn't exist
+        let defs = svg.querySelector('defs');
+        if (!defs) {
+          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+          svg.appendChild(defs);
+        }
+        
+        // Create arrowhead marker
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', 'arrowhead');
+        marker.setAttribute('viewBox', '0 0 10 10');
+        marker.setAttribute('refX', '5');
+        marker.setAttribute('refY', '5');
+        marker.setAttribute('markerWidth', '6');
+        marker.setAttribute('markerHeight', '6');
+        marker.setAttribute('orient', 'auto-start-reverse');
+        
+        // Create arrowhead path
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+        path.setAttribute('fill', '#8B5CF6');
+        
+        // Add path to marker and marker to defs
+        marker.appendChild(path);
+        defs.appendChild(marker);
+      }
       
       mindMapRef.current = mind;
       
@@ -290,7 +385,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Show a toast notification to inform users about right-click functionality
       toast({
         title: "Mind Map Ready",
-        description: "Right-click on any node to access the node menu with options.",
+        description: "Right-click on any node to access options including summary generation.",
         duration: 5000,
       });
       
@@ -301,12 +396,96 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
+  // Function to generate summaries for nodes and their children
+  const generateNodeSummary = (nodeData: any) => {
+    if (!nodeData) return;
+    
+    // Generate a simple summary from the node hierarchy
+    let summaryText = `## Summary of "${nodeData.topic}"\n\n`;
+    
+    // Helper function to extract node topics and build a hierarchical summary
+    const extractTopics = (node: any, level: number = 0) => {
+      if (!node) return '';
+      
+      // Replace emojis and extra whitespace
+      const cleanTopic = (topic: string) => {
+        return topic.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]\s?/g, '').trim();
+      };
+      
+      let result = '';
+      const indent = '  '.repeat(level);
+      
+      if (node.topic) {
+        result += `${indent}- ${cleanTopic(node.topic)}\n`;
+      }
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => {
+          result += extractTopics(child, level + 1);
+        });
+      }
+      
+      return result;
+    };
+    
+    // Generate the hierarchical summary
+    summaryText += extractTopics(nodeData);
+    
+    // Add a conclusion
+    summaryText += `\n## Key Points\n\n`;
+    summaryText += `This branch of the mind map contains ${countNodes(nodeData)} nodes in total.\n`;
+    
+    // Display the summary
+    setSummary(summaryText);
+    setShowSummary(true);
+    
+    toast({
+      title: "Summary Generated",
+      description: `Summary for "${nodeData.topic}" is ready to view.`,
+      duration: 3000,
+    });
+  };
+  
+  // Helper function to count nodes in a branch
+  const countNodes = (node: any): number => {
+    if (!node) return 0;
+    
+    let count = 1; // Count the current node
+    
+    if (node.children && node.children.length > 0) {
+      node.children.forEach((child: any) => {
+        count += countNodes(child);
+      });
+    }
+    
+    return count;
+  };
+  
+  // Close the summary panel
+  const closeSummary = () => {
+    setShowSummary(false);
+  };
+
   if (!isMapGenerated) {
     return null;
   }
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
+      {showSummary && (
+        <div className="absolute top-0 right-0 bottom-0 w-80 bg-white z-10 shadow-lg flex flex-col">
+          <div className="bg-primary p-3 text-white flex justify-between items-center">
+            <h3 className="font-medium">Mind Map Summary</h3>
+            <Button variant="ghost" size="sm" onClick={closeSummary} className="text-white">
+              Close
+            </Button>
+          </div>
+          <div className="p-4 overflow-auto flex-1">
+            <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
+          </div>
+        </div>
+      )}
+      
       <div className="w-full h-full overflow-hidden relative">
         <div 
           ref={containerRef} 

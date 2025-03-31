@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -193,11 +194,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
-
-    // Width adjustment
-    const handleWidthChange = (value: number[]) => {
-      setWidth(value[0]);
-    };
 
     return (
       <div className="h-full flex flex-col bg-gray-50">

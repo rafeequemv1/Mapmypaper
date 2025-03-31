@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";
@@ -7,6 +6,7 @@ import ChatPanel from "./ChatPanel";
 import MobileChatSheet from "./MobileChatSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MindElixirInstance } from "mind-elixir";
+import { Slider } from "@/components/ui/slider";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -31,7 +31,7 @@ const PanelStructure = ({
   const pdfViewerRef = useRef<{ scrollToPage: (pageNumber: number) => void } | null>(null);
   const isMobile = useIsMobile();
 
-  // Panel sizing
+  // Panel sizing with independent control
   const [pdfPanelSize, setPdfPanelSize] = useState(30);
   const [mindMapPanelSize, setMindMapPanelSize] = useState(40);
   const [chatPanelSize, setChatPanelSize] = useState(30);
@@ -58,31 +58,68 @@ const PanelStructure = ({
     }
   };
 
-  // Handle resizing of panels
-  const handleResizeEnd = (sizes: number[]) => {
-    if (showPdf && showChat) {
-      // All three panels visible
-      setPdfPanelSize(sizes[0]);
-      setMindMapPanelSize(sizes[1]);
-      setChatPanelSize(sizes[2]);
-    } else if (showPdf) {
-      // PDF and MindMap
-      setPdfPanelSize(sizes[0]);
-      setMindMapPanelSize(sizes[1]);
-    } else if (showChat) {
-      // MindMap and Chat
-      setMindMapPanelSize(sizes[0]);
-      setChatPanelSize(sizes[1]);
-    }
-    // If only one panel visible, no need to store sizes
+  // Handle width adjustments for PDF panel
+  const handlePdfWidthChange = (value: number) => {
+    setPdfPanelSize(value);
+  };
+  
+  // Handle width adjustments for Chat panel
+  const handleChatWidthChange = (value: number) => {
+    setChatPanelSize(value);
   };
 
   return (
-    <div className="h-full">
+    <div className="h-full flex flex-col">
+      {/* Panel Controls for Desktop */}
+      {!isMobile && (showPdf || showChat) && (
+        <div className="bg-white border-b px-4 py-2 flex items-center gap-4 text-sm">
+          {showPdf && (
+            <div className="flex items-center gap-2 min-w-[140px]">
+              <span className="text-xs font-medium">PDF Width: {pdfPanelSize}%</span>
+              <Slider 
+                value={[pdfPanelSize]} 
+                onValueChange={(values) => handlePdfWidthChange(values[0])}
+                max={50}
+                min={20}
+                step={5}
+                className="w-24"
+              />
+            </div>
+          )}
+          
+          {showChat && (
+            <div className="flex items-center gap-2 min-w-[140px]">
+              <span className="text-xs font-medium">Chat Width: {chatPanelSize}%</span>
+              <Slider 
+                value={[chatPanelSize]} 
+                onValueChange={(values) => handleChatWidthChange(values[0])}
+                max={50}
+                min={20}
+                step={5}
+                className="w-24"
+              />
+            </div>
+          )}
+        </div>
+      )}
+      
       <ResizablePanelGroup 
         direction="horizontal"
-        onLayout={handleResizeEnd}
-        className="h-full"
+        onLayout={(sizes) => {
+          // We still want to keep track of the relative panel sizes when manually resizing
+          if (showPdf && showChat) {
+            setPdfPanelSize(sizes[0]);
+            setMindMapPanelSize(sizes[1]);
+            setChatPanelSize(sizes[2]);
+          } else if (showPdf) {
+            setPdfPanelSize(sizes[0]);
+            setMindMapPanelSize(sizes[1]);
+          } else if (showChat) {
+            setMindMapPanelSize(sizes[0]);
+            setChatPanelSize(sizes[1]);
+          }
+        }}
+        className="flex-1"
       >
         {/* Left Panel - PDF Viewer (Conditionally Rendered) */}
         {showPdf && (

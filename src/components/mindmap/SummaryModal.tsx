@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, Check, FileDown } from "lucide-react";
+import { Loader2, Copy, Check, FileDown, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateStructuredSummary } from "@/services/geminiService";
 import html2canvas from "html2canvas";
@@ -78,7 +78,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     });
   };
 
-  const downloadAsPDF = async () => {
+  const downloadAsPNG = async () => {
     if (!summaryRef.current || !summaryData) return;
     
     setDownloading(true);
@@ -94,7 +94,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         backgroundColor: "#ffffff"
       });
       
-      // Convert canvas to PDF
+      // Convert canvas to PNG
       const imgData = canvas.toDataURL('image/png');
       
       // Create a link and trigger download
@@ -108,10 +108,10 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         description: "The summary has been downloaded as an image file.",
       });
     } catch (err) {
-      console.error("Error generating PDF:", err);
+      console.error("Error generating image:", err);
       toast({
         title: "Download Failed",
-        description: "There was an error creating the PDF file.",
+        description: "There was an error creating the image file.",
         variant: "destructive"
       });
     } finally {
@@ -168,22 +168,26 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           <DialogTitle>Document Summary</DialogTitle>
           <DialogDescription className="flex justify-between items-center">
             <span>AI-generated structured summary of the document</span>
-            {summaryData && !loading && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-2" 
-                onClick={downloadAsPDF}
-                disabled={downloading}
-              >
-                {downloading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FileDown className="h-4 w-4" />
-                )}
-                <span>Download Summary</span>
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {summaryData && !loading && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-2" 
+                    onClick={downloadAsPNG}
+                    disabled={downloading}
+                  >
+                    {downloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileDown className="h-4 w-4" />
+                    )}
+                    <span>Download as Image</span>
+                  </Button>
+                </>
+              )}
+            </div>
           </DialogDescription>
         </DialogHeader>
         
