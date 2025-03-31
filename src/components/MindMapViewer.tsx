@@ -1,9 +1,9 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
-import ThemeSelect, { MindMapTheme, mindMapThemes } from "@/components/mindmap/ThemeSelect";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -28,34 +28,11 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
-// Get node colors based on the selected theme and node level
-const getNodeColors = (level: number, theme: MindMapTheme) => {
-  const { background, color } = mindMapThemes[theme];
-  
-  return {
-    backgroundColor: background,
-    borderColor: color,
-    textColor: '#333333' // Dark text for better readability across all themes
-  };
-};
-
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [theme, setTheme] = useState<MindMapTheme>('purple'); // Default theme
   const { toast } = useToast();
-
-  // Effect to handle theme changes for existing mind map
-  useEffect(() => {
-    if (mindMapRef.current && containerRef.current) {
-      // Update background color of the container
-      containerRef.current.style.background = `linear-gradient(90deg, #F9F7F3 0%, ${mindMapThemes[theme].background} 100%)`;
-      
-      // Re-render the mind map to apply new theme
-      mindMapRef.current.refresh();
-    }
-  }, [theme]);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -74,8 +51,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         },
         theme: {
           name: 'colorful',
-          background: mindMapThemes[theme].background,
-          color: mindMapThemes[theme].color,
+          background: '#E5DEFF',
+          color: '#8B5CF6',
           palette: [],
           cssVar: {},
         },
@@ -83,13 +60,10 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         autoFit: true,
         // Add custom style to nodes based on their level
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
-          // Get appropriate colors based on node level and theme
-          const { backgroundColor, borderColor, textColor } = getNodeColors(level, theme);
-          
           // Apply custom styling to nodes for a more elegant look
-          tpc.style.backgroundColor = level === 0 ? backgroundColor : mindMapThemes[theme].background;
-          tpc.style.color = textColor;
-          tpc.style.border = `2px solid ${level === 0 ? borderColor : mindMapThemes[theme].color}`;
+          tpc.style.backgroundColor = level === 0 ? '#E5DEFF' : '#E5DEFF';
+          tpc.style.color = '#333333';
+          tpc.style.border = `2px solid ${level === 0 ? '#8B5CF6' : '#8B5CF6'}`;
           tpc.style.borderRadius = '12px';
           tpc.style.padding = '10px 16px';
           tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
@@ -236,7 +210,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       linkElements.forEach((link: Element) => {
         const linkElement = link as SVGElement;
         linkElement.setAttribute('stroke-width', '2.5');
-        linkElement.setAttribute('stroke', mindMapThemes[theme].color);
+        linkElement.setAttribute('stroke', '#8B5CF6');
       });
       
       mindMapRef.current = mind;
@@ -258,20 +232,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         setIsReady(true);
       }, 300);
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, theme]);
-
-  const handleThemeChange = (newTheme: MindMapTheme) => {
-    setTheme(newTheme);
-    
-    // Update connection lines color
-    if (containerRef.current) {
-      const linkElements = containerRef.current.querySelectorAll('.fne-link');
-      linkElements.forEach((link: Element) => {
-        const linkElement = link as SVGElement;
-        linkElement.setAttribute('stroke', mindMapThemes[newTheme].color);
-      });
-    }
-  };
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   if (!isMapGenerated) {
     return null;
@@ -284,15 +245,10 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           ref={containerRef} 
           className="w-full h-full" 
           style={{ 
-            background: `linear-gradient(90deg, #F9F7F3 0%, ${mindMapThemes[theme].background} 100%)`,
+            background: `linear-gradient(90deg, #F9F7F3 0%, #E5DEFF 100%)`,
             transition: 'background-color 0.5s ease'
           }}
         />
-        
-        {/* Theme selector in the top-right corner */}
-        <div className="absolute top-2 right-2 z-10">
-          <ThemeSelect value={theme} onValueChange={handleThemeChange} />
-        </div>
       </div>
     </div>
   );
