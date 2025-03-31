@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { TooltipProvider } from "./ui/tooltip";
@@ -317,10 +317,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               <Button 
                 variant="secondary" 
                 size="sm" 
-                className="h-8"
+                className="h-8 flex items-center gap-1"
                 onClick={handleSearch}
               >
-                Search
+                <Search className="h-3.5 w-3.5" />
+                <span>Search</span>
               </Button>
             </div>
           </div>
@@ -358,7 +359,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           <TooltipProvider>
             <ScrollArea className="flex-1" ref={pdfContainerRef}>
               <div 
-                className="flex flex-col items-center py-4 px-2" 
+                className="flex flex-col items-center py-4" 
                 onMouseUp={handleDocumentMouseUp}
                 style={{ position: 'relative' }}
               >
@@ -369,7 +370,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                       renderTooltipContent()
                     ) : (
                       <div 
-                        className="absolute bg-primary text-white px-3 py-2 rounded-md shadow-lg z-10 cursor-pointer"
+                        className="fixed bg-primary text-white px-3 py-2 rounded-md shadow-lg z-10 cursor-pointer"
                         style={{ 
                           left: `${tooltipPosition.x}px`, 
                           top: `${tooltipPosition.y - 40}px`,
@@ -393,9 +394,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   {Array.from(new Array(numPages), (_, index) => (
                     <div
                       key={`page_${index + 1}`}
-                      className="mb-8 shadow-lg bg-white border border-gray-200 transition-colors duration-300"
+                      className="mb-8 shadow-lg bg-white border border-gray-200 transition-colors duration-300 mx-auto"
                       ref={setPageRef(index)}
-                      style={{ width: '100%', maxWidth: '100%' }}
+                      style={{ width: 'fit-content', maxWidth: '100%' }}
                       data-page-number={index + 1}
                     >
                       <Page
@@ -404,7 +405,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         renderAnnotationLayer={false}
                         onRenderSuccess={onPageRenderSuccess}
                         scale={scale}
-                        width={pdfContainerRef.current?.clientWidth ? pdfContainerRef.current.clientWidth - 16 : undefined}
+                        width={pdfContainerRef.current?.clientWidth ? Math.min(pdfContainerRef.current.clientWidth - 32, 800) : undefined}
                         className="mx-auto"
                       />
                       <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-200">

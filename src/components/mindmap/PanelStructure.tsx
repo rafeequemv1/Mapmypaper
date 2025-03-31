@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -71,15 +72,11 @@ const PanelStructure = ({
     }
   };
 
-  // Handle width adjustments for PDF panel - simplified controls
-  const increasePdfWidth = () => {
-    setPdfPanelSize(prev => Math.min(prev + 5, 50));
+  // Handle width adjustments for PDF panel with slider
+  const handlePdfWidthChange = (value: number[]) => {
+    setPdfPanelSize(value[0]);
   };
-  
-  const decreasePdfWidth = () => {
-    setPdfPanelSize(prev => Math.max(prev - 5, 20));
-  };
-  
+
   // Handle width adjustments for Chat panel
   const handleChatWidthChange = (value: number) => {
     setChatPanelSize(value);
@@ -87,29 +84,19 @@ const PanelStructure = ({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Panel Controls for Desktop - Simplified with only +/- buttons for PDF width */}
+      {/* Panel Controls for Desktop - Using slider for more precise control */}
       {!isMobile && showPdf && (
         <div className="bg-white border-b px-4 py-2 flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium">PDF Width: {pdfPanelSize}%</span>
-            <div className="flex items-center">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 w-6 p-0" 
-                onClick={decreasePdfWidth}
-              >
-                <Minus className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 w-6 p-0" 
-                onClick={increasePdfWidth}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
+          <div className="flex items-center gap-2 w-full max-w-xs">
+            <span className="text-xs font-medium min-w-[90px]">PDF Width: {pdfPanelSize}%</span>
+            <Slider
+              defaultValue={[pdfPanelSize]}
+              min={20}
+              max={50}
+              step={1}
+              onValueChange={handlePdfWidthChange}
+              className="w-full"
+            />
           </div>
         </div>
       )}
@@ -139,6 +126,7 @@ const PanelStructure = ({
               defaultSize={pdfPanelSize} 
               minSize={20}
               id="pdf-panel"
+              order={1}
             >
               <TooltipProvider>
                 <PdfViewer 
@@ -188,6 +176,7 @@ const PanelStructure = ({
           defaultSize={mindMapPanelSize} 
           minSize={30}
           id="mindmap-panel"
+          order={2}
         >
           <MindMapViewer 
             isMapGenerated={true} 
@@ -203,6 +192,7 @@ const PanelStructure = ({
               defaultSize={chatPanelSize} 
               minSize={20}
               id="chat-panel"
+              order={3}
             >
               <ChatPanel 
                 toggleChat={toggleChat} 
