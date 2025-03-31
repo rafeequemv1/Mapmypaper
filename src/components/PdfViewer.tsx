@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -319,20 +318,20 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
 
-    // Calculate optimal width for PDF pages based on container width with no upper limit
+    // Calculate optimal width for PDF pages - fit 100% of container width
     const getOptimalPageWidth = () => {
       if (!pdfContainerRef.current) return undefined;
       
       const containerWidth = pdfContainerRef.current.clientWidth;
-      // Remove the max width cap - allow PDF to extend across available width
-      return containerWidth - 32; // Just leave some margin on the sides
+      // Use the full container width
+      return containerWidth - 16; // Just a small margin for aesthetics
     };
 
     return (
       <div className="h-full flex flex-col bg-gray-50">
         {/* PDF Toolbar */}
         <div className="bg-white border-b p-2 flex flex-wrap items-center gap-2 z-10">
-          {/* Zoom Controls */}
+          {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-1">
             <Button 
               variant="ghost" 
@@ -343,7 +342,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <span className="text-xs w-12 text-center">
+            <span className="text-xs w-16 text-center font-medium">
               {Math.round(scale * 100)}%
             </span>
             <Button 
@@ -416,7 +415,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           )}
         </div>
 
-        {/* PDF Content - Improved responsive fit */}
+        {/* PDF Content with full width */}
         {pdfData ? (
           <TooltipProvider>
             <ScrollArea className="flex-1" ref={pdfContainerRef}>

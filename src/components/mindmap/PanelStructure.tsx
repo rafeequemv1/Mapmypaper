@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";
@@ -12,8 +13,6 @@ import {
   TooltipProvider,
   TooltipTrigger 
 } from "@/components/ui/tooltip";
-import { Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -67,24 +66,6 @@ const PanelStructure = ({
     }
   };
 
-  // Adjust PDF panel size with constraints
-  const adjustPdfPanelSize = (increment: boolean) => {
-    setPdfPanelSize(prevSize => {
-      const newSize = increment ? prevSize + 5 : prevSize - 5;
-      // Keep within reasonable bounds - max 55% of viewport width for PDF
-      return Math.max(20, Math.min(55, newSize));
-    });
-  };
-
-  // Adjust Chat panel size with constraints
-  const adjustChatPanelSize = (increment: boolean) => {
-    setChatPanelSize(prevSize => {
-      const newSize = increment ? prevSize + 5 : prevSize - 5;
-      // Keep within reasonable bounds
-      return Math.max(20, Math.min(50, newSize));
-    });
-  };
-
   return (
     <div className="h-full flex flex-col">
       <ResizablePanelGroup 
@@ -103,28 +84,6 @@ const PanelStructure = ({
               className="w-full relative"
               onResize={(size) => setPdfPanelSize(size)}
             >
-              {/* PDF Size Controls */}
-              <div className="absolute top-16 right-3 z-20 flex flex-col gap-1 bg-white/80 rounded-md shadow-md p-1">
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={() => adjustPdfPanelSize(true)}
-                  title="Increase PDF width"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={() => adjustPdfPanelSize(false)}
-                  title="Decrease PDF width"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </div>
-              
               <TooltipProvider>
                 <PdfViewer 
                   onTextSelected={(text) => {
@@ -194,28 +153,6 @@ const PanelStructure = ({
               onResize={(size) => setChatPanelSize(size)}
               className="relative"
             >
-              {/* Chat Size Controls */}
-              <div className="absolute top-16 left-3 z-20 flex flex-col gap-1 bg-white/80 rounded-md shadow-md p-1">
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={() => adjustChatPanelSize(true)}
-                  title="Increase chat width"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={() => adjustChatPanelSize(false)}
-                  title="Decrease chat width"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </div>
-              
               <ChatPanel 
                 toggleChat={toggleChat} 
                 explainText={explainText}

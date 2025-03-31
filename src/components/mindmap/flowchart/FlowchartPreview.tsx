@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
@@ -91,7 +90,7 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-sm font-medium">Preview</h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Button 
             variant="outline" 
             size="sm" 
@@ -101,6 +100,9 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
+          <span className="text-xs w-14 text-center font-medium">
+            {Math.round(scale * 100)}%
+          </span>
           <Button 
             variant="outline" 
             size="sm" 

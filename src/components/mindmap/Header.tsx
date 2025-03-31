@@ -1,5 +1,4 @@
-
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit, Search, Camera } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit, Search, FlowChart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,6 +24,7 @@ interface HeaderProps {
   toggleChat: () => void;
   onExportMindMap?: (type: 'svg' | 'png') => void;
   onOpenSummary?: () => void;
+  onOpenFlowchart?: () => void;
 }
 
 // Define keyboard shortcuts for the mind map
@@ -59,6 +59,7 @@ const Header = ({
   toggleChat,
   onExportMindMap,
   onOpenSummary,
+  onOpenFlowchart,
 }: HeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -145,6 +146,26 @@ const Header = ({
                 <p>Toggle research assistant</p>
               </TooltipContent>
             </Tooltip>
+            
+            {/* Flowchart button */}
+            {onOpenFlowchart && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={onOpenFlowchart}
+                    className="text-gray-500 px-2 h-8"
+                  >
+                    <FlowChart className="h-5 w-5 mr-1" />
+                    <span className="text-xs">Flowchart</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Generate flowchart</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             
             {/* Summary button */}
             {onOpenSummary && (
