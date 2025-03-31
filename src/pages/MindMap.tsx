@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -17,6 +18,7 @@ const MindMap = () => {
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
   const [isGeneratingMindMap, setIsGeneratingMindMap] = useState(false);
+  const [detailLevel, setDetailLevel] = useState<'basic' | 'detailed' | 'advanced'>('detailed');
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -126,15 +128,15 @@ const MindMap = () => {
         return;
       }
       
-      console.log(`Generating mindmap from PDF text (length: ${pdfText.length})`);
+      console.log(`Generating mindmap from PDF text (length: ${pdfText.length}), detail level: ${detailLevel}`);
       
       toast({
         title: "Generating Mind Map",
         description: "Please wait while we analyze your PDF..."
       });
       
-      // Call the Gemini service to generate the mind map
-      const mindMapData = await generateMindMapFromText(pdfText);
+      // Call the Gemini service to generate the mind map with detail level
+      const mindMapData = await generateMindMapFromText(pdfText, detailLevel);
       console.log("Mind map data generated:", mindMapData);
       
       toast({
@@ -175,6 +177,13 @@ const MindMap = () => {
     } finally {
       setIsGeneratingMindMap(false);
     }
+  };
+
+  const handleDetailLevelChange = (level: 'basic' | 'detailed' | 'advanced') => {
+    console.log("Changing detail level to:", level);
+    setDetailLevel(level);
+    // Regenerate the mind map with the new detail level
+    generateMindMapData();
   };
 
   const togglePdf = () => {
@@ -336,6 +345,8 @@ const MindMap = () => {
         toggleChat={toggleChat}
         onExportMindMap={handleExportMindMap}
         onOpenSummary={toggleSummary}
+        detailLevel={detailLevel}
+        onDetailLevelChange={handleDetailLevelChange}
       />
 
       {isGeneratingMindMap ? (

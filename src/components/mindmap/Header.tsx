@@ -1,14 +1,17 @@
-
 import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Brain, FileText, MessageSquare, Download, User } from "lucide-react";
+import { Brain, FileText, MessageSquare, Download, User, FlowChart, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import FlowchartModal from "./FlowchartModal";
 
 interface HeaderProps {
   showPdf: boolean;
@@ -32,6 +36,8 @@ interface HeaderProps {
   toggleChat: () => void;
   onExportMindMap: (type: 'svg' | 'png') => void;
   onOpenSummary: () => void;
+  detailLevel: 'basic' | 'detailed' | 'advanced';
+  onDetailLevelChange: (level: 'basic' | 'detailed' | 'advanced') => void;
 }
 
 const Header = ({
@@ -42,12 +48,15 @@ const Header = ({
   toggleChat,
   onExportMindMap,
   onOpenSummary,
+  detailLevel,
+  onDetailLevelChange,
 }: HeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const [documentTitle, setDocumentTitle] = useState<string>("Document Analysis");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [flowchartModalOpen, setFlowchartModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -124,6 +133,10 @@ const Header = ({
     }
   }, [title, description, user, toast]);
 
+  const handleFlowchartClick = () => {
+    setFlowchartModalOpen(true);
+  };
+
   return (
     <header className="border-b border-[#eaeaea] dark:border-[#333] bg-white dark:bg-[#111] p-2 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -136,6 +149,55 @@ const Header = ({
       </div>
       
       <div className="flex items-center gap-1">
+        {/* Detail Level Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-black dark:text-white h-7 flex gap-1 items-center"
+            >
+              <span className="text-xs capitalize">{detailLevel}</span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white dark:bg-[#222] border-[#eaeaea] dark:border-[#333]">
+            <DropdownMenuLabel>Detail Level</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuRadioGroup value={detailLevel} onValueChange={(value) => onDetailLevelChange(value as 'basic' | 'detailed' | 'advanced')}>
+              <DropdownMenuRadioItem 
+                value="basic"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-[#333] cursor-pointer"
+              >
+                Basic
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem 
+                value="detailed"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-[#333] cursor-pointer"
+              >
+                Detailed
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem 
+                value="advanced"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-[#333] cursor-pointer"
+              >
+                Advanced
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Flowchart Button */}
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={handleFlowchartClick}
+          className="text-black dark:text-white h-7"
+        >
+          <span className="text-xs">Flowchart</span>
+        </Button>
+        
+        {/* Existing buttons */}
         {pdfAvailable && (
           <Button 
             variant={showPdf ? "default" : "ghost"} 
@@ -256,6 +318,12 @@ const Header = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Flowchart Modal */}
+      <FlowchartModal
+        open={flowchartModalOpen}
+        onOpenChange={setFlowchartModalOpen}
+      />
     </header>
   );
 };

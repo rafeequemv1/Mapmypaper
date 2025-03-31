@@ -14,6 +14,7 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -36,6 +37,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     }
   }, [open]);
 
+  const handleDetailLevelChange = (level: 'basic' | 'detailed' | 'advanced') => {
+    generateFlowchart(level);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
@@ -46,6 +51,20 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           </DialogDescription>
         </DialogHeader>
         
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm">Detail Level:</span>
+          <Select onValueChange={(value) => handleDetailLevelChange(value as 'basic' | 'detailed' | 'advanced')}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Detailed" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="basic">Basic</SelectItem>
+              <SelectItem value="detailed">Detailed</SelectItem>
+              <SelectItem value="advanced">Advanced</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 overflow-hidden">
           {/* Code editor */}
           <div className="flex flex-col">
@@ -54,7 +73,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               error={error}
               isGenerating={isGenerating}
               onCodeChange={handleCodeChange}
-              onRegenerate={generateFlowchart}
+              onRegenerate={() => generateFlowchart('detailed')}
             />
           </div>
           

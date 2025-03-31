@@ -107,7 +107,7 @@ export const useFlowchartGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const generateFlowchart = async () => {
+  const generateFlowchart = async (detailLevel: 'basic' | 'detailed' | 'advanced' = 'detailed') => {
     try {
       setIsGenerating(true);
       setError(null);
@@ -118,9 +118,10 @@ export const useFlowchartGenerator = () => {
         throw new Error("No PDF text found. Please upload a PDF first.");
       }
       
-      console.log("Generating flowchart from PDF text, length:", pdfText.length);
+      console.log("Generating flowchart from PDF text, length:", pdfText.length, "detail level:", detailLevel);
       
-      const flowchartCode = await generateFlowchartFromPdf();
+      // Pass the detail level to the API
+      const flowchartCode = await generateFlowchartFromPdf(detailLevel);
       console.log("Raw flowchart code generated:", flowchartCode.substring(0, 500) + "...");
       
       // Clean and validate the mermaid syntax
