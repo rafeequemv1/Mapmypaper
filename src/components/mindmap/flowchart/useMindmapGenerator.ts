@@ -87,7 +87,8 @@ export const useMindmapGenerator = () => {
     error,
     isGenerating,
     generateMindmap,
-    handleCodeChange
+    handleCodeChange,
+    defaultMindmap
   };
 };
 

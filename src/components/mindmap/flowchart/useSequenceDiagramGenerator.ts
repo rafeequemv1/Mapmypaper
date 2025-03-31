@@ -67,7 +67,8 @@ export const useSequenceDiagramGenerator = () => {
     error,
     isGenerating,
     generateDiagram,
-    handleCodeChange
+    handleCodeChange,
+    defaultSequenceDiagram
   };
 };
 
