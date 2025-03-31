@@ -1,8 +1,9 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, FileText } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -15,7 +16,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
-  renderTooltipContent?: () => React.ReactNode; // Added this prop
+  renderTooltipContent?: () => React.ReactNode;
 }
 
 interface PdfViewerHandle {
@@ -108,7 +109,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
-    // Search functionality
+    // Enhanced search functionality with highlighting
     const handleSearch = () => {
       if (!searchQuery.trim()) return;
       
@@ -116,22 +117,50 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       const results: string[] = [];
       const textLayers = document.querySelectorAll('.react-pdf__Page__textContent');
       
+      // Reset previous highlights
+      document.querySelectorAll('.pdf-search-highlight').forEach(el => {
+        (el as HTMLElement).style.backgroundColor = '';
+        el.classList.remove('pdf-search-highlight');
+      });
+      
       textLayers.forEach((layer, pageIndex) => {
         const textContent = layer.textContent || '';
         const regex = new RegExp(searchQuery, 'gi');
         let match;
         
+        // Find matches and create an array of page numbers
         while ((match = regex.exec(textContent)) !== null) {
-          // Store page number for each match
           results.push(`page${pageIndex + 1}`);
+        }
+        
+        // Highlight text in the PDF
+        if (layer.childNodes) {
+          layer.childNodes.forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE && node.textContent) {
+              const parent = node.parentElement;
+              if (parent && parent.textContent) {
+                const nodeText = parent.textContent;
+                if (nodeText.toLowerCase().includes(searchQuery.toLowerCase())) {
+                  parent.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                  parent.classList.add('pdf-search-highlight');
+                }
+              }
+            }
+          });
         }
       });
       
-      setSearchResults(results);
+      // Remove duplicates
+      const uniqueResults = [...new Set(results)];
+      setSearchResults(uniqueResults);
       
-      if (results.length > 0) {
+      if (uniqueResults.length > 0) {
         setCurrentSearchIndex(0);
-        scrollToPosition(results[0]);
+        scrollToPosition(uniqueResults[0]);
+        toast({
+          title: "Search Results",
+          description: `Found ${uniqueResults.length} occurrences of "${searchQuery}"`,
+        });
       } else {
         toast({
           title: "No results found",
@@ -166,7 +195,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Scroll to specific page
+    // Scroll to specific page with highlighting
     const scrollToPage = (pageNumber: number) => {
       if (pageNumber < 1 || pageNumber > numPages) {
         console.warn(`Invalid page number: ${pageNumber}. Pages range from 1 to ${numPages}`);
@@ -185,11 +214,23 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             block: 'start'
           });
           
-          // Flash effect to highlight the page
-          targetPage.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+          // Enhanced flash effect to highlight the page
+          targetPage.style.backgroundColor = 'rgba(59, 130, 246, 0.15)';
           setTimeout(() => {
             targetPage.style.backgroundColor = '';
           }, 1500);
+          
+          // If searching, highlight the occurrences on this page more prominently
+          if (searchQuery) {
+            const highlights = targetPage.querySelectorAll('.pdf-search-highlight');
+            highlights.forEach(el => {
+              const original = el as HTMLElement;
+              original.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+              setTimeout(() => {
+                original.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+              }, 1500);
+            });
+          }
         }
       }
     };
@@ -276,6 +317,24 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           </div>
           
           <div className="h-6 border-l mx-1"></div>
+          
+          {/* PDF Viewer Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 flex items-center gap-1"
+            onClick={() => {
+              // Open PDF in new tab if possible
+              if (pdfData) {
+                const blob = new Blob([atob(pdfData)], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+              }
+            }}
+          >
+            <FileText className="h-4 w-4" />
+            <span className="text-xs">View PDF</span>
+          </Button>
           
           {/* Search Controls */}
           <div className="flex items-center gap-1 ml-auto">

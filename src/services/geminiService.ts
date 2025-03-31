@@ -25,16 +25,16 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
         "children": [
           {
             "id": "section1",
-            "topic": "Section Title",
+            "topic": "Section Title with Complete Sentences",
             "direction": 0,
             "children": [
-              {"id": "section1-1", "topic": "Subsection or Key Point"},
-              {"id": "section1-2", "topic": "Another Key Point"}
+              {"id": "section1-1", "topic": "Subsection with Clear Complete Sentence"},
+              {"id": "section1-2", "topic": "Another Point in Complete Sentence"}
             ]
           },
           {
             "id": "section2",
-            "topic": "Another Main Section",
+            "topic": "Another Main Section as Complete Sentence",
             "direction": 1,
             "children": []
           }
@@ -42,9 +42,13 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       }
     }
 
-    Use "direction": 0 for nodes on the left side, and "direction": 1 for nodes on the right side.
-    Make sure to keep the structure clean and organized.
-    Only include the JSON in your response, nothing else.
+    IMPORTANT REQUIREMENTS:
+    1. Every "topic" must be a complete sentence or phrase, not just keywords or fragments.
+    2. Make each topic short, clear, and self-contained (preferably under 10 words).
+    3. Use "direction": 0 for nodes on the left side, and "direction": 1 for nodes on the right side.
+    4. Create a balanced structure with roughly equal content on both sides.
+    5. Make sure the mind map is organized in a logical hierarchy.
+    6. Only include the JSON in your response, nothing else.
     
     Here's the document text to analyze:
     ${pdfText.slice(0, 15000)}
@@ -165,7 +169,7 @@ export const analyzeImageWithGemini = async (imageData: string): Promise<string>
   }
 };
 
-// New function to generate structured summaries from PDF content
+// Enhanced function to generate structured summaries from PDF content
 export const generateStructuredSummary = async (): Promise<Record<string, string>> => {
   try {
     // Retrieve stored PDF text from sessionStorage
@@ -179,18 +183,32 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Analyze this academic document and create a structured summary with the following sections:
+    You are a scientific summarization assistant. Given the text of a research paper (abstract, full paper, or detailed notes), 
+    generate a structured, concise, and clear summary with the following sections. Keep the writing professional and suited 
+    for an academic audience who wants a snapshot of the study without reading the full paper.
+
+    Format the output as a JSON object with these section names as keys and the content as values:
+    {
+      "Summary": "1-2 sentence high-level summary of the entire study: what was studied, how it was studied, and the key finding.",
+      
+      "Key Findings": "List the main statistical or scientific results clearly, point-wise. Highlight effect sizes, odds ratios, correlations, p-values, or any key quantitative result mentioned in the paper.",
+      
+      "Objectives": "State the research question(s) or aim(s) of the paper, mentioning the gap in the literature or problem the study tries to address.",
+      
+      "Methods": "Briefly describe the study design (e.g., cohort study, case-control, simulation, modeling), data collection methods (e.g., surveys, experiments, datasets used), and analysis approach (e.g., regression models, machine learning, statistical tests).",
+      
+      "Results": "Summarize the main results in 3-5 sentences, focusing on how the data answered the objectives. Include any noteworthy statistics, trends, or patterns.",
+      
+      "Conclusions": "Summarize the implications of the study, what it contributes to the field, and any potential practical applications.",
+      
+      "Key Concepts": "List 8-12 important keywords and concepts from the paper for context and indexing."
+    }
     
-    1. Overview: A brief snapshot of the entire document (2-3 sentences)
-    2. Key Findings: The main discoveries or conclusions (3-5 bullet points)
-    3. Objectives: The stated goals of the research (2-3 bullet points)
-    4. Methods: How the research was conducted (2-4 bullet points)
-    5. Results: Significant outcomes and data (3-5 bullet points)
-    6. Conclusions: Final interpretations and implications (2-3 bullet points)
-    
-    Format your response as a JSON object with these section names as keys and the content as values.
-    Keep each section concise and focused on the most important information.
-    If the document doesn't contain information for a specific section, provide a brief note explaining this.
+    IMPORTANT:
+    - Use bullet points (format as '- Point text') for Key Findings and Key Concepts.
+    - Keep each section concise and focused on the most important information.
+    - If the document doesn't contain information for a specific section, provide a brief note explaining this.
+    - Format the output as proper JSON, not markdown or anything else.
     
     Document text:
     ${pdfText.slice(0, 15000)}

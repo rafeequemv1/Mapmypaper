@@ -6,13 +6,14 @@ import ChatPanel from "./ChatPanel";
 import MobileChatSheet from "./MobileChatSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MindElixirInstance } from "mind-elixir";
-import { Slider } from "@/components/ui/slider";
 import { 
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import { Plus, Minus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -64,13 +65,16 @@ const PanelStructure = ({
     }
   };
 
-  // Handle width adjustments for PDF panel - fixed to match user expectations
-  const handlePdfWidthChange = (value: number) => {
-    // Directly use the slider value: smaller value = narrower panel
-    setPdfPanelSize(value);
+  // Handle width adjustments for PDF panel - simplified controls
+  const increasePdfWidth = () => {
+    setPdfPanelSize(prev => Math.min(prev + 5, 50));
   };
   
-  // Handle width adjustments for Chat panel - normal logic
+  const decreasePdfWidth = () => {
+    setPdfPanelSize(prev => Math.max(prev - 5, 20));
+  };
+  
+  // Handle width adjustments for Chat panel
   const handleChatWidthChange = (value: number) => {
     setChatPanelSize(value);
   };
@@ -78,33 +82,43 @@ const PanelStructure = ({
   return (
     <div className="h-full flex flex-col">
       {/* Panel Controls for Desktop */}
-      {!isMobile && (showPdf || showChat) && (
+      {!isMobile && showPdf && (
         <div className="bg-white border-b px-4 py-2 flex items-center gap-4 text-sm">
-          {showPdf && (
-            <div className="flex items-center gap-2 min-w-[140px]">
-              <span className="text-xs font-medium">PDF Width: {pdfPanelSize}%</span>
-              <Slider 
-                value={[pdfPanelSize]} 
-                onValueChange={(values) => handlePdfWidthChange(values[0])}
-                max={50}
-                min={20}
-                step={5}
-                className="w-24"
-              />
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium">PDF Width: {pdfPanelSize}%</span>
+            <div className="flex items-center">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 w-6 p-0" 
+                onClick={decreasePdfWidth}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 w-6 p-0" 
+                onClick={increasePdfWidth}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
             </div>
-          )}
+          </div>
           
           {showChat && (
             <div className="flex items-center gap-2 min-w-[140px]">
               <span className="text-xs font-medium">Chat Width: {chatPanelSize}%</span>
-              <Slider 
-                value={[chatPanelSize]} 
-                onValueChange={(values) => handleChatWidthChange(values[0])}
-                max={50}
-                min={20}
-                step={5}
-                className="w-24"
-              />
+              <div className="w-24">
+                <Slider 
+                  value={[chatPanelSize]} 
+                  onValueChange={(values) => handleChatWidthChange(values[0])}
+                  max={50}
+                  min={20}
+                  step={5}
+                  className="w-24"
+                />
+              </div>
             </div>
           )}
         </div>
