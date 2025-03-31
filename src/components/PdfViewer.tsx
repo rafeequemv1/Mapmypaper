@@ -1,9 +1,8 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, FileText } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -32,7 +31,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [showTooltip, setShowTooltip] = useState<boolean>(false);
     const [tooltipPosition, setTooltipPosition] = useState<{x: number, y: number}>({x: 0, y: 0});
     const [scale, setScale] = useState<number>(1);
-    const [width, setWidth] = useState<number>(90);
+    const [width, setWidth] = useState<number>(95); // Increase default width for better fit
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [searchResults, setSearchResults] = useState<string[]>([]);
     const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(-1);
@@ -133,7 +132,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           results.push(`page${pageIndex + 1}`);
         }
         
-        // Highlight text in the PDF
+        // Highlight text in the PDF with yellow background
         if (layer.childNodes) {
           layer.childNodes.forEach(node => {
             if (node.nodeType === Node.TEXT_NODE && node.textContent) {
@@ -141,7 +140,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               if (parent && parent.textContent) {
                 const nodeText = parent.textContent;
                 if (nodeText.toLowerCase().includes(searchQuery.toLowerCase())) {
-                  parent.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                  parent.style.backgroundColor = 'rgba(255, 255, 0, 0.5)'; // More visible yellow highlight
                   parent.classList.add('pdf-search-highlight');
                 }
               }
@@ -225,9 +224,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             const highlights = targetPage.querySelectorAll('.pdf-search-highlight');
             highlights.forEach(el => {
               const original = el as HTMLElement;
-              original.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+              original.style.backgroundColor = 'rgba(255, 255, 0, 0.7)'; // More intense yellow
               setTimeout(() => {
-                original.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                original.style.backgroundColor = 'rgba(255, 255, 0, 0.5)'; // Back to normal highlight
               }, 1500);
             });
           }
@@ -315,26 +314,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               <RotateCw className="h-4 w-4" />
             </Button>
           </div>
-          
-          <div className="h-6 border-l mx-1"></div>
-          
-          {/* PDF Viewer Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 flex items-center gap-1"
-            onClick={() => {
-              // Open PDF in new tab if possible
-              if (pdfData) {
-                const blob = new Blob([atob(pdfData)], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                window.open(url, '_blank');
-              }
-            }}
-          >
-            <FileText className="h-4 w-4" />
-            <span className="text-xs">View PDF</span>
-          </Button>
           
           {/* Search Controls */}
           <div className="flex items-center gap-1 ml-auto">
@@ -437,7 +416,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                       key={`page_${index + 1}`}
                       className="my-4 shadow-md mx-auto bg-white transition-colors duration-300"
                       ref={setPageRef(index)}
-                      style={{ maxWidth: `${width}%` }}
+                      style={{ width: '100%', maxWidth: '800px' }}
                       data-page-number={index + 1}
                     >
                       <Page
@@ -446,7 +425,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         renderAnnotationLayer={false}
                         onRenderSuccess={onPageRenderSuccess}
                         scale={scale}
-                        width={Math.min(600, window.innerWidth - 60) * (width/100)}
+                        width={Math.min(800, window.innerWidth - 40)}
                       />
                       <div className="text-center text-xs text-gray-500 py-1">
                         Page {index + 1} of {numPages}

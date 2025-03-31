@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -57,8 +58,8 @@ const PanelStructure = ({
         console.log("Scrolling to page:", pageNumber);
         pdfViewerRef.current.scrollToPage(pageNumber);
         
-        // Ensure PDF panel is visible on mobile
-        if (!showPdf && !isMobile) {
+        // Ensure PDF panel is visible
+        if (!showPdf) {
           togglePdf();
         }
       }
