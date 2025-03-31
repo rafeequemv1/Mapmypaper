@@ -1,4 +1,5 @@
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit, Search, GitBranch } from "lucide-react";
+
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit, Search, GitBranch, Network } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,6 +26,7 @@ interface HeaderProps {
   onExportMindMap?: (type: 'svg' | 'png') => void;
   onOpenSummary?: () => void;
   onOpenFlowchart?: () => void;
+  onOpenSequenceDiagram?: () => void;
 }
 
 // Define keyboard shortcuts for the mind map
@@ -60,6 +62,7 @@ const Header = ({
   onExportMindMap,
   onOpenSummary,
   onOpenFlowchart,
+  onOpenSequenceDiagram,
 }: HeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -163,6 +166,26 @@ const Header = ({
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>Generate flowchart</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {/* Sequence Diagram button */}
+            {onOpenSequenceDiagram && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={onOpenSequenceDiagram}
+                    className="text-gray-500 px-2 h-8"
+                  >
+                    <Network className="h-5 w-5 mr-1" />
+                    <span className="text-xs">Sequence</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Generate sequence diagram</p>
                 </TooltipContent>
               </Tooltip>
             )}
