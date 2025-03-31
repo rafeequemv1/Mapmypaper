@@ -237,3 +237,196 @@ export const explainTextWithGemini = async (selectedText: string) => {
     throw new Error("Failed to generate explanation. Please try again later.");
   }
 };
+
+/**
+ * Chat with Gemini about the uploaded PDF
+ */
+export const chatWithGeminiAboutPdf = async (message: string) => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText) {
+      throw new Error("PDF text not found. Please upload a PDF document first.");
+    }
+    
+    // Create a prompt with context from the PDF
+    const prompt = `
+      You are a helpful research assistant who has read the following document.
+      Please respond to the user's question based on the document content.
+      
+      DOCUMENT CONTENT (partial):
+      ${pdfText.substring(0, 15000)}
+      
+      USER QUESTION:
+      ${message}
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error in chat with Gemini:", error);
+    throw new Error("Failed to get a response from the AI assistant.");
+  }
+};
+
+/**
+ * Analyze an image with Gemini Vision API
+ */
+export const analyzeImageWithGemini = async (imageData: string) => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    
+    // Create prompt for image analysis
+    const prompt = `
+      Analyze this image from a scientific or academic document.
+      Explain what it shows, including:
+      - Type of visual (table, chart, graph, diagram, etc.)
+      - Main information being conveyed
+      - Key data points or findings
+      - Any conclusions that can be drawn
+      
+      Be thorough but concise.
+    `;
+    
+    // Remove data URL prefix if present
+    const imageContent = {
+      inlineData: {
+        data: imageData.includes('base64,') ? imageData.split('base64,')[1] : imageData,
+        mimeType: "image/png"
+      }
+    };
+    
+    const result = await model.generateContent([prompt, imageContent]);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error analyzing image with Gemini:", error);
+    throw new Error("Failed to analyze the image. Please try again.");
+  }
+};
+
+/**
+ * Generate sequence diagram for document processes
+ */
+export const generateSequenceDiagramFromPdf = async (detailLevel: 'basic' | 'detailed' | 'advanced' = 'detailed') => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText) {
+      throw new Error("No PDF text found. Please upload a PDF first.");
+    }
+    
+    // Customize instructions based on detail level
+    let detailInstructions = '';
+    switch (detailLevel) {
+      case 'basic':
+        detailInstructions = "Create a simple sequence diagram with only the main actors and key interactions.";
+        break;
+      case 'detailed':
+        detailInstructions = "Create a moderately detailed sequence diagram showing all important actors and their interactions.";
+        break;
+      case 'advanced':
+        detailInstructions = "Create a comprehensive sequence diagram capturing all actors, interactions, and conditions.";
+        break;
+    }
+    
+    const prompt = `
+      Analyze the following document text and create a sequence diagram using Mermaid.js syntax.
+      ${detailInstructions}
+      
+      If the text describes interactions between different actors, systems, or components, visualize them as a sequence diagram.
+      If not, identify the main actors and create a logical sequence of interactions based on the document content.
+      
+      Use proper Mermaid.js sequence diagram syntax. Example:
+      
+      sequenceDiagram
+          participant User
+          participant System
+          User->>System: Request data
+          System-->>User: Return data
+      
+      IMPORTANT RULES:
+      1. Use descriptive but concise labels for actors
+      2. Use proper Mermaid.js sequence diagram syntax
+      3. Include all relevant interactions
+      4. Only output valid Mermaid.js sequence diagram code, no explanations or comments
+      
+      DOCUMENT TEXT:
+      ${pdfText.substring(0, 30000)}
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const diagramText = response.text();
+    
+    // Extract only the Mermaid code from the response
+    const mermaidMatch = diagramText.match(/```(?:mermaid)?\s*([\s\S]*?)```/);
+    const cleanedDiagram = mermaidMatch ? mermaidMatch[1].trim() : diagramText.trim();
+    
+    return cleanedDiagram;
+  } catch (error) {
+    console.error("Error generating sequence diagram:", error);
+    throw new Error("Failed to generate sequence diagram from document");
+  }
+};
+
+/**
+ * Generate structured summary from the document
+ */
+export const generateStructuredSummary = async () => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText) {
+      throw new Error("No PDF text found. Please upload a PDF first.");
+    }
+    
+    const prompt = `
+      Create a structured summary of the following document.
+      
+      The summary should be organized into these sections:
+      - Overview: Brief description of what the document is about (1-2 sentences)
+      - Key Findings: 3-5 bullet points of the most important findings or conclusions
+      - Objectives: What the document is trying to achieve or demonstrate
+      - Methods: How the research or work was conducted (if applicable)
+      - Results: Key results or data presented
+      - Conclusions: Final takeaways or implications
+      
+      Format your response as a JSON object with these section names as keys and the content as values.
+      Keep each section concise but informative.
+      
+      DOCUMENT TEXT:
+      ${pdfText.substring(0, 40000)}
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const summaryText = response.text();
+    
+    // Try to extract JSON from the response
+    const jsonMatch = summaryText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Could not extract valid JSON from the API response");
+    }
+    
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (parseError) {
+      console.error("Error parsing summary JSON:", parseError);
+      
+      // Fallback to creating a simple structured object
+      return {
+        Overview: "Summary could not be properly structured.",
+        "Key Findings": summaryText,
+        Conclusions: "Please try regenerating the summary."
+      };
+    }
+  } catch (error) {
+    console.error("Error generating structured summary:", error);
+    throw new Error("Failed to generate document summary");
+  }
+};

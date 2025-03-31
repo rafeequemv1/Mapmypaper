@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Brain, FileText, MessageSquare, Download, User, FlowChart, ChevronDown } from "lucide-react";
+import { Brain, FileText, MessageSquare, Download, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
