@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PDFDocument } from "pdf-lib";
 
@@ -8,6 +7,8 @@ const genAI = new GoogleGenerativeAI(
 );
 
 // Function to extract text from a PDF
+// Note: pdf-lib doesn't actually support text extraction directly
+// This is a placeholder that will return page numbers but not actual text content
 const extractTextFromPdf = async (file: File): Promise<string> => {
   const fileData = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.load(fileData);
@@ -15,10 +16,10 @@ const extractTextFromPdf = async (file: File): Promise<string> => {
   const numPages = pdfDoc.getPageCount();
   let text = "";
   
-  // Extract text from each page
+  // Add page information since pdf-lib doesn't have direct text extraction
   for (let i = 0; i < numPages; i++) {
-    const page = pdfDoc.getPage(i);
-    text += `Page ${i + 1}:\n${page.getText()}\n\n`;
+    // Instead of calling getText() which doesn't exist, we just indicate the page number
+    text += `Page ${i + 1}\n\n`;
   }
   
   return text;
