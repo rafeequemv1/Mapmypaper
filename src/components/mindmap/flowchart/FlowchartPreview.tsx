@@ -46,6 +46,7 @@ const FlowchartPreview = ({
     };
   }, [code, theme]);
 
+  // The renderDiagram function needs to be updated
   const renderDiagram = async () => {
     if (!previewRef.current) return;
 
@@ -57,7 +58,7 @@ const FlowchartPreview = ({
 
       // Create a unique ID for the diagram
       const id = `diagram-${Date.now()}`;
-      
+    
       // Configure mermaid with enhanced styling and selected theme
       mermaid.initialize({
         theme: theme,
@@ -67,50 +68,51 @@ const FlowchartPreview = ({
           useMaxWidth: false,
           htmlLabels: true,
           curve: 'basis',
-          rankSpacing: 80,
-          nodeSpacing: 50,
-          padding: 15
+          rankSpacing: 100,
+          nodeSpacing: 80,
+          padding: 20,
+          defaultRenderer: 'elk'
         },
         mindmap: {
-          padding: 16,
+          padding: 20,
+          curve: 'basis'
         },
         themeVariables: {
           primaryColor: '#9b87f5',
-          primaryTextColor: '#fff',
+          primaryTextColor: '#333',
           primaryBorderColor: '#7E69AB',
           lineColor: '#6E59A5',
           secondaryColor: '#D6BCFA',
-          tertiaryColor: '#f2fcf5'
+          tertiaryColor: '#f2fcf5',
+          fontSize: '16px',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
         }
       });
-      
+    
       // Parse the diagram to verify syntax before rendering
       await mermaid.parse(code);
-      
+    
       // If parse succeeds, render the diagram
       const { svg } = await mermaid.render(id, code);
-      
+    
       // Make sure previewRef is still valid before updating the DOM
       if (previewRef.current) {
         previewRef.current.innerHTML = svg;
-        
+      
         // Check if it's a flowchart or mindmap to apply additional styling
         const isDiagramType = (type: string) => code.trim().toLowerCase().startsWith(type);
-        
+      
         if (isDiagramType('flowchart')) {
           // Apply flowchart-specific styling
           styleFlowchart(previewRef.current);
         } else if (isDiagramType('mindmap')) {
           // Apply mindmap-specific styling
           styleMindmap(previewRef.current);
-        } else if (isDiagramType('sequencediagram')) {
-          // Apply sequence diagram-specific styling
-          styleSequenceDiagram(previewRef.current);
         }
       }
     } catch (err) {
       console.error("Failed to render diagram:", err);
-      
+    
       // Display error message in preview area
       if (previewRef.current) {
         previewRef.current.innerHTML = `<div class="text-red-500 p-4">
@@ -121,21 +123,68 @@ const FlowchartPreview = ({
     }
   };
 
-  // Style flowchart elements
+  // Style flowchart elements - update for more beautiful visualization
   const styleFlowchart = (container: HTMLDivElement) => {
-    // Post-process the SVG to add more colors to nodes
+    // Post-process the SVG to add more colors to nodes and ensure rounded corners
     const nodeElements = container.querySelectorAll("g.node");
     const colors = [
-      "#8B5CF6", "#D946EF", "#F97316", "#0EA5E9", 
-      "#10B981", "#EF4444", "#F59E0B", "#6366F1"
+      { fill: '#f9f7ff', stroke: '#8B5CF6' }, // Purple
+      { fill: '#e6f7ff', stroke: '#0EA5E9' }, // Blue
+      { fill: '#f2fcf5', stroke: '#10B981' }, // Green
+      { fill: '#fff7ed', stroke: '#F97316' }, // Orange
+      { fill: '#fdf4ff', stroke: '#D946EF' }, // Pink
+      { fill: '#f5f3ff', stroke: '#8B5CF6' }, // Light Purple
+      { fill: '#ecfdf5', stroke: '#059669' }, // Emerald
+      { fill: '#f0f9ff', stroke: '#3B82F6' }, // Light Blue
+      { fill: '#fef3c7', stroke: '#F59E0B' }, // Amber
+      { fill: '#ffe4e6', stroke: '#EF4444' }  // Red
     ];
-    
+  
     let colorIndex = 0;
     nodeElements.forEach((node) => {
-      const rect = node.querySelector("rect");
+      const rect = node.querySelector("rect, circle, polygon, ellipse");
       if (rect) {
-        rect.setAttribute("fill", colors[colorIndex % colors.length]);
-        rect.setAttribute("stroke", "#4B5563");
+        const color = colors[colorIndex % colors.length];
+        rect.setAttribute("fill", color.fill);
+        rect.setAttribute("stroke", color.stroke);
+        rect.setAttribute("stroke-width", "2");
+      
+        // Add rounded corners if it's a rectangle
+        if (rect.tagName === 'rect') {
+          rect.setAttribute("rx", "15");
+          rect.setAttribute("ry", "15");
+        }
+      
+        // Add drop shadow
+        const defs = container.querySelector('defs') || document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        const filterId = `shadow-${colorIndex}`;
+      
+        // Create filter if it doesn't exist
+        if (!container.querySelector(`#${filterId}`)) {
+          const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+          filter.setAttribute('id', filterId);
+          filter.setAttribute('x', '-20%');
+          filter.setAttribute('y', '-20%');
+          filter.setAttribute('width', '140%');
+          filter.setAttribute('height', '140%');
+        
+          const feDropShadow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
+          feDropShadow.setAttribute('dx', '2');
+          feDropShadow.setAttribute('dy', '2');
+          feDropShadow.setAttribute('stdDeviation', '3');
+          feDropShadow.setAttribute('flood-opacity', '0.2');
+          feDropShadow.setAttribute('flood-color', 'rgb(0, 0, 0)');
+        
+          filter.appendChild(feDropShadow);
+          defs.appendChild(filter);
+        
+          if (!container.querySelector('defs')) {
+            container.querySelector('svg')?.insertBefore(defs, container.querySelector('svg')?.firstChild);
+          }
+        }
+      
+        rect.setAttribute('filter', `url(#${filterId})`);
+      
         colorIndex++;
       }
     });
@@ -143,16 +192,44 @@ const FlowchartPreview = ({
     // Make text more readable
     const textElements = container.querySelectorAll("g.node text");
     textElements.forEach((text) => {
-      text.setAttribute("fill", "#FFFFFF");
-      text.setAttribute("font-weight", "bold");
+      text.setAttribute("font-family", "system-ui, -apple-system, sans-serif");
+      text.setAttribute("font-size", "16px");
+      text.setAttribute("fill", "#333333");
+      text.setAttribute("font-weight", "500");
     });
-    
-    // Style the edges with gradient colors
+  
+    // Style the edges with gradient colors and increase width
     const edgePaths = container.querySelectorAll(".edgePath path");
     edgePaths.forEach((path) => {
-      path.setAttribute("stroke-width", "2");
+      path.setAttribute("stroke-width", "2.5");
       path.setAttribute("stroke", "#6E59A5");
     });
+  
+    // Style arrowheads
+    const markers = container.querySelectorAll("marker");
+    markers.forEach((marker) => {
+      const markerPath = marker.querySelector("path");
+      if (markerPath) {
+        markerPath.setAttribute("fill", "#6E59A5");
+      }
+    });
+  
+    // Add animation to flowchart elements - subtle fade-in
+    nodeElements.forEach((node, index) => {
+      const delay = index * 100;
+      node.style.opacity = "0";
+      node.style.animation = `fadeIn 0.5s ease-out ${delay}ms forwards`;
+    });
+  
+    // Add the animation keyframes
+    const styleElement = document.createElement("style");
+    styleElement.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `;
+    document.head.appendChild(styleElement);
   };
 
   // Style mindmap elements
@@ -186,35 +263,6 @@ const FlowchartPreview = ({
         path.setAttribute("stroke-width", "2.5");
         path.setAttribute("stroke", "#6E59A5");
       }
-    });
-  };
-
-  // Style sequence diagram elements
-  const styleSequenceDiagram = (container: HTMLDivElement) => {
-    // Style actor boxes
-    const actors = container.querySelectorAll(".actor");
-    const colors = ["#8B5CF6", "#D946EF", "#F97316", "#0EA5E9", "#10B981"];
-    
-    let colorIndex = 0;
-    actors.forEach((actor) => {
-      actor.setAttribute("fill", colors[colorIndex % colors.length]);
-      actor.setAttribute("stroke", "#4B5563");
-      
-      // Find and style the associated text
-      const nearestText = actor.parentElement?.querySelector("text");
-      if (nearestText) {
-        nearestText.setAttribute("fill", "#FFFFFF");
-        nearestText.setAttribute("font-weight", "bold");
-      }
-      
-      colorIndex++;
-    });
-
-    // Style message arrows
-    const messages = container.querySelectorAll(".messageLine0, .messageLine1");
-    messages.forEach((message) => {
-      message.setAttribute("stroke-width", "2");
-      message.setAttribute("stroke", "#6E59A5");
     });
   };
 

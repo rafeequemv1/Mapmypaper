@@ -14,16 +14,26 @@ interface ApiKeyModalProps {
 }
 
 const ApiKeyModal = ({ open, onOpenChange }: ApiKeyModalProps) => {
-  const [apiKey, setApiKey] = useState<string>("");
+  const [apiKey, setApiKey] = useState<string>("AIzaSyDWXTmFBjvvpiws05s571DVsxlhmvezTbQ");
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // Check for existing key in localStorage
+  // Check for existing key in localStorage and set default key
   useEffect(() => {
-    const storedKey = localStorage.getItem("GOOGLE_API_KEY");
-    if (storedKey) {
-      setApiKey(storedKey);
+    if (open) {
+      const storedKey = localStorage.getItem("GOOGLE_API_KEY");
+      if (storedKey) {
+        setApiKey(storedKey);
+      } else {
+        // Set default API key
+        setApiKey("AIzaSyDWXTmFBjvvpiws05s571DVsxlhmvezTbQ");
+        
+        // Automatically save and validate the default key
+        setTimeout(() => {
+          handleSave();
+        }, 500);
+      }
     }
   }, [open]);
 
@@ -87,15 +97,7 @@ const ApiKeyModal = ({ open, onOpenChange }: ApiKeyModalProps) => {
             Google Gemini API Key
           </DialogTitle>
           <DialogDescription>
-            Enter your Google Gemini API key to use AI features. You can get an API key from the
-            <a 
-              href="https://aistudio.google.com/app/apikey" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-blue-600 hover:underline ml-1"
-            >
-              Google AI Studio
-            </a>.
+            The API key is pre-filled and will be used for generating research paper flowcharts.
           </DialogDescription>
         </DialogHeader>
         
@@ -105,7 +107,6 @@ const ApiKeyModal = ({ open, onOpenChange }: ApiKeyModalProps) => {
             <Input
               id="api-key"
               type="password"
-              placeholder="AIzaSy..."
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               autoComplete="off"
