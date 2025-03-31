@@ -90,7 +90,14 @@ export const useFlowchartGenerator = () => {
     try {
       setIsGenerating(true);
       setError(null);
-      const flowchartCode = await generateFlowchartFromPdf();
+      
+      // Get PDF text from session storage
+      const pdfText = sessionStorage.getItem('pdfText');
+      if (!pdfText) {
+        throw new Error("PDF text not found. Please upload a PDF document first.");
+      }
+      
+      const flowchartCode = await generateFlowchartFromPdf(pdfText);
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);

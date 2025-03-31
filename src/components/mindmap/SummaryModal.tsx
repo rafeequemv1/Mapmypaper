@@ -36,7 +36,13 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     setError(null);
     
     try {
-      const data = await generateStructuredSummary();
+      // Get PDF text from session storage
+      const pdfText = sessionStorage.getItem('pdfText');
+      if (!pdfText) {
+        throw new Error("PDF text not found. Please upload a PDF document first.");
+      }
+      
+      const data = await generateStructuredSummary(pdfText);
       setSummaryData(data);
     } catch (err) {
       console.error("Error generating summary:", err);

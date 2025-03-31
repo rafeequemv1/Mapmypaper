@@ -37,7 +37,14 @@ export const useSequenceDiagramGenerator = () => {
     try {
       setIsGenerating(true);
       setError(null);
-      const diagramCode = await generateSequenceDiagramFromPdf();
+      
+      // Get PDF text from session storage
+      const pdfText = sessionStorage.getItem('pdfText');
+      if (!pdfText) {
+        throw new Error("PDF text not found. Please upload a PDF document first.");
+      }
+      
+      const diagramCode = await generateSequenceDiagramFromPdf(pdfText);
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanSequenceDiagramSyntax(diagramCode);
