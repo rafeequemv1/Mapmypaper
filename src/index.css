@@ -102,15 +102,15 @@
   
   /* Enhanced typography for AI responses */
   .prose h1 {
-    @apply text-xl font-bold mb-4 mt-6 pb-1 border-b border-gray-200;
+    @apply text-2xl font-bold mb-4 mt-6 pb-2 border-b border-gray-200 text-blue-800;
   }
   
   .prose h2 {
-    @apply text-lg font-semibold mb-3 mt-5 text-blue-700;
+    @apply text-xl font-semibold mb-3 mt-5 text-blue-700;
   }
   
   .prose h3 {
-    @apply text-base font-medium mb-2 mt-4 text-indigo-600;
+    @apply text-lg font-medium mb-2 mt-4 text-indigo-600;
   }
   
   .prose p {
@@ -118,11 +118,11 @@
   }
   
   .prose ul {
-    @apply my-3 ml-5 space-y-1.5 list-disc;
+    @apply my-3 ml-5 space-y-2 list-disc;
   }
   
   .prose ol {
-    @apply my-3 ml-5 space-y-1.5 list-decimal;
+    @apply my-3 ml-5 space-y-2 list-decimal;
   }
   
   .prose li {
@@ -130,11 +130,11 @@
   }
   
   .prose li::marker {
-    @apply text-blue-500;
+    @apply text-blue-600 font-bold;
   }
   
   .prose blockquote {
-    @apply border-l-4 border-blue-300 pl-4 italic my-4 bg-blue-50 py-2 pr-2 rounded-r;
+    @apply border-l-4 border-blue-400 pl-4 italic my-4 bg-blue-50 py-3 pr-3 rounded-r text-gray-700;
   }
   
   .prose code {
@@ -142,15 +142,15 @@
   }
   
   .prose pre {
-    @apply bg-gray-100 p-3 rounded-md my-4 overflow-x-auto text-sm font-mono;
+    @apply bg-gray-100 p-3 rounded-md my-4 overflow-x-auto text-sm font-mono shadow-sm;
   }
   
   .prose table {
-    @apply min-w-full border-collapse my-4;
+    @apply min-w-full border-collapse my-4 shadow-sm;
   }
   
   .prose th {
-    @apply bg-gray-100 px-4 py-2 text-left font-semibold border border-gray-300;
+    @apply bg-gray-100 px-4 py-2 text-left font-semibold border border-gray-300 text-gray-700;
   }
   
   .prose td {
@@ -170,6 +170,6 @@
   }
   
   .prose a {
-    @apply text-blue-600 underline hover:text-blue-800;
+    @apply text-blue-600 underline hover:text-blue-800 font-medium;
   }
 }
