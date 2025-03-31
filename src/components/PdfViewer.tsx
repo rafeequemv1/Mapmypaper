@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +5,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -27,6 +27,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
     const [selectedText, setSelectedText] = useState<string>("");
+    const [showTooltip, setShowTooltip] = useState<boolean>(false);
+    const [tooltipPosition, setTooltipPosition] = useState<{x: number, y: number}>({x: 0, y: 0});
     const [scale, setScale] = useState<number>(1);
     const [width, setWidth] = useState<number>(90);
     const [searchQuery, setSearchQuery] = useState<string>("");
@@ -64,18 +66,46 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Handle text selection
-    const handleDocumentMouseUp = () => {
+    // Handle text selection with tooltip
+    const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "") {
         const text = selection.toString().trim();
         setSelectedText(text);
+        
         if (text.length > 10) {
-          // Only trigger for meaningful selections
-          onTextSelected && onTextSelected(text);
+          // Show tooltip near the selection
+          const rect = selection.getRangeAt(0).getBoundingClientRect();
+          setTooltipPosition({
+            x: e.clientX,
+            y: e.clientY - 10
+          });
+          setShowTooltip(true);
         }
+      } else {
+        setShowTooltip(false);
       }
     };
+
+    // Handle tooltip click to send text to chat
+    const handleExplainClick = () => {
+      if (selectedText && onTextSelected) {
+        onTextSelected(selectedText);
+        setShowTooltip(false);
+      }
+    };
+    
+    // Hide tooltip when clicking elsewhere
+    useEffect(() => {
+      const handleClickOutside = () => {
+        setShowTooltip(false);
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
 
     // Search functionality
     const handleSearch = () => {
@@ -190,6 +220,20 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Adjust width based on slider value (reverse the slider value)
+    useEffect(() => {
+      // Update scale based on width to keep content fitting
+      // This makes the document scale down proportionally when width is decreased
+      const calculateScale = () => {
+        // Base scale of 1 when width is 90%
+        // Scale down proportionally as width decreases
+        const newScale = (width / 90) * scale;
+        setScale(newScale);
+      };
+      
+      calculateScale();
+    }, [width]);
+
     // Zoom handlers
     const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
@@ -293,42 +337,60 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
         {/* PDF Content */}
         {pdfData ? (
-          <ScrollArea className="flex-1" ref={pdfContainerRef}>
-            <div 
-              className="flex flex-col items-center py-4" 
-              onMouseUp={handleDocumentMouseUp}
-            >
-              <Document
-                file={pdfData}
-                onLoadSuccess={onDocumentLoadSuccess}
-                className="w-full"
-                loading={<div className="text-center py-4">Loading PDF...</div>}
-                error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
+          <TooltipProvider>
+            <ScrollArea className="flex-1" ref={pdfContainerRef}>
+              <div 
+                className="flex flex-col items-center py-4" 
+                onMouseUp={handleDocumentMouseUp}
+                style={{ position: 'relative' }}
               >
-                {Array.from(new Array(numPages), (_, index) => (
-                  <div
-                    key={`page_${index + 1}`}
-                    className="my-4 shadow-md mx-auto bg-white transition-colors duration-300"
-                    ref={setPageRef(index)}
-                    style={{ maxWidth: `${width}%` }}
-                    data-page-number={index + 1}
+                {/* Selection Tooltip */}
+                {showTooltip && (
+                  <div 
+                    className="absolute bg-primary text-white px-3 py-2 rounded-md shadow-lg z-10 cursor-pointer"
+                    style={{ 
+                      left: `${tooltipPosition.x}px`, 
+                      top: `${tooltipPosition.y - 40}px`,
+                      transform: 'translateX(-50%)'
+                    }}
+                    onClick={handleExplainClick}
                   >
-                    <Page
-                      pageNumber={index + 1}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={false}
-                      onRenderSuccess={onPageRenderSuccess}
-                      scale={scale}
-                      width={Math.min(600, window.innerWidth - 60) * (width/100)}
-                    />
-                    <div className="text-center text-xs text-gray-500 py-1">
-                      Page {index + 1} of {numPages}
-                    </div>
+                    Explain
                   </div>
-                ))}
-              </Document>
-            </div>
-          </ScrollArea>
+                )}
+              
+                <Document
+                  file={pdfData}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  className="w-full"
+                  loading={<div className="text-center py-4">Loading PDF...</div>}
+                  error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
+                >
+                  {Array.from(new Array(numPages), (_, index) => (
+                    <div
+                      key={`page_${index + 1}`}
+                      className="my-4 shadow-md mx-auto bg-white transition-colors duration-300"
+                      ref={setPageRef(index)}
+                      style={{ maxWidth: `${width}%` }}
+                      data-page-number={index + 1}
+                    >
+                      <Page
+                        pageNumber={index + 1}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={false}
+                        onRenderSuccess={onPageRenderSuccess}
+                        scale={scale}
+                        width={Math.min(600, window.innerWidth - 60) * (width/100)}
+                      />
+                      <div className="text-center text-xs text-gray-500 py-1">
+                        Page {index + 1} of {numPages}
+                      </div>
+                    </div>
+                  ))}
+                </Document>
+              </div>
+            </ScrollArea>
+          </TooltipProvider>
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-gray-500">Loading PDF...</p>

@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+
+import { useState, useRef, useEffect } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
@@ -58,15 +59,21 @@ const PanelStructure = ({
     }
   };
 
-  // Handle width adjustments for PDF panel
+  // Handle width adjustments for PDF panel - reverse logic compared to Chat panel
   const handlePdfWidthChange = (value: number) => {
-    setPdfPanelSize(value);
+    // Reverse the slider value to match expected behavior: 
+    // smaller value = narrower panel
+    const reversedValue = 50 - (value - 20); // Value is between 20-50, so reverse within that range
+    setPdfPanelSize(reversedValue);
   };
   
-  // Handle width adjustments for Chat panel
+  // Handle width adjustments for Chat panel - normal logic
   const handleChatWidthChange = (value: number) => {
     setChatPanelSize(value);
   };
+
+  // Make sure PDF panel size slider shows the inverted value to the user
+  const displayPdfSliderValue = 50 - (pdfPanelSize - 20);
 
   return (
     <div className="h-full flex flex-col">
@@ -75,9 +82,9 @@ const PanelStructure = ({
         <div className="bg-white border-b px-4 py-2 flex items-center gap-4 text-sm">
           {showPdf && (
             <div className="flex items-center gap-2 min-w-[140px]">
-              <span className="text-xs font-medium">PDF Width: {pdfPanelSize}%</span>
+              <span className="text-xs font-medium">PDF Width: {displayPdfSliderValue}%</span>
               <Slider 
-                value={[pdfPanelSize]} 
+                value={[displayPdfSliderValue]} 
                 onValueChange={(values) => handlePdfWidthChange(values[0])}
                 max={50}
                 min={20}
