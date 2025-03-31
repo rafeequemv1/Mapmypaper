@@ -15,7 +15,7 @@ interface MobileChatSheetProps {
 const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
-    { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
+    { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -54,9 +54,9 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
       setIsTyping(true);
       
       try {
-        // Enhanced prompt to encourage complete sentences and page citations
+        // Enhanced prompt to encourage complete sentences, page citations, and emojis
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number.`
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
         );
         
         // Hide typing indicator and add AI response with formatting
@@ -151,7 +151,7 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
                   className={`rounded-lg p-4 ${
                     message.role === 'user' 
                       ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
-                      : 'ai-message'
+                      : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
                   }`}
                 >
                   {message.isHtml ? (
@@ -182,7 +182,7 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
             ))}
             
             {isTyping && (
-              <div className="ai-message">
+              <div className="ai-message bg-gray-50 border border-gray-100 shadow-sm rounded-lg p-4">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
                   <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '200ms' }}></div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; }[]>([
-    { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
+    { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -50,7 +51,7 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
         try {
           // Enhanced prompt to encourage complete sentences and page citations
           const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences and provide specific page citations in [citation:pageX] format: "${explainText}"`
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -116,9 +117,9 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
       setIsTyping(true);
       
       try {
-        // Enhanced prompt to encourage complete sentences and page citations
+        // Enhanced prompt to encourage complete sentences and page citations with emojis
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number.`
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`
         );
         
         // Hide typing indicator and add AI response with enhanced formatting
@@ -214,7 +215,7 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
                 className={`rounded-lg p-4 ${
                   message.role === 'user' 
                     ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
-                    : 'ai-message'
+                    : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
                 }`}
               >
                 {message.isHtml ? (
@@ -245,7 +246,7 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
           ))}
           
           {isTyping && (
-            <div className="ai-message">
+            <div className="ai-message bg-gray-50 border border-gray-100 shadow-sm rounded-lg p-4">
               <div className="flex gap-1">
                 <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
                 <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '200ms' }}></div>
@@ -257,7 +258,7 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
       </ScrollArea>
       
       {/* Input area */}
-      <div className="p-3 border-t">
+      <div className="p-3 border-t bg-white">
         <div className="flex gap-2">
           <Textarea
             className="flex-1 min-h-10 max-h-32 resize-none"

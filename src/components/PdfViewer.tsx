@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +39,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const pdfContainerRef = useRef<HTMLDivElement>(null);
     const pagesRef = useRef<(HTMLDivElement | null)[]>([]);
     const { toast } = useToast();
+    const activeHighlightRef = useRef<HTMLElement | null>(null);
 
     // Extract PDF data from sessionStorage
     useEffect(() => {
@@ -107,7 +109,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
-    // Enhanced search functionality with highlighting
+    // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
       if (!searchQuery.trim()) return;
       
@@ -121,36 +123,68 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         el.classList.remove('pdf-search-highlight');
       });
       
+      // Reset active highlight if any
+      if (activeHighlightRef.current) {
+        activeHighlightRef.current.classList.remove('pdf-search-highlight-active');
+        activeHighlightRef.current = null;
+      }
+      
       textLayers.forEach((layer, pageIndex) => {
         const textContent = layer.textContent || '';
         const regex = new RegExp(searchQuery, 'gi');
         let match;
+        let hasMatch = false;
         
         // Find matches and create an array of page numbers
         while ((match = regex.exec(textContent)) !== null) {
           results.push(`page${pageIndex + 1}`);
+          hasMatch = true;
         }
         
-        // Highlight text in the PDF with more visible yellow background
-        if (layer.childNodes) {
-          layer.childNodes.forEach(node => {
-            if (node.nodeType === Node.TEXT_NODE && node.textContent) {
-              const parent = node.parentElement;
-              if (parent && parent.textContent) {
-                const nodeText = parent.textContent;
-                if (nodeText.toLowerCase().includes(searchQuery.toLowerCase())) {
-                  parent.style.backgroundColor = 'rgba(255, 255, 0, 0.7)'; // Brighter yellow highlight
+        // Only proceed with highlighting if there was a match on this page
+        if (hasMatch) {
+          // Highlight text in the PDF with more visible yellow background
+          if (layer.childNodes) {
+            layer.childNodes.forEach(node => {
+              if (node.nodeType === Node.TEXT_NODE && node.parentElement && node.textContent) {
+                const parent = node.parentElement;
+                
+                // Apply highlight to matching text
+                const nodeText = parent.textContent || '';
+                const lowerNodeText = nodeText.toLowerCase();
+                const lowerSearchQuery = searchQuery.toLowerCase();
+                
+                if (lowerNodeText.includes(lowerSearchQuery)) {
+                  parent.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
                   parent.classList.add('pdf-search-highlight');
+                  
+                  // Apply pulsing animation to make highlighting more noticeable
+                  parent.style.transition = 'background-color 0.5s ease-in-out';
                 }
               }
-            }
-          });
+            });
+          }
         }
       });
       
       // Remove duplicates
       const uniqueResults = [...new Set(results)];
       setSearchResults(uniqueResults);
+      
+      // Style for the highlights
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .pdf-search-highlight {
+          background-color: rgba(255, 255, 0, 0.5) !important;
+          border-radius: 2px;
+          padding: 0 1px;
+        }
+        .pdf-search-highlight-active {
+          background-color: rgba(255, 165, 0, 0.7) !important;
+          box-shadow: 0 0 2px 2px rgba(255, 165, 0, 0.4);
+        }
+      `;
+      document.head.appendChild(style);
       
       if (uniqueResults.length > 0) {
         setCurrentSearchIndex(0);
@@ -170,6 +204,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Navigate through search results
     const navigateSearch = (direction: 'next' | 'prev') => {
       if (searchResults.length === 0) return;
+      
+      // Remove active highlight from current result
+      if (activeHighlightRef.current) {
+        activeHighlightRef.current.classList.remove('pdf-search-highlight-active');
+      }
       
       let newIndex = currentSearchIndex;
       
@@ -193,7 +232,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Scroll to specific page with highlighting
+    // Scroll to specific page with enhanced highlighting
     const scrollToPage = (pageNumber: number) => {
       if (pageNumber < 1 || pageNumber > numPages) {
         console.warn(`Invalid page number: ${pageNumber}. Pages range from 1 to ${numPages}`);
@@ -206,7 +245,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       if (targetPage && pdfContainerRef.current) {
         const scrollContainer = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
         if (scrollContainer) {
-          // Scroll the page into view
+          // Scroll the page into view with smooth animation
           targetPage.scrollIntoView({
             behavior: 'smooth',
             block: 'start'
@@ -214,20 +253,35 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           // Enhanced flash effect to highlight the page
           targetPage.style.backgroundColor = 'rgba(59, 130, 246, 0.15)';
+          targetPage.style.transition = 'background-color 0.5s ease-in-out';
           setTimeout(() => {
             targetPage.style.backgroundColor = '';
-          }, 1500);
+          }, 1800);
           
-          // If searching, highlight the occurrences on this page more prominently
-          if (searchQuery) {
-            const highlights = targetPage.querySelectorAll('.pdf-search-highlight');
-            highlights.forEach(el => {
-              const original = el as HTMLElement;
-              original.style.backgroundColor = 'rgba(255, 255, 0, 0.7)'; // More intense yellow
-              setTimeout(() => {
-                original.style.backgroundColor = 'rgba(255, 255, 0, 0.5)'; // Back to normal highlight
-              }, 1500);
-            });
+          // If searching, find and highlight the active search result on this page
+          if (searchQuery && searchResults.includes(`page${pageNumber}`)) {
+            setTimeout(() => {
+              const highlights = targetPage.querySelectorAll('.pdf-search-highlight');
+              
+              // Find the first highlight on the page and make it active
+              if (highlights.length > 0) {
+                // Remove active class from previous active highlight
+                if (activeHighlightRef.current) {
+                  activeHighlightRef.current.classList.remove('pdf-search-highlight-active');
+                }
+                
+                // Set new active highlight
+                const firstHighlight = highlights[0] as HTMLElement;
+                firstHighlight.classList.add('pdf-search-highlight-active');
+                activeHighlightRef.current = firstHighlight;
+                
+                // Make sure the highlight is visible in the viewport
+                firstHighlight.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center'
+                });
+              }
+            }, 500); // Give time for the page to be scrolled into view
           }
         }
       }
@@ -265,12 +319,12 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
 
-    // Calculate optimal width for PDF pages based on container width
+    // Calculate optimal width for PDF pages based on container width with no upper limit
     const getOptimalPageWidth = () => {
       if (!pdfContainerRef.current) return undefined;
       
       const containerWidth = pdfContainerRef.current.clientWidth;
-      // Remove the max width cap of 900px - allow PDF to extend across available width
+      // Remove the max width cap - allow PDF to extend across available width
       return containerWidth - 32; // Just leave some margin on the sides
     };
 
@@ -404,7 +458,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                       key={`page_${index + 1}`}
                       className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
                       ref={setPageRef(index)}
-                      style={{ width: 'fit-content', maxWidth: '95%' }}
+                      style={{ width: 'fit-content', maxWidth: '100%' }}
                       data-page-number={index + 1}
                     >
                       <Page

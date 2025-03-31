@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";
@@ -13,13 +12,15 @@ import {
   TooltipProvider,
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import { Minus, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady: (mindMap: MindElixirInstance) => void;
+  onMindMapReady: (mindElixirInstance: MindElixirInstance) => void;
   explainText?: string;
   onExplainText: (text: string) => void;
 }
@@ -34,13 +35,10 @@ const PanelStructure = ({
   onExplainText
 }: PanelStructureProps) => {
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [pdfPanelSize, setPdfPanelSize] = useState(35);
+  const [chatPanelSize, setChatPanelSize] = useState(30);
   const pdfViewerRef = useRef<{ scrollToPage: (pageNumber: number) => void } | null>(null);
   const isMobile = useIsMobile();
-
-  // Panel sizing with independent control - now using fixed values
-  const pdfPanelDefaultSize = 35; // Increased default PDF panel size
-  const mindMapPanelDefaultSize = 40;
-  const chatPanelDefaultSize = 30;
 
   // Function to handle citation clicks and scroll PDF to that position
   const handleScrollToPdfPosition = (position: string) => {
@@ -49,7 +47,6 @@ const PanelStructure = ({
     console.log("Scrolling to position:", position);
     
     // Parse the position string (could be page number, section name, etc.)
-    // Example: "page5" -> Scroll to page 5
     if (position.toLowerCase().startsWith('page')) {
       const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);
       if (!isNaN(pageNumber) && pageNumber > 0) {
@@ -70,6 +67,24 @@ const PanelStructure = ({
     }
   };
 
+  // Adjust PDF panel size with constraints
+  const adjustPdfPanelSize = (increment: boolean) => {
+    setPdfPanelSize(prevSize => {
+      const newSize = increment ? prevSize + 5 : prevSize - 5;
+      // Keep within reasonable bounds - max 55% of viewport width for PDF
+      return Math.max(20, Math.min(55, newSize));
+    });
+  };
+
+  // Adjust Chat panel size with constraints
+  const adjustChatPanelSize = (increment: boolean) => {
+    setChatPanelSize(prevSize => {
+      const newSize = increment ? prevSize + 5 : prevSize - 5;
+      // Keep within reasonable bounds
+      return Math.max(20, Math.min(50, newSize));
+    });
+  };
+
   return (
     <div className="h-full flex flex-col">
       <ResizablePanelGroup 
@@ -80,12 +95,36 @@ const PanelStructure = ({
         {showPdf && (
           <>
             <ResizablePanel 
-              defaultSize={pdfPanelDefaultSize} 
-              minSize={25}
+              defaultSize={pdfPanelSize} 
+              minSize={20}
+              maxSize={55}
               id="pdf-panel"
               order={1}
-              className="w-full"
+              className="w-full relative"
+              onResize={(size) => setPdfPanelSize(size)}
             >
+              {/* PDF Size Controls */}
+              <div className="absolute top-16 right-3 z-20 flex flex-col gap-1 bg-white/80 rounded-md shadow-md p-1">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-7 w-7"
+                  onClick={() => adjustPdfPanelSize(true)}
+                  title="Increase PDF width"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-7 w-7"
+                  onClick={() => adjustPdfPanelSize(false)}
+                  title="Decrease PDF width"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <TooltipProvider>
                 <PdfViewer 
                   onTextSelected={(text) => {
@@ -131,7 +170,7 @@ const PanelStructure = ({
 
         {/* Middle Panel - Mind Map */}
         <ResizablePanel 
-          defaultSize={mindMapPanelDefaultSize} 
+          defaultSize={showPdf && showChat ? 35 : showPdf || showChat ? 60 : 100}
           minSize={30}
           id="mindmap-panel"
           order={2}
@@ -147,11 +186,36 @@ const PanelStructure = ({
           <>
             <ResizableHandle withHandle />
             <ResizablePanel 
-              defaultSize={chatPanelDefaultSize} 
+              defaultSize={chatPanelSize} 
               minSize={20}
+              maxSize={50}
               id="chat-panel"
               order={3}
+              onResize={(size) => setChatPanelSize(size)}
+              className="relative"
             >
+              {/* Chat Size Controls */}
+              <div className="absolute top-16 left-3 z-20 flex flex-col gap-1 bg-white/80 rounded-md shadow-md p-1">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-7 w-7"
+                  onClick={() => adjustChatPanelSize(true)}
+                  title="Increase chat width"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-7 w-7"
+                  onClick={() => adjustChatPanelSize(false)}
+                  title="Decrease chat width"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <ChatPanel 
                 toggleChat={toggleChat} 
                 explainText={explainText}
