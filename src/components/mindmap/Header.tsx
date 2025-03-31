@@ -1,5 +1,5 @@
 
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit, Search, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -78,7 +78,7 @@ const Header = ({
 
   return (
     <div className="flex h-full">
-      {/* Left sidebar for vertical icons - now white theme */}
+      {/* Left sidebar with only the brain logo */}
       <div className="w-14 bg-white flex flex-col items-center py-3 border-r shadow-sm">
         {/* App logo - icon only */}
         <div className="mb-5">
@@ -97,8 +97,13 @@ const Header = ({
               <p>Back to home</p>
             </TooltipContent>
           </Tooltip>
-
-          <div className="flex flex-col gap-3 items-center">
+        </TooltipProvider>
+      </div>
+      
+      {/* Top header with icons */}
+      <div className="h-12 bg-white flex items-center px-4 w-full border-b">
+        <div className="flex items-center space-x-2">
+          <TooltipProvider>
             {/* PDF toggle */}
             {pdfAvailable && (
               <Tooltip>
@@ -107,12 +112,13 @@ const Header = ({
                     variant="ghost" 
                     size="sm"
                     onClick={togglePdf}
-                    className={`p-0 h-8 w-8 ${showPdf ? 'text-blue-600' : 'text-gray-500'}`}
+                    className={`px-2 h-8 ${showPdf ? 'text-blue-600' : 'text-gray-500'}`}
                   >
-                    <FileText className="h-5 w-5" />
+                    <FileText className="h-5 w-5 mr-1" />
+                    <span className="text-xs">PDF</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">
+                <TooltipContent side="bottom">
                   <p>Toggle PDF view</p>
                 </TooltipContent>
               </Tooltip>
@@ -125,12 +131,13 @@ const Header = ({
                   variant="ghost" 
                   size="sm"
                   onClick={toggleChat}
-                  className={`p-0 h-8 w-8 ${showChat ? 'text-blue-600' : 'text-gray-500'}`}
+                  className={`px-2 h-8 ${showChat ? 'text-blue-600' : 'text-gray-500'}`}
                 >
-                  <MessageSquare className="h-5 w-5" />
+                  <MessageSquare className="h-5 w-5 mr-1" />
+                  <span className="text-xs">Chat</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">
+              <TooltipContent side="bottom">
                 <p>Toggle research assistant</p>
               </TooltipContent>
             </Tooltip>
@@ -143,12 +150,13 @@ const Header = ({
                     variant="ghost" 
                     size="sm"
                     onClick={onOpenSummary}
-                    className="text-gray-500 p-0 h-8 w-8"
+                    className="text-gray-500 px-2 h-8"
                   >
-                    <FileDigit className="h-5 w-5" />
+                    <FileDigit className="h-5 w-5 mr-1" />
+                    <span className="text-xs">Summary</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">
+                <TooltipContent side="bottom">
                   <p>View summary</p>
                 </TooltipContent>
               </Tooltip>
@@ -160,13 +168,14 @@ const Header = ({
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className="text-gray-500 p-0 h-8 w-8"
+                  className="text-gray-500 px-2 h-8"
                   onClick={handleUploadClick}
                 >
-                  <Upload className="h-5 w-5" />
+                  <Upload className="h-5 w-5 mr-1" />
+                  <span className="text-xs">Upload</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">
+              <TooltipContent side="bottom">
                 <p>Upload new PDF</p>
               </TooltipContent>
             </Tooltip>
@@ -177,16 +186,17 @@ const Header = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-gray-500 p-0 h-8 w-8">
-                        <Download className="h-5 w-5" />
+                      <Button variant="ghost" size="sm" className="text-gray-500 px-2 h-8">
+                        <Download className="h-5 w-5 mr-1" />
+                        <span className="text-xs">Export</span>
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
-                  <TooltipContent side="right">
+                  <TooltipContent side="bottom">
                     <p>Export mind map</p>
                   </TooltipContent>
                 </Tooltip>
-                <DropdownMenuContent align="center" side="right">
+                <DropdownMenuContent align="center" side="bottom">
                   <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
                     Download as SVG
                   </DropdownMenuItem>
@@ -198,55 +208,52 @@ const Header = ({
             )}
             
             {/* Keyboard shortcuts */}
-            <div className="relative mt-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="text-gray-500 p-0 h-8 w-8"
-                    onClick={toggleShortcuts}
-                  >
-                    <Keyboard className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Keyboard shortcuts</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              {showShortcuts && (
-                <div 
-                  className="absolute left-14 bottom-0 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-gray-500 px-2 h-8"
+                  onClick={toggleShortcuts}
                 >
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 w-6 p-0" 
-                      onClick={toggleShortcuts}
-                    >
-                      ✕
-                    </Button>
-                  </div>
-                  <div className="space-y-2 text-xs">
-                    {keyboardShortcuts.map((shortcut, index) => (
-                      <div key={index} className="flex justify-between">
-                        <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
-                        <span className="text-gray-600">{shortcut.description}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <Keyboard className="h-5 w-5 mr-1" />
+                  <span className="text-xs">Shortcuts</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Keyboard shortcuts</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        
+        {/* Keyboard shortcuts panel */}
+        {showShortcuts && (
+          <div 
+            className="absolute top-14 left-14 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 w-6 p-0" 
+                onClick={toggleShortcuts}
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="space-y-2 text-xs">
+              {keyboardShortcuts.map((shortcut, index) => (
+                <div key={index} className="flex justify-between">
+                  <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
+                  <span className="text-gray-600">{shortcut.description}</span>
                 </div>
-              )}
+              ))}
             </div>
           </div>
-        </TooltipProvider>
+        )}
       </div>
-      
-      {/* Slim header */}
-      <div className="h-12 bg-white flex items-center px-4 w-full border-b"></div>
     </div>
   );
 };

@@ -117,9 +117,9 @@ const MindMap = () => {
   }, [mindMap, toast]);
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Vertical sidebar with icons */}
-      <div className="h-full">
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Header with all icons */}
+      <div>
         <Header 
           showPdf={showPdf}
           togglePdf={togglePdf}
