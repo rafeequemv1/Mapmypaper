@@ -4,9 +4,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, Check } from "lucide-react";
+import { Loader2, Copy, Check, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateStructuredSummary } from "@/services/geminiService";
+import html2canvas from "html2canvas";
 
 interface SummaryModalProps {
   open: boolean;
@@ -22,6 +23,8 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Generate summary when modal is opened
@@ -75,6 +78,47 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     });
   };
 
+  const downloadAsPDF = async () => {
+    if (!summaryRef.current || !summaryData) return;
+    
+    setDownloading(true);
+    
+    try {
+      const contentElement = summaryRef.current;
+      
+      // Create a canvas from the content
+      const canvas = await html2canvas(contentElement, {
+        scale: 2, // Higher scale for better quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff"
+      });
+      
+      // Convert canvas to PDF
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Create a link and trigger download
+      const link = document.createElement('a');
+      link.href = imgData;
+      link.download = 'document-summary.png';
+      link.click();
+      
+      toast({
+        title: "Summary Downloaded",
+        description: "The summary has been downloaded as an image file.",
+      });
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+      toast({
+        title: "Download Failed",
+        description: "There was an error creating the PDF file.",
+        variant: "destructive"
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   // Helper function to safely format text with bullet points and paragraphs
   const formatText = (text: string | null | undefined): string => {
     if (!text || typeof text !== 'string') {
@@ -122,8 +166,24 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
       <DialogContent className="max-w-3xl h-[80vh] flex flex-col bg-white">
         <DialogHeader>
           <DialogTitle>Document Summary</DialogTitle>
-          <DialogDescription>
-            AI-generated structured summary of the document
+          <DialogDescription className="flex justify-between items-center">
+            <span>AI-generated structured summary of the document</span>
+            {summaryData && !loading && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-2" 
+                onClick={downloadAsPDF}
+                disabled={downloading}
+              >
+                {downloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
+                <span>Download Summary</span>
+              </Button>
+            )}
           </DialogDescription>
         </DialogHeader>
         
@@ -147,29 +207,31 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             </TabsList>
             
             <ScrollArea className="flex-1">
-              <TabsContent value="all" className="p-4">
-                {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
-                {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
-                {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
-                {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
-                {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
-                {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
-              </TabsContent>
-              
-              <TabsContent value="key-points" className="p-4">
-                {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
-                {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
-                {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
-              </TabsContent>
-              
-              <TabsContent value="methods-results" className="p-4">
-                {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
-                {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
-              </TabsContent>
-              
-              <TabsContent value="conclusions" className="p-4">
-                {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
-              </TabsContent>
+              <div ref={summaryRef} className="p-4 bg-white">
+                <TabsContent value="all">
+                  {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
+                  {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
+                  {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
+                  {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
+                  {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
+                  {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
+                </TabsContent>
+                
+                <TabsContent value="key-points">
+                  {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
+                  {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
+                  {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
+                </TabsContent>
+                
+                <TabsContent value="methods-results">
+                  {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
+                  {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
+                </TabsContent>
+                
+                <TabsContent value="conclusions">
+                  {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
+                </TabsContent>
+              </div>
             </ScrollArea>
           </Tabs>
         ) : null}

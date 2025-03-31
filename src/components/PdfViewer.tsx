@@ -1,10 +1,8 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { Slider } from "./ui/slider";
-import { Search, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -237,20 +235,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           </div>
           
           <div className="h-6 border-l mx-1"></div>
-          
-          {/* Width Slider */}
-          <div className="flex items-center gap-2 flex-1 min-w-[180px]">
-            <span className="text-xs whitespace-nowrap">Width:</span>
-            <Slider 
-              value={[width]} 
-              min={50} 
-              max={100} 
-              step={5}
-              onValueChange={handleWidthChange} 
-              className="w-full max-w-[140px]"
-            />
-            <span className="text-xs w-8">{width}%</span>
-          </div>
           
           {/* Search Controls */}
           <div className="flex items-center gap-1 ml-auto">
