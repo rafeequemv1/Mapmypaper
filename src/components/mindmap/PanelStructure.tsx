@@ -5,7 +5,7 @@ import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "./ChatPanel";
 import MobileChatSheet from "./MobileChatSheet";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { MindElixirInstance } from "mind-elixir";
 
 interface PanelStructureProps {
@@ -29,7 +29,7 @@ const PanelStructure = ({
 }: PanelStructureProps) => {
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [pdfViewerRef, setPdfViewerRef] = useState<any>(null);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   
   // Function to handle citation clicks and scroll PDF to that position
   const handleScrollToPdfPosition = (position: string) => {
@@ -72,7 +72,10 @@ const PanelStructure = ({
 
         {/* Middle Panel - Mind Map */}
         <ResizablePanel defaultSize={showChat ? 40 : 65} minSize={30}>
-          <MindMapViewer onMindMapReady={onMindMapReady} />
+          <MindMapViewer 
+            isMapGenerated={true} 
+            onMindMapReady={onMindMapReady} 
+          />
         </ResizablePanel>
 
         {/* Right Panel - Chat (Conditionally Rendered) */}
