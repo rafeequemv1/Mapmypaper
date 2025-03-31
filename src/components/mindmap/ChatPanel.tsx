@@ -1,19 +1,19 @@
 
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, ChevronRight } from "lucide-react";
+import { MessageSquare, X, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf } from "@/services/geminiService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
-  explainImage?: string;
 }
 
-const ChatPanel = ({ toggleChat, explainText, explainImage }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -24,7 +24,6 @@ const ChatPanel = ({ toggleChat, explainText, explainImage }: ChatPanelProps) =>
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
-  const [processingExplainImage, setProcessingExplainImage] = useState(false);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -85,54 +84,6 @@ const ChatPanel = ({ toggleChat, explainText, explainImage }: ChatPanelProps) =>
     processExplainText();
   }, [explainText, toast]);
 
-  // Process image to explain when it changes
-  useEffect(() => {
-    const processExplainImage = async () => {
-      if (explainImage && !processingExplainImage) {
-        setProcessingExplainImage(true);
-        
-        // Add user message with image indicator
-        setMessages(prev => [...prev, { role: 'user', content: "Explain this selected area from the PDF" }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          // Get response from Gemini
-          const response = await analyzeImageWithGemini(explainImage);
-          
-          // Hide typing indicator and add AI response
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { role: 'assistant', content: response }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Image analysis error:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error analyzing that image. Please try again." 
-            }
-          ]);
-          
-          toast({
-            title: "Image Analysis Error",
-            description: "Failed to analyze the image.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingExplainImage(false);
-        }
-      }
-    };
-    
-    processExplainImage();
-  }, [explainImage, toast]);
-
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
       // Add user message
@@ -155,6 +106,9 @@ const ChatPanel = ({ toggleChat, explainText, explainImage }: ChatPanelProps) =>
           ...prev, 
           { role: 'assistant', content: response }
         ]);
+        
+        // Store chat history in Supabase if needed in the future
+        // Currently not implemented as we need to set up authentication first
       } catch (error) {
         // Handle errors
         setIsTyping(false);
@@ -208,41 +162,8 @@ const ChatPanel = ({ toggleChat, explainText, explainImage }: ChatPanelProps) =>
     });
   };
 
-  // Format message content with improved styling
-  const formatMessageContent = (content: string) => {
-    // Replace markdown headers with styled divs
-    const formattedWithHeadings = content
-      .replace(/^### (.*?)$/gm, '<h3 class="text-md font-bold mt-3 mb-1">$1</h3>')
-      .replace(/^## (.*?)$/gm, '<h2 class="text-lg font-bold mt-4 mb-2">$1</h2>')
-      .replace(/^# (.*?)$/gm, '<h1 class="text-xl font-bold mt-5 mb-3">$1</h1>');
-    
-    // Replace bullet points
-    const formattedWithBullets = formattedWithHeadings
-      .replace(/^- (.*?)$/gm, '<li class="ml-4 flex items-start"><span class="mr-2 mt-1">•</span><span>$1</span></li>')
-      .replace(/^[*] (.*?)$/gm, '<li class="ml-4 flex items-start"><span class="mr-2 mt-1">•</span><span>$1</span></li>');
-    
-    // Convert line breaks to paragraph tags
-    const paragraphs = formattedWithBullets
-      .split('\n\n')
-      .map(para => {
-        if (
-          para.startsWith('<h1') || 
-          para.startsWith('<h2') || 
-          para.startsWith('<h3') ||
-          para.startsWith('<li')
-        ) {
-          return para;
-        }
-        if (para.trim() === '') return '';
-        return `<p class="my-2">${para}</p>`;
-      })
-      .join('');
-    
-    return paragraphs;
-  };
-
   return (
-    <div className="flex flex-col h-full bg-white border-l">
+    <div className="flex flex-col h-full border-l">
       {/* Chat panel header */}
       <div className="flex items-center justify-between p-3 border-b bg-secondary/30">
         <div className="flex items-center gap-2">
@@ -265,43 +186,34 @@ const ChatPanel = ({ toggleChat, explainText, explainImage }: ChatPanelProps) =>
           {messages.map((message, i) => (
             <div key={i} className="group relative">
               <div 
-                className={`max-w-[95%] rounded-lg p-3 ${
+                className={`max-w-[80%] rounded-lg p-3 ${
                   message.role === 'user' 
                     ? 'bg-primary text-primary-foreground ml-auto' 
                     : 'bg-muted'
                 }`}
               >
-                {message.role === 'user' ? (
-                  <div className="flex items-start gap-2">
-                    <ChevronRight className="h-4 w-4 mt-1 flex-shrink-0" />
-                    <div>{message.content}</div>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <div 
-                      className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => copyToClipboard(message.content, i)}
-                    >
-                      {copiedMessageId === i ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </div>
+                {message.content}
+                
+                {message.role === 'assistant' && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => copyToClipboard(message.content, i)}
+                  >
+                    {copiedMessageId === i ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </Button>
                 )}
               </div>
             </div>
           ))}
           
           {isTyping && (
-            <div className="max-w-[95%] rounded-lg p-3 bg-muted">
+            <div className="max-w-[80%] rounded-lg p-3 bg-muted">
               <div className="flex gap-1">
                 <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
                 <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>

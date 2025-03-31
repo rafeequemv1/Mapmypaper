@@ -82,7 +82,7 @@ const Header = ({
     <div className="py-2 px-4 border-b bg-[#222222] flex items-center">
       <div className="flex items-center gap-2 w-1/3">
         <Brain className="h-5 w-5 text-white" />
-        <h1 className="text-base font-medium text-white">MapMyPaper</h1>
+        <h1 className="text-base font-medium text-white">PaperMind</h1>
         
         <Button variant="ghost" size="sm" className="text-white ml-2" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -13,7 +12,6 @@ const MindMap = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
-  const [explainImage, setExplainImage] = useState<string>("");
   const { toast } = useToast();
   
   useEffect(() => {
@@ -60,13 +58,6 @@ const MindMap = () => {
 
   const handleExplainText = useCallback((text: string) => {
     setExplainText(text);
-    if (!showChat) {
-      setShowChat(true);
-    }
-  }, [showChat]);
-
-  const handleExplainImage = useCallback((imageBase64: string) => {
-    setExplainImage(imageBase64);
     if (!showChat) {
       setShowChat(true);
     }
@@ -148,8 +139,6 @@ const MindMap = () => {
           onMindMapReady={handleMindMapReady}
           explainText={explainText}
           onExplainText={handleExplainText}
-          explainImage={explainImage}
-          onExplainImage={handleExplainImage}
         />
       </div>
       
