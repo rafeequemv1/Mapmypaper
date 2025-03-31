@@ -3,10 +3,10 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { TooltipProvider } from "./ui/tooltip";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -277,6 +277,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               size="icon" 
               className="h-8 w-8" 
               onClick={zoomOut}
+              title="Zoom Out"
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
@@ -288,6 +289,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               size="icon" 
               className="h-8 w-8" 
               onClick={zoomIn}
+              title="Zoom In"
             >
               <ZoomIn className="h-4 w-4" />
             </Button>
@@ -296,76 +298,67 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               size="icon" 
               className="h-8 w-8" 
               onClick={resetZoom}
+              title="Reset Zoom"
             >
               <RotateCw className="h-4 w-4" />
             </Button>
           </div>
           
-          {/* Search Controls */}
-          <div className="flex items-center gap-1 ml-auto">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={() => setShowSearch(!showSearch)}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+          {/* Search Input */}
+          <div className="flex-1 mx-2">
+            <div className="flex items-center">
+              <Input
+                placeholder="Search in document..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 text-sm mr-2"
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="h-8"
+                onClick={handleSearch}
+              >
+                Search
+              </Button>
+            </div>
           </div>
+          
+          {/* Search Navigation */}
+          {searchResults.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs">
+                {currentSearchIndex + 1} of {searchResults.length}
+              </span>
+              <div className="flex gap-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2"
+                  onClick={() => navigateSearch('prev')}
+                >
+                  ←
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2"
+                  onClick={() => navigateSearch('next')}
+                >
+                  →
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-        
-        {/* Search Bar */}
-        {showSearch && (
-          <div className="bg-white border-b p-2 flex gap-2 items-center">
-            <Input
-              placeholder="Search in document..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 text-sm"
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="h-8"
-              onClick={handleSearch}
-            >
-              Search
-            </Button>
-            {searchResults.length > 0 && (
-              <>
-                <span className="text-xs">
-                  {currentSearchIndex + 1} of {searchResults.length}
-                </span>
-                <div className="flex gap-1">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 px-2"
-                    onClick={() => navigateSearch('prev')}
-                  >
-                    ←
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 px-2"
-                    onClick={() => navigateSearch('next')}
-                  >
-                    →
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
         {/* PDF Content - Improved responsive fit */}
         {pdfData ? (
           <TooltipProvider>
             <ScrollArea className="flex-1" ref={pdfContainerRef}>
               <div 
-                className="flex flex-col items-center py-4" 
+                className="flex flex-col items-center py-4 px-2" 
                 onMouseUp={handleDocumentMouseUp}
                 style={{ position: 'relative' }}
               >
@@ -400,9 +393,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   {Array.from(new Array(numPages), (_, index) => (
                     <div
                       key={`page_${index + 1}`}
-                      className="mb-4 shadow-md bg-white transition-colors duration-300"
+                      className="mb-8 shadow-lg bg-white border border-gray-200 transition-colors duration-300"
                       ref={setPageRef(index)}
-                      style={{ width: '100%' }}
+                      style={{ width: '100%', maxWidth: '100%' }}
                       data-page-number={index + 1}
                     >
                       <Page
@@ -411,10 +404,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         renderAnnotationLayer={false}
                         onRenderSuccess={onPageRenderSuccess}
                         scale={scale}
-                        width={pdfContainerRef.current?.clientWidth ? pdfContainerRef.current.clientWidth - 32 : undefined}
+                        width={pdfContainerRef.current?.clientWidth ? pdfContainerRef.current.clientWidth - 16 : undefined}
                         className="mx-auto"
                       />
-                      <div className="text-center text-xs text-gray-500 py-1">
+                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-200">
                         Page {index + 1} of {numPages}
                       </div>
                     </div>

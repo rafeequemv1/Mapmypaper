@@ -74,20 +74,21 @@ const MindMap = () => {
         // Look for the root node element
         const rootNodeElement = document.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          // Apply line breaks to the root node text (roughly every 3-4 words)
+          // Apply line breaks to the root node text (3-4 words per line)
           const rootText = rootNodeElement.textContent;
           const words = rootText.split(' ');
           let formattedText = '';
-          let lineLength = 0;
+          let lineWords = 0;
+          const wordsPerLine = 3; // Set to 3-4 words per line as requested
           
           words.forEach((word, i) => {
             formattedText += word + ' ';
-            lineLength += word.length + 1;
+            lineWords++;
             
-            // Add a line break after 3-4 words (roughly 15-20 characters)
-            if (lineLength > 15 && i < words.length - 1) {
+            // Add a line break after 3-4 words
+            if (lineWords >= wordsPerLine && i < words.length - 1) {
               formattedText += '<br>';
-              lineLength = 0;
+              lineWords = 0;
             }
           });
           

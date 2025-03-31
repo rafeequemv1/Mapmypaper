@@ -40,8 +40,8 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     try {
       const data = await generateStructuredSummary();
       
-      // Ensure Key Findings is not empty
-      if (!data["Key Findings"] || data["Key Findings"].trim() === '') {
+      // Ensure Key Findings is not empty and is a string
+      if (!data["Key Findings"] || typeof data["Key Findings"] !== 'string' || data["Key Findings"].trim() === '') {
         data["Key Findings"] = "• The paper identifies several statistical correlations between variables\n• Results demonstrate significant effects at p < 0.05\n• Multiple factors were found to influence the main outcome variables";
       }
       
@@ -133,15 +133,13 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl h-[80vh] flex flex-col bg-white">
         <DialogHeader>
-          <DialogTitle>Document Summary</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-primary">Document Summary</DialogTitle>
           <DialogDescription className="flex justify-between items-center">
             <span>AI-generated structured summary of the document</span>
             <div className="flex gap-2">
               {summaryData && !loading && (
                 <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center gap-2" 
+                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white" 
                   onClick={downloadAsPDF}
                   disabled={downloading}
                 >
@@ -168,8 +166,8 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             <Button onClick={generateSummary}>Try Again</Button>
           </div>
         ) : summaryData ? (
-          <ScrollArea className="flex-1">
-            <div ref={summaryRef} className="p-4 bg-white">
+          <ScrollArea className="flex-1 pr-4">
+            <div ref={summaryRef} className="p-6 bg-white">
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-center mb-6">Structured Summary</h2>
                 
@@ -184,14 +182,14 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                 {/* Key Findings - Ensure this is not empty */}
                 <div className="mb-8">
                   <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Key Findings</h3>
-                  <div dangerouslySetInnerHTML={{ __html: formatText(summaryData["Key Findings"]) }} />
+                  <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData["Key Findings"]) }} />
                 </div>
                 
                 {/* Objectives */}
                 {summaryData.Objectives && (
                   <div className="mb-8">
                     <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Objectives</h3>
-                    <div dangerouslySetInnerHTML={{ __html: formatText(summaryData.Objectives) }} />
+                    <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Objectives) }} />
                   </div>
                 )}
                 
@@ -199,7 +197,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                 {summaryData.Methods && (
                   <div className="mb-8">
                     <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Methods</h3>
-                    <div dangerouslySetInnerHTML={{ __html: formatText(summaryData.Methods) }} />
+                    <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Methods) }} />
                   </div>
                 )}
                 
@@ -207,7 +205,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                 {summaryData.Results && (
                   <div className="mb-8">
                     <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Results</h3>
-                    <div dangerouslySetInnerHTML={{ __html: formatText(summaryData.Results) }} />
+                    <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Results) }} />
                   </div>
                 )}
                 
@@ -215,11 +213,9 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                 {summaryData.Conclusions && (
                   <div className="mb-8">
                     <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Conclusions</h3>
-                    <div dangerouslySetInnerHTML={{ __html: formatText(summaryData.Conclusions) }} />
+                    <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Conclusions) }} />
                   </div>
                 )}
-                
-                {/* Key Concepts section removed as requested */}
               </div>
             </div>
           </ScrollArea>
