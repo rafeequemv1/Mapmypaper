@@ -1,4 +1,5 @@
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit, Search, FlowChart } from "lucide-react";
+
+import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit, Search, FlowParallel } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -157,7 +158,7 @@ const Header = ({
                     onClick={onOpenFlowchart}
                     className="text-gray-500 px-2 h-8"
                   >
-                    <FlowChart className="h-5 w-5 mr-1" />
+                    <FlowParallel className="h-5 w-5 mr-1" />
                     <span className="text-xs">Flowchart</span>
                   </Button>
                 </TooltipTrigger>
