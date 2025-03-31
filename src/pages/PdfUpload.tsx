@@ -5,7 +5,7 @@ import { Upload, FileText, Brain, Trash } from "lucide-react";
 import { useState, useRef, ChangeEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import extractTextFromPdf from "react-pdftotext"; // Fixed import
+import extractTextFromPdf from "react-pdftotext";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Function to get PDF file name without extension
@@ -30,7 +30,7 @@ const PdfUpload = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
 
   // Handle when file is selected
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {

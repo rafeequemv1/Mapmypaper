@@ -1,33 +1,31 @@
 
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { ReactNode } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/sign-in");
-    }
-  }, [user, loading, navigate]);
-
-  // Show nothing while loading
-  if (loading) {
+  // Show loading state while checking authentication
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
       </div>
     );
   }
 
-  // Show children when user is authenticated
-  return user ? <>{children}</> : null;
+  // Redirect to sign-in if not authenticated
+  if (!user) {
+    return <Navigate to="/sign-in" replace />;
+  }
+
+  // Render children if authenticated
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
