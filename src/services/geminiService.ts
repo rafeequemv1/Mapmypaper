@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "@/hooks/use-toast";
 
@@ -120,7 +121,7 @@ export const generateFlowchartFromPdf = async (pdfText: string) => {
       model: "gemini-1.5-pro"
     });
     
-    // Create prompt
+    // Create prompt - fixing the backtick escaping issue
     const prompt = `
       Analyze the following text from a PDF document and extract the key steps, decisions, and processes.
       Create a flowchart diagram in Mermaid syntax that represents these steps and their connections.
@@ -129,14 +130,14 @@ export const generateFlowchartFromPdf = async (pdfText: string) => {
       ${pdfText}
       
       MERMAID SYNTAX:
-      ```mermaid
+      \`\`\`mermaid
       graph LR
           A[Start] --> B{Decision}
           B -- Yes --> C[Process 1]
           B -- No --> D[Process 2]
           C --> E[End]
           D --> E
-      ```
+      \`\`\`
     `;
     
     console.log("Sending flowchart prompt to Gemini");
