@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -97,7 +96,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Define a enhanced colorful theme based on the Catppuccin Theme
       const colorfulTheme = {
         name: 'Catppuccin',
-        type: 'light',
+        type: 'light' as const, // Fix: Use a literal type 'light' instead of string
         background: '#F9F7FF',
         color: '#8B5CF6',
         // Enhanced palette with vibrant complementary colors
