@@ -15,7 +15,8 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 import useSequenceDiagramGenerator from "./flowchart/useSequenceDiagramGenerator";
-import { Activity, Network, GitBranch } from "lucide-react";
+import useMindmapGenerator from "./flowchart/useMindmapGenerator";
+import { Activity, Network, GitBranch, Sigma } from "lucide-react";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -26,9 +27,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const { code, error, isGenerating, generateFlowchart, handleCodeChange } = useFlowchartGenerator();
   const sequenceDiagramGenerator = useSequenceDiagramGenerator();
+  const mindmapGenerator = useMindmapGenerator();
   
   // State for diagram type and theme
-  const [diagramType, setDiagramType] = useState<'flowchart' | 'sequence'>('flowchart');
+  const [diagramType, setDiagramType] = useState<'flowchart' | 'sequence' | 'mindmap'>('flowchart');
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [hideEditor, setHideEditor] = useState(false);
   
@@ -36,27 +38,42 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   useMermaidInit();
 
   // Currently active diagram code, error and generator based on diagram type
-  const activeCode = diagramType === 'flowchart' ? code : sequenceDiagramGenerator.code;
-  const activeError = diagramType === 'flowchart' ? error : sequenceDiagramGenerator.error;
-  const activeIsGenerating = diagramType === 'flowchart' ? isGenerating : sequenceDiagramGenerator.isGenerating;
+  const activeCode = 
+    diagramType === 'flowchart' ? code : 
+    diagramType === 'sequence' ? sequenceDiagramGenerator.code :
+    mindmapGenerator.code;
+  
+  const activeError = 
+    diagramType === 'flowchart' ? error : 
+    diagramType === 'sequence' ? sequenceDiagramGenerator.error :
+    mindmapGenerator.error;
+  
+  const activeIsGenerating = 
+    diagramType === 'flowchart' ? isGenerating : 
+    diagramType === 'sequence' ? sequenceDiagramGenerator.isGenerating :
+    mindmapGenerator.isGenerating;
 
-  // Generate flowchart when modal is opened
+  // Generate diagram when modal is opened or diagram type changes
   useEffect(() => {
     if (open) {
       if (code === defaultFlowchart && diagramType === 'flowchart') {
         generateFlowchart();
       } else if (diagramType === 'sequence' && sequenceDiagramGenerator.code === '') {
         sequenceDiagramGenerator.generateDiagram();
+      } else if (diagramType === 'mindmap' && mindmapGenerator.code === mindmapGenerator.defaultMindmap) {
+        mindmapGenerator.generateMindmap();
       }
     }
-  }, [open, diagramType, generateFlowchart, code, sequenceDiagramGenerator]);
+  }, [open, diagramType, generateFlowchart, code, sequenceDiagramGenerator, mindmapGenerator]);
 
   // Handle code change based on active diagram type
   const handleActiveDiagramCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (diagramType === 'flowchart') {
       handleCodeChange(e);
-    } else {
+    } else if (diagramType === 'sequence') {
       sequenceDiagramGenerator.handleCodeChange(e);
+    } else {
+      mindmapGenerator.handleCodeChange(e);
     }
   };
 
@@ -64,8 +81,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const handleRegenerateActiveDiagram = () => {
     if (diagramType === 'flowchart') {
       generateFlowchart();
-    } else {
+    } else if (diagramType === 'sequence') {
       sequenceDiagramGenerator.generateDiagram();
+    } else {
+      mindmapGenerator.generateMindmap();
     }
   };
 
@@ -90,7 +109,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           <DialogDescription>
             {diagramType === 'flowchart' ? 
               "Create and edit flowcharts visualizing processes and relationships." : 
-              "Create and edit sequence diagrams showing interactions between components."}
+              diagramType === 'sequence' ?
+              "Create and edit sequence diagrams showing interactions between components." :
+              "Create and edit mind maps to organize ideas and concepts."}
           </DialogDescription>
         </DialogHeader>
         
@@ -113,6 +134,15 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             >
               <Network className="h-4 w-4" />
               Sequence
+            </Button>
+            <Button
+              variant={diagramType === 'mindmap' ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDiagramType('mindmap')}
+              className="flex items-center gap-1"
+            >
+              <Sigma className="h-4 w-4" />
+              Mind Map
             </Button>
           </div>
           

@@ -1,32 +1,44 @@
 
 import { useEffect } from "react";
 import mermaid from "mermaid";
+import { useToast } from "@/hooks/use-toast";
 
-export const useMermaidInit = () => {
-  // Initialize mermaid with safe configuration
+const useMermaidInit = () => {
+  const { toast } = useToast();
+  
   useEffect(() => {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: "default",
-      securityLevel: "loose",
-      flowchart: {
-        useMaxWidth: false,
-        htmlLabels: true
-      },
-      sequence: {
-        diagramMarginX: 50,
-        diagramMarginY: 10,
-        actorMargin: 50,
-        width: 150,
-        height: 65,
-        boxMargin: 10,
-        boxTextMargin: 5,
-        noteMargin: 10,
-        messageMargin: 35
-      },
-      logLevel: 3 // Enables warning logs for debugging
-    });
-  }, []);
+    try {
+      // Initialize mermaid with custom configuration
+      mermaid.initialize({
+        securityLevel: 'loose',
+        startOnLoad: true,
+        theme: 'forest',
+        logLevel: 'error',
+        flowchart: {
+          useMaxWidth: false,
+          htmlLabels: true
+        },
+        sequence: {
+          showSequenceNumbers: false,
+          actorMargin: 80,
+          boxMargin: 20
+        },
+        mindmap: {
+          padding: 16
+        },
+        er: {
+          layoutDirection: 'TB'
+        }
+      });
+    } catch (error) {
+      console.error("Failed to initialize Mermaid:", error);
+      toast({
+        title: "Diagram Initialization Error",
+        description: "Failed to initialize diagram renderer. Try refreshing the page.",
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
 };
 
 export default useMermaidInit;

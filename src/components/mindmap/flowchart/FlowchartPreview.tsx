@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
@@ -26,10 +25,10 @@ const FlowchartPreview = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Render flowchart when code or theme changes
+  // Render diagram when code or theme changes
   useEffect(() => {
     if (code && previewRef.current) {
-      renderFlowchart();
+      renderDiagram();
     }
     
     // Cleanup function to prevent DOM manipulation errors
@@ -47,7 +46,7 @@ const FlowchartPreview = ({
     };
   }, [code, theme]);
 
-  const renderFlowchart = async () => {
+  const renderDiagram = async () => {
     if (!previewRef.current) return;
 
     try {
@@ -57,7 +56,7 @@ const FlowchartPreview = ({
       }
 
       // Create a unique ID for the diagram
-      const id = `flowchart-${Date.now()}`;
+      const id = `diagram-${Date.now()}`;
       
       // Configure mermaid with enhanced styling and selected theme
       mermaid.initialize({
@@ -72,6 +71,9 @@ const FlowchartPreview = ({
           nodeSpacing: 50,
           padding: 15
         },
+        mindmap: {
+          padding: 16,
+        },
         themeVariables: {
           primaryColor: '#9b87f5',
           primaryTextColor: '#fff',
@@ -82,49 +84,32 @@ const FlowchartPreview = ({
         }
       });
       
-      // Parse the flowchart to verify syntax before rendering
+      // Parse the diagram to verify syntax before rendering
       await mermaid.parse(code);
       
-      // If parse succeeds, render the flowchart
+      // If parse succeeds, render the diagram
       const { svg } = await mermaid.render(id, code);
       
       // Make sure previewRef is still valid before updating the DOM
       if (previewRef.current) {
         previewRef.current.innerHTML = svg;
         
-        // Post-process the SVG to add more colors to nodes if needed
-        const nodeElements = previewRef.current.querySelectorAll("g.node");
-        const colors = [
-          "#8B5CF6", "#D946EF", "#F97316", "#0EA5E9", 
-          "#10B981", "#EF4444", "#F59E0B", "#6366F1"
-        ];
+        // Check if it's a flowchart or mindmap to apply additional styling
+        const isDiagramType = (type: string) => code.trim().toLowerCase().startsWith(type);
         
-        let colorIndex = 0;
-        nodeElements.forEach((node) => {
-          const rect = node.querySelector("rect");
-          if (rect) {
-            rect.setAttribute("fill", colors[colorIndex % colors.length]);
-            rect.setAttribute("stroke", "#4B5563");
-            colorIndex++;
-          }
-        });
-
-        // Make text more readable
-        const textElements = previewRef.current.querySelectorAll("g.node text");
-        textElements.forEach((text) => {
-          text.setAttribute("fill", "#FFFFFF");
-          text.setAttribute("font-weight", "bold");
-        });
-        
-        // Style the edges with gradient colors
-        const edgePaths = previewRef.current.querySelectorAll(".edgePath path");
-        edgePaths.forEach((path) => {
-          path.setAttribute("stroke-width", "2");
-          path.setAttribute("stroke", "#6E59A5");
-        });
+        if (isDiagramType('flowchart')) {
+          // Apply flowchart-specific styling
+          styleFlowchart(previewRef.current);
+        } else if (isDiagramType('mindmap')) {
+          // Apply mindmap-specific styling
+          styleMindmap(previewRef.current);
+        } else if (isDiagramType('sequencediagram')) {
+          // Apply sequence diagram-specific styling
+          styleSequenceDiagram(previewRef.current);
+        }
       }
     } catch (err) {
-      console.error("Failed to render flowchart:", err);
+      console.error("Failed to render diagram:", err);
       
       // Display error message in preview area
       if (previewRef.current) {
@@ -134,6 +119,103 @@ const FlowchartPreview = ({
         </div>`;
       }
     }
+  };
+
+  // Style flowchart elements
+  const styleFlowchart = (container: HTMLDivElement) => {
+    // Post-process the SVG to add more colors to nodes
+    const nodeElements = container.querySelectorAll("g.node");
+    const colors = [
+      "#8B5CF6", "#D946EF", "#F97316", "#0EA5E9", 
+      "#10B981", "#EF4444", "#F59E0B", "#6366F1"
+    ];
+    
+    let colorIndex = 0;
+    nodeElements.forEach((node) => {
+      const rect = node.querySelector("rect");
+      if (rect) {
+        rect.setAttribute("fill", colors[colorIndex % colors.length]);
+        rect.setAttribute("stroke", "#4B5563");
+        colorIndex++;
+      }
+    });
+
+    // Make text more readable
+    const textElements = container.querySelectorAll("g.node text");
+    textElements.forEach((text) => {
+      text.setAttribute("fill", "#FFFFFF");
+      text.setAttribute("font-weight", "bold");
+    });
+    
+    // Style the edges with gradient colors
+    const edgePaths = container.querySelectorAll(".edgePath path");
+    edgePaths.forEach((path) => {
+      path.setAttribute("stroke-width", "2");
+      path.setAttribute("stroke", "#6E59A5");
+    });
+  };
+
+  // Style mindmap elements
+  const styleMindmap = (container: HTMLDivElement) => {
+    // Style nodes with vibrant colors
+    const nodes = container.querySelectorAll(".mindmap-node>rect, .mindmap-node>circle, .mindmap-node>ellipse, .mindmap-node>polygon");
+    const colors = [
+      "#8B5CF6", "#D946EF", "#F97316", "#0EA5E9", 
+      "#10B981", "#EF4444", "#F59E0B", "#6366F1"
+    ];
+    
+    let colorIndex = 0;
+    nodes.forEach((node) => {
+      node.setAttribute("fill", colors[colorIndex % colors.length]);
+      node.setAttribute("stroke", "#4B5563");
+      colorIndex++;
+    });
+
+    // Style text to be more readable
+    const texts = container.querySelectorAll(".mindmap-node text");
+    texts.forEach((text) => {
+      text.setAttribute("fill", "#FFFFFF");
+      text.setAttribute("font-weight", "bold");
+    });
+
+    // Style edges to be more visible
+    const edges = container.querySelectorAll(".mindmap-edge");
+    edges.forEach((edge) => {
+      const path = edge.querySelector("path");
+      if (path) {
+        path.setAttribute("stroke-width", "2.5");
+        path.setAttribute("stroke", "#6E59A5");
+      }
+    });
+  };
+
+  // Style sequence diagram elements
+  const styleSequenceDiagram = (container: HTMLDivElement) => {
+    // Style actor boxes
+    const actors = container.querySelectorAll(".actor");
+    const colors = ["#8B5CF6", "#D946EF", "#F97316", "#0EA5E9", "#10B981"];
+    
+    let colorIndex = 0;
+    actors.forEach((actor) => {
+      actor.setAttribute("fill", colors[colorIndex % colors.length]);
+      actor.setAttribute("stroke", "#4B5563");
+      
+      // Find and style the associated text
+      const nearestText = actor.parentElement?.querySelector("text");
+      if (nearestText) {
+        nearestText.setAttribute("fill", "#FFFFFF");
+        nearestText.setAttribute("font-weight", "bold");
+      }
+      
+      colorIndex++;
+    });
+
+    // Style message arrows
+    const messages = container.querySelectorAll(".messageLine0, .messageLine1");
+    messages.forEach((message) => {
+      message.setAttribute("stroke-width", "2");
+      message.setAttribute("stroke", "#6E59A5");
+    });
   };
 
   const zoomIn = () => {

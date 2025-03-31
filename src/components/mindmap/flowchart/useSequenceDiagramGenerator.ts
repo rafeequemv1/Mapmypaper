@@ -2,30 +2,17 @@
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
-import { generateSequenceDiagramFromPdf } from "@/services/geminiService";
+import { generateFlowchartFromPdf } from "@/services/geminiService";
 
 export const defaultSequenceDiagram = `sequenceDiagram
-    participant Researcher
-    participant Experiment
-    participant Data
+    participant Client
+    participant Server
+    participant Database
     
-    Researcher->>Experiment: Setup parameters
-    Experiment->>Data: Generate results
-    Data->>Researcher: Return analysis
-    Note right of Researcher: Evaluate findings
-    Researcher->>Researcher: Draw conclusions`;
-
-// Helper function to clean and validate Mermaid syntax for sequence diagrams
-export const cleanSequenceDiagramSyntax = (input: string): string => {
-  let cleaned = input.trim();
-  
-  // Ensure it starts with sequenceDiagram directive
-  if (!cleaned.startsWith("sequenceDiagram")) {
-    cleaned = "sequenceDiagram\n" + cleaned;
-  }
-  
-  return cleaned;
-};
+    Client->>Server: Request data
+    Server->>Database: Query data
+    Database-->>Server: Return data
+    Server-->>Client: Response with data`;
 
 export const useSequenceDiagramGenerator = () => {
   const [code, setCode] = useState(defaultSequenceDiagram);
@@ -37,15 +24,12 @@ export const useSequenceDiagramGenerator = () => {
     try {
       setIsGenerating(true);
       setError(null);
-      const diagramCode = await generateSequenceDiagramFromPdf();
+      const diagramCode = await generateFlowchartFromPdf('sequence');
       
-      // Clean and validate the mermaid syntax
-      const cleanedCode = cleanSequenceDiagramSyntax(diagramCode);
-      
-      // Check if the diagram code is valid
+      // Check if the sequence diagram code is valid
       try {
-        await mermaid.parse(cleanedCode);
-        setCode(cleanedCode);
+        await mermaid.parse(diagramCode);
+        setCode(diagramCode);
         toast({
           title: "Sequence Diagram Generated",
           description: "A sequence diagram has been created based on your PDF content.",
