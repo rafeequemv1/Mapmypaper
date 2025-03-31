@@ -187,6 +187,6 @@
   }
   
   .ai-message-content {
-    @apply prose prose-sm max-w-none;
+    @apply prose max-w-none;
   }
 }
