@@ -12,10 +12,42 @@ interface MindMapViewerProps {
   onRequestOpenChat?: () => void;
 }
 
-// Helper function to format node text with line breaks
-const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
+// Helper function to format node text with line breaks and add emojis
+const formatNodeText = (text: string, wordsPerLine: number = 3): string => {
   if (!text) return '';
   
+  // Add emoji based on topic content
+  const addEmoji = (topic: string) => {
+    const topicLower = topic.toLowerCase();
+    if (topicLower.includes('start') || topicLower.includes('begin')) return '🚀 ' + topic;
+    if (topicLower.includes('organization') || topicLower.includes('structure')) return '📊 ' + topic;
+    if (topicLower.includes('learn') || topicLower.includes('study')) return '📚 ' + topic;
+    if (topicLower.includes('habit')) return '⏰ ' + topic;
+    if (topicLower.includes('goal')) return '🎯 ' + topic;
+    if (topicLower.includes('motivation')) return '💪 ' + topic;
+    if (topicLower.includes('review') || topicLower.includes('summary')) return '✅ ' + topic;
+    if (topicLower.includes('research')) return '🔍 ' + topic;
+    if (topicLower.includes('read')) return '📖 ' + topic;
+    if (topicLower.includes('write') || topicLower.includes('note')) return '✏️ ' + topic;
+    if (topicLower.includes('discuss') || topicLower.includes('talk')) return '💬 ' + topic;
+    if (topicLower.includes('listen')) return '👂 ' + topic;
+    if (topicLower.includes('present')) return '🎤 ' + topic;
+    if (topicLower.includes('plan')) return '📝 ' + topic;
+    if (topicLower.includes('time')) return '⏱️ ' + topic;
+    if (topicLower.includes('break')) return '☕ ' + topic;
+    if (topicLower.includes('focus')) return '🧠 ' + topic;
+    if (topicLower.includes('idea')) return '💡 ' + topic;
+    if (topicLower.includes('question')) return '❓ ' + topic;
+    if (topicLower.includes('answer')) return '✓ ' + topic;
+    if (topicLower.includes('problem')) return '⚠️ ' + topic;
+    if (topicLower.includes('solution')) return '🔧 ' + topic;
+    return topic; // No emoji match
+  };
+  
+  // Add emoji to the text
+  text = addEmoji(text);
+  
+  // Apply line breaks
   const words = text.split(' ');
   if (words.length <= wordsPerLine) return text;
   
@@ -26,6 +58,25 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   }
   
   return result;
+};
+
+// Generate a color from a string (for consistent node colors based on content)
+const stringToColor = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Define a palette of vibrant colors
+  const colors = [
+    '#E57373', '#F06292', '#BA68C8', '#9575CD', 
+    '#7986CB', '#64B5F6', '#4FC3F7', '#4DD0E1', 
+    '#4DB6AC', '#81C784', '#AED581', '#DCE775', 
+    '#FFF176', '#FFD54F', '#FFB74D', '#FF8A65'
+  ];
+  
+  // Use the hash to select a color from palette
+  return colors[Math.abs(hash) % colors.length];
 };
 
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
@@ -51,19 +102,35 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         },
         theme: {
           name: 'colorful',
-          background: '#E5DEFF',
+          background: '#F9F7FF',
           color: '#8B5CF6',
           palette: [],
           cssVar: {},
         },
         nodeMenu: true, // Explicitly enable the nodeMenu
         autoFit: true,
-        // Add custom style to nodes based on their level
+        // Add custom style to nodes based on their level and content
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
-          // Apply custom styling to nodes for a more elegant look
-          tpc.style.backgroundColor = level === 0 ? '#E5DEFF' : '#E5DEFF';
-          tpc.style.color = '#333333';
-          tpc.style.border = `2px solid ${level === 0 ? '#8B5CF6' : '#8B5CF6'}`;
+          // Get node topic and use it to generate consistent color
+          const topic = node.topic || '';
+          const baseColor = stringToColor(topic);
+          
+          // Lighten color for background
+          const lightenColor = (color: string, percent: number) => {
+            const num = parseInt(color.slice(1), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            return `#${(1 << 24 | (R < 255 ? R < 1 ? 0 : R : 255) << 16 | (G < 255 ? G < 1 ? 0 : G : 255) << 8 | (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)}`;
+          };
+          
+          const bgColor = lightenColor(baseColor, 80);
+          
+          // Apply custom styling to nodes for a more elegant and colorful look
+          tpc.style.backgroundColor = level === 0 ? '#E5DEFF' : bgColor;
+          tpc.style.color = level === 0 ? '#8B5CF6' : baseColor.replace('#', '').substring(0, 6);
+          tpc.style.border = `2px solid ${level === 0 ? '#8B5CF6' : baseColor}`;
           tpc.style.borderRadius = '12px';
           tpc.style.padding = '10px 16px';
           tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
@@ -101,7 +168,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           
-          // Apply line breaks to node topics
+          // Apply line breaks and emojis to node topics
           const formatNodes = (node: any) => {
             if (node.topic) {
               node.topic = formatNodeText(node.topic);
@@ -124,62 +191,62 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           data = {
             nodeData: {
               id: 'root',
-              topic: 'Mind\nMapping',
+              topic: '🧠 Mind\nMapping',
               children: [
                 {
                   id: 'bd1',
-                  topic: 'Organization',
+                  topic: '📊 Organization',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd1-1', topic: 'Plan' },
-                    { id: 'bd1-2', topic: 'Study' },
-                    { id: 'bd1-3', topic: 'System' },
-                    { id: 'bd1-4', topic: 'Breaks' }
+                    { id: 'bd1-1', topic: '📝 Plan' },
+                    { id: 'bd1-2', topic: '📚 Study' },
+                    { id: 'bd1-3', topic: '⚙️ System' },
+                    { id: 'bd1-4', topic: '☕ Breaks' }
                   ]
                 },
                 {
                   id: 'bd2',
-                  topic: 'Learning\nStyle',
+                  topic: '🎓 Learning\nStyle',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd2-1', topic: 'Read' },
-                    { id: 'bd2-2', topic: 'Listen' },
-                    { id: 'bd2-3', topic: 'Summarize' }
+                    { id: 'bd2-1', topic: '📖 Read' },
+                    { id: 'bd2-2', topic: '👂 Listen' },
+                    { id: 'bd2-3', topic: '✏️ Summarize' }
                   ]
                 },
                 {
                   id: 'bd3',
-                  topic: 'Habits',
+                  topic: '⏰ Habits',
                   direction: 0 as const,
                   children: []
                 },
                 {
                   id: 'bd4',
-                  topic: 'Goals',
+                  topic: '🎯 Goals',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd4-1', topic: 'Research' },
-                    { id: 'bd4-2', topic: 'Lecture' },
-                    { id: 'bd4-3', topic: 'Conclusions' }
+                    { id: 'bd4-1', topic: '🔍 Research' },
+                    { id: 'bd4-2', topic: '🎤 Lecture' },
+                    { id: 'bd4-3', topic: '📝 Conclusions' }
                   ]
                 },
                 {
                   id: 'bd5',
-                  topic: 'Motivation',
+                  topic: '💪 Motivation',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd5-1', topic: 'Tips' },
-                    { id: 'bd5-2', topic: 'Roadmap' }
+                    { id: 'bd5-1', topic: '💡 Tips' },
+                    { id: 'bd5-2', topic: '🗺️ Roadmap' }
                   ]
                 },
                 {
                   id: 'bd6',
-                  topic: 'Review',
+                  topic: '✅ Review',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd6-1', topic: 'Notes' },
-                    { id: 'bd6-2', topic: 'Method' },
-                    { id: 'bd6-3', topic: 'Discuss' }
+                    { id: 'bd6-1', topic: '📔 Notes' },
+                    { id: 'bd6-2', topic: '🔄 Method' },
+                    { id: 'bd6-3', topic: '💬 Discuss' }
                   ]
                 }
               ]
@@ -191,7 +258,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         data = {
           nodeData: {
             id: 'root',
-            topic: 'Error\nLoading\nMind Map',
+            topic: '⚠️ Error\nLoading\nMind Map',
             children: [
               { id: 'error1', topic: 'There was an error loading the mind map data', direction: 0 as const }
             ]
@@ -245,7 +312,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           ref={containerRef} 
           className="w-full h-full" 
           style={{ 
-            background: `linear-gradient(90deg, #F9F7F3 0%, #E5DEFF 100%)`,
+            background: `linear-gradient(90deg, #F9F7FF 0%, #E5DEFF 100%)`,
             transition: 'background-color 0.5s ease'
           }}
         />
