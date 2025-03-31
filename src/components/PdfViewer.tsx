@@ -25,7 +25,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [pdfData, setPdfData] = useState<string | null>(null);
     const [selectedText, setSelectedText] = useState<string>("");
     const pdfContainerRef = useRef<HTMLDivElement>(null);
-    const pagesRef = useRef<HTMLDivElement[]>([]);
+    const pagesRef = useRef<(HTMLDivElement | null)[]>([]);
     const { toast } = useToast();
 
     // Extract PDF data from sessionStorage
@@ -96,11 +96,12 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           }
         }
       }
-    }));
+    }), [numPages]);
 
     // Handle document loaded
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
       setNumPages(numPages);
+      // Initialize the array with the correct number of null elements
       pagesRef.current = Array(numPages).fill(null);
       if (onPdfLoaded) {
         onPdfLoaded();
@@ -112,9 +113,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       setPageHeight(page.height);
     };
 
-    // Set page ref
-    const setPageRef = (index: number, element: HTMLDivElement) => {
-      pagesRef.current[index] = element;
+    // Set page ref - use a stable callback that doesn't cause re-renders
+    const setPageRef = (index: number) => (element: HTMLDivElement | null) => {
+      if (pagesRef.current && index >= 0 && index < pagesRef.current.length) {
+        pagesRef.current[index] = element;
+      }
     };
 
     return (
@@ -136,7 +139,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   <div
                     key={`page_${index + 1}`}
                     className="my-4 shadow-md mx-auto bg-white transition-colors duration-300"
-                    ref={(el) => el && setPageRef(index, el)}
+                    ref={setPageRef(index)}
                     style={{ maxWidth: '90%' }}
                     data-page-number={index + 1}
                   >

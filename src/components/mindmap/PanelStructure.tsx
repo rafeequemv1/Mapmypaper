@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
@@ -28,12 +28,12 @@ const PanelStructure = ({
   onExplainText
 }: PanelStructureProps) => {
   const [pdfLoaded, setPdfLoaded] = useState(false);
-  const [pdfViewerRef, setPdfViewerRef] = useState<any>(null);
+  const pdfViewerRef = useRef<{ scrollToPage: (pageNumber: number) => void } | null>(null);
   const isMobile = useIsMobile();
   
   // Function to handle citation clicks and scroll PDF to that position
   const handleScrollToPdfPosition = (position: string) => {
-    if (!pdfViewerRef) return;
+    if (!pdfViewerRef.current) return;
     
     console.log("Scrolling to position:", position);
     
@@ -43,7 +43,7 @@ const PanelStructure = ({
       const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);
       if (!isNaN(pageNumber) && pageNumber > 0) {
         console.log("Scrolling to page:", pageNumber);
-        pdfViewerRef.scrollToPage(pageNumber);
+        pdfViewerRef.current.scrollToPage(pageNumber);
         
         // Ensure PDF panel is visible on mobile
         if (!showPdf && !isMobile) {
@@ -63,7 +63,7 @@ const PanelStructure = ({
               <PdfViewer 
                 onTextSelected={onExplainText} 
                 onPdfLoaded={() => setPdfLoaded(true)}
-                ref={setPdfViewerRef}
+                ref={pdfViewerRef}
               />
             </ResizablePanel>
             <ResizableHandle />
