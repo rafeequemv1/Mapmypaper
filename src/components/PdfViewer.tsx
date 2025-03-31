@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -271,8 +270,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       if (!pdfContainerRef.current) return undefined;
       
       const containerWidth = pdfContainerRef.current.clientWidth;
-      // Leave some margin on the sides
-      return Math.min(containerWidth - 32, 900); // Maximum width capped at 900px
+      // Remove the max width cap of 900px - allow PDF to extend across available width
+      return containerWidth - 32; // Just leave some margin on the sides
     };
 
     return (

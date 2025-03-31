@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,14 +42,16 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
         setProcessingExplainText(true);
         
         // Add user message with the selected text
-        setMessages(prev => [...prev, { role: 'user', content: explainText }]);
+        setMessages(prev => [...prev, { role: 'user', content: `Please explain this text in detail with page citations: "${explainText}"` }]);
         
         // Show typing indicator
         setIsTyping(true);
         
         try {
-          // Regular text query
-          const response = await chatWithGeminiAboutPdf(explainText);
+          // Enhanced prompt to encourage complete sentences and page citations
+          const response = await chatWithGeminiAboutPdf(
+            `Please explain this text in detail. Use complete sentences and provide specific page citations in [citation:pageX] format: "${explainText}"`
+          );
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
@@ -115,8 +116,10 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
       setIsTyping(true);
       
       try {
-        // Get response from Gemini
-        const response = await chatWithGeminiAboutPdf(userMessage);
+        // Enhanced prompt to encourage complete sentences and page citations
+        const response = await chatWithGeminiAboutPdf(
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number.`
+        );
         
         // Hide typing indicator and add AI response with enhanced formatting
         setIsTyping(false);

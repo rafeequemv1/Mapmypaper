@@ -9,7 +9,7 @@ export const formatAIResponse = (content: string): string => {
   // Format improved for numeric citations: [citation:page123] -> clickable citation link with just the number
   let formattedContent = content.replace(
     /\[citation:page(\d+)\]/g, 
-    '<span class="citation" data-citation="page$1" role="button" tabindex="0"><sup class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-medium hover:bg-blue-200 cursor-pointer">$1</sup></span>'
+    '<span class="citation" data-citation="page$1" role="button" tabindex="0"><sup class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-medium hover:bg-blue-200 cursor-pointer">Page $1</sup></span>'
   );
   
   // Standard citation format as fallback - now showing page numbers instead of "ref"

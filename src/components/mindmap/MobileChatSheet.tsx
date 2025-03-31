@@ -54,8 +54,10 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
       setIsTyping(true);
       
       try {
-        // Get response from Gemini
-        const response = await chatWithGeminiAboutPdf(userMessage);
+        // Enhanced prompt to encourage complete sentences and page citations
+        const response = await chatWithGeminiAboutPdf(
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number.`
+        );
         
         // Hide typing indicator and add AI response with formatting
         setIsTyping(false);

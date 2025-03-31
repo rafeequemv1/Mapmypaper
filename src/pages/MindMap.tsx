@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -76,14 +77,32 @@ const MindMap = () => {
         // Process the root node
         const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          applyLineBreaksToNode(rootNodeElement, 4); // 4 words per line for root (increased from 3)
+          applyLineBreaksToNode(rootNodeElement, 6); // 6 words per line for root (increased from 4)
         }
         
         // Process all topic nodes
         const topicElements = mindMap.container.querySelectorAll('.mind-elixir-topic');
         topicElements.forEach(topicElement => {
           if (topicElement.classList.contains('mind-elixir-root')) return; // Skip root, already handled
-          applyLineBreaksToNode(topicElement as HTMLElement, 5); // 5 words per line for other nodes (increased from 4)
+          applyLineBreaksToNode(topicElement as HTMLElement, 7); // 7 words per line for other nodes (increased from 5)
+        });
+
+        // Verify all nodes have complete sentences
+        const allNodes = mindMap.container.querySelectorAll('.mind-elixir-topic');
+        allNodes.forEach(node => {
+          const nodeText = node.textContent || '';
+          
+          // Add a period at the end if it doesn't have one and isn't empty
+          if (nodeText && !nodeText.match(/[.!?]$/)) {
+            // Only append periods to actual sentences, not just labels or titles
+            if (nodeText.split(' ').length > 2) {
+              let updatedText = nodeText;
+              if (!nodeText.endsWith('.')) {
+                updatedText += '.';
+              }
+              node.textContent = updatedText;
+            }
+          }
         });
       });
       
@@ -116,7 +135,7 @@ const MindMap = () => {
       setTimeout(() => {
         const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          applyLineBreaksToNode(rootNodeElement, 4);
+          applyLineBreaksToNode(rootNodeElement, 6);
         }
       }, 100);
     };

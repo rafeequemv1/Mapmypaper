@@ -55,9 +55,9 @@ const PanelStructure = ({
       if (!isNaN(pageNumber) && pageNumber > 0) {
         console.log("Scrolling to page:", pageNumber);
         
-        // Ensure PDF panel is visible first
+        // Ensure PDF panel is visible first - ALWAYS open PDF if closed
         if (!showPdf) {
-          togglePdf();
+          togglePdf(); // Always open the PDF panel when citation is clicked
         }
         
         // Use setTimeout to ensure the panel is visible before scrolling
