@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,10 @@ const formatAIResponse = (content: string): string => {
     // Format paragraphs with proper spacing
     .replace(/^\s*$(?:\r\n?|\n)/gm, '</p><p class="mb-3">')
     // Format blockquotes
-    .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-gray-300 pl-3 italic my-2">$1</blockquote>');
+    .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-gray-300 pl-3 italic my-2">$1</blockquote>')
+    // Format tables (basic support)
+    .replace(/\|(.+)\|/g, '<table class="border-collapse w-full my-3"><tr>$1</tr></table>')
+    .replace(/\|---\|/g, '');
 
   // Wrap the result in a paragraph if it doesn't start with an HTML tag
   if (!formattedContent.startsWith('<')) {

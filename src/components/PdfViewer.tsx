@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,6 +42,9 @@ const PdfViewer = ({
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<number[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
+  const [capturedScreenshotData, setCapturedScreenshotData] = useState<string | null>(null);
+  const [showScreenshotTooltip, setShowScreenshotTooltip] = useState(false);
+  const [screenshotTooltipPosition, setScreenshotTooltipPosition] = useState<{ x: number; y: number } | null>(null);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const selectionOverlayRef = useRef<HTMLDivElement>(null);
@@ -111,6 +113,8 @@ const PdfViewer = ({
   const handleStartAreaSelection = () => {
     setIsAreaSelectMode(true);
     setSelectionRect(null);
+    setCapturedScreenshotData(null);
+    setShowScreenshotTooltip(false);
     document.body.style.cursor = 'crosshair';
     toast({
       title: "Selection Mode",
@@ -146,24 +150,29 @@ const PdfViewer = ({
       } : null);
     };
 
-    const handleMouseUp = async () => {
+    const handleMouseUp = async (upEvent: MouseEvent) => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'default';
       
-      if (selectionRect && 
-          Math.abs(selectionRect.endX - selectionRect.startX) > 20 && 
-          Math.abs(selectionRect.endY - selectionRect.startY) > 20) {
+      if (selectionRect) {
+        // Calculate the width and height of the selection
+        const width = Math.abs(selectionRect.endX - selectionRect.startX);
+        const height = Math.abs(selectionRect.endY - selectionRect.startY);
+        
+        // Allow any size of selection - even small ones
         await captureSelectedArea();
-      } else {
-        toast({
-          title: "Selection too small",
-          description: "Please select a larger area",
-          variant: "destructive"
-        });
+        
+        if (pdfContainerRef.current) {
+          const containerRect = pdfContainerRef.current.getBoundingClientRect();
+          // Position the tooltip at the end of the selection
+          setScreenshotTooltipPosition({
+            x: upEvent.clientX - containerRect.left,
+            y: upEvent.clientY - containerRect.top + 10
+          });
+          setShowScreenshotTooltip(true);
+        }
       }
-      
-      setIsAreaSelectMode(false);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -204,24 +213,10 @@ const PdfViewer = ({
         );
         
         const screenshotDataUrl = croppedCanvas.toDataURL('image/png');
+        setCapturedScreenshotData(screenshotDataUrl);
         
-        // Request to open chat panel if it's closed
-        if (onRequestOpenChat) {
-          onRequestOpenChat();
-        }
-        
-        // If onExplainText is provided, pass screenshot context to parent
-        if (onExplainText) {
-          onExplainText(`[Area screenshot from page ${currentPage}] Please explain what's shown in this selected area.`);
-          
-          // Store the screenshot in session storage
-          sessionStorage.setItem('screenshotData', screenshotDataUrl);
-        }
-        
-        toast({
-          title: "Area screenshot captured",
-          description: "Screenshot sent to research assistant",
-        });
+        // Store the screenshot in session storage for later use
+        sessionStorage.setItem('screenshotData', screenshotDataUrl);
       }
     } catch (error) {
       console.error("Error capturing area screenshot:", error);
@@ -232,8 +227,32 @@ const PdfViewer = ({
       });
     } finally {
       setIsCapturingScreenshot(false);
-      setSelectionRect(null);
     }
+  };
+
+  const handleExplainScreenshot = () => {
+    if (!capturedScreenshotData) return;
+    
+    // Request to open chat panel if it's closed
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+    
+    // If onExplainText is provided, pass screenshot context to parent
+    if (onExplainText) {
+      onExplainText(`[Area screenshot from page ${currentPage}] Please explain what's shown in this selected area.`);
+    }
+    
+    toast({
+      title: "Screenshot sent",
+      description: "Screenshot sent to research assistant",
+    });
+    
+    // Reset UI state
+    setIsAreaSelectMode(false);
+    setSelectionRect(null);
+    setShowScreenshotTooltip(false);
+    setCapturedScreenshotData(null);
   };
 
   // Text selection handler
@@ -697,7 +716,29 @@ const PdfViewer = ({
                 />
               )}
 
-              {/* Explain tooltip that appears when text is selected */}
+              {/* Explain tooltip for screenshots */}
+              {showScreenshotTooltip && screenshotTooltipPosition && capturedScreenshotData && (
+                <div 
+                  className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
+                  style={{ 
+                    left: `${screenshotTooltipPosition.x}px`, 
+                    top: `${screenshotTooltipPosition.y}px`,
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex items-center gap-1 text-xs"
+                    onClick={handleExplainScreenshot}
+                  >
+                    <HelpCircle className="h-3 w-3" />
+                    Explain Screenshot
+                  </Button>
+                </div>
+              )}
+
+              {/* Text selection explain tooltip */}
               {selectedText && popoverPosition && !isAreaSelectMode && (
                 <div 
                   className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
