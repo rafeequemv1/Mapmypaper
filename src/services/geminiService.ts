@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google-generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "@/hooks/use-toast";
 
 // Initialize the API
