@@ -30,6 +30,11 @@ const PanelStructure = ({
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const pdfViewerRef = useRef<{ scrollToPage: (pageNumber: number) => void } | null>(null);
   const isMobile = useIsMobile();
+
+  // Panel sizing
+  const [pdfPanelSize, setPdfPanelSize] = useState(30);
+  const [mindMapPanelSize, setMindMapPanelSize] = useState(40);
+  const [chatPanelSize, setChatPanelSize] = useState(30);
   
   // Function to handle citation clicks and scroll PDF to that position
   const handleScrollToPdfPosition = (position: string) => {
@@ -53,25 +58,56 @@ const PanelStructure = ({
     }
   };
 
+  // Handle resizing of panels
+  const handleResizeEnd = (sizes: number[]) => {
+    if (showPdf && showChat) {
+      // All three panels visible
+      setPdfPanelSize(sizes[0]);
+      setMindMapPanelSize(sizes[1]);
+      setChatPanelSize(sizes[2]);
+    } else if (showPdf) {
+      // PDF and MindMap
+      setPdfPanelSize(sizes[0]);
+      setMindMapPanelSize(sizes[1]);
+    } else if (showChat) {
+      // MindMap and Chat
+      setMindMapPanelSize(sizes[0]);
+      setChatPanelSize(sizes[1]);
+    }
+    // If only one panel visible, no need to store sizes
+  };
+
   return (
     <div className="h-full">
-      <ResizablePanelGroup direction="horizontal">
+      <ResizablePanelGroup 
+        direction="horizontal"
+        onLayout={handleResizeEnd}
+        className="h-full"
+      >
         {/* Left Panel - PDF Viewer (Conditionally Rendered) */}
         {showPdf && (
           <>
-            <ResizablePanel defaultSize={35} minSize={20}>
+            <ResizablePanel 
+              defaultSize={pdfPanelSize} 
+              minSize={20}
+              id="pdf-panel"
+            >
               <PdfViewer 
                 onTextSelected={onExplainText} 
                 onPdfLoaded={() => setPdfLoaded(true)}
                 ref={pdfViewerRef}
               />
             </ResizablePanel>
-            <ResizableHandle />
+            <ResizableHandle withHandle />
           </>
         )}
 
         {/* Middle Panel - Mind Map */}
-        <ResizablePanel defaultSize={showChat ? 40 : 65} minSize={30}>
+        <ResizablePanel 
+          defaultSize={mindMapPanelSize} 
+          minSize={30}
+          id="mindmap-panel"
+        >
           <MindMapViewer 
             isMapGenerated={true} 
             onMindMapReady={onMindMapReady} 
@@ -81,8 +117,12 @@ const PanelStructure = ({
         {/* Right Panel - Chat (Conditionally Rendered) */}
         {showChat && !isMobile && (
           <>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={25} minSize={20}>
+            <ResizableHandle withHandle />
+            <ResizablePanel 
+              defaultSize={chatPanelSize} 
+              minSize={20}
+              id="chat-panel"
+            >
               <ChatPanel 
                 toggleChat={toggleChat} 
                 explainText={explainText}

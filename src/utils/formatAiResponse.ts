@@ -86,15 +86,24 @@ export const activateCitations = (container: HTMLElement, onCitationClick: (cita
     const citationData = citationElement.dataset.citation;
     
     if (citationData) {
+      // Remove existing event listeners if any
+      const newElement = citationElement.cloneNode(true);
+      citationElement.parentNode?.replaceChild(newElement, citationElement);
+      const newCitationElement = newElement as HTMLElement;
+      
       // Add click event listener to the citation
-      citationElement.addEventListener('click', () => {
+      newCitationElement.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("Citation clicked: ", citationData);
         onCitationClick(citationData);
       });
       
       // Add keyboard event listener for accessibility
-      citationElement.addEventListener('keydown', (e) => {
+      newCitationElement.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          console.log("Citation activated by keyboard: ", citationData);
           onCitationClick(citationData);
         }
       });
