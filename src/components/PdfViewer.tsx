@@ -15,6 +15,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
+  renderTooltipContent?: () => React.ReactNode; // Added this prop
 }
 
 interface PdfViewerHandle {
@@ -22,7 +23,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded }, ref) => {
+  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -346,17 +347,23 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               >
                 {/* Selection Tooltip */}
                 {showTooltip && (
-                  <div 
-                    className="absolute bg-primary text-white px-3 py-2 rounded-md shadow-lg z-10 cursor-pointer"
-                    style={{ 
-                      left: `${tooltipPosition.x}px`, 
-                      top: `${tooltipPosition.y - 40}px`,
-                      transform: 'translateX(-50%)'
-                    }}
-                    onClick={handleExplainClick}
-                  >
-                    Explain
-                  </div>
+                  <>
+                    {renderTooltipContent ? (
+                      renderTooltipContent()
+                    ) : (
+                      <div 
+                        className="absolute bg-primary text-white px-3 py-2 rounded-md shadow-lg z-10 cursor-pointer"
+                        style={{ 
+                          left: `${tooltipPosition.x}px`, 
+                          top: `${tooltipPosition.y - 40}px`,
+                          transform: 'translateX(-50%)'
+                        }}
+                        onClick={handleExplainClick}
+                      >
+                        Explain
+                      </div>
+                    )}
+                  </>
                 )}
               
                 <Document
