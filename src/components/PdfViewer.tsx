@@ -2,10 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus, HelpCircle } from "lucide-react";
+import { Minus, Plus, HelpCircle, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import html2canvas from 'html2canvas';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -18,6 +19,7 @@ interface PdfViewerProps {
   showPdf?: boolean;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
+  onExplainImage?: (imageBase64: string) => void;
 }
 
 const PdfViewer = ({ 
@@ -25,7 +27,8 @@ const PdfViewer = ({
   onTogglePdf, 
   showPdf = true, 
   onExplainText,
-  onRequestOpenChat
+  onRequestOpenChat,
+  onExplainImage
 }: PdfViewerProps) => {
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
@@ -34,8 +37,13 @@ const PdfViewer = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedText, setSelectedText] = useState<string>("");
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isAreaSelecting, setIsAreaSelecting] = useState<boolean>(false);
+  const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
+  const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
+  const [selectionBox, setSelectionBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const selectionBoxRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -74,6 +82,8 @@ const PdfViewer = ({
 
   // Text selection handler - Fixed with improved positioning
   const handleTextSelection = () => {
+    if (isAreaSelecting) return; // Don't process text selection during area selection
+
     const selection = window.getSelection();
     
     if (selection && selection.toString().trim()) {
@@ -124,7 +134,69 @@ const PdfViewer = ({
     }
   };
 
-  // Handle explain button click
+  // Area selection handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || !pdfContainerRef.current) return; // Only handle left mouse button
+
+    const containerRect = pdfContainerRef.current.getBoundingClientRect();
+    const startX = e.clientX - containerRect.left;
+    const startY = e.clientY - containerRect.top;
+    
+    setIsAreaSelecting(true);
+    setSelectionStart({ x: startX, y: startY });
+    setSelectionEnd({ x: startX, y: startY });
+    setSelectionBox({
+      left: startX,
+      top: startY,
+      width: 0,
+      height: 0
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isAreaSelecting || !selectionStart || !pdfContainerRef.current) return;
+
+    const containerRect = pdfContainerRef.current.getBoundingClientRect();
+    const currentX = Math.max(0, Math.min(e.clientX - containerRect.left, containerRect.width));
+    const currentY = Math.max(0, Math.min(e.clientY - containerRect.top, containerRect.height));
+    
+    setSelectionEnd({ x: currentX, y: currentY });
+    
+    // Calculate the box coordinates
+    const left = Math.min(selectionStart.x, currentX);
+    const top = Math.min(selectionStart.y, currentY);
+    const width = Math.abs(currentX - selectionStart.x);
+    const height = Math.abs(currentY - selectionStart.y);
+    
+    setSelectionBox({ left, top, width, height });
+  };
+
+  const handleMouseUp = async (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isAreaSelecting || !selectionBox || !pdfContainerRef.current) return;
+
+    // Only proceed if the selection box is large enough
+    if (selectionBox.width > 10 && selectionBox.height > 10) {
+      try {
+        // Position tooltip at bottom right of selection
+        setPopoverPosition({
+          x: selectionBox.left + selectionBox.width,
+          y: selectionBox.top + selectionBox.height
+        });
+
+        // Show screenshot tooltip
+        // The actual screenshot will be captured in handleExplainArea
+      } catch (error) {
+        console.error("Error setting up area selection:", error);
+      }
+    } else {
+      // Reset if the selection is too small
+      setSelectionBox(null);
+    }
+    
+    setIsAreaSelecting(false);
+  };
+
+  // Handle explain button click for text
   const handleExplain = () => {
     if (selectedText) {
       console.log("Sending text to explain:", selectedText);
@@ -152,6 +224,72 @@ const PdfViewer = ({
           window.getSelection()?.removeAllRanges();
         }
       }
+    }
+  };
+
+  // Handle explain button click for area selection
+  const handleExplainArea = async () => {
+    if (!selectionBox || !pdfContainerRef.current || !onExplainImage) return;
+    
+    try {
+      // Create a temporary container for the screenshot
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '0';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = `${selectionBox.width}px`;
+      tempDiv.style.height = `${selectionBox.height}px`;
+      tempDiv.style.overflow = 'hidden';
+      document.body.appendChild(tempDiv);
+      
+      // Clone the PDF container for screenshot
+      const pdfClone = pdfContainerRef.current.cloneNode(true) as HTMLDivElement;
+      pdfClone.style.position = 'absolute';
+      pdfClone.style.left = `-${selectionBox.left}px`;
+      pdfClone.style.top = `-${selectionBox.top}px`;
+      tempDiv.appendChild(pdfClone);
+      
+      // Take screenshot
+      const canvas = await html2canvas(tempDiv, {
+        backgroundColor: null,
+        logging: false,
+        scale: 2 // Higher resolution
+      });
+      
+      // Convert to base64
+      const imageData = canvas.toDataURL('image/png');
+      
+      // Clean up
+      document.body.removeChild(tempDiv);
+      
+      // Request to open chat panel if it's closed
+      if (onRequestOpenChat) {
+        onRequestOpenChat();
+      }
+      
+      // Pass the image to parent
+      onExplainImage(imageData);
+      
+      // Clear the selection
+      setSelectionBox(null);
+      setPopoverPosition(null);
+      
+      toast({
+        title: "Image captured",
+        description: "Processing the selected area..."
+      });
+      
+    } catch (error) {
+      console.error("Error capturing screenshot:", error);
+      toast({
+        title: "Error",
+        description: "Failed to capture the selected area",
+        variant: "destructive"
+      });
+      
+      // Clear the selection
+      setSelectionBox(null);
+      setPopoverPosition(null);
     }
   };
 
@@ -207,7 +345,9 @@ const PdfViewer = ({
         <div 
           className="min-h-full p-4 flex flex-col items-center bg-muted/10 relative" 
           ref={pdfContainerRef}
-          onMouseUp={handleTextSelection}
+          onMouseUp={handleMouseUp}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-full w-full">
@@ -239,6 +379,7 @@ const PdfViewer = ({
                     onLoad={() => {
                       if (pageNumber === 1) setCurrentPage(1);
                     }}
+                    onMouseUp={handleTextSelection}
                   >
                     <Page
                       pageNumber={pageNumber}
@@ -266,8 +407,22 @@ const PdfViewer = ({
                 ))}
               </Document>
 
-              {/* Explain tooltip that appears when text is selected - Moved outside the Document component */}
-              {selectedText && popoverPosition && (
+              {/* Area selection box */}
+              {selectionBox && (
+                <div 
+                  ref={selectionBoxRef}
+                  className="absolute border-2 border-blue-500 bg-blue-500/10 pointer-events-none z-10"
+                  style={{
+                    left: `${selectionBox.left}px`,
+                    top: `${selectionBox.top}px`,
+                    width: `${selectionBox.width}px`,
+                    height: `${selectionBox.height}px`
+                  }}
+                />
+              )}
+
+              {/* Explain tooltip for text or area selection */}
+              {popoverPosition && (selectedText || selectionBox) && (
                 <div 
                   className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
                   style={{ 
@@ -276,15 +431,27 @@ const PdfViewer = ({
                     transform: 'translateX(-50%)'
                   }}
                 >
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="flex items-center gap-1 text-xs"
-                    onClick={handleExplain}
-                  >
-                    <HelpCircle className="h-3 w-3" />
-                    Explain
-                  </Button>
+                  {selectedText ? (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex items-center gap-1 text-xs"
+                      onClick={handleExplain}
+                    >
+                      <HelpCircle className="h-3 w-3" />
+                      Explain
+                    </Button>
+                  ) : selectionBox && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex items-center gap-1 text-xs"
+                      onClick={handleExplainArea}
+                    >
+                      <Camera className="h-3 w-3" />
+                      Explain Image
+                    </Button>
+                  )}
                 </div>
               )}
             </>

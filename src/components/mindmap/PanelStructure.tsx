@@ -12,6 +12,8 @@ interface PanelStructureProps {
   onMindMapReady?: (mindMap: any) => void;
   explainText?: string;
   onExplainText?: (text: string) => void;
+  explainImage?: string;
+  onExplainImage?: (imageBase64: string) => void;
 }
 
 const PanelStructure: React.FC<PanelStructureProps> = ({ 
@@ -21,7 +23,9 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   togglePdf, 
   onMindMapReady,
   explainText,
-  onExplainText
+  onExplainText,
+  explainImage,
+  onExplainImage
 }) => {
   return (
     <div className="flex-1 flex h-full overflow-hidden bg-[#F9F7F3]">
@@ -33,7 +37,8 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
               if (!showChat) toggleChat();
             }} 
             onTogglePdf={togglePdf}
-            onExplainText={onExplainText} 
+            onExplainText={onExplainText}
+            onExplainImage={onExplainImage}
           />
         </div>
       )}
@@ -56,6 +61,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
           <ChatPanel 
             toggleChat={toggleChat} 
             explainText={explainText}
+            explainImage={explainImage}
           />
         </div>
       )}
