@@ -34,6 +34,7 @@ const PdfViewer = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedText, setSelectedText] = useState<string>("");
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef<HTMLDivElement>(null);
@@ -54,6 +55,30 @@ const PdfViewer = ({
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // Update container width on resize
+  useEffect(() => {
+    if (!pdfContainerRef.current) return;
+    
+    const updateWidth = () => {
+      if (pdfContainerRef.current) {
+        setContainerWidth(pdfContainerRef.current.clientWidth);
+      }
+    };
+    
+    // Initial width
+    updateWidth();
+    
+    // Update width on resize
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(pdfContainerRef.current);
+    
+    return () => {
+      if (pdfContainerRef.current) {
+        resizeObserver.unobserve(pdfContainerRef.current);
+      }
+    };
   }, []);
 
   // Handle successful document load
@@ -80,9 +105,6 @@ const PdfViewer = ({
       const text = selection.toString().trim();
       setSelectedText(text);
       
-      // Log selection to help debug
-      console.log("Text selected:", text);
-      
       try {
         // Get position for the popover
         const range = selection.getRangeAt(0);
@@ -93,13 +115,7 @@ const PdfViewer = ({
           const x = rect.left + (rect.width / 2) - containerRect.left;
           const y = rect.bottom - containerRect.top;
           
-          console.log("Popover position calculated:", { x, y });
-          console.log("Selection rect:", rect);
-          console.log("Container rect:", containerRect);
-          
           setPopoverPosition({ x, y });
-        } else {
-          console.error("PDF container ref is null");
         }
       } catch (error) {
         console.error("Error calculating popover position:", error);
@@ -231,39 +247,45 @@ const PdfViewer = ({
                   </div>
                 }
               >
-                {pageNumbers.map(pageNumber => (
-                  <div 
-                    key={`page_${pageNumber}`} 
-                    className="mb-4 shadow-md relative"
-                    ref={pageNumber === currentPage ? currentPageRef : null}
-                    onLoad={() => {
-                      if (pageNumber === 1) setCurrentPage(1);
-                    }}
-                  >
-                    <Page
-                      pageNumber={pageNumber}
-                      scale={scale}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={true}
-                      onRenderSuccess={() => {
-                        const observer = new IntersectionObserver((entries) => {
-                          entries.forEach(entry => {
-                            if (entry.isIntersecting) {
-                              setCurrentPage(pageNumber);
-                            }
-                          });
-                        }, { threshold: 0.5 });
-                        
-                        const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`);
-                        if (pageElement) observer.observe(pageElement);
-                        
-                        return () => {
-                          if (pageElement) observer.unobserve(pageElement);
-                        };
+                {pageNumbers.map(pageNumber => {
+                  // Calculate width to fit container while maintaining aspect ratio
+                  const pageWidth = Math.min(containerWidth - 32, 800) * scale; 
+                  
+                  return (
+                    <div 
+                      key={`page_${pageNumber}`} 
+                      className="mb-4 shadow-md relative"
+                      ref={pageNumber === currentPage ? currentPageRef : null}
+                      onLoad={() => {
+                        if (pageNumber === 1) setCurrentPage(1);
                       }}
-                    />
-                  </div>
-                ))}
+                    >
+                      <Page
+                        pageNumber={pageNumber}
+                        width={pageWidth || undefined}
+                        scale={scale}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={true}
+                        onRenderSuccess={() => {
+                          const observer = new IntersectionObserver((entries) => {
+                            entries.forEach(entry => {
+                              if (entry.isIntersecting) {
+                                setCurrentPage(pageNumber);
+                              }
+                            });
+                          }, { threshold: 0.5 });
+                          
+                          const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`);
+                          if (pageElement) observer.observe(pageElement);
+                          
+                          return () => {
+                            if (pageElement) observer.unobserve(pageElement);
+                          };
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </Document>
 
               {/* Explain tooltip that appears when text is selected - Moved outside the Document component */}

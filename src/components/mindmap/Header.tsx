@@ -82,173 +82,173 @@ const Header = ({
     <div className="flex h-full">
       {/* Left sidebar for vertical icons */}
       <div className="w-16 bg-[#222222] flex flex-col items-center py-4 border-r border-[#333]">
-        {/* App logo */}
+        {/* App logo - icon only */}
         <div className="mb-8">
           <Brain className="h-8 w-8 text-white" />
         </div>
         
         {/* Back button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-white mb-8" onClick={handleBack}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <p>Back to home</p>
-          </TooltipContent>
-        </Tooltip>
-
-        <div className="flex flex-col gap-4 items-center">
-          {/* PDF toggle */}
-          {pdfAvailable && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Toggle 
-                  pressed={showPdf} 
-                  onPressedChange={togglePdf}
-                  aria-label="Toggle PDF"
-                  className={`bg-transparent hover:bg-white/20 text-white border ${showPdf ? 'border-white' : 'border-white/30'} rounded-md w-10 h-10 p-0`}
-                >
-                  <FileText className="h-5 w-5" />
-                </Toggle>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Toggle PDF view</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          
-          {/* Chat toggle */}
+        <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Toggle 
-                pressed={showChat} 
-                onPressedChange={toggleChat}
-                aria-label="Toggle research assistant"
-                className={`bg-transparent hover:bg-white/20 text-white border ${showChat ? 'border-white' : 'border-white/30'} rounded-md w-10 h-10 p-0`}
-              >
-                <MessageSquare className="h-5 w-5" />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>Toggle research assistant</p>
-            </TooltipContent>
-          </Tooltip>
-          
-          {/* Summary button */}
-          {onOpenSummary && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={onOpenSummary}
-                  className="text-white hover:bg-white/20 border border-white/30 rounded-md w-10 h-10 p-0"
-                >
-                  <FileDigit className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>View summary</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          
-          {/* Upload button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="text-white hover:bg-white/20 border border-white/30 rounded-md w-10 h-10 p-0"
-                onClick={handleUploadClick}
-              >
-                <Upload className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="text-white mb-8" onClick={handleBack}>
+                <ArrowLeft className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>Upload new PDF</p>
+              <p>Back to home</p>
             </TooltipContent>
           </Tooltip>
-          
-          {/* Export dropdown */}
-          {onExportMindMap && (
-            <DropdownMenu>
+
+          <div className="flex flex-col gap-4 items-center">
+            {/* PDF toggle - simplified */}
+            {pdfAvailable && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 border border-white/30 rounded-md w-10 h-10 p-0">
-                      <Download className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <Button
+                    variant="ghost" 
+                    size="icon"
+                    onClick={togglePdf}
+                    className={`text-white hover:bg-white/20 ${showPdf ? 'text-white' : 'text-white/60'}`}
+                  >
+                    <FileText className="h-5 w-5" />
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>Export mind map</p>
+                  <p>Toggle PDF view</p>
                 </TooltipContent>
               </Tooltip>
-              <DropdownMenuContent align="center" side="right">
-                <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
-                  Download as SVG
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExportMindMap('png')}>
-                  Download as PNG
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          
-          {/* Keyboard shortcuts */}
-          <div className="relative mt-auto">
+            )}
+            
+            {/* Chat toggle - simplified */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost" 
+                  size="icon"
+                  onClick={toggleChat}
+                  className={`text-white hover:bg-white/20 ${showChat ? 'text-white' : 'text-white/60'}`}
+                >
+                  <MessageSquare className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Toggle research assistant</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            {/* Summary button - simplified */}
+            {onOpenSummary && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={onOpenSummary}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <FileDigit className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>View summary</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {/* Upload button - simplified */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  className="text-white hover:bg-white/20 border border-white/30 rounded-md w-10 h-10 p-0"
-                  onClick={toggleShortcuts}
+                  className="text-white hover:bg-white/20"
+                  onClick={handleUploadClick}
                 >
-                  <Keyboard className="h-5 w-5" />
+                  <Upload className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">
-                <p>Keyboard shortcuts</p>
+                <p>Upload new PDF</p>
               </TooltipContent>
             </Tooltip>
             
-            {showShortcuts && (
-              <div 
-                className="absolute left-16 bottom-0 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
-              >
-                <div className="flex justify-between items-center mb-3">
-                  <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
+            {/* Export dropdown - simplified */}
+            {onExportMindMap && (
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+                        <Download className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Export mind map</p>
+                  </TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="center" side="right">
+                  <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
+                    Download as SVG
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportMindMap('png')}>
+                    Download as PNG
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            
+            {/* Keyboard shortcuts - simplified */}
+            <div className="relative mt-auto">
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    size="sm" 
-                    className="h-6 w-6 p-0" 
+                    size="icon"
+                    className="text-white hover:bg-white/20"
                     onClick={toggleShortcuts}
                   >
-                    ✕
+                    <Keyboard className="h-5 w-5" />
                   </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Keyboard shortcuts</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              {showShortcuts && (
+                <div 
+                  className="absolute left-16 bottom-0 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0" 
+                      onClick={toggleShortcuts}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    {keyboardShortcuts.map((shortcut, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
+                        <span className="text-gray-600">{shortcut.description}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2 text-xs">
-                  {keyboardShortcuts.map((shortcut, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
-                      <span className="text-gray-600">{shortcut.description}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        </TooltipProvider>
       </div>
       
-      {/* Header title */}
-      <div className="h-12 bg-[#222222] flex items-center px-4 w-full">
-        <h1 className="text-base font-medium text-white">MapMyPaper</h1>
-      </div>
+      {/* Header without title */}
+      <div className="h-12 bg-[#222222] flex items-center px-4 w-full"></div>
     </div>
   );
 };

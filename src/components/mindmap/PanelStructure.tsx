@@ -3,6 +3,7 @@ import React from 'react';
 import MindMapViewer from "@/components/MindMapViewer";
 import PdfViewer from "@/components/PdfViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -24,22 +25,36 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   onExplainText
 }) => {
   return (
-    <div className="flex-1 flex h-full overflow-hidden bg-[#F9F7F3]">
+    <ResizablePanelGroup 
+      direction="horizontal" 
+      className="flex-1 h-full overflow-hidden bg-[#F9F7F3]"
+    >
       {/* PDF Viewer Panel */}
       {showPdf && (
-        <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden bg-white">
-          <PdfViewer 
-            onRequestOpenChat={() => {
-              if (!showChat) toggleChat();
-            }} 
-            onTogglePdf={togglePdf}
-            onExplainText={onExplainText} 
-          />
-        </div>
+        <>
+          <ResizablePanel 
+            defaultSize={30} 
+            minSize={20} 
+            maxSize={50}
+            className="h-full overflow-hidden bg-white"
+          >
+            <PdfViewer 
+              onRequestOpenChat={() => {
+                if (!showChat) toggleChat();
+              }} 
+              onTogglePdf={togglePdf}
+              onExplainText={onExplainText} 
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+        </>
       )}
 
       {/* Mind Map Viewer Panel */}
-      <div className={`flex-1 h-full overflow-hidden ${showPdf ? 'border-r border-gray-200' : ''}`}>
+      <ResizablePanel 
+        defaultSize={showChat ? (showPdf ? 40 : 70) : 100} 
+        className="h-full overflow-hidden"
+      >
         <MindMapViewer 
           isMapGenerated={true} 
           onMindMapReady={onMindMapReady}
@@ -48,18 +63,26 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
             if (!showChat) toggleChat();
           }}
         />
-      </div>
+      </ResizablePanel>
 
       {/* Chat Panel */}
       {showChat && (
-        <div className="w-1/4 h-full border-l border-gray-200 bg-white">
-          <ChatPanel 
-            toggleChat={toggleChat} 
-            explainText={explainText}
-          />
-        </div>
+        <>
+          <ResizableHandle withHandle />
+          <ResizablePanel 
+            defaultSize={30} 
+            minSize={20} 
+            maxSize={50}
+            className="h-full bg-white"
+          >
+            <ChatPanel 
+              toggleChat={toggleChat} 
+              explainText={explainText}
+            />
+          </ResizablePanel>
+        </>
       )}
-    </div>
+    </ResizablePanelGroup>
   );
 };
 
