@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";
@@ -8,6 +7,12 @@ import MobileChatSheet from "./MobileChatSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MindElixirInstance } from "mind-elixir";
 import { Slider } from "@/components/ui/slider";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -59,21 +64,16 @@ const PanelStructure = ({
     }
   };
 
-  // Handle width adjustments for PDF panel - reverse logic compared to Chat panel
+  // Handle width adjustments for PDF panel - fixed to match user expectations
   const handlePdfWidthChange = (value: number) => {
-    // Reverse the slider value to match expected behavior: 
-    // smaller value = narrower panel
-    const reversedValue = 50 - (value - 20); // Value is between 20-50, so reverse within that range
-    setPdfPanelSize(reversedValue);
+    // Directly use the slider value: smaller value = narrower panel
+    setPdfPanelSize(value);
   };
   
   // Handle width adjustments for Chat panel - normal logic
   const handleChatWidthChange = (value: number) => {
     setChatPanelSize(value);
   };
-
-  // Make sure PDF panel size slider shows the inverted value to the user
-  const displayPdfSliderValue = 50 - (pdfPanelSize - 20);
 
   return (
     <div className="h-full flex flex-col">
@@ -82,9 +82,9 @@ const PanelStructure = ({
         <div className="bg-white border-b px-4 py-2 flex items-center gap-4 text-sm">
           {showPdf && (
             <div className="flex items-center gap-2 min-w-[140px]">
-              <span className="text-xs font-medium">PDF Width: {displayPdfSliderValue}%</span>
+              <span className="text-xs font-medium">PDF Width: {pdfPanelSize}%</span>
               <Slider 
-                value={[displayPdfSliderValue]} 
+                value={[pdfPanelSize]} 
                 onValueChange={(values) => handlePdfWidthChange(values[0])}
                 max={50}
                 min={20}
@@ -136,11 +136,44 @@ const PanelStructure = ({
               minSize={20}
               id="pdf-panel"
             >
-              <PdfViewer 
-                onTextSelected={onExplainText} 
-                onPdfLoaded={() => setPdfLoaded(true)}
-                ref={pdfViewerRef}
-              />
+              <TooltipProvider>
+                <PdfViewer 
+                  onTextSelected={(text) => {
+                    // Store selected text but don't send to chat yet
+                    // The tooltip button will handle sending text to chat
+                    sessionStorage.setItem('selectedPdfText', text || '');
+                  }}
+                  onPdfLoaded={() => setPdfLoaded(true)}
+                  ref={pdfViewerRef}
+                  renderTooltipContent={() => (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          className="bg-primary text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+                          onClick={() => {
+                            const selectedText = sessionStorage.getItem('selectedPdfText');
+                            if (selectedText) {
+                              onExplainText(selectedText);
+                              // Clear the selection after sending to chat
+                              sessionStorage.removeItem('selectedPdfText');
+                              
+                              // Open chat panel if not already open
+                              if (!showChat) {
+                                toggleChat();
+                              }
+                            }
+                          }}
+                        >
+                          Explain
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="p-2">
+                        <p className="text-xs">Click to explain selected text in chat</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                />
+              </TooltipProvider>
             </ResizablePanel>
             <ResizableHandle withHandle />
           </>

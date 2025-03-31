@@ -15,7 +15,7 @@ interface MindMapViewerProps {
 }
 
 // Helper function to format node text with line breaks and add emojis
-const formatNodeText = (text: string, wordsPerLine: number = 3): string => {
+const formatNodeText = (text: string, wordsPerLine: number = 5): string => {
   if (!text) return '';
   
   // Add emoji based on topic content
@@ -69,15 +69,13 @@ const stringToColor = (str: string): string => {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  // Define a vibrant color palette
+  // Define the Catppuccin-inspired color palette
   const colors = [
-    '#E57373', '#F06292', '#BA68C8', '#9575CD', 
-    '#7986CB', '#64B5F6', '#4FC3F7', '#4DD0E1', 
-    '#4DB6AC', '#81C784', '#AED581', '#DCE775', 
-    '#FFF176', '#FFD54F', '#FFB74D', '#FF8A65',
-    '#FF5722', '#009688', '#673AB7', '#3F51B5',
-    '#2196F3', '#00BCD4', '#4CAF50', '#8BC34A',
-    '#CDDC39', '#FFC107', '#FF9800', '#9C27B0'
+    '#dd7878', '#ea76cb', '#8839ef', '#e64553', 
+    '#fe640b', '#df8e1d', '#40a02b', '#209fb5', 
+    '#1e66f5', '#7287fd', '#ea81bb', '#dd7878', 
+    '#4699d9', '#fe640b', '#6dc7be', '#a5adcb',
+    '#fea45c', '#40a02b', '#e64553', '#8839ef'
   ];
   
   // Use the hash to select a color from palette
@@ -96,6 +94,27 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
       // Initialize the mind map only once when it's generated
       
+      // Define a custom theme based on the Catppuccin Theme
+      const customTheme = {
+        name: 'Colorful',
+        background: '#F9F7FF',
+        color: '#8B5CF6',
+        palette: [
+          '#dd7878', '#ea76cb', '#8839ef', '#e64553', 
+          '#fe640b', '#df8e1d', '#40a02b', '#209fb5', 
+          '#1e66f5', '#7287fd'
+        ],
+        cssVar: {
+          '--main-color': '#333',
+          '--main-bgcolor': '#fff',
+          '--color': '#454545',
+          '--bgcolor': '#f5f5f7',
+          '--panel-color': '#444446',
+          '--panel-bgcolor': '#ffffff',
+          '--panel-border-color': '#eaeaea',
+        },
+      };
+      
       const options = {
         el: containerRef.current,
         direction: 1 as const,
@@ -107,13 +126,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           create: true,
           edit: true,
         },
-        theme: {
-          name: 'colorful',
-          background: '#F9F7FF',
-          color: '#8B5CF6',
-          palette: [],
-          cssVar: {},
-        },
+        theme: customTheme,
         nodeMenu: true, // Explicitly enable the nodeMenu
         autoFit: true,
         // Add custom style to nodes based on their level and content
@@ -132,11 +145,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             return `#${(1 << 24 | (R < 255 ? R < 1 ? 0 : R : 255) << 16 | (G < 255 ? G < 1 ? 0 : G : 255) << 8 | (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)}`;
           };
           
-          const bgColor = lightenColor(baseColor, 80);
+          const bgColor = lightenColor(baseColor, 85);
           
           // Apply colorful styling to nodes
           tpc.style.backgroundColor = level === 0 ? '#E5DEFF' : bgColor;
-          tpc.style.color = level === 0 ? '#8B5CF6' : baseColor.replace('#', '').substring(0, 6);
+          tpc.style.color = level === 0 ? '#8B5CF6' : baseColor;
           tpc.style.border = `2px solid ${level === 0 ? '#8B5CF6' : baseColor}`;
           tpc.style.borderRadius = '12px';
           tpc.style.padding = '10px 16px';
@@ -217,7 +230,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           name: '✨ Generate Summary',
           onclick: () => {
             // Get the node and its children
-            // Fix: Use the node directly instead of trying to get all data with children
             generateNodeSummary(node);
           }
         });
@@ -258,62 +270,65 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           data = {
             nodeData: {
               id: 'root',
-              topic: '🧠 Mind\nMapping',
+              topic: '🧠 Understanding Mind Maps',
               children: [
                 {
                   id: 'bd1',
-                  topic: '📊 Organization',
+                  topic: '📊 Organization is key for effective studying and information retention.',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd1-1', topic: '📝 Plan' },
-                    { id: 'bd1-2', topic: '📚 Study' },
-                    { id: 'bd1-3', topic: '⚙️ System' },
-                    { id: 'bd1-4', topic: '☕ Breaks' }
+                    { id: 'bd1-1', topic: '📝 Planning your study sessions helps you stay focused and motivated.' },
+                    { id: 'bd1-2', topic: '📚 Study with purpose by breaking complex topics into manageable chunks.' },
+                    { id: 'bd1-3', topic: '⚙️ Create a system that works for you rather than following generic advice.' },
+                    { id: 'bd1-4', topic: '☕ Taking regular breaks improves your productivity and memory retention.' }
                   ]
                 },
                 {
                   id: 'bd2',
-                  topic: '🎓 Learning\nStyle',
+                  topic: '🎓 Learning styles vary from person to person, so find what works for you.',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd2-1', topic: '📖 Read' },
-                    { id: 'bd2-2', topic: '👂 Listen' },
-                    { id: 'bd2-3', topic: '✏️ Summarize' }
+                    { id: 'bd2-1', topic: '📖 Reading actively by highlighting and making notes improves understanding.' },
+                    { id: 'bd2-2', topic: '👂 Listening to lectures and discussions can reinforce important concepts.' },
+                    { id: 'bd2-3', topic: '✏️ Summarizing what you learn in your own words strengthens memory connections.' }
                   ]
                 },
                 {
                   id: 'bd3',
-                  topic: '⏰ Habits',
+                  topic: '⏰ Consistent habits make learning easier and more productive over time.',
                   direction: 0 as const,
-                  children: []
+                  children: [
+                    { id: 'bd3-1', topic: '🔄 Regular review sessions help move information to long-term memory.' },
+                    { id: 'bd3-2', topic: '⏱️ Setting a specific time each day for studying builds discipline.' }
+                  ]
                 },
                 {
                   id: 'bd4',
-                  topic: '🎯 Goals',
+                  topic: '🎯 Setting clear goals helps measure progress and maintain motivation.',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd4-1', topic: '🔍 Research' },
-                    { id: 'bd4-2', topic: '🎤 Lecture' },
-                    { id: 'bd4-3', topic: '📝 Conclusions' }
+                    { id: 'bd4-1', topic: '🔍 Researching thoroughly gives you a strong foundation of knowledge.' },
+                    { id: 'bd4-2', topic: '🎤 Teaching concepts to others is one of the best ways to master them.' },
+                    { id: 'bd4-3', topic: '📝 Drawing conclusions and making connections deepens understanding.' }
                   ]
                 },
                 {
                   id: 'bd5',
-                  topic: '💪 Motivation',
+                  topic: '💪 Staying motivated requires both intrinsic and extrinsic factors.',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd5-1', topic: '💡 Tips' },
-                    { id: 'bd5-2', topic: '🗺️ Roadmap' }
+                    { id: 'bd5-1', topic: '💡 Finding personal interest in the subject makes learning more enjoyable.' },
+                    { id: 'bd5-2', topic: '🗺️ Creating a roadmap helps you see how individual topics connect to larger goals.' }
                   ]
                 },
                 {
                   id: 'bd6',
-                  topic: '✅ Review',
+                  topic: '✅ Regular review is essential for long-term retention of information.',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd6-1', topic: '📔 Notes' },
-                    { id: 'bd6-2', topic: '🔄 Method' },
-                    { id: 'bd6-3', topic: '💬 Discuss' }
+                    { id: 'bd6-1', topic: '📔 Organized notes make review sessions more effective and efficient.' },
+                    { id: 'bd6-2', topic: '🔄 Using spaced repetition helps strengthen memory over time.' },
+                    { id: 'bd6-3', topic: '💬 Discussing topics with others reveals gaps in your understanding.' }
                   ]
                 }
               ]
@@ -325,9 +340,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         data = {
           nodeData: {
             id: 'root',
-            topic: '⚠️ Error\nLoading\nMind Map',
+            topic: '⚠️ Error Loading Mind Map',
             children: [
-              { id: 'error1', topic: 'There was an error loading the mind map data', direction: 0 as const }
+              { id: 'error1', topic: 'There was an error loading the mind map data. Please try refreshing the page.', direction: 0 as const }
             ]
           }
         };
