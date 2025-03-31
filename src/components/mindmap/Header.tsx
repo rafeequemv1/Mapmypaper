@@ -79,120 +79,175 @@ const Header = ({
   };
 
   return (
-    <div className="py-2 px-4 border-b bg-[#222222] flex items-center">
-      <div className="flex items-center gap-2 w-1/3">
-        <Brain className="h-5 w-5 text-white" />
-        <h1 className="text-base font-medium text-white">PaperMind</h1>
+    <div className="flex h-full">
+      {/* Left sidebar for vertical icons */}
+      <div className="w-16 bg-[#222222] flex flex-col items-center py-4 border-r border-[#333]">
+        {/* App logo */}
+        <div className="mb-8">
+          <Brain className="h-8 w-8 text-white" />
+        </div>
         
-        <Button variant="ghost" size="sm" className="text-white ml-2" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back
-        </Button>
-      </div>
-      
-      {/* Center section - Toggle buttons for PDF and research assistant */}
-      <div className="flex items-center justify-center w-1/3 gap-4">
-        {pdfAvailable && (
-          <Toggle 
-            pressed={showPdf} 
-            onPressedChange={togglePdf}
-            aria-label="Toggle PDF"
-            className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">PDF</span>
-          </Toggle>
-        )}
-        
-        <Toggle 
-          pressed={showChat} 
-          onPressedChange={toggleChat}
-          aria-label="Toggle research assistant"
-          className="bg-transparent hover:bg-white/20 text-white border border-white/30 rounded-md px-4 py-1 h-auto"
-        >
-          <MessageSquare className="h-4 w-4 mr-2" />
-          <span className="text-sm font-medium">Research Assistant</span>
-        </Toggle>
-        
-        {onOpenSummary && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onOpenSummary}
-            className="bg-[#8B5CF6] hover:bg-[#7c4deb] text-white border-none rounded-md px-4 py-1 h-auto"
-          >
-            <FileDigit className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Summarize</span>
-          </Button>
-        )}
-      </div>
-      
-      {/* Actions on the right */}
-      <div className="flex items-center justify-end gap-4 w-1/3">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-white"
-          onClick={handleUploadClick}
-        >
-          <Upload className="h-4 w-4 mr-1" />
-          <span className="hidden sm:inline">Upload PDF</span>
-        </Button>
-        
-        {onExportMindMap && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-white">
-                <Download className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
-                Download as SVG
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onExportMindMap('png')}>
-                Download as PNG
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        
-        <div className="relative">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-white"
-            onClick={toggleShortcuts}
-          >
-            <Keyboard className="h-4 w-4" />
-          </Button>
+        {/* Back button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-white mb-8" onClick={handleBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>Back to home</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <div className="flex flex-col gap-4 items-center">
+          {/* PDF toggle */}
+          {pdfAvailable && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle 
+                  pressed={showPdf} 
+                  onPressedChange={togglePdf}
+                  aria-label="Toggle PDF"
+                  className={`bg-transparent hover:bg-white/20 text-white border ${showPdf ? 'border-white' : 'border-white/30'} rounded-md w-10 h-10 p-0`}
+                >
+                  <FileText className="h-5 w-5" />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Toggle PDF view</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
           
-          {showShortcuts && (
-            <div 
-              className="absolute right-0 top-full mt-2 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
-            >
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
+          {/* Chat toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle 
+                pressed={showChat} 
+                onPressedChange={toggleChat}
+                aria-label="Toggle research assistant"
+                className={`bg-transparent hover:bg-white/20 text-white border ${showChat ? 'border-white' : 'border-white/30'} rounded-md w-10 h-10 p-0`}
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Toggle research assistant</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          {/* Summary button */}
+          {onOpenSummary && (
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button 
                   variant="ghost" 
-                  size="sm" 
-                  className="h-6 w-6 p-0" 
+                  size="icon"
+                  onClick={onOpenSummary}
+                  className="text-white hover:bg-white/20 border border-white/30 rounded-md w-10 h-10 p-0"
+                >
+                  <FileDigit className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>View summary</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          
+          {/* Upload button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="text-white hover:bg-white/20 border border-white/30 rounded-md w-10 h-10 p-0"
+                onClick={handleUploadClick}
+              >
+                <Upload className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Upload new PDF</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          {/* Export dropdown */}
+          {onExportMindMap && (
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 border border-white/30 rounded-md w-10 h-10 p-0">
+                      <Download className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Export mind map</p>
+                </TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="center" side="right">
+                <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
+                  Download as SVG
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onExportMindMap('png')}>
+                  Download as PNG
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          
+          {/* Keyboard shortcuts */}
+          <div className="relative mt-auto">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="text-white hover:bg-white/20 border border-white/30 rounded-md w-10 h-10 p-0"
                   onClick={toggleShortcuts}
                 >
-                  ✕
+                  <Keyboard className="h-5 w-5" />
                 </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Keyboard shortcuts</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            {showShortcuts && (
+              <div 
+                className="absolute left-16 bottom-0 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0" 
+                    onClick={toggleShortcuts}
+                  >
+                    ✕
+                  </Button>
+                </div>
+                <div className="space-y-2 text-xs">
+                  {keyboardShortcuts.map((shortcut, index) => (
+                    <div key={index} className="flex justify-between">
+                      <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
+                      <span className="text-gray-600">{shortcut.description}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2 text-xs">
-                {keyboardShortcuts.map((shortcut, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
-                    <span className="text-gray-600">{shortcut.description}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+      </div>
+      
+      {/* Header title */}
+      <div className="h-12 bg-[#222222] flex items-center px-4 w-full">
+        <h1 className="text-base font-medium text-white">MapMyPaper</h1>
       </div>
     </div>
   );

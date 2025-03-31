@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -118,28 +119,32 @@ const MindMap = () => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* Header component with navigation and toggles */}
-      <Header 
-        showPdf={showPdf}
-        togglePdf={togglePdf}
-        pdfAvailable={pdfAvailable}
-        showChat={showChat}
-        toggleChat={toggleChat}
-        onExportMindMap={handleExportMindMap}
-        onOpenSummary={toggleSummary}
-      />
+      <div className="flex flex-1 overflow-hidden">
+        {/* Vertical sidebar with icons */}
+        <div className="h-full">
+          <Header 
+            showPdf={showPdf}
+            togglePdf={togglePdf}
+            pdfAvailable={pdfAvailable}
+            showChat={showChat}
+            toggleChat={toggleChat}
+            onExportMindMap={handleExportMindMap}
+            onOpenSummary={toggleSummary}
+          />
+        </div>
 
-      {/* Main Content - Panels for PDF, MindMap, and Chat */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <PanelStructure 
-          showPdf={showPdf && pdfAvailable}
-          showChat={showChat}
-          toggleChat={toggleChat}
-          togglePdf={togglePdf}
-          onMindMapReady={handleMindMapReady}
-          explainText={explainText}
-          onExplainText={handleExplainText}
-        />
+        {/* Main Content - Panels for PDF, MindMap, and Chat */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <PanelStructure 
+            showPdf={showPdf && pdfAvailable}
+            showChat={showChat}
+            toggleChat={toggleChat}
+            togglePdf={togglePdf}
+            onMindMapReady={handleMindMapReady}
+            explainText={explainText}
+            onExplainText={handleExplainText}
+          />
+        </div>
       </div>
       
       {/* Summary Modal */}
