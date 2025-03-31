@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
@@ -19,16 +20,23 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
 
   // Render flowchart when code changes
   useEffect(() => {
-    if (previewRef.current) {
+    if (code && previewRef.current) {
       renderFlowchart();
     }
+    
+    // Cleanup function to prevent DOM manipulation errors
+    return () => {
+      if (previewRef.current) {
+        previewRef.current.innerHTML = '';
+      }
+    };
   }, [code]);
 
   const renderFlowchart = async () => {
     if (!previewRef.current) return;
 
     try {
-      // Clear the preview area
+      // Clear the preview area before rendering a new chart
       previewRef.current.innerHTML = "";
 
       // Create a unique ID for the diagram
@@ -39,7 +47,11 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
       
       // If parse succeeds, render the flowchart
       const { svg } = await mermaid.render(id, code);
-      previewRef.current.innerHTML = svg;
+      
+      // Make sure previewRef is still valid before updating the DOM
+      if (previewRef.current) {
+        previewRef.current.innerHTML = svg;
+      }
     } catch (err) {
       console.error("Failed to render flowchart:", err);
       
@@ -133,21 +145,21 @@ const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) 
         ref={contentRef}
         style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
       >
-        <div 
-          ref={previewRef} 
-          className="absolute" 
-          style={{
-            transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
-            transformOrigin: 'center center',
-            transition: isDragging ? 'none' : 'transform 0.1s ease'
-          }}
-        >
-          {isGenerating ? (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : null}
-        </div>
+        {isGenerating ? (
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div 
+            ref={previewRef} 
+            className="absolute" 
+            style={{
+              transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
+              transformOrigin: 'center center',
+              transition: isDragging ? 'none' : 'transform 0.1s ease'
+            }}
+          ></div>
+        )}
       </div>
     </div>
   );

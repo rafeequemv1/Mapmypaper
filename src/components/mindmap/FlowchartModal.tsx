@@ -34,7 +34,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         generateFlowchart();
       }
     }
-  }, [open]);
+  }, [open, generateFlowchart, code]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

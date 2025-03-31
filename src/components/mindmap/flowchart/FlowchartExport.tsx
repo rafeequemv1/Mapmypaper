@@ -11,7 +11,17 @@ const FlowchartExport = ({ previewRef }: FlowchartExportProps) => {
   const { toast } = useToast();
 
   const exportSvg = () => {
-    if (!previewRef.current || !previewRef.current.querySelector("svg")) {
+    if (!previewRef.current) {
+      toast({
+        title: "Export Failed",
+        description: "No flowchart container found. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const svgElement = previewRef.current.querySelector("svg");
+    if (!svgElement) {
       toast({
         title: "Export Failed",
         description: "No flowchart to export. Please ensure your flowchart renders correctly.",
@@ -21,8 +31,7 @@ const FlowchartExport = ({ previewRef }: FlowchartExportProps) => {
     }
 
     try {
-      const svgElement = previewRef.current.querySelector("svg");
-      const svgData = new XMLSerializer().serializeToString(svgElement!);
+      const svgData = new XMLSerializer().serializeToString(svgElement);
       const blob = new Blob([svgData], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
       
