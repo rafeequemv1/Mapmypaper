@@ -64,50 +64,65 @@ const MindMap = () => {
   }, [showChat]);
 
   const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
-    // Set up the mind map instance with proper line breaks for the root node
+    // Set up the mind map instance with proper line breaks for nodes
     setMindMap(mindMap);
     
-    // Add event listener for when the mind map is ready to modify the root node text style
-    if (mindMap.container) {
-      const observer = new MutationObserver((mutations) => {
-        // Look for the root node element
-        const rootNodeElement = document.querySelector('.mind-elixir-root');
+    // Function to apply line breaks to all nodes, especially the root
+    const applyLineBreaksToNodes = () => {
+      if (!mindMap.container) return;
+      
+      // Observer to watch for DOM changes and apply formatting
+      const observer = new MutationObserver(() => {
+        // Process the root node
+        const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          // Apply line breaks to the root node text (3-4 words per line)
-          const rootText = rootNodeElement.textContent;
-          const words = rootText.split(' ');
-          let formattedText = '';
-          let lineWords = 0;
-          const wordsPerLine = 3; // Set to 3-4 words per line as requested
-          
-          words.forEach((word, i) => {
-            formattedText += word + ' ';
-            lineWords++;
-            
-            // Add a line break after 3-4 words
-            if (lineWords >= wordsPerLine && i < words.length - 1) {
-              formattedText += '<br>';
-              lineWords = 0;
-            }
-          });
-          
-          // Apply the formatted text with line breaks
-          if (rootNodeElement instanceof HTMLElement) {
-            rootNodeElement.innerHTML = formattedText;
-          }
-          
-          // Disconnect observer after modification
-          observer.disconnect();
+          applyLineBreaksToNode(rootNodeElement, 3); // 3 words per line for root
         }
+        
+        // Process all topic nodes
+        const topicElements = mindMap.container.querySelectorAll('.mind-elixir-topic');
+        topicElements.forEach(topicElement => {
+          if (topicElement.classList.contains('mind-elixir-root')) return; // Skip root, already handled
+          applyLineBreaksToNode(topicElement as HTMLElement, 4); // 4 words per line for other nodes
+        });
       });
       
-      // Start observing the mind map container
+      // Apply line breaks to a specific node
+      const applyLineBreaksToNode = (element: Element, wordsPerLine: number) => {
+        if (!(element instanceof HTMLElement) || !element.textContent) return;
+        
+        const text = element.textContent;
+        const words = text.split(' ');
+        
+        if (words.length <= wordsPerLine) return; // No need for line breaks
+        
+        let formattedText = '';
+        for (let i = 0; i < words.length; i += wordsPerLine) {
+          const chunk = words.slice(i, i + wordsPerLine).join(' ');
+          formattedText += chunk + (i + wordsPerLine < words.length ? '<br>' : '');
+        }
+        
+        element.innerHTML = formattedText;
+      };
+      
+      // Start observing
       observer.observe(mindMap.container, { 
         childList: true, 
         subtree: true,
         characterData: true 
       });
-    }
+      
+      // Initial formatting attempt
+      setTimeout(() => {
+        const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
+        if (rootNodeElement && rootNodeElement.textContent) {
+          applyLineBreaksToNode(rootNodeElement, 3);
+        }
+      }, 100);
+    };
+    
+    // Apply line breaks after a brief delay to ensure nodes are rendered
+    setTimeout(applyLineBreaksToNodes, 200);
   }, []);
 
   const handleExportMindMap = useCallback(async (type: 'svg' | 'png') => {

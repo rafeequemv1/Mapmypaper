@@ -12,43 +12,111 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     // Store the PDF text in sessionStorage for chat functionality
     sessionStorage.setItem('pdfText', pdfText);
     
+    // Create a standard research paper template
+    const researchPaperTemplate = {
+      "nodeData": {
+        "id": "root",
+        "topic": "Research Paper Title",
+        "root": true,
+        "children": [
+          {
+            "id": "intro",
+            "topic": "Introduction",
+            "direction": 0,
+            "children": [
+              { "id": "intro1", "topic": "Background / Context" },
+              { "id": "intro2", "topic": "Motivation / Problem Statement" },
+              { "id": "intro3", "topic": "Research Gap" },
+              { "id": "intro4", "topic": "Objective / Hypothesis" }
+            ]
+          },
+          {
+            "id": "method",
+            "topic": "Methodology",
+            "direction": 0,
+            "children": [
+              { "id": "method1", "topic": "Experimental Setup / Data Collection" },
+              { "id": "method2", "topic": "Models / Theories / Frameworks" },
+              { "id": "method3", "topic": "Procedures / Algorithms" },
+              { "id": "method4", "topic": "Variables / Parameters" }
+            ]
+          },
+          {
+            "id": "results",
+            "topic": "Results",
+            "direction": 1,
+            "children": [
+              { "id": "results1", "topic": "Key Findings" },
+              { "id": "results2", "topic": "Figures / Tables / Visualizations" },
+              { "id": "results3", "topic": "Statistical Analysis" },
+              { "id": "results4", "topic": "Observations" }
+            ]
+          },
+          {
+            "id": "discuss",
+            "topic": "Discussion",
+            "direction": 1,
+            "children": [
+              { "id": "discuss1", "topic": "Interpretation of Results" },
+              { "id": "discuss2", "topic": "Comparison with Previous Work" },
+              { "id": "discuss3", "topic": "Implications" },
+              { "id": "discuss4", "topic": "Limitations" }
+            ]
+          },
+          {
+            "id": "concl",
+            "topic": "Conclusion",
+            "direction": 1,
+            "children": [
+              { "id": "concl1", "topic": "Summary of Contributions" },
+              { "id": "concl2", "topic": "Future Work" },
+              { "id": "concl3", "topic": "Final Remarks" }
+            ]
+          },
+          {
+            "id": "refs",
+            "topic": "References",
+            "direction": 0,
+            "children": [
+              { "id": "refs1", "topic": "Key Papers Cited" },
+              { "id": "refs2", "topic": "Datasets / Tools" }
+            ]
+          },
+          {
+            "id": "supp",
+            "topic": "Supplementary",
+            "direction": 0,
+            "children": [
+              { "id": "supp1", "topic": "Additional Experiments" },
+              { "id": "supp2", "topic": "Appendices" },
+              { "id": "supp3", "topic": "Code / Data Availability" }
+            ]
+          }
+        ]
+      }
+    };
+
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-    Analyze the following academic paper/document text and create a hierarchical mind map structure.
-    Format the response as a JSON object with the following structure:
-    {
-      "nodeData": {
-        "id": "root",
-        "topic": "Main Title of the Paper",
-        "children": [
-          {
-            "id": "section1",
-            "topic": "Section Title with Complete Sentences",
-            "direction": 0,
-            "children": [
-              {"id": "section1-1", "topic": "Subsection with Clear Complete Sentence"},
-              {"id": "section1-2", "topic": "Another Point in Complete Sentence"}
-            ]
-          },
-          {
-            "id": "section2",
-            "topic": "Another Main Section as Complete Sentence",
-            "direction": 1,
-            "children": []
-          }
-        ]
-      }
-    }
+    Analyze the following academic paper/document text and extract information to fill in this research paper mind map structure.
+    Do not change the structure, only fill in the content based on the document.
+    
+    For each node, provide a clear, complete sentence or short phrase based on the paper's content.
+    If information for a certain node isn't available in the document, keep the default label.
+    
+    For the root node, use the paper's actual title.
+    
+    Format the response as a JSON object with the following structure EXACTLY AS PROVIDED below:
+    ${JSON.stringify(researchPaperTemplate, null, 2)}
 
     IMPORTANT REQUIREMENTS:
-    1. Every "topic" must be a complete sentence or phrase, not just keywords or fragments.
-    2. Make each topic short, clear, and self-contained (preferably under 10 words).
-    3. Use "direction": 0 for nodes on the left side, and "direction": 1 for nodes on the right side.
-    4. Create a balanced structure with roughly equal content on both sides.
-    5. Make sure the mind map is organized in a logical hierarchy.
-    6. Only include the JSON in your response, nothing else.
+    1. Do NOT modify the structure of the template - keep ALL nodes.
+    2. Replace only the topic text with relevant content from the paper.
+    3. Keep all node IDs and directions as they are in the template.
+    4. For each topic, provide concise but complete information (preferably under 10 words).
+    5. Only include the JSON in your response, nothing else.
     
     Here's the document text to analyze:
     ${pdfText.slice(0, 15000)}
@@ -63,10 +131,27 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       // Find and extract JSON if it's surrounded by markdown code blocks or other text
       const jsonMatch = text.match(/```(?:json)?([\s\S]*?)```/) || text.match(/({[\s\S]*})/);
       const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
-      return JSON.parse(jsonString);
+      const parsedResponse = JSON.parse(jsonString);
+      
+      // Store the raw template for backup
+      sessionStorage.setItem('mindMapTemplate', JSON.stringify(researchPaperTemplate));
+      
+      return parsedResponse;
     } catch (parseError) {
       console.error("Failed to parse Gemini response as JSON:", parseError);
-      throw new Error("Failed to generate mind map. The AI response format was invalid.");
+      console.log("Using template instead due to parsing error");
+      
+      // If parsing fails, use the template with the paper title extracted, if possible
+      try {
+        const titleMatch = pdfText.match(/^(.+?)(?:\n|$)/);
+        if (titleMatch && titleMatch[1]) {
+          researchPaperTemplate.nodeData.topic = titleMatch[1].trim();
+        }
+      } catch (e) {
+        console.error("Error extracting title:", e);
+      }
+      
+      return researchPaperTemplate;
     }
   } catch (error) {
     console.error("Gemini API error:", error);
