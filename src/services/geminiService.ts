@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Always use this specific API key - hardcoded as requested
@@ -205,13 +206,8 @@ export const generateMindMapFromText = async (text: string): Promise<string> => 
 
 // Chat with Gemini about PDF content
 export const chatWithGeminiAboutPdf = async (query: string): Promise<string> => {
-  const pdfFile = getCurrentPdfFile();
-  if (!pdfFile) {
-    throw new Error("No PDF file found. Please upload a PDF file.");
-  }
-  
-  // Extract text from PDF if not already in context
-  const text = await extractTextFromPdf(pdfFile);
+  // Try to get extracted text directly
+  const text = await extractTextFromPdf();
   
   // Generate response using Gemini
   const genAI = getGenAI();
