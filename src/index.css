@@ -101,6 +101,10 @@
   }
   
   /* Enhanced typography for AI responses */
+  .prose {
+    @apply text-base leading-relaxed;
+  }
+  
   .prose h1 {
     @apply text-2xl font-bold mb-4 mt-6 pb-2 border-b border-gray-200 text-blue-800;
   }
@@ -111,6 +115,10 @@
   
   .prose h3 {
     @apply text-lg font-medium mb-2 mt-4 text-indigo-600;
+  }
+  
+  .prose h4 {
+    @apply text-base font-medium mb-2 mt-3 text-indigo-500;
   }
   
   .prose p {
@@ -171,5 +179,14 @@
   
   .prose a {
     @apply text-blue-600 underline hover:text-blue-800 font-medium;
+  }
+  
+  /* New class for AI message container */
+  .ai-message {
+    @apply bg-gray-50 border border-gray-100 shadow-sm rounded-lg p-4 max-w-[95%] relative;
+  }
+  
+  .ai-message-content {
+    @apply prose prose-sm max-w-none;
   }
 }

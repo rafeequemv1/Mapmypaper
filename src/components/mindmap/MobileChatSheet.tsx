@@ -6,45 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
-
-// Helper function to format AI responses with better structure
-const formatAIResponse = (content: string): string => {
-  // Replace markdown headers with HTML
-  let formattedContent = content
-    // Format headers with enhanced styling
-    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-4 mt-6 pb-2 border-b border-gray-200 text-blue-800">$1</h1>')
-    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mb-3 mt-5 text-blue-700">$1</h2>')
-    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-medium mb-2 mt-4 text-indigo-600">$1</h3>')
-    // Format bullet points with better spacing and styling
-    .replace(/^\* (.*$)/gim, '<li class="ml-5 list-disc mb-2">$1</li>')
-    .replace(/^- (.*$)/gim, '<li class="ml-5 list-disc mb-2">$1</li>')
-    .replace(/^\d\. (.*$)/gim, '<li class="ml-5 list-decimal mb-2">$1</li>')
-    // Format code blocks with improved styling
-    .replace(/```(.+?)```/gs, '<pre class="bg-gray-100 p-3 rounded my-3 overflow-x-auto text-sm font-mono shadow-sm">$1</pre>')
-    .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-pink-600 font-mono">$1</code>')
-    // Format bold and italics with stronger styling
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em class="italic text-gray-800">$1</em>')
-    // Format paragraphs with proper spacing and line height
-    .replace(/^\s*$(?:\r\n?|\n)/gm, '</p><p class="mb-3 text-base leading-relaxed">')
-    // Format blockquotes with better styling
-    .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-blue-400 pl-4 italic my-4 bg-blue-50 py-3 pr-3 rounded-r text-gray-700">$1</blockquote>')
-    // Format tables with improved styling
-    .replace(/\|(.+)\|/g, '<table class="min-w-full border-collapse my-4 shadow-sm"><tr>$1</tr></table>')
-    .replace(/\|---\|/g, '');
-
-  // Wrap the result in a paragraph if it doesn't start with an HTML tag
-  if (!formattedContent.startsWith('<')) {
-    formattedContent = '<p class="mb-3 text-base leading-relaxed">' + formattedContent;
-  }
-  
-  // Add closing paragraph if needed
-  if (!formattedContent.endsWith('>')) {
-    formattedContent = formattedContent + '</p>';
-  }
-  
-  return formattedContent;
-};
+import { formatAIResponse } from "@/utils/formatAiResponse";
 
 const MobileChatSheet = () => {
   const { toast } = useToast();
@@ -164,12 +126,12 @@ const MobileChatSheet = () => {
                   className={`rounded-lg p-4 ${
                     message.role === 'user' 
                       ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
-                      : 'bg-gray-50 border border-gray-100 shadow-sm max-w-[95%] text-base leading-relaxed'
+                      : 'ai-message'
                   }`}
                 >
                   {message.isHtml ? (
                     <div 
-                      className="prose prose-sm max-w-none" 
+                      className="ai-message-content" 
                       dangerouslySetInnerHTML={{ __html: message.content }} 
                     />
                   ) : (
@@ -195,7 +157,7 @@ const MobileChatSheet = () => {
             ))}
             
             {isTyping && (
-              <div className="max-w-[95%] rounded-lg p-4 bg-gray-50 border border-gray-100 shadow-sm">
+              <div className="ai-message">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
                   <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '200ms' }}></div>
