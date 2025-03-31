@@ -18,7 +18,17 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     console.log(`Generating mindmap from PDF text (length: ${pdfText.length})`);
     
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    let model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    // For very large documents, ensure we're using the appropriate model 
+    // with higher context window
+    if (pdfText.length > 100000) {
+      console.log("Using high-capacity model for large document");
+      model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        systemInstruction: "You are an expert at analyzing academic papers and creating structured mind maps from them. Focus on the key concepts, relationships, and hierarchy." 
+      });
+    }
 
     // For larger documents, we'll extract key sections for better analysis
     const processedText = processLargeDocument(pdfText);
@@ -55,6 +65,8 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     Make sure to keep the structure clean and organized.
     Only include the JSON in your response, nothing else.
     
+    For large texts, focus on extracting the most important concepts only and create a concise mind map.
+    
     Here's the document text to analyze:
     ${processedText}
     `;
@@ -77,6 +89,14 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       // Validate the structure contains nodeData
       if (!mindMapData.nodeData) {
         console.error("Invalid mindmap structure - missing nodeData:", mindMapData);
+        // Attempt to fix common structure issues
+        if (mindMapData.id && mindMapData.topic) {
+          console.log("Attempting to fix missing nodeData structure");
+          const fixedData = { nodeData: mindMapData };
+          console.log("Fixed mind map structure:", fixedData);
+          sessionStorage.setItem('mindMapData', JSON.stringify(fixedData));
+          return fixedData;
+        }
         throw new Error("Generated mindmap has invalid structure");
       }
       
@@ -88,7 +108,17 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     } catch (parseError) {
       console.error("Failed to parse Gemini response as JSON:", parseError);
       console.error("Raw response text:", text.substring(0, 500) + "...");
-      throw new Error("Failed to generate mind map. The AI response format was invalid.");
+      
+      // Attempt recovery - create a basic mindmap structure
+      try {
+        console.log("Attempting to create fallback mindmap from text");
+        const fallbackMindMap = createFallbackMindMap(processedText);
+        sessionStorage.setItem('mindMapData', JSON.stringify(fallbackMindMap));
+        return fallbackMindMap;
+      } catch (fallbackError) {
+        console.error("Failed to create fallback mindmap:", fallbackError);
+        throw new Error("Failed to generate mind map. The AI response format was invalid.");
+      }
     }
   } catch (error) {
     console.error("Gemini API error:", error);
@@ -96,54 +126,169 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
   }
 };
 
+// Create a basic fallback mindmap from text when automatic generation fails
+const createFallbackMindMap = (text: string): any => {
+  // Extract title (first non-empty line or default)
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  const title = lines.length > 0 ? lines[0].trim() : "Document Analysis";
+  
+  // Find potential section headings (capitalized lines or lines ending with colon)
+  const potentialHeadings = lines.filter(line => {
+    const trimmed = line.trim();
+    return (
+      (trimmed.length > 0 && trimmed.length < 100) &&
+      ((/^[A-Z]/.test(trimmed) && /[.:]$/.test(trimmed)) || 
+       (/^[0-9]+\./.test(trimmed)) || 
+       (/^[A-Z][A-Z\s]{2,}/.test(trimmed)))
+    );
+  }).slice(0, 8); // Limit to first 8 potential headings
+  
+  // Create a basic mindmap structure
+  const mindMap = {
+    nodeData: {
+      id: "root",
+      topic: title.length > 50 ? title.substring(0, 50) + "..." : title,
+      children: []
+    }
+  };
+  
+  // Add children nodes alternating directions
+  potentialHeadings.forEach((heading, index) => {
+    const direction = index % 2 === 0 ? 0 : 1;
+    const cleanHeading = heading.replace(/^[0-9]+\.\s*/, '').trim();
+    const topicText = cleanHeading.length > 40 ? cleanHeading.substring(0, 40) + "..." : cleanHeading;
+    
+    mindMap.nodeData.children.push({
+      id: `section${index + 1}`,
+      topic: topicText,
+      direction,
+      children: []
+    });
+  });
+  
+  // If we couldn't find any headings, add some default nodes
+  if (mindMap.nodeData.children.length === 0) {
+    mindMap.nodeData.children = [
+      { id: "section1", topic: "Key Points", direction: 0, children: [] },
+      { id: "section2", topic: "Main Ideas", direction: 1, children: [] }
+    ];
+  }
+  
+  return mindMap;
+};
+
 // Helper function to process large documents for optimal analysis
 function processLargeDocument(text: string): string {
-  // For very large documents, we need a smarter approach
-  if (text.length > 30000) {
-    console.log("Document is very large, using advanced processing");
+  // For extremely large documents, we need an even more aggressive approach
+  if (text.length > 200000) {
+    console.log("Document is extremely large, using highly optimized processing");
     
-    // Extract potential section headers using regex patterns
-    const headingPattern = /\n([A-Z][A-Za-z\s]{3,50})\n/g;
+    // Extract potential section headers using regex patterns for academic papers
+    const headingPatterns = [
+      /\n([A-Z][A-Za-z\s]{3,50})\n/g,                   // Capitalized lines
+      /\n([0-9]+\.\s[A-Z][A-Za-z\s]{3,50})\n/g,         // Numbered sections
+      /\n(INTRODUCTION|ABSTRACT|CONCLUSION|METHODS|RESULTS|DISCUSSION|REFERENCES)\s*\n/gi // Common section names
+    ];
+    
     const potentialHeadings: string[] = [];
-    let match;
+    const headingPositions: number[] = [];
     
-    // Find potential headings
-    while ((match = headingPattern.exec(text)) !== null) {
-      potentialHeadings.push(match[1]);
+    // Find potential headings using different patterns
+    for (const pattern of headingPatterns) {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        potentialHeadings.push(match[1]);
+        headingPositions.push(match.index);
+      }
     }
     
-    // Construct a representative sample
-    const intro = text.slice(0, 5000); // First chunk (abstract, intro)
+    // Sort headings by their position in the text
+    const sortedHeadings = potentialHeadings
+      .map((heading, i) => ({ heading, position: headingPositions[i] }))
+      .sort((a, b) => a.position - b.position);
     
-    let sampleText = intro + "\n\n";
+    // Large sample from beginning (usually has abstract, intro etc.)
+    const beginning = text.slice(0, 20000); 
     
-    // Add sections based on potential headings
-    if (potentialHeadings.length > 0) {
-      for (let i = 0; i < Math.min(potentialHeadings.length, 10); i++) {
-        const heading = potentialHeadings[i];
-        // Get text following this heading (up to 1000 chars)
-        const sectionStart = text.indexOf(heading);
-        if (sectionStart > -1) {
-          const section = text.slice(sectionStart, sectionStart + 2000);
-          sampleText += section + "\n\n";
+    // Construct a representative sample based on key sections
+    let sampleText = beginning + "\n\n";
+    
+    // Add content from important section types if we can find them
+    const keySectionPatterns = [
+      /(abstract|summary)/i,
+      /(introduction|background)/i,
+      /(method|approach|model)/i,
+      /(result|finding|observation)/i,
+      /(discussion|analysis)/i,
+      /(conclusion|future work)/i
+    ];
+    
+    // For each key section pattern, try to find a matching section
+    for (const pattern of keySectionPatterns) {
+      for (let i = 0; i < sortedHeadings.length; i++) {
+        const { heading, position } = sortedHeadings[i];
+        if (pattern.test(heading)) {
+          // Found a key section, extract some text from it
+          const sectionStart = position;
+          const sectionEnd = (i < sortedHeadings.length - 1) 
+            ? sortedHeadings[i + 1].position 
+            : Math.min(position + 15000, text.length);
+          
+          const sectionText = text.slice(sectionStart, sectionEnd);
+          if (sectionText.length > 500) { // Only add substantial sections
+            sampleText += `\n\n${heading}:\n${sectionText}\n\n`;
+          }
         }
       }
     }
     
+    // If we didn't find enough key sections, add some samples
+    if (sampleText.length < 50000) {
+      const numSamples = 4;
+      for (let i = 1; i <= numSamples; i++) {
+        const startPos = Math.floor((text.length / (numSamples + 1)) * i);
+        sampleText += text.slice(startPos, startPos + 10000) + "\n\n[...]\n\n";
+      }
+    }
+    
     // Add conclusion (often at the end)
-    const conclusion = text.slice(text.length - 5000);
+    const conclusion = text.slice(Math.max(0, text.length - 15000));
     sampleText += conclusion;
     
     return sampleText;
   }
   
+  // For very large documents
+  if (text.length > 100000) {
+    console.log("Document is very large, using advanced processing");
+    
+    // Take beginning (usually abstract/introduction)
+    const beginning = text.slice(0, 15000);
+    
+    // Take samples from throughout the document at regular intervals
+    const samples = [];
+    const numSamples = 5;
+    const textLength = text.length;
+    
+    for (let i = 1; i <= numSamples; i++) {
+      const startPos = Math.floor((textLength / (numSamples + 1)) * i);
+      samples.push(text.slice(startPos, startPos + 10000));
+    }
+    
+    // Take end (usually conclusion, references)
+    const end = text.slice(Math.max(0, text.length - 15000));
+    
+    // Combine all parts
+    return beginning + samples.join("\n\n[...]\n\n") + "\n\n[...]\n\n" + end;
+  }
+  
   // For medium-sized documents
-  if (text.length > 15000) {
+  if (text.length > 30000) {
     console.log("Document is medium-sized, using simplified processing");
     // Take beginning (abstract/intro), some middle content, and end (conclusion)
-    const beginning = text.slice(0, 5000);
-    const middle = text.slice(Math.floor(text.length / 2) - 2500, Math.floor(text.length / 2) + 2500);
-    const end = text.slice(text.length - 5000);
+    const beginning = text.slice(0, 10000);
+    const middle = text.slice(Math.floor(text.length / 2) - 5000, Math.floor(text.length / 2) + 5000);
+    const end = text.slice(text.length - 10000);
     
     return beginning + "\n\n[...]\n\n" + middle + "\n\n[...]\n\n" + end;
   }

@@ -14,6 +14,14 @@ export const defaultFlowchart = `flowchart TD
 export const cleanMermaidSyntax = (input: string): string => {
   let cleaned = input.trim();
   
+  console.log("Cleaning Mermaid syntax, input length:", cleaned.length);
+  
+  // Guard against empty or invalid input
+  if (!cleaned || cleaned.length < 10) {
+    console.warn("Empty or too short Mermaid input");
+    return defaultFlowchart;
+  }
+  
   // Fix common syntax errors
   cleaned = cleaned
     // Fix arrows if needed
@@ -23,6 +31,7 @@ export const cleanMermaidSyntax = (input: string): string => {
   
   // Ensure it starts with flowchart directive
   if (!cleaned.startsWith("flowchart")) {
+    console.log("Adding missing flowchart directive");
     cleaned = "flowchart TD\n" + cleaned;
   }
   
@@ -75,10 +84,21 @@ export const cleanMermaidSyntax = (input: string): string => {
       });
     }
     
+    // Fix node IDs in connections to use underscores instead of hyphens
+    processedLine = processedLine.replace(/\b([A-Za-z0-9]+)-([A-Za-z0-9]+)\b(?!\]|\)|\})/g, "$1_$2");
+    
+    // Fix arrow syntax to ensure proper spacing
+    processedLine = processedLine.replace(/(\w+)\s*-->\s*(\w+)/g, "$1 --> $2");
+    
+    // Fix arrow labels
+    processedLine = processedLine.replace(/-->(\w)/g, "-->|$1");
+    
     return processedLine;
   });
   
-  return processedLines.join('\n');
+  const result = processedLines.join('\n');
+  console.log("Mermaid syntax cleaning complete, output length:", result.length);
+  return result;
 };
 
 export const useFlowchartGenerator = () => {
@@ -118,13 +138,33 @@ export const useFlowchartGenerator = () => {
         });
       } catch (parseError) {
         console.error("Mermaid parse error:", parseError);
-        setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-        setCode(defaultFlowchart);
-        toast({
-          title: "Syntax Error",
-          description: "The generated flowchart had syntax errors. Using a default template instead.",
-          variant: "destructive",
-        });
+        
+        // Try additional fallback cleaning for very problematic syntax
+        try {
+          console.log("Attempting further syntax cleaning");
+          const simplifiedCode = `flowchart TD\n` + cleanedCode
+            .split('\n')
+            .filter(line => line.includes('-->')) // Only keep lines with connections
+            .slice(0, 15) // Limit to a reasonable number of lines
+            .join('\n');
+          
+          await mermaid.parse(simplifiedCode);
+          setCode(simplifiedCode);
+          console.log("Simplified flowchart parsed successfully");
+          toast({
+            title: "Simplified Flowchart Generated", 
+            description: "A simplified flowchart was created due to complexity in the PDF content.",
+          });
+        } catch (fallbackError) {
+          // If all else fails, use the default flowchart
+          setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+          setCode(defaultFlowchart);
+          toast({
+            title: "Syntax Error",
+            description: "The generated flowchart had syntax errors. Using a default template instead.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to generate flowchart:", err);

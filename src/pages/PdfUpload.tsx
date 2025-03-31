@@ -7,21 +7,24 @@ import { Sparkles, Upload, Brain, ChevronRight, LogOut, AlertCircle } from "luci
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-const MAX_PDF_SIZE_MB = 50; // Increased maximum PDF size
+const MAX_PDF_SIZE_MB = 100; // Increased maximum PDF size to 100MB
 
 const PdfUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [processingProgress, setProcessingProgress] = useState<number | null>(null);
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMessage(null);
+    setProcessingProgress(null);
+    
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Check file size - increased limit
+      // Check file size - increased limit to 100MB
       if (file.size > MAX_PDF_SIZE_MB * 1024 * 1024) {
         setErrorMessage(`File is too large. Maximum size is ${MAX_PDF_SIZE_MB}MB.`);
         toast({
@@ -42,6 +45,7 @@ const PdfUpload = () => {
     try {
       setIsUploading(true);
       setErrorMessage(null);
+      setProcessingProgress(0);
       
       // Store PDF file name in sessionStorage
       sessionStorage.setItem("pdfFileName", selectedFile.name);
@@ -50,8 +54,11 @@ const PdfUpload = () => {
       const pdfUrl = URL.createObjectURL(selectedFile);
       sessionStorage.setItem("pdfUrl", pdfUrl);
       
-      // For large PDFs, use a more efficient text extraction approach
-      if (selectedFile.size > 10 * 1024 * 1024) {
+      // For large PDFs, use a more efficient text extraction approach with chunking
+      if (selectedFile.size > 25 * 1024 * 1024) {
+        console.log("Very large PDF detected, using advanced chunked processing");
+        await processVeryLargePdf(selectedFile);
+      } else if (selectedFile.size > 10 * 1024 * 1024) {
         console.log("Large PDF detected, using chunked processing");
         await processLargePdf(selectedFile);
       } else {
@@ -68,7 +75,93 @@ const PdfUpload = () => {
         variant: "destructive"
       });
       setIsUploading(false);
+      setProcessingProgress(null);
     }
+  };
+
+  // Process very large PDFs (>25MB) with advanced chunking
+  const processVeryLargePdf = async (file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+      const fileReader = new FileReader();
+      let offset = 0;
+      const textChunks: string[] = [];
+      
+      // Set up a function to process the file in chunks
+      const readChunk = () => {
+        const slice = file.slice(offset, offset + CHUNK_SIZE);
+        fileReader.readAsText(slice);
+      };
+      
+      fileReader.onload = (e) => {
+        if (e.target?.result) {
+          const chunk = e.target.result as string;
+          textChunks.push(chunk);
+          offset += CHUNK_SIZE;
+          
+          // Update progress indicator
+          const progress = Math.min(100, Math.round((offset / file.size) * 100));
+          setProcessingProgress(progress);
+          
+          // Continue reading if not at the end of file
+          if (offset < file.size) {
+            // Use setTimeout to avoid blocking the UI
+            setTimeout(readChunk, 10);
+          } else {
+            // Finished reading the entire file
+            try {
+              const fullText = textChunks.join('');
+              console.log(`Successfully read large PDF (${file.size / (1024 * 1024)} MB), extracted text length: ${fullText.length}`);
+              
+              // Process text to extract representative content for very large files
+              const extractedText = extractOptimizedContent(fullText);
+              console.log(`Optimized content for Gemini processing, length: ${extractedText.length}`);
+              
+              try {
+                // Store the processed text
+                sessionStorage.setItem("pdfText", extractedText);
+                console.log("PDF text stored in sessionStorage");
+                
+                // Navigate to mindmap page
+                setTimeout(() => {
+                  console.log("Navigating to /mindmap");
+                  navigate("/mindmap");
+                  resolve();
+                }, 500);
+              } catch (storageError) {
+                console.error("Storage error:", storageError);
+                
+                // Further reduce content if necessary
+                const furtherReducedText = extractedText.slice(0, Math.min(extractedText.length, 150000));
+                
+                try {
+                  sessionStorage.setItem("pdfText", furtherReducedText);
+                  console.log("Reduced PDF text stored in sessionStorage");
+                  
+                  setTimeout(() => {
+                    console.log("Navigating to /mindmap with reduced text");
+                    navigate("/mindmap");
+                    resolve();
+                  }, 500);
+                } catch (finalError) {
+                  reject(new Error("Document is too complex to process. Please try a different PDF."));
+                }
+              }
+            } catch (processError) {
+              reject(processError);
+            }
+          }
+        }
+      };
+      
+      fileReader.onerror = (error) => {
+        console.error("Error reading file:", error);
+        reject(new Error("Failed to read the PDF file."));
+      };
+      
+      // Start the first chunk read
+      readChunk();
+    });
   };
 
   // Process large PDFs in chunks to avoid memory issues
@@ -81,19 +174,23 @@ const PdfUpload = () => {
           if (event.target && event.target.result) {
             const fullText = event.target.result as string;
             console.log("PDF text extracted, length:", fullText.length);
+            setProcessingProgress(50);
             
             // Process text in a way that avoids memory issues
             const extractedText = extractRepresentativeContent(fullText);
             console.log("Extracted representative content, length:", extractedText.length);
+            setProcessingProgress(75);
             
             // Store the processed text
             try {
               sessionStorage.setItem("pdfText", extractedText);
               console.log("PDF text stored in sessionStorage");
+              setProcessingProgress(90);
               
               // Navigate to mindmap page
               setTimeout(() => {
                 console.log("Navigating to /mindmap");
+                setProcessingProgress(100);
                 navigate("/mindmap");
                 resolve();
               }, 500);
@@ -142,15 +239,18 @@ const PdfUpload = () => {
           try {
             const fullText = event.target.result as string;
             console.log("PDF text extracted, length:", fullText.length);
+            setProcessingProgress(50);
             
             try {
               // Store the full text for smaller PDFs
               sessionStorage.setItem("pdfText", fullText);
               console.log("PDF text stored in sessionStorage");
+              setProcessingProgress(75);
               
               // Navigate to mindmap page
               setTimeout(() => {
                 console.log("Navigating to /mindmap");
+                setProcessingProgress(100);
                 navigate("/mindmap");
                 resolve();
               }, 500);
@@ -188,6 +288,81 @@ const PdfUpload = () => {
       // Read as text
       reader.readAsText(file);
     });
+  };
+
+  // Extract optimized content for very large documents
+  const extractOptimizedContent = (text: string): string => {
+    // For extremely large text
+    if (text.length > 500000) {
+      console.log("Text is extremely large, using highly optimized extraction");
+      
+      // Take beginning (abstract, introduction) - larger sample
+      const beginning = text.slice(0, 20000);
+      
+      // Extract potential headings and key sections
+      const headingPattern = /\n([A-Z][A-Za-z\s]{3,50}[:.?])\n/g;
+      const potentialHeadings: string[] = [];
+      const headingPositions: number[] = [];
+      let match;
+      
+      // Find potential headings and their positions
+      while ((match = headingPattern.exec(text)) !== null) {
+        potentialHeadings.push(match[1]);
+        headingPositions.push(match.index);
+      }
+      
+      // Start with a good sample of the beginning
+      let sampleText = beginning + "\n\n";
+      
+      // If we found some headings, select extracts from key sections
+      if (potentialHeadings.length > 0) {
+        // Focus on standard paper sections if we can find them
+        const keySections = [
+          /method/i, /approach/i, /experiment/i, 
+          /result/i, /finding/i, /discussion/i, 
+          /conclusion/i, /reference/i, /abstract/i
+        ];
+        
+        // Get text from each key section we can find
+        for (const pattern of keySections) {
+          for (let i = 0; i < potentialHeadings.length; i++) {
+            if (pattern.test(potentialHeadings[i])) {
+              const startPos = headingPositions[i];
+              const endPos = (i < potentialHeadings.length - 1) ? 
+                             headingPositions[i + 1] : 
+                             Math.min(startPos + 15000, text.length);
+              const sectionText = text.slice(startPos, endPos);
+              sampleText += sectionText + "\n\n[...]\n\n";
+              break;
+            }
+          }
+        }
+        
+        // Add some samples from throughout the document at regular intervals
+        const numSamples = 3;
+        for (let i = 1; i <= numSamples; i++) {
+          const startPos = Math.floor((text.length / (numSamples + 1)) * i);
+          // Get more context around each sample
+          sampleText += text.slice(startPos, startPos + 8000) + "\n\n[...]\n\n";
+        }
+      } else {
+        // If no headings found, just take samples from throughout the document
+        const numSamples = 7;
+        for (let i = 1; i <= numSamples; i++) {
+          const startPos = Math.floor((text.length / (numSamples + 1)) * i);
+          sampleText += text.slice(startPos, startPos + 10000) + "\n\n[...]\n\n";
+        }
+      }
+      
+      // Take end (conclusion, references)
+      const end = text.slice(Math.max(0, text.length - 20000));
+      sampleText += end;
+      
+      return sampleText;
+    }
+    
+    // Fallback to the standard representative content extraction
+    return extractRepresentativeContent(text);
   };
 
   // Extract representative content from large text
@@ -308,6 +483,20 @@ const PdfUpload = () => {
                       </p>
                     )}
                   </div>
+                  
+                  {/* Processing Progress Bar */}
+                  {processingProgress !== null && (
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="bg-black h-2.5 rounded-full transition-all duration-300" 
+                        style={{ width: `${processingProgress}%` }}
+                      ></div>
+                      <p className="text-xs text-gray-500 mt-1 text-center">
+                        {processingProgress < 100 ? `Processing: ${processingProgress}%` : "Processing complete"}
+                      </p>
+                    </div>
+                  )}
+                  
                   <Button
                     type="submit"
                     disabled={!selectedFile || isUploading || !!errorMessage}
