@@ -20,8 +20,8 @@ const formatNodeText = (text: string, wordsPerLine: number = 7): string => {
   
   // Add emoji based on topic content if one doesn't exist already
   const addEmoji = (topic: string) => {
-    // Check if the topic already starts with an emoji
-    if (/^[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/.test(topic)) {
+    // Check if the topic already starts with an emoji - fixed regex pattern
+    if (/^\p{Emoji}/u.test(topic)) {
       return topic; // Already has an emoji
     }
     
