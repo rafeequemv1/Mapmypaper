@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -97,5 +98,42 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Enhanced typography for AI responses */
+  .prose h1 {
+    @apply text-xl font-bold mb-3 mt-4;
+  }
+  
+  .prose h2 {
+    @apply text-lg font-semibold mb-2 mt-3;
+  }
+  
+  .prose h3 {
+    @apply text-md font-medium mb-2 mt-3;
+  }
+  
+  .prose p {
+    @apply mb-3 text-base;
+  }
+  
+  .prose ul, .prose ol {
+    @apply my-2 ml-5;
+  }
+  
+  .prose li {
+    @apply mb-1;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 border-gray-300 pl-3 italic my-2;
+  }
+  
+  .prose code {
+    @apply bg-gray-100 px-1 rounded text-sm;
+  }
+  
+  .prose pre {
+    @apply bg-gray-100 p-2 rounded my-2 overflow-x-auto text-sm;
   }
 }

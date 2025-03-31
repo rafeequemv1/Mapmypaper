@@ -2,7 +2,6 @@
 import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
 import { 
   Tooltip, 
   TooltipContent, 
@@ -70,7 +69,6 @@ const Header = ({
   };
 
   const handleUploadClick = () => {
-    // Navigate to the upload page
     navigate("/");
   };
 
@@ -80,18 +78,18 @@ const Header = ({
 
   return (
     <div className="flex h-full">
-      {/* Left sidebar for vertical icons */}
-      <div className="w-16 bg-[#222222] flex flex-col items-center py-4 border-r border-[#333]">
+      {/* Left sidebar for vertical icons - now white theme */}
+      <div className="w-14 bg-white flex flex-col items-center py-3 border-r shadow-sm">
         {/* App logo - icon only */}
-        <div className="mb-8">
-          <Brain className="h-8 w-8 text-white" />
+        <div className="mb-5">
+          <Brain className="h-6 w-6 text-gray-700" />
         </div>
         
         {/* Back button */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white mb-8" onClick={handleBack}>
+              <Button variant="ghost" size="sm" className="text-gray-700 mb-5 h-8 w-8 p-0" onClick={handleBack}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
@@ -100,16 +98,16 @@ const Header = ({
             </TooltipContent>
           </Tooltip>
 
-          <div className="flex flex-col gap-4 items-center">
-            {/* PDF toggle - simplified */}
+          <div className="flex flex-col gap-3 items-center">
+            {/* PDF toggle */}
             {pdfAvailable && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost" 
-                    size="icon"
+                    size="sm"
                     onClick={togglePdf}
-                    className={`text-white hover:bg-white/20 ${showPdf ? 'text-white' : 'text-white/60'}`}
+                    className={`p-0 h-8 w-8 ${showPdf ? 'text-blue-600' : 'text-gray-500'}`}
                   >
                     <FileText className="h-5 w-5" />
                   </Button>
@@ -120,14 +118,14 @@ const Header = ({
               </Tooltip>
             )}
             
-            {/* Chat toggle - simplified */}
+            {/* Chat toggle */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost" 
-                  size="icon"
+                  size="sm"
                   onClick={toggleChat}
-                  className={`text-white hover:bg-white/20 ${showChat ? 'text-white' : 'text-white/60'}`}
+                  className={`p-0 h-8 w-8 ${showChat ? 'text-blue-600' : 'text-gray-500'}`}
                 >
                   <MessageSquare className="h-5 w-5" />
                 </Button>
@@ -137,15 +135,15 @@ const Header = ({
               </TooltipContent>
             </Tooltip>
             
-            {/* Summary button - simplified */}
+            {/* Summary button */}
             {onOpenSummary && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    size="icon"
+                    size="sm"
                     onClick={onOpenSummary}
-                    className="text-white hover:bg-white/20"
+                    className="text-gray-500 p-0 h-8 w-8"
                   >
                     <FileDigit className="h-5 w-5" />
                   </Button>
@@ -156,13 +154,13 @@ const Header = ({
               </Tooltip>
             )}
             
-            {/* Upload button - simplified */}
+            {/* Upload button */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
                   variant="ghost" 
-                  size="icon"
-                  className="text-white hover:bg-white/20"
+                  size="sm"
+                  className="text-gray-500 p-0 h-8 w-8"
                   onClick={handleUploadClick}
                 >
                   <Upload className="h-5 w-5" />
@@ -173,13 +171,13 @@ const Header = ({
               </TooltipContent>
             </Tooltip>
             
-            {/* Export dropdown - simplified */}
+            {/* Export dropdown */}
             {onExportMindMap && (
               <DropdownMenu>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+                      <Button variant="ghost" size="sm" className="text-gray-500 p-0 h-8 w-8">
                         <Download className="h-5 w-5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -199,14 +197,14 @@ const Header = ({
               </DropdownMenu>
             )}
             
-            {/* Keyboard shortcuts - simplified */}
+            {/* Keyboard shortcuts */}
             <div className="relative mt-auto">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    size="icon"
-                    className="text-white hover:bg-white/20"
+                    size="sm"
+                    className="text-gray-500 p-0 h-8 w-8"
                     onClick={toggleShortcuts}
                   >
                     <Keyboard className="h-5 w-5" />
@@ -219,7 +217,7 @@ const Header = ({
               
               {showShortcuts && (
                 <div 
-                  className="absolute left-16 bottom-0 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
+                  className="absolute left-14 bottom-0 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
                 >
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
@@ -247,8 +245,8 @@ const Header = ({
         </TooltipProvider>
       </div>
       
-      {/* Header without title */}
-      <div className="h-12 bg-[#222222] flex items-center px-4 w-full"></div>
+      {/* Slim header */}
+      <div className="h-12 bg-white flex items-center px-4 w-full border-b"></div>
     </div>
   );
 };

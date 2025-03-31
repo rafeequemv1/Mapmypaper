@@ -13,11 +13,47 @@ interface ChatPanelProps {
   explainText?: string;
 }
 
+// Helper function to format AI responses with better structure
+const formatAIResponse = (content: string): string => {
+  // Replace markdown headers with HTML
+  let formattedContent = content
+    // Format headers
+    .replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold mb-3 mt-4">$1</h1>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-lg font-semibold mb-2 mt-3">$1</h2>')
+    .replace(/^### (.*$)/gim, '<h3 class="text-md font-medium mb-2 mt-3">$1</h3>')
+    // Format bullet points
+    .replace(/^\* (.*$)/gim, '<li class="ml-4 list-disc mb-1">$1</li>')
+    .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc mb-1">$1</li>')
+    .replace(/^\d\. (.*$)/gim, '<li class="ml-4 list-decimal mb-1">$1</li>')
+    // Format code blocks
+    .replace(/```(.+?)```/gs, '<pre class="bg-gray-100 p-2 rounded my-2 overflow-x-auto text-sm">$1</pre>')
+    .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded text-sm">$1</code>')
+    // Format bold and italics
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Format paragraphs with proper spacing
+    .replace(/^\s*$(?:\r\n?|\n)/gm, '</p><p class="mb-3">')
+    // Format blockquotes
+    .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-gray-300 pl-3 italic my-2">$1</blockquote>');
+
+  // Wrap the result in a paragraph if it doesn't start with an HTML tag
+  if (!formattedContent.startsWith('<')) {
+    formattedContent = '<p class="mb-3">' + formattedContent;
+  }
+  
+  // Add closing paragraph if needed
+  if (!formattedContent.endsWith('>')) {
+    formattedContent = formattedContent + '</p>';
+  }
+  
+  return formattedContent;
+};
+
 const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -52,11 +88,15 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
           // Get response from Gemini
           const response = await chatWithGeminiAboutPdf(userMessage);
           
-          // Hide typing indicator and add AI response
+          // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
           setMessages(prev => [
             ...prev, 
-            { role: 'assistant', content: response }
+            { 
+              role: 'assistant', 
+              content: formatAIResponse(response),
+              isHtml: true 
+            }
           ]);
         } catch (error) {
           // Handle errors
@@ -100,15 +140,16 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
         // Get response from Gemini
         const response = await chatWithGeminiAboutPdf(userMessage);
         
-        // Hide typing indicator and add AI response
+        // Hide typing indicator and add AI response with formatting
         setIsTyping(false);
         setMessages(prev => [
           ...prev, 
-          { role: 'assistant', content: response }
+          { 
+            role: 'assistant', 
+            content: formatAIResponse(response),
+            isHtml: true 
+          }
         ]);
-        
-        // Store chat history in Supabase if needed in the future
-        // Currently not implemented as we need to set up authentication first
       } catch (error) {
         // Handle errors
         setIsTyping(false);
@@ -138,7 +179,10 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   };
 
   const copyToClipboard = (text: string, messageId: number) => {
-    navigator.clipboard.writeText(text).then(() => {
+    // Strip HTML tags for copying plain text
+    const plainText = text.replace(/<[^>]*>?/gm, '');
+    
+    navigator.clipboard.writeText(plainText).then(() => {
       setCopiedMessageId(messageId);
       
       toast({
@@ -165,7 +209,7 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
   return (
     <div className="flex flex-col h-full border-l">
       {/* Chat panel header */}
-      <div className="flex items-center justify-between p-3 border-b bg-secondary/30">
+      <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           <h3 className="font-medium text-sm">Research Assistant</h3>
@@ -182,17 +226,24 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
       
       {/* Chat messages area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {messages.map((message, i) => (
             <div key={i} className="group relative">
               <div 
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`rounded-lg p-4 ${
                   message.role === 'user' 
-                    ? 'bg-primary text-primary-foreground ml-auto' 
-                    : 'bg-muted'
+                    ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
+                    : 'bg-gray-50 border border-gray-100 shadow-sm max-w-[90%] text-base leading-relaxed'
                 }`}
               >
-                {message.content}
+                {message.isHtml ? (
+                  <div 
+                    className="prose prose-sm max-w-none" 
+                    dangerouslySetInnerHTML={{ __html: message.content }} 
+                  />
+                ) : (
+                  message.content
+                )}
                 
                 {message.role === 'assistant' && (
                   <Button 
@@ -213,11 +264,11 @@ const ChatPanel = ({ toggleChat, explainText }: ChatPanelProps) => {
           ))}
           
           {isTyping && (
-            <div className="max-w-[80%] rounded-lg p-3 bg-muted">
+            <div className="max-w-[90%] rounded-lg p-4 bg-gray-50 border border-gray-100 shadow-sm">
               <div className="flex gap-1">
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '200ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '400ms' }}></div>
               </div>
             </div>
           )}
