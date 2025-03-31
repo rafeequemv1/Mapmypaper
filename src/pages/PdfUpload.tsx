@@ -1,10 +1,11 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, FileText, Brain, Trash } from "lucide-react";
 import { useState, useRef, ChangeEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import extractTextFromPdf from "react-pdftotext";
+import extractTextFromPdf from "react-pdftotext"; // Fixed import
 import { useAuth } from "@/contexts/AuthContext";
 
 // Function to get PDF file name without extension

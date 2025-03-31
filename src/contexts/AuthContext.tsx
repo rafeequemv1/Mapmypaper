@@ -11,9 +11,9 @@ type User = {
 
 type AuthContextType = {
   user: User | null;
-  isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  isLoading: boolean; // Added isLoading property
+  signIn: (email: string, password: string) => Promise<{ error?: Error }>;
+  signUp: (email: string, password: string) => Promise<{ error?: Error }>;
   signOut: () => Promise<void>;
 };
 
@@ -90,9 +90,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // User is set by the auth state change listener
+      return {}; // Return an empty object if successful
     } catch (error) {
       console.error("Error signing in:", error);
-      throw error;
+      return { error: error as Error }; // Return the error
     } finally {
       setIsLoading(false);
     }
@@ -111,9 +112,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // User is set by the auth state change listener if auto-confirm is enabled
+      return {}; // Return an empty object if successful
     } catch (error) {
       console.error("Error signing up:", error);
-      throw error;
+      return { error: error as Error }; // Return the error
     } finally {
       setIsLoading(false);
     }
