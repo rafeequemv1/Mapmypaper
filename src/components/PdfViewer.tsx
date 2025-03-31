@@ -52,7 +52,6 @@ const PdfViewer = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Load PDF data from sessionStorage
   useEffect(() => {
     try {
       const storedPdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
@@ -69,7 +68,6 @@ const PdfViewer = ({
     }
   }, []);
 
-  // Update container width on resize
   useEffect(() => {
     if (!pdfContainerRef.current) return;
     
@@ -79,10 +77,8 @@ const PdfViewer = ({
       }
     };
     
-    // Initial width
     updateWidth();
     
-    // Update width on resize
     const resizeObserver = new ResizeObserver(updateWidth);
     resizeObserver.observe(pdfContainerRef.current);
     
@@ -93,14 +89,12 @@ const PdfViewer = ({
     };
   }, []);
 
-  // Handle successful document load
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     console.log(`Document loaded with ${numPages} pages`);
     setNumPages(numPages);
     setIsLoading(false);
   };
 
-  // Handle zoom in/out
   const handleZoomIn = () => {
     setScale(prevScale => Math.min(prevScale + 0.2, 3.0));
   };
@@ -109,7 +103,6 @@ const PdfViewer = ({
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
   };
 
-  // Rectangle area selection for screenshots
   const handleStartAreaSelection = () => {
     setIsAreaSelectMode(true);
     setSelectionRect(null);
@@ -156,20 +149,19 @@ const PdfViewer = ({
       document.body.style.cursor = 'default';
       
       if (selectionRect) {
-        // Calculate the width and height of the selection
-        const width = Math.abs(selectionRect.endX - selectionRect.startX);
-        const height = Math.abs(selectionRect.endY - selectionRect.startY);
-        
-        // Allow any size of selection - even small ones
         await captureSelectedArea();
         
         if (pdfContainerRef.current) {
           const containerRect = pdfContainerRef.current.getBoundingClientRect();
-          // Position the tooltip at the end of the selection
+          const selX = Math.min(selectionRect.startX, selectionRect.endX) + 
+                      Math.abs(selectionRect.endX - selectionRect.startX) / 2;
+          const selY = Math.max(selectionRect.startY, selectionRect.endY) + 10;
+          
           setScreenshotTooltipPosition({
-            x: upEvent.clientX - containerRect.left,
-            y: upEvent.clientY - containerRect.top + 10
+            x: selX,
+            y: selY
           });
+          
           setShowScreenshotTooltip(true);
         }
       }
@@ -185,21 +177,18 @@ const PdfViewer = ({
     try {
       setIsCapturingScreenshot(true);
       
-      // Normalize the rectangle coordinates
       const x = Math.min(selectionRect.startX, selectionRect.endX);
       const y = Math.min(selectionRect.startY, selectionRect.endY);
-      const width = Math.abs(selectionRect.endX - selectionRect.startX);
-      const height = Math.abs(selectionRect.endY - selectionRect.startY);
+      const width = Math.max(1, Math.abs(selectionRect.endX - selectionRect.startX));
+      const height = Math.max(1, Math.abs(selectionRect.endY - selectionRect.startY));
       
-      // Take screenshot of the entire PDF container
       const screenshotCanvas = await html2canvas(pdfContainerRef.current, {
-        scale: 2, // Higher quality
+        scale: 2,
         backgroundColor: null,
         logging: false,
         useCORS: true
       });
       
-      // Crop to the selected area
       const croppedCanvas = document.createElement('canvas');
       croppedCanvas.width = width;
       croppedCanvas.height = height;
@@ -208,14 +197,13 @@ const PdfViewer = ({
       if (ctx) {
         ctx.drawImage(
           screenshotCanvas,
-          x, y, width, height,  // Source rectangle
-          0, 0, width, height   // Destination rectangle
+          x, y, width, height,
+          0, 0, width, height
         );
         
         const screenshotDataUrl = croppedCanvas.toDataURL('image/png');
         setCapturedScreenshotData(screenshotDataUrl);
         
-        // Store the screenshot in session storage for later use
         sessionStorage.setItem('screenshotData', screenshotDataUrl);
       }
     } catch (error) {
@@ -233,31 +221,25 @@ const PdfViewer = ({
   const handleExplainScreenshot = () => {
     if (!capturedScreenshotData) return;
     
-    // Request to open chat panel if it's closed
     if (onRequestOpenChat) {
       onRequestOpenChat();
     }
     
-    // If onExplainText is provided, pass screenshot context to parent
     if (onExplainText) {
-      onExplainText(`[Area screenshot from page ${currentPage}] Please explain what's shown in this selected area.`);
+      onExplainText(`[Screenshot from page ${currentPage}] Please explain what's shown in this selected area.`);
     }
     
     toast({
       title: "Screenshot sent",
-      description: "Screenshot sent to research assistant",
+      description: "Screenshot sent to research assistant for analysis",
     });
     
-    // Reset UI state
     setIsAreaSelectMode(false);
     setSelectionRect(null);
     setShowScreenshotTooltip(false);
-    setCapturedScreenshotData(null);
   };
 
-  // Text selection handler
   const handleTextSelection = () => {
-    // Don't handle text selection when in area select mode
     if (isAreaSelectMode) return;
     
     const selection = window.getSelection();
@@ -267,7 +249,6 @@ const PdfViewer = ({
       setSelectedText(text);
       
       try {
-        // Get position for the popover
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         
@@ -280,7 +261,6 @@ const PdfViewer = ({
         }
       } catch (error) {
         console.error("Error calculating popover position:", error);
-        // Fallback position
         if (pdfContainerRef.current) {
           const containerRect = pdfContainerRef.current.getBoundingClientRect();
           setPopoverPosition({ 
@@ -290,7 +270,6 @@ const PdfViewer = ({
         }
       }
     } else {
-      // Only clear when clicking outside of the tooltip
       setTimeout(() => {
         const newSelection = window.getSelection();
         if (!newSelection || !newSelection.toString().trim()) {
@@ -301,27 +280,22 @@ const PdfViewer = ({
     }
   };
 
-  // Handle explain button click
   const handleExplain = () => {
     if (selectedText) {
       console.log("Sending text to explain:", selectedText);
       
-      // Request to open chat panel if it's closed
       if (onRequestOpenChat) {
         console.log("Requesting to open chat panel");
         onRequestOpenChat();
       }
       
-      // If onExplainText is provided, pass the selected text to parent
       if (onExplainText) {
         onExplainText(selectedText);
       }
       
-      // Clear selection after sending
       setSelectedText("");
       setPopoverPosition(null);
       
-      // Also clear the browser's selection
       if (window.getSelection) {
         if (window.getSelection()?.empty) {
           window.getSelection()?.empty();
@@ -332,16 +306,14 @@ const PdfViewer = ({
     }
   };
 
-  // Full page screenshot capture handler
   const handleScreenshotCapture = async () => {
     if (!pdfContainerRef.current) return;
     
     try {
       setIsCapturingScreenshot(true);
       
-      // Take screenshot of the PDF container
       const screenshotCanvas = await html2canvas(pdfContainerRef.current, {
-        scale: 2, // Higher quality
+        scale: 2,
         backgroundColor: null,
         logging: false,
         useCORS: true
@@ -349,16 +321,13 @@ const PdfViewer = ({
       
       const screenshotDataUrl = screenshotCanvas.toDataURL('image/png');
       
-      // Request to open chat panel if it's closed
       if (onRequestOpenChat) {
         onRequestOpenChat();
       }
       
-      // If onExplainText is provided, pass screenshot context to parent
       if (onExplainText) {
         onExplainText(`[Full screenshot from page ${currentPage}] Please explain what's shown in this image.`);
         
-        // Store the screenshot in session storage
         sessionStorage.setItem('screenshotData', screenshotDataUrl);
       }
       
@@ -378,7 +347,6 @@ const PdfViewer = ({
     }
   };
 
-  // Search functionality
   const handleSearch = async () => {
     if (!searchQuery.trim() || !pdfData) return;
     
@@ -387,21 +355,18 @@ const PdfViewer = ({
     setCurrentSearchIndex(0);
     
     try {
-      // Simple text search in the rendered text layers
-      // In a real implementation, you would use the PDF.js findController
       const textLayers = document.querySelectorAll('.react-pdf__Page__textContent');
       const results: number[] = [];
       
       textLayers.forEach((layer, pageIndex) => {
         const pageText = layer.textContent.toLowerCase();
         if (pageText.includes(searchQuery.toLowerCase())) {
-          results.push(pageIndex + 1); // Store page numbers (1-indexed)
+          results.push(pageIndex + 1);
         }
       });
       
       if (results.length > 0) {
         setSearchResults(results);
-        // Navigate to the first result
         setCurrentPage(results[0]);
         toast({
           title: "Search Results",
@@ -450,7 +415,6 @@ const PdfViewer = ({
     setCurrentPage(searchResults[prevIndex]);
   };
 
-  // Toggle search input visibility
   const toggleSearch = () => {
     setIsSearching(!isSearching);
     if (!isSearching) {
@@ -460,7 +424,6 @@ const PdfViewer = ({
     }
   };
 
-  // Create array of page numbers for rendering
   const pageNumbers = Array.from(
     new Array(numPages),
     (_, index) => index + 1
@@ -470,7 +433,6 @@ const PdfViewer = ({
     <div className={`flex flex-col h-full ${className}`}>
       <div className="bg-muted/20 p-2 border-b flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          {/* Search functionality */}
           <div className="relative">
             <TooltipProvider delayDuration={300}>
               <Tooltip>
@@ -543,7 +505,6 @@ const PdfViewer = ({
             )}
           </div>
 
-          {/* Zoom controls */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -580,7 +541,6 @@ const PdfViewer = ({
             </Tooltip>
           </TooltipProvider>
 
-          {/* Area screenshot selection button */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -599,7 +559,6 @@ const PdfViewer = ({
             </Tooltip>
           </TooltipProvider>
 
-          {/* Full screenshot capture button */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -658,7 +617,6 @@ const PdfViewer = ({
                 }
               >
                 {pageNumbers.map(pageNumber => {
-                  // Calculate width to fit container while maintaining aspect ratio
                   const pageWidth = Math.min(containerWidth - 32, 800) * scale; 
                   
                   return (
@@ -698,7 +656,6 @@ const PdfViewer = ({
                 })}
               </Document>
 
-              {/* Selection overlay for area screenshot */}
               {isAreaSelectMode && selectionRect && (
                 <div 
                   ref={selectionOverlayRef} 
@@ -716,7 +673,6 @@ const PdfViewer = ({
                 />
               )}
 
-              {/* Explain tooltip for screenshots */}
               {showScreenshotTooltip && screenshotTooltipPosition && capturedScreenshotData && (
                 <div 
                   className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
@@ -738,7 +694,6 @@ const PdfViewer = ({
                 </div>
               )}
 
-              {/* Text selection explain tooltip */}
               {selectedText && popoverPosition && !isAreaSelectMode && (
                 <div 
                   className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
