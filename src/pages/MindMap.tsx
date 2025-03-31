@@ -119,17 +119,15 @@ const MindMap = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header with all icons */}
-      <div>
-        <Header 
-          showPdf={showPdf}
-          togglePdf={togglePdf}
-          pdfAvailable={pdfAvailable}
-          showChat={showChat}
-          toggleChat={toggleChat}
-          onExportMindMap={handleExportMindMap}
-          onOpenSummary={toggleSummary}
-        />
-      </div>
+      <Header 
+        showPdf={showPdf}
+        togglePdf={togglePdf}
+        pdfAvailable={pdfAvailable}
+        showChat={showChat}
+        toggleChat={toggleChat}
+        onExportMindMap={handleExportMindMap}
+        onOpenSummary={toggleSummary}
+      />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 overflow-hidden">

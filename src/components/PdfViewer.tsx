@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus, HelpCircle, Camera, Search, X } from "lucide-react";
+import { Minus, Plus, HelpCircle, Camera, Search, X, Crop } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -37,12 +37,15 @@ const PdfViewer = ({
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  const [isAreaSelectMode, setIsAreaSelectMode] = useState(false);
+  const [selectionRect, setSelectionRect] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<number[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const selectionOverlayRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -104,8 +107,140 @@ const PdfViewer = ({
     setScale(prevScale => Math.max(prevScale - 0.2, 0.5));
   };
 
-  // Text selection handler - Fixed with improved positioning
+  // Rectangle area selection for screenshots
+  const handleStartAreaSelection = () => {
+    setIsAreaSelectMode(true);
+    setSelectionRect(null);
+    document.body.style.cursor = 'crosshair';
+    toast({
+      title: "Selection Mode",
+      description: "Click and drag to select an area for screenshot"
+    });
+  };
+
+  const handleSelectionMouseDown = (e: React.MouseEvent) => {
+    if (!isAreaSelectMode || !pdfContainerRef.current) return;
+    
+    const containerRect = pdfContainerRef.current.getBoundingClientRect();
+    const startX = e.clientX - containerRect.left;
+    const startY = e.clientY - containerRect.top;
+    
+    setSelectionRect({
+      startX,
+      startY,
+      endX: startX,
+      endY: startY
+    });
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!pdfContainerRef.current) return;
+      
+      const containerRect = pdfContainerRef.current.getBoundingClientRect();
+      const currentX = moveEvent.clientX - containerRect.left;
+      const currentY = moveEvent.clientY - containerRect.top;
+      
+      setSelectionRect(prev => prev ? {
+        ...prev,
+        endX: currentX,
+        endY: currentY
+      } : null);
+    };
+
+    const handleMouseUp = async () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+      
+      if (selectionRect && 
+          Math.abs(selectionRect.endX - selectionRect.startX) > 20 && 
+          Math.abs(selectionRect.endY - selectionRect.startY) > 20) {
+        await captureSelectedArea();
+      } else {
+        toast({
+          title: "Selection too small",
+          description: "Please select a larger area",
+          variant: "destructive"
+        });
+      }
+      
+      setIsAreaSelectMode(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const captureSelectedArea = async () => {
+    if (!selectionRect || !pdfContainerRef.current) return;
+    
+    try {
+      setIsCapturingScreenshot(true);
+      
+      // Normalize the rectangle coordinates
+      const x = Math.min(selectionRect.startX, selectionRect.endX);
+      const y = Math.min(selectionRect.startY, selectionRect.endY);
+      const width = Math.abs(selectionRect.endX - selectionRect.startX);
+      const height = Math.abs(selectionRect.endY - selectionRect.startY);
+      
+      // Take screenshot of the entire PDF container
+      const screenshotCanvas = await html2canvas(pdfContainerRef.current, {
+        scale: 2, // Higher quality
+        backgroundColor: null,
+        logging: false,
+        useCORS: true
+      });
+      
+      // Crop to the selected area
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = width;
+      croppedCanvas.height = height;
+      const ctx = croppedCanvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.drawImage(
+          screenshotCanvas,
+          x, y, width, height,  // Source rectangle
+          0, 0, width, height   // Destination rectangle
+        );
+        
+        const screenshotDataUrl = croppedCanvas.toDataURL('image/png');
+        
+        // Request to open chat panel if it's closed
+        if (onRequestOpenChat) {
+          onRequestOpenChat();
+        }
+        
+        // If onExplainText is provided, pass screenshot context to parent
+        if (onExplainText) {
+          onExplainText(`[Area screenshot from page ${currentPage}] Please explain what's shown in this selected area.`);
+          
+          // Store the screenshot in session storage
+          sessionStorage.setItem('screenshotData', screenshotDataUrl);
+        }
+        
+        toast({
+          title: "Area screenshot captured",
+          description: "Screenshot sent to research assistant",
+        });
+      }
+    } catch (error) {
+      console.error("Error capturing area screenshot:", error);
+      toast({
+        title: "Screenshot Error",
+        description: "Failed to capture area screenshot",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCapturingScreenshot(false);
+      setSelectionRect(null);
+    }
+  };
+
+  // Text selection handler
   const handleTextSelection = () => {
+    // Don't handle text selection when in area select mode
+    if (isAreaSelectMode) return;
+    
     const selection = window.getSelection();
     
     if (selection && selection.toString().trim()) {
@@ -126,7 +261,7 @@ const PdfViewer = ({
         }
       } catch (error) {
         console.error("Error calculating popover position:", error);
-        // Fallback position near the middle of the container
+        // Fallback position
         if (pdfContainerRef.current) {
           const containerRect = pdfContainerRef.current.getBoundingClientRect();
           setPopoverPosition({ 
@@ -178,7 +313,7 @@ const PdfViewer = ({
     }
   };
 
-  // Screenshot capture handler
+  // Full page screenshot capture handler
   const handleScreenshotCapture = async () => {
     if (!pdfContainerRef.current) return;
     
@@ -202,10 +337,9 @@ const PdfViewer = ({
       
       // If onExplainText is provided, pass screenshot context to parent
       if (onExplainText) {
-        onExplainText(`[Screenshot from page ${currentPage}] Please explain what's shown in this image.`);
+        onExplainText(`[Full screenshot from page ${currentPage}] Please explain what's shown in this image.`);
         
-        // You would ideally have a more sophisticated way to pass the image data
-        // For now we'll save it in session storage as a simple approach
+        // Store the screenshot in session storage
         sessionStorage.setItem('screenshotData', screenshotDataUrl);
       }
       
@@ -427,7 +561,26 @@ const PdfViewer = ({
             </Tooltip>
           </TooltipProvider>
 
-          {/* Screenshot capture button */}
+          {/* Area screenshot selection button */}
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleStartAreaSelection}
+                  className="h-8 w-8 p-1 rounded hover:bg-muted text-muted-foreground"
+                  disabled={isCapturingScreenshot || !pdfData || isAreaSelectMode}
+                  aria-label="Select area for screenshot"
+                >
+                  <Crop className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Select area for screenshot</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* Full screenshot capture button */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -436,8 +589,8 @@ const PdfViewer = ({
                   size="icon"
                   onClick={handleScreenshotCapture}
                   className="h-8 w-8 p-1 rounded hover:bg-muted text-muted-foreground"
-                  disabled={isCapturingScreenshot || !pdfData}
-                  aria-label="Capture screenshot"
+                  disabled={isCapturingScreenshot || !pdfData || isAreaSelectMode}
+                  aria-label="Capture full screenshot"
                 >
                   {isCapturingScreenshot ? (
                     <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -446,7 +599,7 @@ const PdfViewer = ({
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Capture screenshot</TooltipContent>
+              <TooltipContent side="bottom">Capture full screenshot</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
@@ -460,7 +613,8 @@ const PdfViewer = ({
         <div 
           className="min-h-full p-4 flex flex-col items-center bg-muted/10 relative" 
           ref={pdfContainerRef}
-          onMouseUp={handleTextSelection}
+          onMouseDown={isAreaSelectMode ? handleSelectionMouseDown : undefined}
+          onMouseUp={!isAreaSelectMode ? handleTextSelection : undefined}
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-full w-full">
@@ -525,8 +679,26 @@ const PdfViewer = ({
                 })}
               </Document>
 
+              {/* Selection overlay for area screenshot */}
+              {isAreaSelectMode && selectionRect && (
+                <div 
+                  ref={selectionOverlayRef} 
+                  style={{
+                    position: 'absolute',
+                    border: '2px dashed #3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    left: Math.min(selectionRect.startX, selectionRect.endX) + 'px',
+                    top: Math.min(selectionRect.startY, selectionRect.endY) + 'px',
+                    width: Math.abs(selectionRect.endX - selectionRect.startX) + 'px',
+                    height: Math.abs(selectionRect.endY - selectionRect.startY) + 'px',
+                    pointerEvents: 'none',
+                    zIndex: 50,
+                  }}
+                />
+              )}
+
               {/* Explain tooltip that appears when text is selected */}
-              {selectedText && popoverPosition && (
+              {selectedText && popoverPosition && !isAreaSelectMode && (
                 <div 
                   className="absolute z-50 bg-background shadow-lg rounded-lg border p-2"
                   style={{ 
