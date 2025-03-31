@@ -20,6 +20,10 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+    // For larger documents, we'll extract key sections for better analysis
+    const processedText = processLargeDocument(pdfText);
+    console.log(`Processed text for Gemini analysis (length: ${processedText.length})`);
+    
     const prompt = `
     Analyze the following academic paper/document text and create a hierarchical mind map structure.
     Format the response as a JSON object with the following structure:
@@ -52,7 +56,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     Only include the JSON in your response, nothing else.
     
     Here's the document text to analyze:
-    ${pdfText.slice(0, 15000)}
+    ${processedText}
     `;
 
     console.log("Sending request to Gemini API for mindmap generation");
@@ -92,6 +96,62 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
   }
 };
 
+// Helper function to process large documents for optimal analysis
+function processLargeDocument(text: string): string {
+  // For very large documents, we need a smarter approach
+  if (text.length > 30000) {
+    console.log("Document is very large, using advanced processing");
+    
+    // Extract potential section headers using regex patterns
+    const headingPattern = /\n([A-Z][A-Za-z\s]{3,50})\n/g;
+    const potentialHeadings: string[] = [];
+    let match;
+    
+    // Find potential headings
+    while ((match = headingPattern.exec(text)) !== null) {
+      potentialHeadings.push(match[1]);
+    }
+    
+    // Construct a representative sample
+    const intro = text.slice(0, 5000); // First chunk (abstract, intro)
+    
+    let sampleText = intro + "\n\n";
+    
+    // Add sections based on potential headings
+    if (potentialHeadings.length > 0) {
+      for (let i = 0; i < Math.min(potentialHeadings.length, 10); i++) {
+        const heading = potentialHeadings[i];
+        // Get text following this heading (up to 1000 chars)
+        const sectionStart = text.indexOf(heading);
+        if (sectionStart > -1) {
+          const section = text.slice(sectionStart, sectionStart + 2000);
+          sampleText += section + "\n\n";
+        }
+      }
+    }
+    
+    // Add conclusion (often at the end)
+    const conclusion = text.slice(text.length - 5000);
+    sampleText += conclusion;
+    
+    return sampleText;
+  }
+  
+  // For medium-sized documents
+  if (text.length > 15000) {
+    console.log("Document is medium-sized, using simplified processing");
+    // Take beginning (abstract/intro), some middle content, and end (conclusion)
+    const beginning = text.slice(0, 5000);
+    const middle = text.slice(Math.floor(text.length / 2) - 2500, Math.floor(text.length / 2) + 2500);
+    const end = text.slice(text.length - 5000);
+    
+    return beginning + "\n\n[...]\n\n" + middle + "\n\n[...]\n\n" + end;
+  }
+  
+  // For smaller documents, use the text as is
+  return text;
+}
+
 // New function to chat with Gemini about PDF content
 export const chatWithGeminiAboutPdf = async (message: string): Promise<string> => {
   try {
@@ -105,13 +165,16 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
+    // Process text to get a representative sample if it's too large
+    const processedText = pdfText.length > 30000 ? processLargeDocument(pdfText) : pdfText.slice(0, 15000);
+    
     // Use a history array to maintain context
     const prompt = `
     You are an AI research assistant chatting with a user about a PDF document. 
     The user has the following question or request: "${message}"
     
     Here's an excerpt from the document they're referring to (it may be truncated):
-    ${pdfText.slice(0, 15000)}
+    ${processedText}
     
     Provide a helpful, well-structured response based solely on the document content.
     Structure your answer with:
@@ -197,6 +260,9 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
+    // Process text for larger documents
+    const processedText = processLargeDocument(pdfText);
+    
     const prompt = `
     Analyze this academic document and create a structured summary with the following sections:
     
@@ -212,7 +278,7 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     If the document doesn't contain information for a specific section, provide a brief note explaining this.
     
     Document text:
-    ${pdfText.slice(0, 15000)}
+    ${processedText}
     `;
     
     const result = await model.generateContent(prompt);
@@ -253,6 +319,9 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
+    // Process text for larger documents
+    const processedText = processLargeDocument(pdfText);
+    
     const prompt = `
     Create a simple, valid Mermaid flowchart based on this document text.
     
@@ -278,7 +347,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
       D --> E
     
     Here's the document text:
-    ${pdfText.slice(0, 8000)}
+    ${processedText}
     
     Generate ONLY valid Mermaid flowchart code, nothing else.
     `;
@@ -423,6 +492,9 @@ export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
+    // Process text for larger documents
+    const processedText = processLargeDocument(pdfText);
+    
     const prompt = `
     Create a valid Mermaid sequence diagram based on this research document text. 
     The sequence diagram should visualize the methodology, experimental procedures, or workflow described in the document.
@@ -451,7 +523,7 @@ export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
       Note right of Researcher: Analyze data
     
     Here's the document text:
-    ${pdfText.slice(0, 8000)}
+    ${processedText}
     
     Generate ONLY valid Mermaid sequence diagram code, nothing else.
     `;

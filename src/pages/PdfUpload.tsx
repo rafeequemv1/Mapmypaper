@@ -3,25 +3,30 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, Link } from "react-router-dom";
-import { Sparkles, Upload, Brain, ChevronRight, LogOut } from "lucide-react";
+import { Sparkles, Upload, Brain, ChevronRight, LogOut, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+
+const MAX_PDF_SIZE_MB = 50; // Increased maximum PDF size
 
 const PdfUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMessage(null);
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Check file size - limit to 20MB
-      if (file.size > 20 * 1024 * 1024) {
+      // Check file size - increased limit
+      if (file.size > MAX_PDF_SIZE_MB * 1024 * 1024) {
+        setErrorMessage(`File is too large. Maximum size is ${MAX_PDF_SIZE_MB}MB.`);
         toast({
           title: "File Too Large",
-          description: "Please select a PDF smaller than 20MB.",
+          description: `Please select a PDF smaller than ${MAX_PDF_SIZE_MB}MB.`,
           variant: "destructive"
         });
         return;
@@ -36,6 +41,7 @@ const PdfUpload = () => {
 
     try {
       setIsUploading(true);
+      setErrorMessage(null);
       
       // Store PDF file name in sessionStorage
       sessionStorage.setItem("pdfFileName", selectedFile.name);
@@ -44,98 +50,18 @@ const PdfUpload = () => {
       const pdfUrl = URL.createObjectURL(selectedFile);
       sessionStorage.setItem("pdfUrl", pdfUrl);
       
-      // Extract text using a smaller chunk approach
-      const reader = new FileReader();
-      
-      reader.onload = async (event) => {
-        if (event.target && event.target.result) {
-          try {
-            // Instead of storing the full text, we'll extract key portions
-            // and process them in chunks
-            const fullText = event.target.result as string;
-            console.log("PDF text extracted, length:", fullText.length);
-            
-            // Function to extract small chunks of text and combine
-            const processTextInChunks = (text: string, chunkSize = 3000, maxChunks = 5) => {
-              // Take first paragraph (usually abstract or intro)
-              const firstPortion = text.slice(0, chunkSize);
-              
-              // Take a few samples from throughout the document
-              const samples = [];
-              const textLength = text.length;
-              
-              for (let i = 1; i < maxChunks; i++) {
-                const startPos = Math.floor((textLength / maxChunks) * i);
-                samples.push(text.slice(startPos, startPos + chunkSize));
-              }
-              
-              return [firstPortion, ...samples].join("\n\n[...]\n\n");
-            };
-            
-            // Process text in manageable chunks
-            const processedText = processTextInChunks(fullText);
-            console.log("Processed text length:", processedText.length);
-            
-            // Store the processed text
-            try {
-              sessionStorage.setItem("pdfText", processedText);
-              console.log("PDF text stored in sessionStorage");
-              
-              // Add a brief delay to ensure storage is complete before navigating
-              setTimeout(() => {
-                console.log("Navigating to /mindmap");
-                navigate("/mindmap");
-              }, 200);
-              
-            } catch (storageError) {
-              console.error("Storage error:", storageError);
-              // Fallback to even smaller text
-              try {
-                // Take just the beginning for minimal processing
-                const minimalText = fullText.slice(0, 10000);
-                sessionStorage.setItem("pdfText", minimalText);
-                console.log("Minimal PDF text stored in sessionStorage");
-                
-                setTimeout(() => {
-                  console.log("Navigating to /mindmap with minimal text");
-                  navigate("/mindmap");
-                }, 200);
-                
-              } catch (finalError) {
-                toast({
-                  title: "PDF Too Complex",
-                  description: "This PDF contains too much text. Try a simpler document or extract key sections manually.",
-                  variant: "destructive"
-                });
-                setIsUploading(false);
-              }
-            }
-          } catch (error) {
-            console.error("PDF processing error:", error);
-            toast({
-              title: "Processing Error",
-              description: "Failed to process the PDF. Please try a different file.",
-              variant: "destructive"
-            });
-            setIsUploading(false);
-          }
-        }
-      };
-      
-      reader.onerror = () => {
-        toast({
-          title: "Error",
-          description: "Failed to read the PDF file.",
-          variant: "destructive"
-        });
-        setIsUploading(false);
-      };
-      
-      // Read as text for better memory efficiency
-      reader.readAsText(selectedFile);
-      
+      // For large PDFs, use a more efficient text extraction approach
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        console.log("Large PDF detected, using chunked processing");
+        await processLargePdf(selectedFile);
+      } else {
+        // Standard processing for smaller PDFs
+        await processStandardPdf(selectedFile);
+      }
+
     } catch (error) {
       console.error("Error uploading file:", error);
+      setErrorMessage("There was a problem processing your PDF. Please try again with a different file.");
       toast({
         title: "Upload Failed",
         description: "There was a problem processing your PDF.",
@@ -143,6 +69,153 @@ const PdfUpload = () => {
       });
       setIsUploading(false);
     }
+  };
+
+  // Process large PDFs in chunks to avoid memory issues
+  const processLargePdf = async (file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        try {
+          if (event.target && event.target.result) {
+            const fullText = event.target.result as string;
+            console.log("PDF text extracted, length:", fullText.length);
+            
+            // Process text in a way that avoids memory issues
+            const extractedText = extractRepresentativeContent(fullText);
+            console.log("Extracted representative content, length:", extractedText.length);
+            
+            // Store the processed text
+            try {
+              sessionStorage.setItem("pdfText", extractedText);
+              console.log("PDF text stored in sessionStorage");
+              
+              // Navigate to mindmap page
+              setTimeout(() => {
+                console.log("Navigating to /mindmap");
+                navigate("/mindmap");
+                resolve();
+              }, 500);
+              
+            } catch (storageError) {
+              console.error("Storage error:", storageError);
+              const reducedText = extractedText.slice(0, Math.min(extractedText.length, 100000));
+              
+              try {
+                sessionStorage.setItem("pdfText", reducedText);
+                console.log("Reduced PDF text stored in sessionStorage");
+                
+                setTimeout(() => {
+                  console.log("Navigating to /mindmap with reduced text");
+                  navigate("/mindmap");
+                  resolve();
+                }, 500);
+              } catch (finalError) {
+                reject(new Error("Document is too complex to process. Please try a different PDF."));
+              }
+            }
+          } else {
+            reject(new Error("Failed to extract text from PDF."));
+          }
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error("Failed to read the PDF file."));
+      };
+      
+      // Read as text
+      reader.readAsText(file);
+    });
+  };
+
+  // Standard processing for normal-sized PDFs
+  const processStandardPdf = async (file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        if (event.target && event.target.result) {
+          try {
+            const fullText = event.target.result as string;
+            console.log("PDF text extracted, length:", fullText.length);
+            
+            try {
+              // Store the full text for smaller PDFs
+              sessionStorage.setItem("pdfText", fullText);
+              console.log("PDF text stored in sessionStorage");
+              
+              // Navigate to mindmap page
+              setTimeout(() => {
+                console.log("Navigating to /mindmap");
+                navigate("/mindmap");
+                resolve();
+              }, 500);
+              
+            } catch (storageError) {
+              console.error("Storage error:", storageError);
+              // Fallback to reduced text
+              const reducedText = extractRepresentativeContent(fullText);
+              
+              try {
+                sessionStorage.setItem("pdfText", reducedText);
+                console.log("Reduced PDF text stored in sessionStorage");
+                
+                setTimeout(() => {
+                  console.log("Navigating to /mindmap");
+                  navigate("/mindmap");
+                  resolve();
+                }, 500);
+              } catch (finalError) {
+                reject(new Error("PDF is too complex. Try a different document."));
+              }
+            }
+          } catch (error) {
+            reject(error);
+          }
+        } else {
+          reject(new Error("Failed to extract text from PDF."));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error("Failed to read the PDF file."));
+      };
+      
+      // Read as text
+      reader.readAsText(file);
+    });
+  };
+
+  // Extract representative content from large text
+  const extractRepresentativeContent = (text: string): string => {
+    if (text.length <= 100000) {
+      return text; // Return as is if not very large
+    }
+    
+    console.log("Text is very large, extracting representative sections");
+    
+    // Take beginning (usually abstract/introduction)
+    const beginning = text.slice(0, 15000);
+    
+    // Take samples from throughout the document at regular intervals
+    const samples = [];
+    const numSamples = 5;
+    const textLength = text.length;
+    
+    for (let i = 1; i <= numSamples; i++) {
+      const startPos = Math.floor((textLength / (numSamples + 1)) * i);
+      samples.push(text.slice(startPos, startPos + 10000));
+    }
+    
+    // Take end (usually conclusion, references)
+    const end = text.slice(Math.max(0, text.length - 15000));
+    
+    // Combine all parts
+    return beginning + samples.join("\n\n[...]\n\n") + "\n\n[...]\n\n" + end;
   };
 
   const handleLogout = async () => {
@@ -191,18 +264,26 @@ const PdfUpload = () => {
               Visualize complex academic content as interactive mind maps. Boost comprehension, increase retention, and save valuable research time.
             </p>
             
-            {/* Upload Section - Moved to the top as requested */}
+            {/* Upload Section */}
             <section id="upload" className="bg-gray-50 rounded-lg p-8 shadow-sm">
               <div className="max-w-md mx-auto space-y-6">
                 <h2 className="text-2xl font-semibold text-center">Upload Your Research Paper</h2>
+                <p className="text-center text-gray-600">
+                  Now supporting PDFs up to {MAX_PDF_SIZE_MB}MB
+                </p>
+                
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
                     <label
                       htmlFor="pdf-upload"
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+                      className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed ${errorMessage ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-gray-50'} rounded-lg cursor-pointer hover:bg-gray-100 transition-colors`}
                     >
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                        {errorMessage ? (
+                          <AlertCircle className="w-8 h-8 mb-2 text-red-500" />
+                        ) : (
+                          <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                        )}
                         <p className="mb-1 text-sm text-gray-600">
                           <span className="font-semibold">Click to upload</span> or drag and drop
                         </p>
@@ -216,7 +297,12 @@ const PdfUpload = () => {
                         onChange={handleFileChange}
                       />
                     </label>
-                    {selectedFile && (
+                    {errorMessage && (
+                      <p className="text-sm text-red-600">
+                        {errorMessage}
+                      </p>
+                    )}
+                    {selectedFile && !errorMessage && (
                       <p className="text-sm text-gray-600">
                         Selected: {selectedFile.name}
                       </p>
@@ -224,7 +310,7 @@ const PdfUpload = () => {
                   </div>
                   <Button
                     type="submit"
-                    disabled={!selectedFile || isUploading}
+                    disabled={!selectedFile || isUploading || !!errorMessage}
                     className="w-full bg-black text-white hover:bg-gray-800"
                   >
                     {isUploading ? (
