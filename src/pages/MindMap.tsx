@@ -242,7 +242,7 @@ const MindMap = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `mindmap.${type}`;
+      a.download = `mapmypaper.${type}`;
       document.body.appendChild(a);
       a.click();
       
@@ -361,6 +361,12 @@ const MindMap = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black mx-auto mb-4"></div>
             <h2 className="text-xl font-semibold mb-2">Generating Mind Map</h2>
             <p className="text-gray-600">Analyzing your PDF and creating a visual knowledge map...</p>
+            <button 
+              className="mt-6 text-blue-600 hover:text-blue-800 underline text-sm"
+              onClick={() => setIsGeneratingMindMap(false)}
+            >
+              Cancel and show default map
+            </button>
           </div>
         </div>
       ) : (

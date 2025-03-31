@@ -15,7 +15,7 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, RefreshCw } from "lucide-react";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -55,9 +55,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       <DialogContent className={`${isFullscreen ? 'fixed inset-0 w-full h-full max-w-none rounded-none p-0' : 'max-w-[90vw] w-[95vw] h-[90vh]'} flex flex-col`}>
         {!isFullscreen && (
           <DialogHeader>
-            <DialogTitle>Flowchart Editor</DialogTitle>
+            <DialogTitle>MapMyPaper Flowchart</DialogTitle>
             <DialogDescription>
-              Create and edit flowcharts based on your PDF content.
+              Automatically generated flowchart based on your PDF content.
             </DialogDescription>
           </DialogHeader>
         )}
@@ -75,6 +75,17 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
                 <SelectItem value="advanced">Advanced</SelectItem>
               </SelectContent>
             </Select>
+            
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => generateFlowchart('detailed')} 
+              disabled={isGenerating}
+              className="ml-2"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
+              Regenerate
+            </Button>
           </div>
           
           <Button
@@ -107,6 +118,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               code={code}
               error={error}
               isGenerating={isGenerating}
+              ref={previewRef}
             />
           </div>
         </div>

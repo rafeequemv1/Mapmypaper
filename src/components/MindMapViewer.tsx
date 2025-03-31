@@ -4,6 +4,7 @@ import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -49,8 +50,10 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [hasAttemptedInitialization, setHasAttemptedInitialization] = useState(false);
 
   // Check for dark mode
   useEffect(() => {
@@ -68,10 +71,66 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  useEffect(() => {
-    if (isMapGenerated && containerRef.current && !mindMapRef.current) {
-      // Initialize the mind map only once when it's generated
-      console.log("Initializing mind map...");
+  // Initialize mind map
+  const initializeMindMap = useCallback(() => {
+    if (!containerRef.current || mindMapRef.current) return;
+    
+    setIsLoading(true);
+    console.log("Initializing mind map...");
+    
+    // Get mind map data
+    let data: MindElixirData | null = null;
+    
+    try {
+      // First try to get the data from sessionStorage
+      const savedData = sessionStorage.getItem('mindMapData');
+      console.log("Retrieved mind map data from sessionStorage:", savedData ? "yes" : "no");
+      
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        console.log("Successfully parsed mind map data");
+        
+        // Apply line breaks to node topics
+        const formatNodes = (node: any) => {
+          if (node.topic) {
+            node.topic = formatNodeText(node.topic);
+          }
+          
+          if (node.children && node.children.length > 0) {
+            node.children.forEach(formatNodes);
+          }
+          
+          return node;
+        };
+        
+        // Format the root node and all children
+        if (parsedData.nodeData) {
+          formatNodes(parsedData.nodeData);
+          data = parsedData;
+        } else {
+          console.error("Invalid mind map data structure:", parsedData);
+          throw new Error("Invalid mind map data structure");
+        }
+      } else {
+        console.log("No saved mind map data found, using default");
+        // Use default mind map
+        data = {
+          nodeData: {
+            id: 'root',
+            topic: 'MapMyPaper',
+            children: [
+              {
+                id: 'bd1',
+                topic: 'No mindmap data',
+                direction: 0 as const,
+                children: [
+                  { id: 'bd1-1', topic: 'Please generate a mindmap first' },
+                ]
+              }
+            ]
+          }
+        };
+      }
       
       const options = {
         el: containerRef.current,
@@ -137,121 +196,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Install the node menu plugin before init
       mind.install(nodeMenu);
       
-      // Get the generated mind map data from sessionStorage or use a default structure
-      let data: MindElixirData;
-      
-      try {
-        // First try to get the data from sessionStorage
-        const savedData = sessionStorage.getItem('mindMapData');
-        console.log("Retrieved mind map data from sessionStorage:", savedData ? "yes" : "no");
-        
-        if (savedData) {
-          const parsedData = JSON.parse(savedData);
-          console.log("Successfully parsed mind map data");
-          
-          // Apply line breaks to node topics
-          const formatNodes = (node: any) => {
-            if (node.topic) {
-              node.topic = formatNodeText(node.topic);
-            }
-            
-            if (node.children && node.children.length > 0) {
-              node.children.forEach(formatNodes);
-            }
-            
-            return node;
-          };
-          
-          // Format the root node and all children
-          if (parsedData.nodeData) {
-            formatNodes(parsedData.nodeData);
-            data = parsedData;
-          } else {
-            console.error("Invalid mind map data structure:", parsedData);
-            throw new Error("Invalid mind map data structure");
-          }
-        } else {
-          console.log("No saved mind map data found, using default");
-          // Default mind map with black and white theme
-          data = {
-            nodeData: {
-              id: 'root',
-              topic: 'Mind\nMapping',
-              children: [
-                {
-                  id: 'bd1',
-                  topic: 'Organization',
-                  direction: 0 as const,
-                  children: [
-                    { id: 'bd1-1', topic: 'Plan' },
-                    { id: 'bd1-2', topic: 'Study' },
-                    { id: 'bd1-3', topic: 'System' },
-                    { id: 'bd1-4', topic: 'Breaks' }
-                  ]
-                },
-                {
-                  id: 'bd2',
-                  topic: 'Learning\nStyle',
-                  direction: 0 as const,
-                  children: [
-                    { id: 'bd2-1', topic: 'Read' },
-                    { id: 'bd2-2', topic: 'Listen' },
-                    { id: 'bd2-3', topic: 'Summarize' }
-                  ]
-                },
-                {
-                  id: 'bd3',
-                  topic: 'Habits',
-                  direction: 0 as const,
-                  children: []
-                },
-                {
-                  id: 'bd4',
-                  topic: 'Goals',
-                  direction: 1 as const,
-                  children: [
-                    { id: 'bd4-1', topic: 'Research' },
-                    { id: 'bd4-2', topic: 'Lecture' },
-                    { id: 'bd4-3', topic: 'Conclusions' }
-                  ]
-                },
-                {
-                  id: 'bd5',
-                  topic: 'Motivation',
-                  direction: 1 as const,
-                  children: [
-                    { id: 'bd5-1', topic: 'Tips' },
-                    { id: 'bd5-2', topic: 'Roadmap' }
-                  ]
-                },
-                {
-                  id: 'bd6',
-                  topic: 'Review',
-                  direction: 1 as const,
-                  children: [
-                    { id: 'bd6-1', topic: 'Notes' },
-                    { id: 'bd6-2', topic: 'Method' },
-                    { id: 'bd6-3', topic: 'Discuss' }
-                  ]
-                }
-              ]
-            }
-          };
-        }
-      } catch (error) {
-        console.error("Error parsing mind map data:", error);
-        // Use default data on error
-        data = {
-          nodeData: {
-            id: 'root',
-            topic: 'Error\nLoading\nMind Map',
-            children: [
-              { id: 'error1', topic: 'There was an error loading the mind map data', direction: 0 as const }
-            ]
-          }
-        };
-      }
-
       // Initialize the mind map with data
       console.log("Initializing mind map with data");
       mind.init(data);
@@ -260,12 +204,14 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       (window as any).mind = mind;
       
       // Add custom styling to connection lines - Updated for black and white theme
-      const linkElements = containerRef.current.querySelectorAll('.fne-link');
-      linkElements.forEach((link: Element) => {
-        const linkElement = link as SVGElement;
-        linkElement.setAttribute('stroke-width', '2.5');
-        linkElement.setAttribute('stroke', isDarkMode ? '#888' : '#555');
-      });
+      setTimeout(() => {
+        const linkElements = containerRef.current?.querySelectorAll('.fne-link');
+        linkElements?.forEach((link: Element) => {
+          const linkElement = link as SVGElement;
+          linkElement.setAttribute('stroke-width', '2.5');
+          linkElement.setAttribute('stroke', isDarkMode ? '#888' : '#555');
+        });
+      }, 100);
       
       mindMapRef.current = mind;
       
@@ -281,30 +227,73 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         duration: 5000,
       });
       
-      // Set a timeout to ensure the mind map is rendered before scaling
-      setTimeout(() => {
-        setIsReady(true);
-      }, 300);
+      setIsReady(true);
+      setIsLoading(false);
+      
+    } catch (error) {
+      console.error("Error initializing mind map:", error);
+      toast({
+        title: "Mind Map Error",
+        description: "Failed to initialize mind map. Please try refreshing the page.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, isDarkMode]);
+  }, [isDarkMode, onMindMapReady, toast]);
+
+  useEffect(() => {
+    if (isMapGenerated && !hasAttemptedInitialization) {
+      setHasAttemptedInitialization(true);
+      
+      // Delay initialization slightly to ensure DOM is ready
+      const timer = setTimeout(() => {
+        initializeMindMap();
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMapGenerated, hasAttemptedInitialization, initializeMindMap]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (mindMapRef.current) {
+        // Clean up mind map instance if needed
+        mindMapRef.current = null;
+      }
+    };
+  }, []);
 
   if (!isMapGenerated) {
-    return null;
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-50">
+        <p className="text-gray-500">Please upload a PDF to generate a mind map.</p>
+      </div>
+    );
   }
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
-      <div className="w-full h-full overflow-hidden relative">
-        <div 
-          ref={containerRef} 
-          className="w-full h-full" 
-          style={{ 
-            background: isDarkMode 
-              ? 'linear-gradient(90deg, #111 0%, #141414 100%)' 
-              : 'linear-gradient(90deg, #f9f9f9 0%, #f3f3f3 100%)',
-          }}
-        />
-      </div>
+      {isLoading ? (
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-700">Initializing mind map...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="w-full h-full overflow-hidden relative">
+          <div 
+            ref={containerRef} 
+            className="w-full h-full" 
+            style={{ 
+              background: isDarkMode 
+                ? 'linear-gradient(90deg, #111 0%, #141414 100%)' 
+                : 'linear-gradient(90deg, #f9f9f9 0%, #f3f3f3 100%)',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -39,6 +39,13 @@ export const generateMindMapFromText = async (text: string, detailLevel: 'basic'
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
+    // Check if we have valid text to analyze
+    if (!text || text.trim().length < 100) {
+      throw new Error("Not enough text to analyze. Please check the PDF extraction.");
+    }
+
+    console.log(`Analyzing PDF text for mind map generation. Text length: ${text.length}, Detail level: ${detailLevel}`);
+
     // Tailor the prompt based on detail level
     let detailInstructions = '';
     if (detailLevel === 'basic') {
@@ -137,9 +144,11 @@ export const generateFlowchartFromPdf = async (detailLevel: 'basic' | 'detailed'
     // Get the PDF text from session storage
     const pdfText = sessionStorage.getItem('pdfText');
     
-    if (!pdfText) {
-      throw new Error("No PDF text found. Please upload a PDF first.");
+    if (!pdfText || pdfText.trim().length < 100) {
+      throw new Error("Not enough text to analyze. Please check the PDF extraction.");
     }
+
+    console.log(`Analyzing PDF text for flowchart generation. Text length: ${pdfText.length}, Detail level: ${detailLevel}`);
 
     // Customize instructions based on detail level
     let detailInstructions = '';
@@ -188,7 +197,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'basic' | 'detailed'
     const mermaidMatch = flowchartText.match(/```(?:mermaid)?\s*([\s\S]*?)```/);
     const cleanedFlowchart = mermaidMatch ? mermaidMatch[1].trim() : flowchartText.trim();
     
-    console.log("Flowchart generated successfully");
+    console.log("Flowchart generated successfully, length:", cleanedFlowchart.length);
     
     return cleanedFlowchart;
   } catch (error) {
@@ -430,3 +439,4 @@ export const generateStructuredSummary = async () => {
     throw new Error("Failed to generate document summary");
   }
 };
+
