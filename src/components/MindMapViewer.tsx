@@ -94,25 +94,38 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
       // Initialize the mind map only once when it's generated
       
-      // Define a custom theme based on the Catppuccin Theme
-      const customTheme = {
-        name: 'Colorful',
+      // Define a enhanced colorful theme based on the Catppuccin Theme
+      const colorfulTheme = {
+        name: 'Catppuccin',
+        type: 'light',
         background: '#F9F7FF',
         color: '#8B5CF6',
+        // Enhanced palette with vibrant complementary colors
         palette: [
           '#dd7878', '#ea76cb', '#8839ef', '#e64553', 
           '#fe640b', '#df8e1d', '#40a02b', '#209fb5', 
-          '#1e66f5', '#7287fd'
+          '#1e66f5', '#7287fd', '#ea81bb', '#fea45c'
         ],
         cssVar: {
           '--main-color': '#333',
-          '--main-bgcolor': '#fff',
+          '--main-bgcolor': '#F9F7FF',
           '--color': '#454545',
           '--bgcolor': '#f5f5f7',
           '--panel-color': '#444446',
           '--panel-bgcolor': '#ffffff',
           '--panel-border-color': '#eaeaea',
-        },
+          '--selected-color': '#8B5CF6',
+          '--selected-bgcolor': '#E5DEFF',
+          '--line-color': '#8B5CF6',
+          '--line-width': '3px',
+          '--selected-line-color': '#F97316',
+          '--selected-line-width': '3.5px',
+          '--root-color': '#8B5CF6',
+          '--root-bgcolor': '#E5DEFF',
+          '--root-border-color': '#8B5CF6',
+          '--box-shadow': '0 3px 10px rgba(0,0,0,0.05)',
+          '--hover-box-shadow': '0 5px 15px rgba(0,0,0,0.08)',
+        }
       };
       
       const options = {
@@ -126,14 +139,28 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           create: true,
           edit: true,
         },
-        theme: customTheme,
-        nodeMenu: true, // Explicitly enable the nodeMenu
+        theme: colorfulTheme, // Use the enhanced colorful theme
+        nodeMenu: true,
         autoFit: true,
         // Add custom style to nodes based on their level and content
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
-          // Get node topic and use it to generate consistent color
-          const topic = node.topic || '';
-          const baseColor = stringToColor(topic);
+          // Get branch color from palette based on branch position
+          const getBranchColor = (node: any) => {
+            if (!node || !node.id) return colorfulTheme.palette[0];
+            
+            // If it's a root node, use the root color from theme
+            if (node.id === 'root') return colorfulTheme.cssVar['--root-color'];
+            
+            // Find branch position for consistent coloring
+            const branchId = node.id.split('-')[0];
+            const branchIndex = parseInt(branchId.replace(/\D/g, '')) || 0;
+            
+            // Get color from palette based on branch index
+            return colorfulTheme.palette[branchIndex % colorfulTheme.palette.length];
+          };
+          
+          // Determine color based on branch and node level
+          const branchColor = getBranchColor(node);
           
           // Lighten color for background
           const lightenColor = (color: string, percent: number) => {
@@ -145,15 +172,16 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             return `#${(1 << 24 | (R < 255 ? R < 1 ? 0 : R : 255) << 16 | (G < 255 ? G < 1 ? 0 : G : 255) << 8 | (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)}`;
           };
           
-          const bgColor = lightenColor(baseColor, 85);
+          // Calculate a lighter variant for background
+          const bgColor = lightenColor(branchColor, 85);
           
           // Apply colorful styling to nodes
-          tpc.style.backgroundColor = level === 0 ? '#E5DEFF' : bgColor;
-          tpc.style.color = level === 0 ? '#8B5CF6' : baseColor;
-          tpc.style.border = `2px solid ${level === 0 ? '#8B5CF6' : baseColor}`;
+          tpc.style.backgroundColor = level === 0 ? colorfulTheme.cssVar['--root-bgcolor'] : bgColor;
+          tpc.style.color = level === 0 ? colorfulTheme.cssVar['--root-color'] : branchColor;
+          tpc.style.border = `2px solid ${level === 0 ? colorfulTheme.cssVar['--root-border-color'] : branchColor}`;
           tpc.style.borderRadius = '12px';
           tpc.style.padding = '10px 16px';
-          tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
+          tpc.style.boxShadow = colorfulTheme.cssVar['--box-shadow'];
           tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
           tpc.style.fontSize = level === 0 ? '20px' : '16px';
           tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
@@ -199,16 +227,16 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           };
           
           // Add tags to nodes
-          addTags(topic, tpc);
+          addTags(node.topic || "", tpc);
           
           // Add hover effect
           tpc.addEventListener('mouseover', () => {
-            tpc.style.boxShadow = '0 5px 15px rgba(0,0,0,0.08)';
+            tpc.style.boxShadow = colorfulTheme.cssVar['--hover-box-shadow'];
             tpc.style.transform = 'translateY(-2px)';
           });
           
           tpc.addEventListener('mouseout', () => {
-            tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
+            tpc.style.boxShadow = colorfulTheme.cssVar['--box-shadow'];
             tpc.style.transform = 'translateY(0)';
           });
         }
@@ -354,44 +382,54 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Add custom styling to connection lines with arrows
-      const linkElements = containerRef.current.querySelectorAll('.fne-link');
-      linkElements.forEach((link: Element) => {
-        const linkElement = link as SVGElement;
-        linkElement.setAttribute('stroke-width', '2.5');
-        linkElement.setAttribute('stroke', '#8B5CF6');
-        linkElement.setAttribute('marker-end', 'url(#arrowhead)');
-      });
-      
-      // Add arrowhead definition to SVG
-      const svg = containerRef.current.querySelector('svg');
-      if (svg) {
-        // Create a defs element if it doesn't exist
-        let defs = svg.querySelector('defs');
-        if (!defs) {
-          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-          svg.appendChild(defs);
+      // Enhance connection lines with arrows and colors from theme
+      const enhanceConnectionLines = () => {
+        // Add arrowhead definition to SVG
+        const svg = containerRef.current?.querySelector('svg');
+        if (svg) {
+          // Create a defs element if it doesn't exist
+          let defs = svg.querySelector('defs');
+          if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            svg.appendChild(defs);
+          }
+          
+          // Create arrowhead marker
+          const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+          marker.setAttribute('id', 'arrowhead');
+          marker.setAttribute('viewBox', '0 0 10 10');
+          marker.setAttribute('refX', '6');
+          marker.setAttribute('refY', '5');
+          marker.setAttribute('markerWidth', '6');
+          marker.setAttribute('markerHeight', '6');
+          marker.setAttribute('orient', 'auto-start-reverse');
+          
+          // Create arrowhead path
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+          path.setAttribute('fill', colorfulTheme.cssVar['--line-color']);
+          
+          // Add path to marker and marker to defs
+          marker.appendChild(path);
+          defs.appendChild(marker);
         }
         
-        // Create arrowhead marker
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-        marker.setAttribute('id', 'arrowhead');
-        marker.setAttribute('viewBox', '0 0 10 10');
-        marker.setAttribute('refX', '5');
-        marker.setAttribute('refY', '5');
-        marker.setAttribute('markerWidth', '6');
-        marker.setAttribute('markerHeight', '6');
-        marker.setAttribute('orient', 'auto-start-reverse');
-        
-        // Create arrowhead path
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
-        path.setAttribute('fill', '#8B5CF6');
-        
-        // Add path to marker and marker to defs
-        marker.appendChild(path);
-        defs.appendChild(marker);
-      }
+        // Style all connection lines
+        const linkElements = containerRef.current?.querySelectorAll('.fne-link');
+        if (linkElements) {
+          linkElements.forEach((link: Element) => {
+            const linkElement = link as SVGElement;
+            linkElement.setAttribute('stroke-width', colorfulTheme.cssVar['--line-width'].replace('px', ''));
+            linkElement.setAttribute('stroke', colorfulTheme.cssVar['--line-color']);
+            linkElement.setAttribute('marker-end', 'url(#arrowhead)');
+          });
+        }
+      };
+      
+      // Apply enhanced connections after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        enhanceConnectionLines();
+      }, 100);
       
       mindMapRef.current = mind;
       
