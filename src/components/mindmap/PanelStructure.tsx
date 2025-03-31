@@ -23,51 +23,42 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   explainText,
   onExplainText
 }) => {
-  // Calculate panel sizes with increased PDF panel width
-  const pdfPanelSize = 40; // Increased from 30% to 40%
-  const mindMapPanelSize = showPdf ? 35 : 75; // Adjusted mindmap size
-  const chatPanelSize = 25; // Decreased chat panel slightly
-
   return (
-    <div className="flex-1 flex h-full overflow-hidden bg-[#f9f9f9] dark:bg-[#121212]">
-      <div className="w-full h-full flex">
-        {/* PDF Viewer Panel */}
-        {showPdf && (
-          <div className="w-[40%] h-full bg-white dark:bg-[#191919] flex flex-col border-r border-[#eaeaea] dark:border-[#333]"> 
-            <PdfViewer 
-              className="w-full h-full"
-              onRequestOpenChat={() => {
-                if (!showChat) toggleChat();
-              }} 
-              onTogglePdf={togglePdf}
-              onExplainText={onExplainText}
-              defaultZoom={1.0} // Set default zoom to 100%
-            />
-          </div>
-        )}
-
-        {/* Mind Map Viewer Panel */}
-        <div className={`${showPdf ? 'w-[35%]' : 'w-[75%]'} ${showChat ? '' : 'flex-1'} h-full`}> 
-          <MindMapViewer 
-            isMapGenerated={true} 
-            onMindMapReady={onMindMapReady}
-            onExplainText={onExplainText}
+    <div className="flex-1 flex h-full overflow-hidden bg-[#F9F7F3]">
+      {/* PDF Viewer Panel */}
+      {showPdf && (
+        <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden bg-white">
+          <PdfViewer 
             onRequestOpenChat={() => {
               if (!showChat) toggleChat();
-            }}
+            }} 
+            onTogglePdf={togglePdf}
+            onExplainText={onExplainText} 
           />
         </div>
+      )}
 
-        {/* Chat Panel */}
-        {showChat && (
-          <div className="w-[25%] h-full bg-white dark:bg-[#191919] border-l border-[#eaeaea] dark:border-[#333]"> 
-            <ChatPanel 
-              toggleChat={toggleChat} 
-              explainText={explainText}
-            />
-          </div>
-        )}
+      {/* Mind Map Viewer Panel */}
+      <div className={`flex-1 h-full overflow-hidden ${showPdf ? 'border-r border-gray-200' : ''}`}>
+        <MindMapViewer 
+          isMapGenerated={true} 
+          onMindMapReady={onMindMapReady}
+          onExplainText={onExplainText}
+          onRequestOpenChat={() => {
+            if (!showChat) toggleChat();
+          }}
+        />
       </div>
+
+      {/* Chat Panel */}
+      {showChat && (
+        <div className="w-1/4 h-full border-l border-gray-200 bg-white">
+          <ChatPanel 
+            toggleChat={toggleChat} 
+            explainText={explainText}
+          />
+        </div>
+      )}
     </div>
   );
 };

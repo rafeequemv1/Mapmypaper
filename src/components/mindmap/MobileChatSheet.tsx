@@ -1,18 +1,14 @@
 
 import { MessageSquare, Copy, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
-import ReactMarkdown from "react-markdown";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 
 const MobileChatSheet = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
     { role: 'assistant', content: 'Hello! I\'m your research assistant. Ask me questions about the document you uploaded.' }
   ]);
@@ -20,73 +16,6 @@ const MobileChatSheet = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
-  const [currentMindmapId, setCurrentMindmapId] = useState<string | null>(null);
-  
-  // Load existing chat history if user is logged in and a mindmap exists
-  useEffect(() => {
-    const loadExistingChat = async () => {
-      if (!user) return;
-      
-      try {
-        const pdfFilename = sessionStorage.getItem('pdfFileName');
-        
-        if (!pdfFilename) return;
-        
-        // Check if this PDF is already stored in the database
-        const { data: existingMindmaps, error } = await supabase
-          .from('user_mindmaps')
-          .select('id, chat_history')
-          .eq('user_id', user.id)
-          .eq('pdf_filename', pdfFilename)
-          .maybeSingle();
-          
-        if (error) {
-          console.error('Error checking for existing mindmap:', error);
-          return;
-        }
-        
-        // If this PDF already exists in database and has chat history
-        if (existingMindmaps && existingMindmaps.chat_history) {
-          setCurrentMindmapId(existingMindmaps.id);
-          
-          // Load chat history
-          const savedMessages = existingMindmaps.chat_history as Array<{ role: 'user' | 'assistant'; content: string }>;
-          if (Array.isArray(savedMessages) && savedMessages.length > 0) {
-            setMessages(savedMessages);
-          }
-        }
-      } catch (error) {
-        console.error('Error in loadExistingChat:', error);
-      }
-    };
-    
-    loadExistingChat();
-  }, [user]);
-  
-  // Save chat history to database when messages change
-  useEffect(() => {
-    const saveChatHistory = async () => {
-      if (!user || !currentMindmapId || messages.length <= 1) return;
-      
-      try {
-        const { error } = await supabase
-          .from('user_mindmaps')
-          .update({
-            chat_history: messages,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', currentMindmapId);
-          
-        if (error) {
-          console.error('Error saving chat history:', error);
-        }
-      } catch (error) {
-        console.error('Error in saveChatHistory:', error);
-      }
-    };
-    
-    saveChatHistory();
-  }, [messages, user, currentMindmapId]);
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
@@ -163,42 +92,6 @@ const MobileChatSheet = () => {
     });
   };
 
-  // Custom renderer components for markdown
-  const MarkdownContent = ({ content }: { content: string }) => {
-    return (
-      <div className="prose prose-sm dark:prose-invert max-w-none">
-        <ReactMarkdown
-          components={{
-            h1: ({ children }) => <h1 className="text-xl font-bold mt-3 mb-2">{children}</h1>,
-            h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-1.5">{children}</h2>,
-            h3: ({ children }) => <h3 className="text-base font-semibold mt-2 mb-1">{children}</h3>,
-            h4: ({ children }) => <h4 className="text-sm font-semibold mt-2 mb-1">{children}</h4>,
-            p: ({ children }) => <p className="text-sm my-1.5">{children}</p>,
-            ul: ({ children }) => <ul className="list-disc pl-5 my-1.5">{children}</ul>,
-            ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5">{children}</ol>,
-            li: ({ children }) => <li className="text-sm my-0.5">{children}</li>,
-            strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-            em: ({ children }) => <em className="italic">{children}</em>,
-            blockquote: ({ children }) => <blockquote className="border-l-2 border-gray-300 pl-3 italic text-gray-700 dark:text-gray-300 my-2">{children}</blockquote>,
-            code: ({ children, className }) => {
-              const match = /language-(\w+)/.exec(className || '');
-              return match ? (
-                <pre className="bg-gray-200 dark:bg-gray-800 p-2 rounded text-sm my-2 overflow-x-auto">
-                  <code className={className}>{children}</code>
-                </pre>
-              ) : (
-                <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded text-sm">{children}</code>
-              );
-            },
-            a: ({ children, href }) => <a href={href} className="text-blue-600 dark:text-blue-400 underline">{children}</a>,
-          }}
-        >
-          {content}
-        </ReactMarkdown>
-      </div>
-    );
-  };
-
   return (
     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
       <SheetTrigger asChild>
@@ -222,17 +115,13 @@ const MobileChatSheet = () => {
             {messages.map((message, i) => (
               <div key={i} className="group relative">
                 <div 
-                  className={`max-w-[90%] rounded-lg p-3 ${
+                  className={`max-w-[80%] rounded-lg p-3 ${
                     message.role === 'user' 
                       ? 'bg-primary text-primary-foreground ml-auto' 
                       : 'bg-muted'
                   }`}
                 >
-                  {message.role === 'user' ? (
-                    <div className="text-sm">{message.content}</div>
-                  ) : (
-                    <MarkdownContent content={message.content} />
-                  )}
+                  {message.content}
                   
                   {message.role === 'assistant' && (
                     <Button 

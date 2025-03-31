@@ -13,14 +13,6 @@ export const defaultFlowchart = `flowchart TD
 export const cleanMermaidSyntax = (input: string): string => {
   let cleaned = input.trim();
   
-  console.log("Cleaning Mermaid syntax, input length:", cleaned.length);
-  
-  // Guard against empty or invalid input
-  if (!cleaned || cleaned.length < 10) {
-    console.warn("Empty or too short Mermaid input");
-    return defaultFlowchart;
-  }
-  
   // Fix common syntax errors
   cleaned = cleaned
     // Fix arrows if needed
@@ -30,7 +22,6 @@ export const cleanMermaidSyntax = (input: string): string => {
   
   // Ensure it starts with flowchart directive
   if (!cleaned.startsWith("flowchart")) {
-    console.log("Adding missing flowchart directive");
     cleaned = "flowchart TD\n" + cleaned;
   }
   
@@ -83,21 +74,10 @@ export const cleanMermaidSyntax = (input: string): string => {
       });
     }
     
-    // Fix node IDs in connections to use underscores instead of hyphens
-    processedLine = processedLine.replace(/\b([A-Za-z0-9]+)-([A-Za-z0-9]+)\b(?!\]|\)|\})/g, "$1_$2");
-    
-    // Fix arrow syntax to ensure proper spacing
-    processedLine = processedLine.replace(/(\w+)\s*-->\s*(\w+)/g, "$1 --> $2");
-    
-    // Fix arrow labels
-    processedLine = processedLine.replace(/-->(\w)/g, "-->|$1");
-    
     return processedLine;
   });
   
-  const result = processedLines.join('\n');
-  console.log("Mermaid syntax cleaning complete, output length:", result.length);
-  return result;
+  return processedLines.join('\n');
 };
 
 export const useFlowchartGenerator = () => {
@@ -106,25 +86,11 @@ export const useFlowchartGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const generateFlowchart = async (detailLevel: 'basic' | 'detailed' | 'advanced' = 'detailed') => {
+  const generateFlowchart = async () => {
     try {
       setIsGenerating(true);
       setError(null);
-      
-      // Get PDF text from sessionStorage
-      const pdfText = sessionStorage.getItem('pdfText');
-      if (!pdfText) {
-        throw new Error("No PDF text found. Please upload a PDF first.");
-      }
-      
-      console.log("Generating flowchart from PDF text, length:", pdfText.length);
-      toast({
-        title: "Generating Flowchart",
-        description: "Analyzing your document content..."
-      });
-      
-      // Pass the detail level to the API
-      const flowchartCode = await generateFlowchartFromPdf(detailLevel);
+      const flowchartCode = await generateFlowchartFromPdf();
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
@@ -133,40 +99,19 @@ export const useFlowchartGenerator = () => {
       try {
         await mermaid.parse(cleanedCode);
         setCode(cleanedCode);
-        console.log("Flowchart code successfully parsed by mermaid");
         toast({
           title: "Flowchart Generated",
-          description: "Your flowchart has been created based on document analysis.",
+          description: "A flowchart has been created based on your PDF content.",
         });
       } catch (parseError) {
         console.error("Mermaid parse error:", parseError);
-        
-        // Try additional fallback cleaning for very problematic syntax
-        try {
-          console.log("Attempting further syntax cleaning");
-          const simplifiedCode = `flowchart TD\n` + cleanedCode
-            .split('\n')
-            .filter(line => line.includes('-->')) // Only keep lines with connections
-            .slice(0, 15) // Limit to a reasonable number of lines
-            .join('\n');
-          
-          await mermaid.parse(simplifiedCode);
-          setCode(simplifiedCode);
-          console.log("Simplified flowchart parsed successfully");
-          toast({
-            title: "Simplified Flowchart Generated", 
-            description: "A simplified flowchart was created due to complexity in the document content.",
-          });
-        } catch (fallbackError) {
-          // If all else fails, use the default flowchart
-          setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-          setCode(defaultFlowchart);
-          toast({
-            title: "Syntax Error",
-            description: "The generated flowchart had syntax errors. Using a default template instead.",
-            variant: "destructive",
-          });
-        }
+        setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        setCode(defaultFlowchart);
+        toast({
+          title: "Syntax Error",
+          description: "The generated flowchart had syntax errors. Using a default template instead.",
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error("Failed to generate flowchart:", err);
@@ -174,7 +119,7 @@ export const useFlowchartGenerator = () => {
       setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
       toast({
         title: "Generation Failed",
-        description: "Failed to generate flowchart from document content.",
+        description: "Failed to generate flowchart from PDF content.",
         variant: "destructive",
       });
     } finally {

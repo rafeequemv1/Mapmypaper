@@ -4,11 +4,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, Check, Download } from "lucide-react";
+import { Loader2, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateStructuredSummary } from "@/services/geminiService";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 interface SummaryModalProps {
   open: boolean;
@@ -24,9 +22,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
-  const summaryRef = React.useRef<HTMLDivElement>(null);
 
   // Generate summary when modal is opened
   useEffect(() => {
@@ -52,55 +48,6 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const downloadSummaryAsPDF = async () => {
-    if (!summaryRef.current || !summaryData) return;
-
-    setIsDownloading(true);
-    try {
-      const summaryElement = summaryRef.current;
-      const canvas = await html2canvas(summaryElement, {
-        scale: 2, // Higher scale for better quality
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
-      
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-      
-      // Calculate the PDF dimensions
-      const imgWidth = 210; // A4 width in mm (210mm)
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      // Add the image to the PDF
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      
-      // Get PDF file name from session storage or use default
-      const pdfFileName = sessionStorage.getItem('pdfFileName') || 'document';
-      
-      // Save the PDF
-      pdf.save(`${pdfFileName.replace('.pdf', '')}-summary.pdf`);
-      
-      toast({
-        title: "Summary Downloaded",
-        description: "Summary was successfully downloaded as PDF",
-      });
-    } catch (error) {
-      console.error("Error downloading summary:", error);
-      toast({
-        title: "Download Failed",
-        description: "Failed to download summary. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsDownloading(false);
     }
   };
 
@@ -155,7 +102,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     return (
       <div className="relative group mb-5">
         <div className="flex items-start justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+          <h3 className="text-lg font-semibold text-primary mb-2">{title}</h3>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -165,7 +112,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             {copiedSection === title ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
-        <div className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
+        <div className="text-sm" dangerouslySetInnerHTML={{ __html: formatText(content) }} />
       </div>
     );
   };
@@ -173,28 +120,11 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl h-[80vh] flex flex-col bg-white">
-        <DialogHeader className="flex justify-between items-start flex-row">
-          <div>
-            <DialogTitle>Document Summary</DialogTitle>
-            <DialogDescription>
-              AI-generated structured summary of the document
-            </DialogDescription>
-          </div>
-          {summaryData && !loading && (
-            <Button 
-              variant="outline" 
-              onClick={downloadSummaryAsPDF}
-              disabled={isDownloading || !summaryData}
-              className="flex items-center gap-2"
-            >
-              {isDownloading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              {isDownloading ? "Downloading..." : "Download PDF"}
-            </Button>
-          )}
+        <DialogHeader>
+          <DialogTitle>Document Summary</DialogTitle>
+          <DialogDescription>
+            AI-generated structured summary of the document
+          </DialogDescription>
         </DialogHeader>
         
         {loading ? (
@@ -217,31 +147,29 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             </TabsList>
             
             <ScrollArea className="flex-1">
-              <div ref={summaryRef} className="p-6 bg-white">
-                <TabsContent value="all" className="mt-0">
-                  {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
-                  {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
-                  {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
-                  {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
-                  {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
-                  {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
-                </TabsContent>
-                
-                <TabsContent value="key-points" className="mt-0">
-                  {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
-                  {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
-                  {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
-                </TabsContent>
-                
-                <TabsContent value="methods-results" className="mt-0">
-                  {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
-                  {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
-                </TabsContent>
-                
-                <TabsContent value="conclusions" className="mt-0">
-                  {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
-                </TabsContent>
-              </div>
+              <TabsContent value="all" className="p-4">
+                {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
+                {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
+                {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
+                {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
+                {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
+                {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
+              </TabsContent>
+              
+              <TabsContent value="key-points" className="p-4">
+                {summaryData.Overview && renderSummarySection("Overview", summaryData.Overview)}
+                {summaryData["Key Findings"] && renderSummarySection("Key Findings", summaryData["Key Findings"])}
+                {summaryData.Objectives && renderSummarySection("Objectives", summaryData.Objectives)}
+              </TabsContent>
+              
+              <TabsContent value="methods-results" className="p-4">
+                {summaryData.Methods && renderSummarySection("Methods", summaryData.Methods)}
+                {summaryData.Results && renderSummarySection("Results", summaryData.Results)}
+              </TabsContent>
+              
+              <TabsContent value="conclusions" className="p-4">
+                {summaryData.Conclusions && renderSummarySection("Conclusions", summaryData.Conclusions)}
+              </TabsContent>
             </ScrollArea>
           </Tabs>
         ) : null}

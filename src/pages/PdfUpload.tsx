@@ -1,206 +1,354 @@
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Upload, FileText, Brain, Trash } from "lucide-react";
-import { useState, useRef, ChangeEvent } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import extractTextFromPdf from "react-pdftotext";
-import { useAuth } from "@/contexts/AuthContext";
-
-// Function to get PDF file name without extension
-const getFileNameWithoutExtension = (fileName: string): string => {
-  return fileName.replace(/\.[^/.]+$/, "");
-};
-
-// Function to format bytes to readable size
-const formatBytes = (bytes: number, decimals = 2): string => {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
-};
+import { useToast } from "@/hooks/use-toast";
+import PdfToText from "react-pdftotext";
+import { Brain, FileText, Upload, BookOpen, Lightbulb, GraduationCap, Network } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { generateMindMapFromText } from "@/services/geminiService";
 
 const PdfUpload = () => {
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
+  const { toast } = useToast();
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle when file is selected
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    
-    if (!selectedFile) return;
-
-    // Check if file is a PDF
-    if (selectedFile.type !== "application/pdf") {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload a PDF file.",
-        variant: "destructive",
-      });
-      return;
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
     }
+  }, []);
 
-    // Clear session storage from previous uploads
-    sessionStorage.removeItem("pdfText");
-    sessionStorage.removeItem("pdfUrl");
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
     
-    // Store the PDF file and create object URL
-    setFile(selectedFile);
-    
-    // Store the filename
-    sessionStorage.setItem("pdfFileName", selectedFile.name);
-  };
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === "application/pdf") {
+        setSelectedFile(file);
+        toast({
+          title: "PDF uploaded successfully",
+          description: `File: ${file.name}`,
+        });
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF file",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [toast]);
 
-  // Handle PDF processing and navigation to mindmap
-  const handleContinue = async () => {
-    if (!file) {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.type === "application/pdf") {
+        setSelectedFile(file);
+        toast({
+          title: "PDF uploaded successfully",
+          description: `File: ${file.name}`,
+        });
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF file",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [toast]);
+
+  const handleGenerateMindmap = useCallback(async () => {
+    if (!selectedFile) {
       toast({
         title: "No file selected",
-        description: "Please upload a PDF file to continue.",
+        description: "Please upload a PDF file first",
         variant: "destructive",
       });
       return;
     }
 
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to analyze documents.",
-        variant: "destructive",
-      });
-      navigate("/sign-in");
-      return;
-    }
+    setIsProcessing(true);
+    setExtractionError(null);
+    
+    toast({
+      title: "Processing PDF",
+      description: "Extracting text and generating mind map...",
+    });
 
     try {
-      setIsUploading(true);
-      setUploadProgress(10);
-
+      // First, read the PDF as DataURL for viewing later
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64data = e.target?.result as string;
+        // Store PDF data under both keys for compatibility
+        sessionStorage.setItem('pdfData', base64data);
+        sessionStorage.setItem('uploadedPdfData', base64data);
+        console.log("PDF data stored, length:", base64data.length);
+      };
+      reader.readAsDataURL(selectedFile);
+      
       // Extract text from PDF
-      const startTime = Date.now();
-      console.log(`Starting PDF text extraction for ${file.name} (${formatBytes(file.size)})`);
-
-      const pdfText = await extractTextFromPdf(file);
-      setUploadProgress(80);
+      const extractedText = await PdfToText(selectedFile);
       
-      console.log(`PDF text extracted in ${(Date.now() - startTime) / 1000}s. Text length: ${pdfText.length}`);
-
-      // Store PDF text in session storage
-      sessionStorage.setItem("pdfText", pdfText);
+      if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
+        throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
+      }
       
-      // Also store an object URL for the PDF for viewing
-      const objectUrl = URL.createObjectURL(file);
-      sessionStorage.setItem("pdfUrl", objectUrl);
+      // Process the text with Gemini to generate mind map data
+      const mindMapData = await generateMindMapFromText(extractedText);
       
-      setUploadProgress(100);
+      // Store the generated mind map data in sessionStorage
+      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
       
+      // Navigate to the mind map view
       toast({
-        title: "PDF processed successfully",
-        description: "Navigating to mind map view...",
+        title: "Success",
+        description: "Mind map generated successfully!",
       });
-
-      // Navigate to the mindmap page
-      setTimeout(() => navigate("/mindmap"), 1000);
+      navigate("/mindmap");
     } catch (error) {
-      console.error("PDF processing error:", error);
+      console.error("Error processing PDF:", error);
+      setExtractionError(error instanceof Error ? error.message : "Failed to process PDF");
       toast({
-        title: "Processing failed",
-        description: "Failed to extract text from the PDF. Please try another file.",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to process PDF",
         variant: "destructive",
       });
-      setIsUploading(false);
-      setUploadProgress(0);
+      setIsProcessing(false);
     }
-  };
-
-  // Handle file deletion
-  const handleDeleteFile = () => {
-    setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    sessionStorage.removeItem("pdfUrl");
-    sessionStorage.removeItem("pdfText");
-    sessionStorage.removeItem("pdfFileName");
-  };
+  }, [selectedFile, navigate, toast]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-gray-50 p-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-sm">
-        <div className="flex items-center justify-center mb-8">
-          <Brain className="h-8 w-8 text-black mr-2" />
-          <h1 className="text-2xl font-bold">DocuMind</h1>
-        </div>
-        
-        {!file ? (
-          <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileChange}
-              className="hidden"
-              ref={fileInputRef}
-            />
-            <FileText className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-600 mb-4">
-              Upload your PDF document to create a mind map
-            </p>
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-black text-white hover:bg-gray-800"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Select PDF
-            </Button>
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="py-4 px-8 border-b bg-[#222222]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain className="h-6 w-6 text-white" />
+            <h1 className="text-xl font-medium text-white">PaperMind</h1>
           </div>
-        ) : (
-          <div className="p-4 border border-gray-100 rounded-lg bg-gray-50">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <FileText className="h-6 w-6 text-black mr-2" />
-                <div>
-                  <p className="font-medium text-sm">{file.name}</p>
-                  <p className="text-gray-500 text-xs">{formatBytes(file.size)}</p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDeleteFile}
-                className="h-8 w-8 p-0"
-                disabled={isUploading}
-              >
-                <Trash className="h-4 w-4 text-gray-500" />
+          <nav>
+            <ul className="flex gap-8 text-white/80">
+              <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+              <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+              <li><a href="#get-started" className="hover:text-white transition-colors">Get Started</a></li>
+            </ul>
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero Section with Dropzone */}
+      <section className="py-20 px-4 bg-gradient-to-br from-indigo-50 to-slate-100">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 leading-tight">
+              Transform Research Papers into Visual Knowledge
+            </h1>
+            <p className="text-lg text-slate-700 max-w-lg">
+              Upload your academic papers and transform them into interactive mind maps using AI. Visualize complex concepts, enhance comprehension, and accelerate your research.
+            </p>
+            <a href="#get-started" className="inline-block">
+              <Button size="lg" className="mt-2 bg-indigo-600 hover:bg-indigo-700">
+                Get Started Now
+                <GraduationCap className="ml-2 h-5 w-5" />
               </Button>
+            </a>
+          </div>
+          
+          {/* Dropzone */}
+          <div id="get-started" className="bg-white p-8 rounded-xl shadow-lg">
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-slate-900">Upload Your Paper</h2>
+              <p className="text-slate-600">
+                Upload a research paper or academic PDF to generate an interactive mind map.
+              </p>
+              
+              {/* Simple Dropzone */}
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
+                  dragActive ? "border-indigo-500 bg-indigo-50" : "border-slate-300"
+                } cursor-pointer flex flex-col items-center justify-center gap-4`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <FileText className="h-12 w-12 text-indigo-500" />
+                <p className="text-center text-slate-700">
+                  Drag & drop your PDF here<br />or click to browse
+                </p>
+              </div>
+              
+              {/* Selected File Info */}
+              {selectedFile && (
+                <div className="p-4 bg-slate-50 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-indigo-600" />
+                    <div>
+                      <p className="font-medium text-slate-900">{selectedFile.name}</p>
+                      <p className="text-sm text-slate-500">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Generate Button */}
+              <Button 
+                onClick={handleGenerateMindmap} 
+                className="w-full bg-indigo-600 hover:bg-indigo-700 mt-4" 
+                disabled={!selectedFile || isProcessing}
+                size="lg"
+              >
+                {isProcessing ? "Processing..." : "Generate Mindmap with AI"}
+                <Brain className="ml-2 h-5 w-5" />
+              </Button>
+              
+              {extractionError && (
+                <p className="text-red-500 text-sm mt-2">{extractionError}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-slate-900">Key Features</h2>
+            <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+              Discover how PaperMind transforms the way you interact with academic research.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-6 bg-slate-50 rounded-xl">
+              <div className="p-3 bg-indigo-100 w-fit rounded-full mb-4">
+                <Brain className="h-6 w-6 text-indigo-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">AI-Powered Analysis</h3>
+              <p className="text-slate-600">
+                Google Gemini AI extracts key concepts and relationships from your papers to create meaningful mind maps.
+              </p>
             </div>
             
-            {isUploading ? (
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-                <div
-                  className="bg-black h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+            <div className="p-6 bg-slate-50 rounded-xl">
+              <div className="p-3 bg-indigo-100 w-fit rounded-full mb-4">
+                <Network className="h-6 w-6 text-indigo-600" />
               </div>
-            ) : (
-              <Button
-                className="w-full bg-black text-white hover:bg-gray-800"
-                onClick={handleContinue}
-              >
-                <Brain className="h-4 w-4 mr-2" />
-                Analyze Document
-              </Button>
-            )}
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">Interactive Visualizations</h3>
+              <p className="text-slate-600">
+                Explore and edit your mind maps dynamically with an intuitive interface for better comprehension.
+              </p>
+            </div>
+            
+            <div className="p-6 bg-slate-50 rounded-xl">
+              <div className="p-3 bg-indigo-100 w-fit rounded-full mb-4">
+                <BookOpen className="h-6 w-6 text-indigo-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">PDF Integration</h3>
+              <p className="text-slate-600">
+                View your original PDF alongside the mind map for easy reference and context.
+              </p>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="how-it-works" className="py-20 px-4 bg-gradient-to-br from-slate-50 to-indigo-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-slate-900">How It Works</h2>
+            <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+              Transform your research papers into visual knowledge in three simple steps.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xl font-bold">1</div>
+              <div className="bg-white p-6 rounded-xl shadow-md h-full">
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">Upload Your PDF</h3>
+                <p className="text-slate-600">
+                  Drag and drop your research paper or academic PDF to start the process.
+                </p>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xl font-bold">2</div>
+              <div className="bg-white p-6 rounded-xl shadow-md h-full">
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">AI Processing</h3>
+                <p className="text-slate-600">
+                  Our AI analyzes the content, extracts key concepts, and structures the information.
+                </p>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xl font-bold">3</div>
+              <div className="bg-white p-6 rounded-xl shadow-md h-full">
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">Explore Your Mind Map</h3>
+                <p className="text-slate-600">
+                  Interact with your visual knowledge map, edit nodes, and export for your research.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Call to Action */}
+      <section className="py-20 px-4 bg-indigo-600 text-white">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Research?</h2>
+          <p className="text-lg text-indigo-100 mb-8 max-w-2xl mx-auto">
+            Upload your academic paper now and experience the power of visual knowledge mapping.
+          </p>
+          <a href="#get-started">
+            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-indigo-600">
+              Get Started Now
+            </Button>
+          </a>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-8 px-8 bg-slate-900 text-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-indigo-400" />
+              <span className="text-xl font-medium">PaperMind</span>
+            </div>
+            <p className="text-sm text-slate-400">
+              © 2023 PaperMind — Transform research into visual knowledge
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

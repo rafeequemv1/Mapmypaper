@@ -1,10 +1,9 @@
-
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import ThemeSelect, { MindMapTheme, mindMapThemes } from "@/components/mindmap/ThemeSelect";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -29,108 +28,38 @@ const formatNodeText = (text: string, wordsPerLine: number = 4): string => {
   return result;
 };
 
-// Get node colors based on node level - Updated for black and white theme
-const getNodeColors = (level: number, isDarkMode: boolean) => {
-  if (isDarkMode) {
-    return {
-      backgroundColor: level === 0 ? '#333' : '#222',
-      borderColor: level === 0 ? '#fff' : '#aaa',
-      textColor: '#ffffff'
-    };
-  } else {
-    return {
-      backgroundColor: level === 0 ? '#000' : '#f3f3f3',
-      borderColor: level === 0 ? '#000' : '#000',
-      textColor: level === 0 ? '#fff' : '#000'
-    };
-  }
+// Get node colors based on the selected theme and node level
+const getNodeColors = (level: number, theme: MindMapTheme) => {
+  const { background, color } = mindMapThemes[theme];
+  
+  return {
+    backgroundColor: background,
+    borderColor: color,
+    textColor: '#333333' // Dark text for better readability across all themes
+  };
 };
 
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [theme, setTheme] = useState<MindMapTheme>('purple'); // Default theme
   const { toast } = useToast();
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [hasAttemptedInitialization, setHasAttemptedInitialization] = useState(false);
 
-  // Check for dark mode
+  // Effect to handle theme changes for existing mind map
   useEffect(() => {
-    // Check if the user prefers dark mode
-    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setIsDarkMode(prefersDarkMode);
-    
-    // Listen for changes in color scheme preference
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  // Initialize mind map
-  const initializeMindMap = useCallback(() => {
-    if (!containerRef.current || mindMapRef.current) return;
-    
-    setIsLoading(true);
-    console.log("Initializing mind map...");
-    
-    // Get mind map data
-    let data: MindElixirData | null = null;
-    
-    try {
-      // First try to get the data from sessionStorage
-      const savedData = sessionStorage.getItem('mindMapData');
-      console.log("Retrieved mind map data from sessionStorage:", savedData ? "yes" : "no");
+    if (mindMapRef.current && containerRef.current) {
+      // Update background color of the container
+      containerRef.current.style.background = `linear-gradient(90deg, #F9F7F3 0%, ${mindMapThemes[theme].background} 100%)`;
       
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        console.log("Successfully parsed mind map data");
-        
-        // Apply line breaks to node topics
-        const formatNodes = (node: any) => {
-          if (node.topic) {
-            node.topic = formatNodeText(node.topic);
-          }
-          
-          if (node.children && node.children.length > 0) {
-            node.children.forEach(formatNodes);
-          }
-          
-          return node;
-        };
-        
-        // Format the root node and all children
-        if (parsedData.nodeData) {
-          formatNodes(parsedData.nodeData);
-          data = parsedData;
-        } else {
-          console.error("Invalid mind map data structure:", parsedData);
-          throw new Error("Invalid mind map data structure");
-        }
-      } else {
-        console.log("No saved mind map data found, using default");
-        // Use default mind map
-        data = {
-          nodeData: {
-            id: 'root',
-            topic: 'MapMyPaper',
-            children: [
-              {
-                id: 'bd1',
-                topic: 'No mindmap data',
-                direction: 0 as const,
-                children: [
-                  { id: 'bd1-1', topic: 'Please generate a mindmap first' },
-                ]
-              }
-            ]
-          }
-        };
-      }
+      // Re-render the mind map to apply new theme
+      mindMapRef.current.refresh();
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (isMapGenerated && containerRef.current && !mindMapRef.current) {
+      // Initialize the mind map only once when it's generated
       
       const options = {
         el: containerRef.current,
@@ -144,47 +73,41 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           edit: true,
         },
         theme: {
-          name: 'custom',
-          background: isDarkMode ? '#111' : '#f9f9f9',
-          color: isDarkMode ? '#ffffff' : '#000000',
+          name: 'colorful',
+          background: mindMapThemes[theme].background,
+          color: mindMapThemes[theme].color,
           palette: [],
           cssVar: {},
         },
         nodeMenu: true, // Explicitly enable the nodeMenu
         autoFit: true,
-        // Add custom style to nodes based on their level - Updated for black and white theme
+        // Add custom style to nodes based on their level
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
-          // Get appropriate colors based on node level and dark mode
-          const { backgroundColor, borderColor, textColor } = getNodeColors(level, isDarkMode);
+          // Get appropriate colors based on node level and theme
+          const { backgroundColor, borderColor, textColor } = getNodeColors(level, theme);
           
           // Apply custom styling to nodes for a more elegant look
-          tpc.style.backgroundColor = backgroundColor;
+          tpc.style.backgroundColor = level === 0 ? backgroundColor : mindMapThemes[theme].background;
           tpc.style.color = textColor;
-          tpc.style.border = `2px solid ${borderColor}`;
-          tpc.style.borderRadius = '8px';
+          tpc.style.border = `2px solid ${level === 0 ? borderColor : mindMapThemes[theme].color}`;
+          tpc.style.borderRadius = '12px';
           tpc.style.padding = '10px 16px';
-          tpc.style.boxShadow = isDarkMode 
-            ? '0 3px 10px rgba(0,0,0,0.4)' 
-            : '0 3px 10px rgba(0,0,0,0.05)';
+          tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
           tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
           tpc.style.fontSize = level === 0 ? '20px' : '16px';
-          tpc.style.fontFamily = "'system-ui', '-apple-system', 'Segoe UI', sans-serif";
+          tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
           
           // Add transition for smooth color changes
           tpc.style.transition = 'all 0.3s ease';
           
           // Add hover effect
           tpc.addEventListener('mouseover', () => {
-            tpc.style.boxShadow = isDarkMode 
-              ? '0 5px 15px rgba(0,0,0,0.6)' 
-              : '0 5px 15px rgba(0,0,0,0.15)';
+            tpc.style.boxShadow = '0 5px 15px rgba(0,0,0,0.08)';
             tpc.style.transform = 'translateY(-2px)';
           });
           
           tpc.addEventListener('mouseout', () => {
-            tpc.style.boxShadow = isDarkMode 
-              ? '0 3px 10px rgba(0,0,0,0.4)' 
-              : '0 3px 10px rgba(0,0,0,0.05)';
+            tpc.style.boxShadow = '0 3px 10px rgba(0,0,0,0.05)';
             tpc.style.transform = 'translateY(0)';
           });
         }
@@ -196,22 +119,125 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Install the node menu plugin before init
       mind.install(nodeMenu);
       
+      // Get the generated mind map data from sessionStorage or use a default structure
+      let data: MindElixirData;
+      
+      try {
+        const savedData = sessionStorage.getItem('mindMapData');
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          
+          // Apply line breaks to node topics
+          const formatNodes = (node: any) => {
+            if (node.topic) {
+              node.topic = formatNodeText(node.topic);
+            }
+            
+            if (node.children && node.children.length > 0) {
+              node.children.forEach(formatNodes);
+            }
+            
+            return node;
+          };
+          
+          // Format the root node and all children
+          if (parsedData.nodeData) {
+            formatNodes(parsedData.nodeData);
+          }
+          
+          data = parsedData;
+        } else {
+          data = {
+            nodeData: {
+              id: 'root',
+              topic: 'Mind\nMapping',
+              children: [
+                {
+                  id: 'bd1',
+                  topic: 'Organization',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd1-1', topic: 'Plan' },
+                    { id: 'bd1-2', topic: 'Study' },
+                    { id: 'bd1-3', topic: 'System' },
+                    { id: 'bd1-4', topic: 'Breaks' }
+                  ]
+                },
+                {
+                  id: 'bd2',
+                  topic: 'Learning\nStyle',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd2-1', topic: 'Read' },
+                    { id: 'bd2-2', topic: 'Listen' },
+                    { id: 'bd2-3', topic: 'Summarize' }
+                  ]
+                },
+                {
+                  id: 'bd3',
+                  topic: 'Habits',
+                  direction: 0 as const,
+                  children: []
+                },
+                {
+                  id: 'bd4',
+                  topic: 'Goals',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd4-1', topic: 'Research' },
+                    { id: 'bd4-2', topic: 'Lecture' },
+                    { id: 'bd4-3', topic: 'Conclusions' }
+                  ]
+                },
+                {
+                  id: 'bd5',
+                  topic: 'Motivation',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd5-1', topic: 'Tips' },
+                    { id: 'bd5-2', topic: 'Roadmap' }
+                  ]
+                },
+                {
+                  id: 'bd6',
+                  topic: 'Review',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd6-1', topic: 'Notes' },
+                    { id: 'bd6-2', topic: 'Method' },
+                    { id: 'bd6-3', topic: 'Discuss' }
+                  ]
+                }
+              ]
+            }
+          };
+        }
+      } catch (error) {
+        console.error("Error parsing mind map data:", error);
+        data = {
+          nodeData: {
+            id: 'root',
+            topic: 'Error\nLoading\nMind Map',
+            children: [
+              { id: 'error1', topic: 'There was an error loading the mind map data', direction: 0 as const }
+            ]
+          }
+        };
+      }
+
       // Initialize the mind map with data
-      console.log("Initializing mind map with data");
       mind.init(data);
       
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Add custom styling to connection lines - Updated for black and white theme
-      setTimeout(() => {
-        const linkElements = containerRef.current?.querySelectorAll('.fne-link');
-        linkElements?.forEach((link: Element) => {
-          const linkElement = link as SVGElement;
-          linkElement.setAttribute('stroke-width', '2.5');
-          linkElement.setAttribute('stroke', isDarkMode ? '#888' : '#555');
-        });
-      }, 100);
+      // Add custom styling to connection lines
+      const linkElements = containerRef.current.querySelectorAll('.fne-link');
+      linkElements.forEach((link: Element) => {
+        const linkElement = link as SVGElement;
+        linkElement.setAttribute('stroke-width', '2.5');
+        linkElement.setAttribute('stroke', mindMapThemes[theme].color);
+      });
       
       mindMapRef.current = mind;
       
@@ -227,73 +253,47 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         duration: 5000,
       });
       
-      setIsReady(true);
-      setIsLoading(false);
-      
-    } catch (error) {
-      console.error("Error initializing mind map:", error);
-      toast({
-        title: "Mind Map Error",
-        description: "Failed to initialize mind map. Please try refreshing the page.",
-        variant: "destructive"
-      });
-      setIsLoading(false);
-    }
-  }, [isDarkMode, onMindMapReady, toast]);
-
-  useEffect(() => {
-    if (isMapGenerated && !hasAttemptedInitialization) {
-      setHasAttemptedInitialization(true);
-      
-      // Delay initialization slightly to ensure DOM is ready
-      const timer = setTimeout(() => {
-        initializeMindMap();
+      // Set a timeout to ensure the mind map is rendered before scaling
+      setTimeout(() => {
+        setIsReady(true);
       }, 300);
-      
-      return () => clearTimeout(timer);
     }
-  }, [isMapGenerated, hasAttemptedInitialization, initializeMindMap]);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, theme]);
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (mindMapRef.current) {
-        // Clean up mind map instance if needed
-        mindMapRef.current = null;
-      }
-    };
-  }, []);
+  const handleThemeChange = (newTheme: MindMapTheme) => {
+    setTheme(newTheme);
+    
+    // Update connection lines color
+    if (containerRef.current) {
+      const linkElements = containerRef.current.querySelectorAll('.fne-link');
+      linkElements.forEach((link: Element) => {
+        const linkElement = link as SVGElement;
+        linkElement.setAttribute('stroke', mindMapThemes[newTheme].color);
+      });
+    }
+  };
 
   if (!isMapGenerated) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Please upload a PDF to generate a mind map.</p>
-      </div>
-    );
+    return null;
   }
 
   return (
     <div className="w-full h-full flex-1 flex flex-col">
-      {isLoading ? (
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-700">Initializing mind map...</p>
-          </div>
+      <div className="w-full h-full overflow-hidden relative">
+        <div 
+          ref={containerRef} 
+          className="w-full h-full" 
+          style={{ 
+            background: `linear-gradient(90deg, #F9F7F3 0%, ${mindMapThemes[theme].background} 100%)`,
+            transition: 'background-color 0.5s ease'
+          }}
+        />
+        
+        {/* Theme selector in the top-right corner */}
+        <div className="absolute top-2 right-2 z-10">
+          <ThemeSelect value={theme} onValueChange={handleThemeChange} />
         </div>
-      ) : (
-        <div className="w-full h-full overflow-hidden relative">
-          <div 
-            ref={containerRef} 
-            className="w-full h-full" 
-            style={{ 
-              background: isDarkMode 
-                ? 'linear-gradient(90deg, #111 0%, #141414 100%)' 
-                : 'linear-gradient(90deg, #f9f9f9 0%, #f3f3f3 100%)',
-            }}
-          />
-        </div>
-      )}
+      </div>
     </div>
   );
 };

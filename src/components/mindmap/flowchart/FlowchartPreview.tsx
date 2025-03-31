@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState, forwardRef, ForwardedRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Move } from "lucide-react";
@@ -10,19 +10,13 @@ interface FlowchartPreviewProps {
   isGenerating: boolean;
 }
 
-const FlowchartPreview = forwardRef((
-  { code, error, isGenerating }: FlowchartPreviewProps, 
-  ref: ForwardedRef<HTMLDivElement>
-) => {
+const FlowchartPreview = ({ code, error, isGenerating }: FlowchartPreviewProps) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const previewRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const internalRef = useRef<HTMLDivElement>(null);
-  
-  // Use the forwarded ref or fall back to the internal ref
-  const previewRef = (ref as React.MutableRefObject<HTMLDivElement>) || internalRef;
 
   // Render flowchart when code changes
   useEffect(() => {
@@ -155,8 +149,6 @@ const FlowchartPreview = forwardRef((
       </div>
     </div>
   );
-});
-
-FlowchartPreview.displayName = "FlowchartPreview";
+};
 
 export default FlowchartPreview;
