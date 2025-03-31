@@ -1,10 +1,17 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PDFDocument } from "pdf-lib";
 
-// Initialize the Generative AI API
-const genAI = new GoogleGenerativeAI(
-  import.meta.env.VITE_GOOGLE_API_KEY || "AIzaSyDiXKI_QJHXYgGderjMFsJoE7Jli_ZPVkQ"
-);
+// Initialize the Generative AI API with a function that checks for a valid key
+const getGeminiAPI = () => {
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem("GOOGLE_API_KEY");
+  
+  if (!apiKey) {
+    throw new Error("No Google Gemini API key found. Please add your API key in the settings.");
+  }
+  
+  return new GoogleGenerativeAI(apiKey);
+};
 
 // Function to extract text from a PDF
 // Note: pdf-lib doesn't actually support text extraction directly
@@ -23,6 +30,29 @@ const extractTextFromPdf = async (file: File): Promise<string> => {
   }
   
   return text;
+};
+
+// Function to save the API key in localStorage
+export const saveGeminiAPIKey = (apiKey: string): void => {
+  localStorage.setItem("GOOGLE_API_KEY", apiKey);
+};
+
+// Function to check if the API key is valid
+export const checkGeminiAPIKey = async (): Promise<boolean> => {
+  try {
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem("GOOGLE_API_KEY");
+    if (!apiKey) return false;
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    
+    // Simple test request to check if the API key is valid
+    await model.generateContent(["Test"]);
+    return true;
+  } catch (error) {
+    console.error("Error checking Gemini API key:", error);
+    return false;
+  }
 };
 
 // Get the current PDF file from localStorage
@@ -66,36 +96,37 @@ export const generateFlowchartFromPdf = async (type: 'flowchart' | 'sequence' | 
     throw new Error("No PDF file found. Please upload a PDF file.");
   }
   
-  // Extract text from PDF
-  const text = await extractTextFromPdf(pdfFile);
-  
-  // Generate flowchart using Gemini
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-  
-  const systemPrompt = type === 'flowchart' ? 
-    `You are a helpful assistant that creates Mermaid flowcharts based on PDF content.
-     Create a detailed and well-organized flowchart that represents the main concepts and processes described in the document.
-     Use appropriate node shapes and styles.
-     Use ONLY Mermaid flowchart syntax.
-     Be sure to use the "flowchart TD" directive at the beginning.
-     Return just the Mermaid code for the flowchart, with no additional explanation.`
-    : 
-    type === 'sequence' ? 
-    `You are a helpful assistant that creates Mermaid sequence diagrams based on PDF content.
-     Create a detailed and well-organized sequence diagram that represents the interactions, flows, and communications described in the document.
-     Use appropriate actors and messages.
-     Use ONLY Mermaid sequence diagram syntax.
-     Be sure to use the "sequenceDiagram" directive at the beginning.
-     Return just the Mermaid code for the sequence diagram, with no additional explanation.`
-    :
-    `You are a helpful assistant that creates Mermaid mind maps based on PDF content.
-     Create a detailed and well-organized mind map that represents the main concepts and their relationships described in the document.
-     Use appropriate node structure with relevant topics and subtopics.
-     Use ONLY Mermaid mindmap syntax.
-     Be sure to use the "mindmap" directive at the beginning.
-     Return just the Mermaid code for the mind map, with no additional explanation.`;
-
   try {
+    // Extract text from PDF
+    const text = await extractTextFromPdf(pdfFile);
+    
+    // Generate flowchart using Gemini
+    const genAI = getGeminiAPI();
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    
+    const systemPrompt = type === 'flowchart' ? 
+      `You are a helpful assistant that creates Mermaid flowcharts based on PDF content.
+       Create a detailed and well-organized flowchart that represents the main concepts and processes described in the document.
+       Use appropriate node shapes and styles.
+       Use ONLY Mermaid flowchart syntax.
+       Be sure to use the "flowchart TD" directive at the beginning.
+       Return just the Mermaid code for the flowchart, with no additional explanation.`
+      : 
+      type === 'sequence' ? 
+      `You are a helpful assistant that creates Mermaid sequence diagrams based on PDF content.
+       Create a detailed and well-organized sequence diagram that represents the interactions, flows, and communications described in the document.
+       Use appropriate actors and messages.
+       Use ONLY Mermaid sequence diagram syntax.
+       Be sure to use the "sequenceDiagram" directive at the beginning.
+       Return just the Mermaid code for the sequence diagram, with no additional explanation.`
+      :
+      `You are a helpful assistant that creates Mermaid mind maps based on PDF content.
+       Create a detailed and well-organized mind map that represents the main concepts and their relationships described in the document.
+       Use appropriate node structure with relevant topics and subtopics.
+       Use ONLY Mermaid mindmap syntax.
+       Be sure to use the "mindmap" directive at the beginning.
+       Return just the Mermaid code for the mind map, with no additional explanation.`;
+
     const result = await model.generateContent([
       systemPrompt,
       `Create a ${type} based on the following PDF content:\n\n${text}`
@@ -107,6 +138,12 @@ export const generateFlowchartFromPdf = async (type: 'flowchart' | 'sequence' | 
     return flowchartCode;
   } catch (error) {
     console.error("Error generating diagram:", error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error && error.message.includes("API key not valid")) {
+      throw new Error("Invalid Gemini API key. Please check your API key and try again.");
+    }
+    
     throw error;
   }
 };
@@ -115,6 +152,7 @@ export const generateFlowchartFromPdf = async (type: 'flowchart' | 'sequence' | 
 export const generateMindMapFromText = async (text: string): Promise<any> => {
   try {
     // Generate mind map structure using Gemini
+    const genAI = getGeminiAPI();
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     
     const systemPrompt = `You are a helpful assistant that creates structured mind maps based on document content.
@@ -154,6 +192,12 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
     }
   } catch (error) {
     console.error("Error generating mind map from text:", error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error && error.message.includes("API key not valid")) {
+      throw new Error("Invalid Gemini API key. Please check your API key and try again.");
+    }
+    
     throw error;
   }
 };
@@ -170,6 +214,7 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
     const text = await extractTextFromPdf(pdfFile);
     
     // Chat with Gemini
+    const genAI = getGeminiAPI();
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     
     const systemPrompt = `You are a helpful academic assistant that helps users understand PDF documents.
@@ -187,6 +232,12 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
     return response.text();
   } catch (error) {
     console.error("Error chatting with Gemini about PDF:", error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error && error.message.includes("API key not valid")) {
+      throw new Error("Invalid Gemini API key. Please check your API key and try again.");
+    }
+    
     throw error;
   }
 };
@@ -203,6 +254,7 @@ export const generateStructuredSummary = async (format: 'bullets' | 'paragraphs'
     const text = await extractTextFromPdf(pdfFile);
     
     // Generate summary using Gemini
+    const genAI = getGeminiAPI();
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     
     const promptFormat = format === 'bullets' ? 'bullet points' : 
@@ -224,6 +276,12 @@ export const generateStructuredSummary = async (format: 'bullets' | 'paragraphs'
     return response.text();
   } catch (error) {
     console.error("Error generating structured summary:", error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error && error.message.includes("API key not valid")) {
+      throw new Error("Invalid Gemini API key. Please check your API key and try again.");
+    }
+    
     throw error;
   }
 };
