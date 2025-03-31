@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";
@@ -12,9 +13,6 @@ import {
   TooltipProvider,
   TooltipTrigger 
 } from "@/components/ui/tooltip";
-import { Plus, Minus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -39,10 +37,10 @@ const PanelStructure = ({
   const pdfViewerRef = useRef<{ scrollToPage: (pageNumber: number) => void } | null>(null);
   const isMobile = useIsMobile();
 
-  // Panel sizing with independent control
-  const [pdfPanelSize, setPdfPanelSize] = useState(30);
-  const [mindMapPanelSize, setMindMapPanelSize] = useState(40);
-  const [chatPanelSize, setChatPanelSize] = useState(30);
+  // Panel sizing with independent control - now using fixed values
+  const pdfPanelDefaultSize = 35; // Increased default PDF panel size
+  const mindMapPanelDefaultSize = 40;
+  const chatPanelDefaultSize = 30;
 
   // Function to handle citation clicks and scroll PDF to that position
   const handleScrollToPdfPosition = (position: string) => {
@@ -72,61 +70,21 @@ const PanelStructure = ({
     }
   };
 
-  // Handle width adjustments for PDF panel with slider
-  const handlePdfWidthChange = (value: number[]) => {
-    setPdfPanelSize(value[0]);
-  };
-
-  // Handle width adjustments for Chat panel
-  const handleChatWidthChange = (value: number) => {
-    setChatPanelSize(value);
-  };
-
   return (
     <div className="h-full flex flex-col">
-      {/* Panel Controls for Desktop - Using slider for more precise control */}
-      {!isMobile && showPdf && (
-        <div className="bg-white border-b px-4 py-2 flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2 w-full max-w-xs">
-            <span className="text-xs font-medium min-w-[90px]">PDF Width: {pdfPanelSize}%</span>
-            <Slider
-              defaultValue={[pdfPanelSize]}
-              min={20}
-              max={50}
-              step={1}
-              onValueChange={handlePdfWidthChange}
-              className="w-full"
-            />
-          </div>
-        </div>
-      )}
-      
       <ResizablePanelGroup 
         direction="horizontal"
-        onLayout={(sizes) => {
-          // We still want to keep track of the relative panel sizes when manually resizing
-          if (showPdf && showChat) {
-            setPdfPanelSize(sizes[0]);
-            setMindMapPanelSize(sizes[1]);
-            setChatPanelSize(sizes[2]);
-          } else if (showPdf) {
-            setPdfPanelSize(sizes[0]);
-            setMindMapPanelSize(sizes[1]);
-          } else if (showChat) {
-            setMindMapPanelSize(sizes[0]);
-            setChatPanelSize(sizes[1]);
-          }
-        }}
         className="flex-1"
       >
         {/* Left Panel - PDF Viewer (Conditionally Rendered) */}
         {showPdf && (
           <>
             <ResizablePanel 
-              defaultSize={pdfPanelSize} 
-              minSize={20}
+              defaultSize={pdfPanelDefaultSize} 
+              minSize={25}
               id="pdf-panel"
               order={1}
+              className="w-full"
             >
               <TooltipProvider>
                 <PdfViewer 
@@ -173,7 +131,7 @@ const PanelStructure = ({
 
         {/* Middle Panel - Mind Map */}
         <ResizablePanel 
-          defaultSize={mindMapPanelSize} 
+          defaultSize={mindMapPanelDefaultSize} 
           minSize={30}
           id="mindmap-panel"
           order={2}
@@ -189,7 +147,7 @@ const PanelStructure = ({
           <>
             <ResizableHandle withHandle />
             <ResizablePanel 
-              defaultSize={chatPanelSize} 
+              defaultSize={chatPanelDefaultSize} 
               minSize={20}
               id="chat-panel"
               order={3}

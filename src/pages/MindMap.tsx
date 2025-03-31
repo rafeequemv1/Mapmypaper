@@ -76,14 +76,14 @@ const MindMap = () => {
         // Process the root node
         const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          applyLineBreaksToNode(rootNodeElement, 3); // 3 words per line for root
+          applyLineBreaksToNode(rootNodeElement, 4); // 4 words per line for root (increased from 3)
         }
         
         // Process all topic nodes
         const topicElements = mindMap.container.querySelectorAll('.mind-elixir-topic');
         topicElements.forEach(topicElement => {
           if (topicElement.classList.contains('mind-elixir-root')) return; // Skip root, already handled
-          applyLineBreaksToNode(topicElement as HTMLElement, 4); // 4 words per line for other nodes
+          applyLineBreaksToNode(topicElement as HTMLElement, 5); // 5 words per line for other nodes (increased from 4)
         });
       });
       
@@ -116,7 +116,7 @@ const MindMap = () => {
       setTimeout(() => {
         const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          applyLineBreaksToNode(rootNodeElement, 3);
+          applyLineBreaksToNode(rootNodeElement, 4);
         }
       }, 100);
     };

@@ -266,11 +266,20 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
 
+    // Calculate optimal width for PDF pages based on container width
+    const getOptimalPageWidth = () => {
+      if (!pdfContainerRef.current) return undefined;
+      
+      const containerWidth = pdfContainerRef.current.clientWidth;
+      // Leave some margin on the sides
+      return Math.min(containerWidth - 32, 900); // Maximum width capped at 900px
+    };
+
     return (
       <div className="h-full flex flex-col bg-gray-50">
-        {/* PDF Toolbar - Simplified with only one set of zoom controls */}
-        <div className="bg-white border-b p-2 flex flex-wrap items-center gap-2">
-          {/* Zoom Controls - Single set */}
+        {/* PDF Toolbar */}
+        <div className="bg-white border-b p-2 flex flex-wrap items-center gap-2 z-10">
+          {/* Zoom Controls */}
           <div className="flex items-center gap-1">
             <Button 
               variant="ghost" 
@@ -394,9 +403,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   {Array.from(new Array(numPages), (_, index) => (
                     <div
                       key={`page_${index + 1}`}
-                      className="mb-8 shadow-lg bg-white border border-gray-200 transition-colors duration-300 mx-auto"
+                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
                       ref={setPageRef(index)}
-                      style={{ width: 'fit-content', maxWidth: '100%' }}
+                      style={{ width: 'fit-content', maxWidth: '95%' }}
                       data-page-number={index + 1}
                     >
                       <Page
@@ -405,10 +414,15 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         renderAnnotationLayer={false}
                         onRenderSuccess={onPageRenderSuccess}
                         scale={scale}
-                        width={pdfContainerRef.current?.clientWidth ? Math.min(pdfContainerRef.current.clientWidth - 32, 800) : undefined}
+                        width={getOptimalPageWidth()}
                         className="mx-auto"
+                        loading={
+                          <div className="flex items-center justify-center h-[600px] w-full">
+                            <div className="animate-pulse bg-gray-200 h-full w-full"></div>
+                          </div>
+                        }
                       />
-                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-200">
+                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
                         Page {index + 1} of {numPages}
                       </div>
                     </div>

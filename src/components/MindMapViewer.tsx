@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -13,20 +14,74 @@ interface MindMapViewerProps {
   onRequestOpenChat?: () => void;
 }
 
-// Helper function to format node text with line breaks and add emojis
-const formatNodeText = (text: string, wordsPerLine: number = 5): string => {
+// Enhanced helper function to format node text with line breaks and add emojis
+const formatNodeText = (text: string, wordsPerLine: number = 7): string => {
   if (!text) return '';
   
-  // Add emoji based on topic content
+  // Add emoji based on topic content if one doesn't exist already
   const addEmoji = (topic: string) => {
+    // Check if the topic already starts with an emoji
+    if (/^[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/.test(topic)) {
+      return topic; // Already has an emoji
+    }
+    
     const topicLower = topic.toLowerCase();
+    
+    // Main sections
+    if (topicLower.includes('introduction')) return '🔍 ' + topic;
+    if (topicLower.includes('methodology')) return '⚙️ ' + topic;
+    if (topicLower.includes('results')) return '📊 ' + topic;
+    if (topicLower.includes('discussion')) return '💭 ' + topic;
+    if (topicLower.includes('conclusion')) return '🎯 ' + topic;
+    if (topicLower.includes('references')) return '📚 ' + topic;
+    if (topicLower.includes('supplementary')) return '📎 ' + topic;
+    
+    // Introduction subsections
+    if (topicLower.includes('background') || topicLower.includes('context')) return '📘 ' + topic;
+    if (topicLower.includes('motivation') || topicLower.includes('problem')) return '⚠️ ' + topic;
+    if (topicLower.includes('gap')) return '🧩 ' + topic;
+    if (topicLower.includes('objective') || topicLower.includes('hypothesis')) return '🎯 ' + topic;
+    
+    // Methodology subsections
+    if (topicLower.includes('experimental') || topicLower.includes('data collection')) return '🧪 ' + topic;
+    if (topicLower.includes('model') || topicLower.includes('theory') || topicLower.includes('framework')) return '🔬 ' + topic;
+    if (topicLower.includes('procedure') || topicLower.includes('algorithm')) return '📋 ' + topic;
+    if (topicLower.includes('variable') || topicLower.includes('parameter')) return '🔢 ' + topic;
+    
+    // Results subsections
+    if (topicLower.includes('key finding')) return '✨ ' + topic;
+    if (topicLower.includes('figure') || topicLower.includes('table') || topicLower.includes('visualization')) return '📈 ' + topic;
+    if (topicLower.includes('statistical') || topicLower.includes('analysis')) return '📏 ' + topic;
+    if (topicLower.includes('observation')) return '👁️ ' + topic;
+    
+    // Discussion subsections
+    if (topicLower.includes('interpretation')) return '🔎 ' + topic;
+    if (topicLower.includes('comparison') || topicLower.includes('previous work')) return '🔄 ' + topic;
+    if (topicLower.includes('implication')) return '💡 ' + topic;
+    if (topicLower.includes('limitation')) return '🛑 ' + topic;
+    
+    // Conclusion subsections
+    if (topicLower.includes('summary') || topicLower.includes('contribution')) return '✅ ' + topic;
+    if (topicLower.includes('future work')) return '🔮 ' + topic;
+    if (topicLower.includes('final') || topicLower.includes('remark')) return '🏁 ' + topic;
+    
+    // References subsections
+    if (topicLower.includes('key paper') || topicLower.includes('cited')) return '📄 ' + topic;
+    if (topicLower.includes('dataset') || topicLower.includes('tool')) return '🛠️ ' + topic;
+    
+    // Supplementary subsections
+    if (topicLower.includes('additional') || topicLower.includes('experiment')) return '🧮 ' + topic;
+    if (topicLower.includes('appendix') || topicLower.includes('appendices')) return '📑 ' + topic;
+    if (topicLower.includes('code') || topicLower.includes('data availability')) return '💾 ' + topic;
+    
+    // Generic topics
     if (topicLower.includes('start') || topicLower.includes('begin')) return '🚀 ' + topic;
     if (topicLower.includes('organization') || topicLower.includes('structure')) return '📊 ' + topic;
     if (topicLower.includes('learn') || topicLower.includes('study')) return '📚 ' + topic;
     if (topicLower.includes('habit')) return '⏰ ' + topic;
     if (topicLower.includes('goal')) return '🎯 ' + topic;
     if (topicLower.includes('motivation')) return '💪 ' + topic;
-    if (topicLower.includes('review') || topicLower.includes('summary')) return '✅ ' + topic;
+    if (topicLower.includes('review')) return '✅ ' + topic;
     if (topicLower.includes('research')) return '🔍 ' + topic;
     if (topicLower.includes('read')) return '📖 ' + topic;
     if (topicLower.includes('write') || topicLower.includes('note')) return '✏️ ' + topic;
@@ -42,15 +97,34 @@ const formatNodeText = (text: string, wordsPerLine: number = 5): string => {
     if (topicLower.includes('answer')) return '✓ ' + topic;
     if (topicLower.includes('problem')) return '⚠️ ' + topic;
     if (topicLower.includes('solution')) return '🔧 ' + topic;
-    return topic; // No emoji match
+    
+    // Default emoji for unmatched topics
+    return '📌 ' + topic;
   };
   
-  // Add emoji to the text
-  text = addEmoji(text);
+  // Ensure the topic text is a complete sentence by checking for period at the end
+  const ensureCompleteSentence = (topic: string) => {
+    const trimmedTopic = topic.trim();
+    // Don't modify if it's just an emoji or very short
+    if (trimmedTopic.length <= 3) return trimmedTopic;
+    
+    // If already ends with punctuation, return as is
+    if (/[.!?;:]$/.test(trimmedTopic)) return trimmedTopic;
+    
+    // Add a period if it looks like a sentence (starts with capital letter or has spaces)
+    if (/^[A-Z]/.test(trimmedTopic) || trimmedTopic.includes(' ')) {
+      return trimmedTopic + '.';
+    }
+    
+    return trimmedTopic;
+  };
   
-  // Apply line breaks
-  const words = text.split(' ');
-  if (words.length <= wordsPerLine) return text;
+  // Add emoji to the text and ensure it's a complete sentence
+  const processedText = ensureCompleteSentence(addEmoji(text));
+  
+  // Apply line breaks for better readability
+  const words = processedText.split(' ');
+  if (words.length <= wordsPerLine) return processedText;
   
   let result = '';
   for (let i = 0; i < words.length; i += wordsPerLine) {
@@ -96,7 +170,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Define a enhanced colorful theme based on the Catppuccin Theme
       const colorfulTheme = {
         name: 'Catppuccin',
-        type: 'light' as const, // Fix: Use a literal type 'light' instead of string
+        type: 'light' as const,
         background: '#F9F7FF',
         color: '#8B5CF6',
         // Enhanced palette with vibrant complementary colors
@@ -138,7 +212,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           create: true,
           edit: true,
         },
-        theme: colorfulTheme, // Use the enhanced colorful theme
+        theme: colorfulTheme,
         nodeMenu: true,
         autoFit: true,
         // Add custom style to nodes based on their level and content
@@ -184,6 +258,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
           tpc.style.fontSize = level === 0 ? '20px' : '16px';
           tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
+          tpc.style.lineHeight = '1.5';
           
           // Add transition for smooth color changes
           tpc.style.transition = 'all 0.3s ease';
@@ -274,7 +349,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           
-          // Apply line breaks and emojis to node topics
+          // Apply line breaks, emojis, and complete sentences to node topics
           const formatNodes = (node: any) => {
             if (node.topic) {
               node.topic = formatNodeText(node.topic);
@@ -294,68 +369,83 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           
           data = parsedData;
         } else {
+          // Default research paper structure with complete sentences and emojis
           data = {
             nodeData: {
               id: 'root',
-              topic: '🧠 Understanding Mind Maps',
+              topic: '🧠 Research Paper Title',
               children: [
                 {
                   id: 'bd1',
-                  topic: '📊 Organization is key for effective studying and information retention.',
+                  topic: '🔍 Introduction provides context and sets the stage for the research.',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd1-1', topic: '📝 Planning your study sessions helps you stay focused and motivated.' },
-                    { id: 'bd1-2', topic: '📚 Study with purpose by breaking complex topics into manageable chunks.' },
-                    { id: 'bd1-3', topic: '⚙️ Create a system that works for you rather than following generic advice.' },
-                    { id: 'bd1-4', topic: '☕ Taking regular breaks improves your productivity and memory retention.' }
+                    { id: 'bd1-1', topic: '📘 Background establishes the essential context for understanding the research problem.' },
+                    { id: 'bd1-2', topic: '⚠️ The problem statement clearly identifies the issue being addressed in this study.' },
+                    { id: 'bd1-3', topic: '🧩 Research gap identifies what is missing in current understanding of the topic.' },
+                    { id: 'bd1-4', topic: '🎯 This study aims to test the hypothesis that will address the identified research gap.' }
                   ]
                 },
                 {
                   id: 'bd2',
-                  topic: '🎓 Learning styles vary from person to person, so find what works for you.',
+                  topic: '⚙️ Methodology describes how the research was conducted with appropriate rigor.',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd2-1', topic: '📖 Reading actively by highlighting and making notes improves understanding.' },
-                    { id: 'bd2-2', topic: '👂 Listening to lectures and discussions can reinforce important concepts.' },
-                    { id: 'bd2-3', topic: '✏️ Summarizing what you learn in your own words strengthens memory connections.' }
+                    { id: 'bd2-1', topic: '🧪 The experimental setup was carefully designed to collect reliable and valid data.' },
+                    { id: 'bd2-2', topic: '🔬 Theoretical models provide the foundation for testing our research hypotheses.' },
+                    { id: 'bd2-3', topic: '📋 Procedures were followed systematically to ensure reproducibility of results.' },
+                    { id: 'bd2-4', topic: '🔢 Key variables were identified and measured using validated instruments and techniques.' }
                   ]
                 },
                 {
                   id: 'bd3',
-                  topic: '⏰ Consistent habits make learning easier and more productive over time.',
+                  topic: '📊 Results present the empirical findings without interpretation.',
                   direction: 0 as const,
                   children: [
-                    { id: 'bd3-1', topic: '🔄 Regular review sessions help move information to long-term memory.' },
-                    { id: 'bd3-2', topic: '⏱️ Setting a specific time each day for studying builds discipline.' }
+                    { id: 'bd3-1', topic: '✨ Key findings demonstrate significant relationships between the studied variables.' },
+                    { id: 'bd3-2', topic: '📈 Visual representations of data help to illustrate important patterns found in the analysis.' },
+                    { id: 'bd3-3', topic: '📏 Statistical analyses confirm the significance of the observed relationships.' },
+                    { id: 'bd3-4', topic: '👁️ Careful observations reveal additional patterns not initially anticipated in the design.' }
                   ]
                 },
                 {
                   id: 'bd4',
-                  topic: '🎯 Setting clear goals helps measure progress and maintain motivation.',
+                  topic: '💭 Discussion explores the meaning and implications of the results.',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd4-1', topic: '🔍 Researching thoroughly gives you a strong foundation of knowledge.' },
-                    { id: 'bd4-2', topic: '🎤 Teaching concepts to others is one of the best ways to master them.' },
-                    { id: 'bd4-3', topic: '📝 Drawing conclusions and making connections deepens understanding.' }
+                    { id: 'bd4-1', topic: '🔎 Interpretation of results explains what the findings mean in relation to the research questions.' },
+                    { id: 'bd4-2', topic: '🔄 Comparison with previous work shows how this research contributes to the field.' },
+                    { id: 'bd4-3', topic: '💡 Implications suggest how these findings might impact theory and practice.' },
+                    { id: 'bd4-4', topic: '🛑 Limitations acknowledge the constraints that affect the interpretation of the results.' }
                   ]
                 },
                 {
                   id: 'bd5',
-                  topic: '💪 Staying motivated requires both intrinsic and extrinsic factors.',
+                  topic: '🎯 Conclusion summarizes the key contributions and future directions.',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd5-1', topic: '💡 Finding personal interest in the subject makes learning more enjoyable.' },
-                    { id: 'bd5-2', topic: '🗺️ Creating a roadmap helps you see how individual topics connect to larger goals.' }
+                    { id: 'bd5-1', topic: '✅ The summary of contributions highlights the main advancements made by this research.' },
+                    { id: 'bd5-2', topic: '🔮 Future work recommendations identify promising directions for extending this research.' },
+                    { id: 'bd5-3', topic: '🏁 Final remarks emphasize the broader significance of this work to the field.' }
                   ]
                 },
                 {
                   id: 'bd6',
-                  topic: '✅ Regular review is essential for long-term retention of information.',
+                  topic: '📚 References provide a comprehensive list of sources that informed this work.',
                   direction: 1 as const,
                   children: [
-                    { id: 'bd6-1', topic: '📔 Organized notes make review sessions more effective and efficient.' },
-                    { id: 'bd6-2', topic: '🔄 Using spaced repetition helps strengthen memory over time.' },
-                    { id: 'bd6-3', topic: '💬 Discussing topics with others reveals gaps in your understanding.' }
+                    { id: 'bd6-1', topic: '📄 Key papers cited in this work establish the theoretical foundation for the research.' },
+                    { id: 'bd6-2', topic: '🛠️ Datasets and tools used in the analysis are properly documented for reproducibility.' }
+                  ]
+                },
+                {
+                  id: 'bd7',
+                  topic: '📎 Supplementary materials provide additional details supporting the main text.',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd7-1', topic: '🧮 Additional experiments that didn\'t fit in the main text are included here.' },
+                    { id: 'bd7-2', topic: '📑 Appendices contain detailed methodological information for interested readers.' },
+                    { id: 'bd7-3', topic: '💾 Code and data are made available to ensure transparency and reproducibility.' }
                   ]
                 }
               ]
