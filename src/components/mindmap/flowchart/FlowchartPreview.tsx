@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
@@ -74,8 +75,8 @@ const FlowchartPreview = ({
           defaultRenderer: 'elk'
         },
         mindmap: {
-          padding: 20,
-          curve: 'basis'
+          // Remove the 'curve' property as it doesn't exist in MindmapDiagramConfig
+          padding: 20
         },
         themeVariables: {
           primaryColor: '#9b87f5',
@@ -217,8 +218,9 @@ const FlowchartPreview = ({
     // Add animation to flowchart elements - subtle fade-in
     nodeElements.forEach((node, index) => {
       const delay = index * 100;
-      node.style.opacity = "0";
-      node.style.animation = `fadeIn 0.5s ease-out ${delay}ms forwards`;
+      // Fix: Use setAttribute instead of style property
+      node.setAttribute("opacity", "0");
+      node.setAttribute("style", `animation: fadeIn 0.5s ease-out ${delay}ms forwards`);
     });
   
     // Add the animation keyframes
