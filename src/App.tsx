@@ -8,8 +8,24 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
+import { useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
+
+const AppRoutes = () => {
+  const { user, loading, refreshSession } = useAuth();
+  
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<PdfUpload user={user} onAuthChange={refreshSession} />} />
+        <Route path="/mindmap" element={<MindMap />} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -17,14 +33,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <div className="relative">
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<PdfUpload />} />
-            <Route path="/mindmap" element={<MindMap />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <AppRoutes />
       </div>
     </TooltipProvider>
   </QueryClientProvider>

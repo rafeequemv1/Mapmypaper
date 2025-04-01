@@ -1,16 +1,12 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  GitBranchPlus,
   GitCommitHorizontal,
-  ListOrdered,
-  Network,
   FileText,
   Download,
   Upload,
   MessageSquare,
-  PlusCircle,
   FileIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,14 +28,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
+import { User } from "@supabase/supabase-js";
+import AuthButton from "../auth/AuthButton";
 
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowSequenceDiagram?: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowMindmap?: React.Dispatch<React.SetStateAction<boolean>>;
+  user?: User | null;
+  onAuthChange?: () => void;
 }
 
 const Header = ({ 
@@ -47,8 +45,8 @@ const Header = ({
   toggleChat, 
   setShowSummary,
   setShowFlowchart,
-  setShowSequenceDiagram,
-  setShowMindmap
+  user,
+  onAuthChange = () => {}
 }: HeaderProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [fileName, setFileName] = useState("mindmap");
@@ -151,39 +149,29 @@ const Header = ({
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
           
-          <Button variant="ghost" onClick={() => setShowMindmap && setShowMindmap(true)} className="flex items-center gap-1 text-black h-8 px-3">
-            <PlusCircle className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Create</span>
-          </Button>
+          {setShowFlowchart && (
+            <Button variant="ghost" onClick={() => setShowFlowchart(true)} className="flex items-center gap-1 text-black h-8 px-3">
+              <GitCommitHorizontal className="h-3.5 w-3.5" />
+              <span className="hidden md:inline text-sm">Flowchart</span>
+            </Button>
+          )}
         </div>
         
         {/* Right side - Action buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {user !== undefined && (
+            <AuthButton 
+              user={user} 
+              onAuthChange={onAuthChange} 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 mr-2" 
+            />
+          )}
+          
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
             <Upload className="h-3.5 w-3.5 text-black" />
           </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 px-2">
-                <GitBranchPlus className="h-3.5 w-3.5 text-black" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowFlowchart && setShowFlowchart(true)}>
-                <GitCommitHorizontal className="h-3.5 w-3.5 mr-2" />
-                Flowchart
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowSequenceDiagram && setShowSequenceDiagram(true)}>
-                <ListOrdered className="h-3.5 w-3.5 mr-2" />
-                Sequence Diagram
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowMindmap && setShowMindmap(true)}>
-                <Network className="h-3.5 w-3.5 mr-2" />
-                Mindmap
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>
             <Download className="h-3.5 w-3.5 text-black" />

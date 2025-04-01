@@ -1,201 +1,201 @@
 
-import { useState, useCallback, useRef } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import PdfToText from "react-pdftotext";
-import { Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { generateMindMapFromText } from "@/services/geminiService";
+import { useToast } from "@/hooks/use-toast";
+import { Upload, FileText, Linkedin, Twitter } from "lucide-react";
+import { User } from "@supabase/supabase-js";
+import AuthButton from "@/components/auth/AuthButton";
 
-const PdfUpload = () => {
+interface PdfUploadProps {
+  user: User | null;
+  onAuthChange: () => void;
+}
+
+const PdfUpload = ({ user, onAuthChange }: PdfUploadProps) => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [extractionError, setExtractionError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleDrag = useCallback((e: React.DragEvent) => {
+  
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
     if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
     } else if (e.type === "dragleave") {
       setDragActive(false);
     }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  };
+  
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type === "application/pdf") {
-        setSelectedFile(file);
-        toast({
-          title: "PDF uploaded successfully",
-          description: `File: ${file.name}`,
-        });
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF file",
-          variant: "destructive",
-        });
-      }
+      handleFiles(e.dataTransfer.files[0]);
     }
-  }, [toast]);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.type === "application/pdf") {
-        setSelectedFile(file);
-        toast({
-          title: "PDF uploaded successfully",
-          description: `File: ${file.name}`,
-        });
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF file",
-          variant: "destructive",
-        });
-      }
+      handleFiles(e.target.files[0]);
     }
-  }, [toast]);
-
-  const handleGenerateMindmap = useCallback(async () => {
-    if (!selectedFile) {
+  };
+  
+  const handleFiles = async (file: File) => {
+    if (file.type !== "application/pdf") {
       toast({
-        title: "No file selected",
-        description: "Please upload a PDF file first",
-        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload a PDF file.",
+        variant: "destructive"
       });
       return;
     }
-
-    setIsProcessing(true);
-    setExtractionError(null);
     
-    toast({
-      title: "Processing PDF",
-      description: "Extracting text and generating mind map...",
-    });
-
+    setIsUploading(true);
+    
     try {
-      // First, read the PDF as DataURL for viewing later
+      // Store PDF as base64 string
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64data = e.target?.result as string;
-        // Store PDF data under both keys for compatibility
-        sessionStorage.setItem('pdfData', base64data);
-        sessionStorage.setItem('uploadedPdfData', base64data);
-        console.log("PDF data stored, length:", base64data.length);
+      reader.readAsDataURL(file);
+      
+      reader.onload = () => {
+        const pdfData = reader.result as string;
+        sessionStorage.setItem("uploadedPdfData", pdfData);
+        sessionStorage.setItem("uploadedPdfName", file.name);
+        
+        // Navigate to mind map page
+        toast({
+          title: "PDF uploaded successfully",
+          description: "Redirecting to mind map viewer..."
+        });
+        
+        setTimeout(() => {
+          navigate("/mindmap");
+        }, 1500);
       };
-      reader.readAsDataURL(selectedFile);
       
-      // Extract text from PDF
-      const extractedText = await PdfToText(selectedFile);
-      
-      if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
-        throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
-      }
-      
-      // Process the text with Gemini to generate mind map data
-      const mindMapData = await generateMindMapFromText(extractedText);
-      
-      // Store the generated mind map data in sessionStorage
-      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
-      
-      // Navigate to the mind map view
-      toast({
-        title: "Success",
-        description: "Mind map generated successfully!",
-      });
-      navigate("/mindmap");
     } catch (error) {
-      console.error("Error processing PDF:", error);
-      setExtractionError(error instanceof Error ? error.message : "Failed to process PDF");
+      console.error("PDF upload error:", error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to process PDF",
-        variant: "destructive",
+        title: "Upload failed",
+        description: "An error occurred while uploading the PDF.",
+        variant: "destructive"
       });
-      setIsProcessing(false);
+    } finally {
+      setIsUploading(false);
     }
-  }, [selectedFile, navigate, toast]);
-
+  };
+  
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-4 mb-3">
-            <Brain className="h-10 w-10 text-[#333]" />
-            <h1 className="text-4xl font-bold text-[#333]">MapMyPaper</h1>
+    <div className="flex flex-col min-h-screen">
+      <header className="bg-white p-4 border-b flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div className="bg-black text-white p-1.5 rounded-md">
+            <Upload className="h-4 w-4" />
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl">
-            Upload your academic paper or research document to automatically generate interactive mind maps, summaries, and AI-powered insights
-          </p>
+          <h1 className="text-lg font-bold">mapmypaper</h1>
+          <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">
+            BETA
+          </div>
         </div>
         
-        <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
-          {/* Dropzone */}
+        <AuthButton user={user} onAuthChange={onAuthChange} />
+      </header>
+      
+      <main className="flex-1 flex flex-col items-center justify-center p-6">
+        <div className="max-w-2xl w-full text-center space-y-6">
+          <h1 className="text-3xl md:text-4xl font-bold">
+            Transform Research Papers into Interactive Mind Maps
+          </h1>
+          
+          <p className="text-gray-600 max-w-lg mx-auto">
+            Upload your PDF and our AI will create a visual, navigable mind map of key concepts,
+            making complex research papers easier to understand.
+          </p>
+          
+          {/* Upload Area */}
           <div
-            className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${
-              dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"
-            } cursor-pointer flex flex-col items-center justify-center gap-4`}
+            className={`border-2 border-dashed rounded-lg p-10 transition-all ${
+              dragActive ? "border-black bg-gray-50" : "border-gray-300"
+            }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
           >
             <input
-              ref={fileInputRef}
+              id="pdf-upload"
               type="file"
-              accept=".pdf"
-              className="hidden"
+              accept="application/pdf"
               onChange={handleFileChange}
+              className="hidden"
+              disabled={isUploading}
             />
-            <Upload className="h-12 w-12 text-gray-400" />
-            <div className="text-center">
-              <p className="text-lg font-medium">Drag and drop your PDF here</p>
-              <p className="text-gray-500">or select a file from your computer</p>
-            </div>
+            
+            <label
+              htmlFor="pdf-upload"
+              className="flex flex-col items-center gap-4 cursor-pointer"
+            >
+              <div className="bg-gray-100 rounded-full p-3">
+                <FileText className="h-8 w-8 text-gray-700" />
+              </div>
+              
+              <div className="space-y-1 text-center">
+                <p className="text-gray-700 font-medium">
+                  {isUploading ? "Uploading..." : "Drop your PDF here or click to browse"}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Accepts PDF documents (max 30MB)
+                </p>
+              </div>
+              
+              <Button
+                disabled={isUploading}
+                variant="default"
+                className="mt-2"
+              >
+                {isUploading ? "Uploading..." : "Upload PDF"}
+              </Button>
+            </label>
+          </div>
+        </div>
+      </main>
+      
+      <footer className="bg-white border-t p-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <p className="text-sm text-gray-600">
+              &copy; {new Date().getFullYear()} MapMyPaper. All rights reserved.
+            </p>
           </div>
           
-          {/* Selected File Info */}
-          {selectedFile && (
-            <div className="p-4 bg-gray-50 rounded-lg flex items-center justify-between mb-6">
-              <p className="font-medium truncate">{selectedFile.name}</p>
-              <p className="text-sm text-gray-500">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
-            </div>
-          )}
-          
-          {/* Generate Button */}
-          <Button 
-            onClick={handleGenerateMindmap} 
-            className="w-full bg-[#333] hover:bg-[#444] text-white" 
-            disabled={!selectedFile || isProcessing}
-            size="lg"
-          >
-            {isProcessing ? "Processing..." : "Generate Mind Map"}
-          </Button>
-          
-          {extractionError && (
-            <p className="text-red-500 text-sm mt-4">{extractionError}</p>
-          )}
+          <div className="flex items-center gap-4">
+            <a 
+              href="https://linkedin.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-blue-600 transition-colors"
+              aria-label="LinkedIn"
+            >
+              <Linkedin className="h-5 w-5" />
+            </a>
+            <a 
+              href="https://twitter.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-blue-400 transition-colors"
+              aria-label="Twitter"
+            >
+              <Twitter className="h-5 w-5" />
+            </a>
+          </div>
         </div>
-      </div>
-      
-      <footer className="py-4 text-center text-gray-500 text-sm">
-        MapMyPaper — Transform research into visual knowledge
       </footer>
     </div>
   );
