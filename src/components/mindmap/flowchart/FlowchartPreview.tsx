@@ -1,83 +1,76 @@
 
-import { useEffect, useRef, RefObject } from "react";
-import mermaid from "mermaid";
+import { useRef, useEffect, useState } from 'react';
+import mermaid from 'mermaid';
 
-interface FlowchartPreviewProps {
+export interface FlowchartPreviewProps {
   code: string;
-  error: string | null;
-  isGenerating: boolean;
-  theme: 'default' | 'forest' | 'dark' | 'neutral';
-  previewRef?: RefObject<HTMLDivElement>;
+  error?: string | null;
+  isGenerating?: boolean;
+  theme?: 'default' | 'forest' | 'dark' | 'neutral';
+  previewRef?: React.RefObject<HTMLDivElement>;
+  hideEditor?: boolean; // Added hideEditor prop
 }
 
-const FlowchartPreview = ({ code, error, isGenerating, theme, previewRef }: FlowchartPreviewProps) => {
+const FlowchartPreview = ({ 
+  code, 
+  error, 
+  isGenerating = false, 
+  theme = 'default',
+  previewRef,
+  hideEditor = false // Default to false
+}: FlowchartPreviewProps) => {
   const localRef = useRef<HTMLDivElement>(null);
   const ref = previewRef || localRef;
-  
-  // Render mermaid diagram when code or theme changes
+  const [renderError, setRenderError] = useState<string | null>(null);
+
   useEffect(() => {
     const renderDiagram = async () => {
-      if (!ref.current || !code || isGenerating || error) return;
-      
       try {
-        // Clear previous content
-        ref.current.innerHTML = "";
-        
-        // Set theme
-        mermaid.initialize({
-          theme: theme,
-          securityLevel: 'loose',
-          startOnLoad: false, // Prevent automatic rendering
-        });
-        
-        // Directly render to the element itself rather than creating a new element
-        const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
-        
-        if (ref.current) { // Check again in case component unmounted during async operation
-          ref.current.innerHTML = svg;
+        if (ref.current) {
+          ref.current.innerHTML = '';
+          ref.current.removeAttribute('data-processed');
+  
+          // Configure mermaid
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: theme,
+            securityLevel: 'loose',
+            fontFamily: 'Roboto, sans-serif'
+          });
           
-          // Add zoom and pan functionality
-          const svgElement = ref.current.querySelector('svg');
-          if (svgElement) {
-            svgElement.style.maxWidth = '100%';
-            svgElement.style.height = 'auto';
+          // Render the diagram
+          const { svg } = await mermaid.render('mermaid-diagram', code);
+          if (ref.current) {
+            ref.current.innerHTML = svg;
+            setRenderError(null);
           }
         }
       } catch (err) {
-        console.error('Error rendering diagram:', err);
-        if (ref.current) {
-          ref.current.innerHTML = `<div class="text-red-500">Error rendering diagram: ${err.message || 'Unknown error'}</div>`;
-        }
+        console.error('Mermaid rendering error:', err);
+        setRenderError(`Error rendering diagram: ${err instanceof Error ? err.message : String(err)}`);
       }
     };
     
-    renderDiagram();
-  }, [code, theme, isGenerating, error]);
-  
-  // Display appropriate content based on state
-  if (isGenerating) {
-    return <div className="flex-1 flex items-center justify-center p-8">
-      <div className="animate-pulse flex flex-col items-center">
-        <div className="h-8 w-8 rounded-full bg-gray-300 mb-4"></div>
-        <div className="h-4 w-48 bg-gray-300 rounded"></div>
-      </div>
-    </div>;
-  }
-  
-  if (error) {
-    return (
-      <div className="flex-1 p-4 overflow-auto">
-        <div className="p-4 bg-red-50 text-red-800 rounded-md border border-red-200">
-          <h3 className="font-bold mb-2">Error</h3>
-          <pre className="whitespace-pre-wrap text-sm">{error}</pre>
-        </div>
-      </div>
-    );
-  }
-  
+    if (code && !isGenerating) {
+      renderDiagram();
+    }
+  }, [code, isGenerating, theme, ref]);
+
   return (
-    <div className="flex-1 p-6 bg-white rounded-md border overflow-auto flex items-center justify-center">
-      <div ref={ref} className="mermaid-diagram w-full h-full flex items-center justify-center" />
+    <div className="w-full h-full flex flex-col">
+      {isGenerating ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-pulse text-gray-500">Generating diagram...</div>
+        </div>
+      ) : renderError ? (
+        <div className="p-4 text-red-500 text-sm bg-red-50 rounded-md mb-4">
+          {renderError}
+        </div>
+      ) : null}
+      
+      <div className="overflow-auto flex-1 flex items-center justify-center p-4">
+        <div ref={ref} className="mermaid-diagram max-w-full"></div>
+      </div>
     </div>
   );
 };

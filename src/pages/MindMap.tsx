@@ -20,11 +20,13 @@ const MindMap = () => {
     mindElixirInstance.current = instance;
     
     // Auto-expand the map 
-    if (instance) {
+    if (instance && instance.nodeData) {
       try {
         // Get the root node and expand it
-        const rootNode = instance.nodeData.root as string;
-        instance.expandNode(rootNode);
+        const rootNode = instance.nodeData.id;
+        if (rootNode) {
+          instance.expandNode(rootNode);
+        }
       } catch (err) {
         console.log("Error expanding root node:", err);
       }
