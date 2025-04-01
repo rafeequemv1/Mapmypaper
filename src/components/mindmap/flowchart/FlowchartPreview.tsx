@@ -60,6 +60,45 @@ const FlowchartPreview = ({
           processedCode = processedCode.replace(/flowchart\s+[A-Z]{2}/, 'flowchart LR');
         }
         
+        // Auto-assign different colors to nodes in flowchart if not already assigned
+        if (processedCode.includes('flowchart') && !processedCode.includes('class') && !processedCode.includes('style')) {
+          const lines = processedCode.split('\n');
+          let nodeCount = 0;
+          const nodeClass = {};
+          
+          // Process each line to find nodes
+          for (let i = 0; i < lines.length; i++) {
+            // Match node definitions and connections
+            const nodeMatches = lines[i].match(/([A-Za-z0-9_-]+)(?:\[|\(|\{|\>)/g);
+            if (nodeMatches) {
+              for (const match of nodeMatches) {
+                const nodeName = match.replace(/[\[\(\{\>]$/, '').trim();
+                if (!nodeClass[nodeName] && nodeName !== 'flowchart') {
+                  nodeClass[nodeName] = `class-${(nodeCount % 7) + 1}`; // Cycle through 7 classes
+                  nodeCount++;
+                }
+              }
+            }
+            
+            // Find start nodes in connections
+            const connMatches = lines[i].match(/([A-Za-z0-9_-]+)\s*-->/g);
+            if (connMatches) {
+              for (const match of connMatches) {
+                const nodeName = match.replace(/\s*-->$/, '').trim();
+                if (!nodeClass[nodeName]) {
+                  nodeClass[nodeName] = `class-${(nodeCount % 7) + 1}`;
+                  nodeCount++;
+                }
+              }
+            }
+          }
+          
+          // Add class assignments at the end
+          for (const [node, className] of Object.entries(nodeClass)) {
+            processedCode += `\nclass ${node} ${className}`;
+          }
+        }
+        
         // Add custom styling for enhanced colors
         const customStyles = `
           .flowchart-node rect, .flowchart-label rect {
@@ -124,6 +163,34 @@ const FlowchartPreview = ({
           .node.neutral > rect, .node.neutral > circle, .node.neutral > ellipse, .node.neutral > polygon {
             fill: #FDE1D3 !important;
             stroke: #F97316 !important;
+          }
+          .node.class-1 > rect, .node.class-1 > circle, .node.class-1 > ellipse, .node.class-1 > polygon {
+            fill: #E5DEFF !important;
+            stroke: #8B5CF6 !important;
+          }
+          .node.class-2 > rect, .node.class-2 > circle, .node.class-2 > ellipse, .node.class-2 > polygon {
+            fill: #D3E4FD !important;
+            stroke: #0EA5E9 !important;
+          }
+          .node.class-3 > rect, .node.class-3 > circle, .node.class-3 > ellipse, .node.class-3 > polygon {
+            fill: #FDE1D3 !important;
+            stroke: #F97316 !important;
+          }
+          .node.class-4 > rect, .node.class-4 > circle, .node.class-4 > ellipse, .node.class-4 > polygon {
+            fill: #F2FCE2 !important;
+            stroke: #22C55E !important;
+          }
+          .node.class-5 > rect, .node.class-5 > circle, .node.class-5 > ellipse, .node.class-5 > polygon {
+            fill: #FFDEE2 !important;
+            stroke: #EF4444 !important;
+          }
+          .node.class-6 > rect, .node.class-6 > circle, .node.class-6 > ellipse, .node.class-6 > polygon {
+            fill: #FEF7CD !important;
+            stroke: #F59E0B !important;
+          }
+          .node.class-7 > rect, .node.class-7 > circle, .node.class-7 > ellipse, .node.class-7 > polygon {
+            fill: #F1F0FB !important;
+            stroke: #D946EF !important;
           }
           .node.decision > path {
             fill: #E5DEFF !important;

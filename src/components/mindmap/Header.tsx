@@ -7,7 +7,6 @@ import {
   Download,
   Upload,
   MessageSquare,
-  Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +27,6 @@ interface HeaderProps {
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
-  toggleTreemap?: () => void; // Add this prop
 }
 
 const Header = ({ 
@@ -36,7 +34,6 @@ const Header = ({
   toggleChat, 
   setShowSummary,
   setShowFlowchart,
-  toggleTreemap,
 }: HeaderProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [fileName, setFileName] = useState("mindmap");
@@ -143,13 +140,6 @@ const Header = ({
             <GitCommitHorizontal className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
-          
-          {toggleTreemap && (
-            <Button variant="ghost" onClick={toggleTreemap} className="flex items-center gap-1 text-black h-8 px-3">
-              <Network className="h-3.5 w-3.5" />
-              <span className="hidden md:inline text-sm">Tree View</span>
-            </Button>
-          )}
         </div>
         
         {/* Right side - Action buttons */}

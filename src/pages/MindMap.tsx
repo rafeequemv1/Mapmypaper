@@ -3,11 +3,8 @@ import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
-import TreemapModal from "@/components/mindmap/TreemapModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Network } from "lucide-react";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -15,7 +12,6 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
-  const [showTreemap, setShowTreemap] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
   const { toast } = useToast();
@@ -67,10 +63,6 @@ const MindMap = () => {
   const toggleFlowchart = useCallback(() => {
     setShowFlowchart(prev => !prev);
   }, []);
-  
-  const toggleTreemap = useCallback(() => {
-    setShowTreemap(prev => !prev);
-  }, []);
 
   const handleExplainText = useCallback((text: string) => {
     setExplainText(text);
@@ -99,7 +91,7 @@ const MindMap = () => {
         const topicElements = mindMap.container.querySelectorAll('.mind-elixir-topic');
         topicElements.forEach(topicElement => {
           if (topicElement.classList.contains('mind-elixir-root')) return; // Skip root, already handled
-          applyLineBreaksToNode(topicElement as HTMLElement, 7); // 7 words per line for other nodes
+          applyLineBreaksToNode(topicElement as HTMLElement, 5); // 5 words per line as requested
         });
 
         // Verify all nodes have complete sentences
@@ -233,7 +225,6 @@ const MindMap = () => {
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
-        toggleTreemap={toggleTreemap} // Pass the toggle function for treemap
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -258,11 +249,6 @@ const MindMap = () => {
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
-      />
-      
-      <TreemapModal
-        open={showTreemap}
-        onOpenChange={setShowTreemap}
       />
     </div>
   );
