@@ -26,6 +26,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   // State for theme and editor visibility
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [initialGeneration, setInitialGeneration] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
   
   // Direction set to LR for better visibility of detailed sub-branches
   useMermaidInit("LR");
@@ -48,6 +49,19 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
     setTheme(themes[nextIndex]);
   };
 
+  // Handle zoom controls
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.2, 2.0));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const handleZoomReset = () => {
+    setZoomLevel(1);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
@@ -58,6 +72,19 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
           </DialogDescription>
         </DialogHeader>
         
+        {/* Zoom controls */}
+        <div className="flex items-center gap-2 mb-2">
+          <Button variant="outline" size="sm" onClick={handleZoomOut}>
+            -
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleZoomReset}>
+            {Math.round(zoomLevel * 100)}%
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleZoomIn}>
+            +
+          </Button>
+        </div>
+        
         {/* Preview - Takes up all space */}
         <div className="flex-1 overflow-hidden">
           <FlowchartPreview
@@ -67,6 +94,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
             theme={theme}
             previewRef={previewRef}
             hideEditor={true}
+            zoomLevel={zoomLevel}
           />
         </div>
         
