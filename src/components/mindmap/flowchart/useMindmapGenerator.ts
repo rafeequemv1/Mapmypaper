@@ -1,9 +1,14 @@
+
 import { useState } from "react";
 import { generateMindmapFromPdf } from "@/services/geminiService";
 
 // Default mindmap diagram with enhanced colors and branch-based structure
 export const defaultMindmap = `mindmap
   root((Paper Topic))
+    Summary:::summary
+      Key Points:::summaryDetail
+      Main Contributions:::summaryDetail
+      Significance:::summaryDetail
     Key Concept 1:::branch1
       Sub-concept 1.1:::subbranch1
       Sub-concept 1.2:::subbranch1
@@ -17,6 +22,8 @@ export const defaultMindmap = `mindmap
 
 %% Color styling for different branches
 classDef root fill:#8b5cf6,color:#ffffff,stroke:#6d28d9,stroke-width:4px,font-size:18px
+classDef summary fill:#f97316,color:#ffffff,stroke:#ea580c,stroke-width:2px,font-weight:bold
+classDef summaryDetail fill:#fdba74,color:#7c2d12,stroke:#f97316,font-style:italic
 classDef branch1 fill:#f97316,color:#ffffff,stroke:#ea580c,stroke-width:2px
 classDef branch2 fill:#06b6d4,color:#ffffff,stroke:#0891b2,stroke-width:2px
 classDef branch3 fill:#10b981,color:#ffffff,stroke:#059669,stroke-width:2px
@@ -92,6 +99,7 @@ const useMindmapGenerator = () => {
     
     // Keywords to special colors based on content
     const keywordMapping: Record<string, string> = {
+      summary: 'summary',
       introduction: 'intro',
       background: 'background',
       method: 'method',
@@ -113,6 +121,7 @@ const useMindmapGenerator = () => {
     let branchCounter = 0;
     let subBranchCounter = 0;
     let inHeader = true;
+    let summaryFound = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -158,32 +167,47 @@ const useMindmapGenerator = () => {
       // Main branches (indent level 1)
       else if (level === 1) {
         branchCounter++;
-        const branchClass = `branch${branchCounter}`;
-        branchClasses.push(branchClass);
         
-        // Apply content-based classes if keywords are present
-        const lowerCaseLine = line.toLowerCase();
-        const contentClass = Object.keys(keywordMapping).find(key => lowerCaseLine.includes(key));
-        
-        if (contentClass) {
+        // Check if this is the summary branch - it should be the first branch
+        if (line.toLowerCase().includes('summary') || (!summaryFound && branchCounter === 1)) {
+          summaryFound = true;
           if (line.includes(':::')) {
-            // Already has class, fix format
             const [nodePart, _] = line.split(':::');
             processedLines.push(nodePart.trim());
-            processedLines.push(`    :::${keywordMapping[contentClass]}`);
+            processedLines.push(`    :::summary`);
           } else {
             processedLines.push(line);
-            processedLines.push(`    :::${keywordMapping[contentClass]}`);
+            processedLines.push(`    :::summary`);
           }
-        } else {
-          if (line.includes(':::')) {
-            // Already has class, fix format
-            const [nodePart, _] = line.split(':::');
-            processedLines.push(nodePart.trim());
-            processedLines.push(`    :::${branchClass}`);
+        }
+        // Apply content-based classes if keywords are present
+        else {
+          const branchClass = `branch${branchCounter}`;
+          branchClasses.push(branchClass);
+          
+          const lowerCaseLine = line.toLowerCase();
+          const contentClass = Object.keys(keywordMapping).find(key => lowerCaseLine.includes(key));
+          
+          if (contentClass) {
+            if (line.includes(':::')) {
+              // Already has class, fix format
+              const [nodePart, _] = line.split(':::');
+              processedLines.push(nodePart.trim());
+              processedLines.push(`    :::${keywordMapping[contentClass]}`);
+            } else {
+              processedLines.push(line);
+              processedLines.push(`    :::${keywordMapping[contentClass]}`);
+            }
           } else {
-            processedLines.push(line);
-            processedLines.push(`    :::${branchClass}`);
+            if (line.includes(':::')) {
+              // Already has class, fix format
+              const [nodePart, _] = line.split(':::');
+              processedLines.push(nodePart.trim());
+              processedLines.push(`    :::${branchClass}`);
+            } else {
+              processedLines.push(line);
+              processedLines.push(`    :::${branchClass}`);
+            }
           }
         }
         
@@ -197,18 +221,32 @@ const useMindmapGenerator = () => {
         }
         
         const parentBranch = branchCounter > 0 ? branchCounter : 1;
-        const className = level === 2 ? 
-          `subbranch${parentBranch}` : 
-          `detail${parentBranch}`;
         
-        if (line.includes(':::')) {
-          // Already has class, fix format
-          const [nodePart, _] = line.split(':::');
-          processedLines.push(nodePart.trim());
-          processedLines.push(`${'    '.repeat(level)}:::${className}`);
-        } else {
-          processedLines.push(line);
-          processedLines.push(`${'    '.repeat(level)}:::${className}`);
+        // Special handling for summary section children
+        if (summaryFound && level === 2 && currentLevel === 1) {
+          if (line.includes(':::')) {
+            const [nodePart, _] = line.split(':::');
+            processedLines.push(nodePart.trim());
+            processedLines.push(`${'    '.repeat(level)}:::summaryDetail`);
+          } else {
+            processedLines.push(line);
+            processedLines.push(`${'    '.repeat(level)}:::summaryDetail`);
+          }
+        } 
+        else {
+          const className = level === 2 ? 
+            `subbranch${parentBranch}` : 
+            `detail${parentBranch}`;
+          
+          if (line.includes(':::')) {
+            // Already has class, fix format
+            const [nodePart, _] = line.split(':::');
+            processedLines.push(nodePart.trim());
+            processedLines.push(`${'    '.repeat(level)}:::${className}`);
+          } else {
+            processedLines.push(line);
+            processedLines.push(`${'    '.repeat(level)}:::${className}`);
+          }
         }
         
         currentLevel = level;
@@ -223,6 +261,8 @@ const useMindmapGenerator = () => {
     if (!processedLines.some(line => line.startsWith('classDef'))) {
       processedLines.push('\n%% Color styling for different branches');
       processedLines.push('classDef root fill:#8b5cf6,color:#ffffff,stroke:#6d28d9,stroke-width:4px,font-size:18px');
+      processedLines.push('classDef summary fill:#f97316,color:#ffffff,stroke:#ea580c,stroke-width:2px,font-weight:bold');
+      processedLines.push('classDef summaryDetail fill:#fdba74,color:#7c2d12,stroke:#f97316,font-style:italic');
       
       // Define branch colors - use a vibrant palette
       const branchColors = [

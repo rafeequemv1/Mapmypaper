@@ -126,7 +126,10 @@ const Header = ({
         <div className="bg-black text-white p-2 rounded-md">
           <FileUp className="h-5 w-5" />
         </div>
-        <h1 className="text-xl font-bold">mapmypaper</h1>
+        <div className="flex items-center">
+          <h1 className="text-xl font-bold">mapmypaper</h1>
+          <div className="ml-2 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">BETA</div>
+        </div>
       </div>
       <div className="flex items-center gap-2 md:gap-4">
         {/* Middle section with PDF, Chat, Summary buttons with text */}
@@ -144,12 +147,12 @@ const Header = ({
         </Button>
         
         {/* Right section with icon-only buttons */}
-        <Button size="icon" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
           <Upload className="h-4 w-4" />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="icon">
+            <Button variant="ghost" size="icon">
               <GitBranchPlus className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -168,7 +171,7 @@ const Header = ({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button size="icon" onClick={() => setShowExportDialog(true)}>
+        <Button variant="ghost" size="icon" onClick={() => setShowExportDialog(true)}>
           <Download className="h-4 w-4" />
         </Button>
       </div>
@@ -194,13 +197,15 @@ const Header = ({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={handleExportPNG}>
+            <Button variant="ghost" onClick={handleExportPNG}>
               Export as PNG
             </Button>
-            <Button variant="secondary" onClick={handleExportSVG}>
+            <Button variant="ghost" onClick={handleExportSVG}>
               Export as SVG
             </Button>
-            <Button onClick={handleExportJSON}>Export as JSON</Button>
+            <Button variant="ghost" onClick={handleExportJSON}>
+              Export as JSON
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -19,6 +20,16 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
         "topic": "Research Paper Title",
         "root": true,
         "children": [
+          {
+            "id": "summary",
+            "topic": "Paper Summary",
+            "direction": 0,
+            "children": [
+              { "id": "summary1", "topic": "Key Points" },
+              { "id": "summary2", "topic": "Main Contributions" },
+              { "id": "summary3", "topic": "Significance" }
+            ]
+          },
           {
             "id": "intro",
             "topic": "Introduction",
@@ -107,6 +118,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     If information for a certain node isn't available in the document, keep the default label.
     
     For the root node, use the paper's actual title.
+    Pay special attention to the Summary section which should provide a concise overview of the entire paper.
     
     Format the response as a JSON object with the following structure EXACTLY AS PROVIDED below:
     ${JSON.stringify(researchPaperTemplate, null, 2)}
@@ -116,7 +128,8 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     2. Replace only the topic text with relevant content from the paper.
     3. Keep all node IDs and directions as they are in the template.
     4. For each topic, provide concise but complete information (preferably under 10 words).
-    5. Only include the JSON in your response, nothing else.
+    5. For the Summary section, provide a meaningful overview with complete sentences for each child node.
+    6. Only include the JSON in your response, nothing else.
     
     Here's the document text to analyze:
     ${pdfText.slice(0, 15000)}
