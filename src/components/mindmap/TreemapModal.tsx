@@ -61,7 +61,6 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
             .replace(/[\(\)']/g, ''); // Remove problematic characters
             
           treemapCode += `  root(("${rootTopic}"))\n`;
-          treemapCode += `  ::rootStyle\n`; // Apply custom class for styling
           
           // Helper function to recursively add nodes with color classes
           const addNodesRecursively = (node: any, parent: string, depth: number) => {
@@ -81,31 +80,34 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
               
               // Choose different node styles based on depth
               let nodeStyle = '';
-              let styleClass = '';
+              let classDeclaration = '';
               
               if (depth === 1) {
-                // First level: rounded rectangle with class
+                // First level: rounded rectangle
                 nodeStyle = `["${cleanTopic}"]`;
-                styleClass = `::level1Style${index % 5}`; // Use modulo for color variety
+                classDeclaration = `classDef style${depth}_${index % 5} fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C`;
               } else if (depth === 2) {
-                // Second level: stadium shape with class
+                // Second level: stadium shape
                 nodeStyle = `("${cleanTopic}")`;
-                styleClass = `::level2Style${index % 5}`;
+                classDeclaration = `classDef style${depth}_${index % 5} fill:#F6F6F7,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C`;
               } else if (depth === 3) {
-                // Third level: hexagon with class
+                // Third level: hexagon
                 nodeStyle = `{{"${cleanTopic}"}}`;
-                styleClass = `::level3Style${index % 5}`;
+                classDeclaration = `classDef style${depth}_${index % 5} fill:#FDE1D3,stroke:#F97316,stroke-width:1px,color:#1A1F2C,font-style:italic`;
               } else {
-                // Other levels: cloud with class
-                nodeStyle = `::"${cleanTopic}"`;
-                styleClass = `::level4Style${index % 4}`;
+                // Other levels: cloud
+                nodeStyle = `>"${cleanTopic}"]`;
+                classDeclaration = `classDef style${depth}_${index % 4} fill:#F1F0FB,stroke:#D946EF,stroke-width:1px,color:#1A1F2C`;
               }
               
               treemapCode += `${indent}${parent} --> ${nodeId}${nodeStyle}\n`;
               
-              // Add style class if not using the text node style already
-              if (!nodeStyle.startsWith('::')) {
-                treemapCode += `${indent}${nodeId}${styleClass}\n`;
+              // Add class for styling directly to the node
+              treemapCode += `${indent}class ${nodeId} style${depth}_${index % 5}\n`;
+              
+              // Add style definition at the bottom if needed
+              if (!treemapCode.includes(classDeclaration)) {
+                treemapCode += `%% ${classDeclaration}\n`;
               }
               
               // Recursively process children
@@ -115,62 +117,72 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
             });
           };
           
+          // Add style for root
+          treemapCode += `  class root rootStyle\n`;
+          treemapCode += `%% classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold\n`;
+          
           // Start recursive node addition
           addNodesRecursively(rootNode, "root", 1);
           
-          // Add custom styling classes
-          treemapCode += `
-  classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold
-  classDef level1Style0 fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
-  classDef level1Style1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
-  classDef level1Style2 fill:#FDE1D3,stroke:#F97316,stroke-width:1px,color:#1A1F2C
-  classDef level1Style3 fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#1A1F2C
-  classDef level1Style4 fill:#F2FCE2,stroke:#6E59A5,stroke-width:1px,color:#1A1F2C
-  classDef level2Style0 fill:#F6F6F7,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
-  classDef level2Style1 fill:#F1F0FB,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
-  classDef level2Style2 fill:#FEF7CD,stroke:#F97316,stroke-width:1px,color:#1A1F2C
-  classDef level2Style3 fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#1A1F2C
-  classDef level2Style4 fill:#F2FCE2,stroke:#6E59A5,stroke-width:1px,color:#1A1F2C
-  classDef level3Style0 fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C,font-style:italic
-  classDef level3Style1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C,font-style:italic
-  classDef level3Style2 fill:#FDE1D3,stroke:#F97316,stroke-width:1px,color:#1A1F2C,font-style:italic
-  classDef level3Style3 fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#1A1F2C,font-style:italic
-  classDef level3Style4 fill:#F2FCE2,stroke:#6E59A5,stroke-width:1px,color:#1A1F2C,font-style:italic
-  classDef level4Style0 fill:#F1F0FB,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
-  classDef level4Style1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
-  classDef level4Style2 fill:#FDE1D3,stroke:#F97316,stroke-width:1px,color:#1A1F2C
-  classDef level4Style3 fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#1A1F2C
-`;
         } else {
           // If no data, create a colorful example mindmap
           treemapCode += `
-  root(("Paper Structure"))::rootStyle
-  root --> root_0["Introduction"]::level1Style0
-    root_0 --> root_0_0("Background")::level2Style0
-    root_0 --> root_0_1("Problem Statement")::level2Style1
-  root --> root_1["Methodology"]::level1Style1
-    root_1 --> root_1_0("Experimental Setup")::level2Style2
-    root_1 --> root_1_1("Analysis Techniques")::level2Style3
-  root --> root_2["Results"]::level1Style2
-    root_2 --> root_2_0{{"Key Findings"}}::level3Style0
-    root_2 --> root_2_1{{"Statistical Analysis"}}::level3Style1
-  root --> root_3["Discussion"]::level1Style3
-    root_3 --> root_3_0::"Implications"
-    root_3 --> root_3_1::"Limitations"
-  root --> root_4["Conclusion"]::level1Style4
+  root(("Paper Structure"))
+  class root rootStyle
   
-  classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold
-  classDef level1Style0 fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
-  classDef level1Style1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
-  classDef level1Style2 fill:#FDE1D3,stroke:#F97316,stroke-width:1px,color:#1A1F2C
-  classDef level1Style3 fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#1A1F2C
-  classDef level1Style4 fill:#F2FCE2,stroke:#6E59A5,stroke-width:1px,color:#1A1F2C
-  classDef level2Style0 fill:#F6F6F7,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
-  classDef level2Style1 fill:#F1F0FB,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
-  classDef level2Style2 fill:#FEF7CD,stroke:#F97316,stroke-width:1px,color:#1A1F2C
-  classDef level2Style3 fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#1A1F2C
-  classDef level3Style0 fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C,font-style:italic
-  classDef level3Style1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C,font-style:italic
+  root --> root_0["Introduction"]
+  class root_0 style1_0
+  
+  root_0 --> root_0_0("Background")
+  class root_0_0 style2_0
+  
+  root_0 --> root_0_1("Problem Statement")
+  class root_0_1 style2_1
+  
+  root --> root_1["Methodology"]
+  class root_1 style1_1
+  
+  root_1 --> root_1_0("Experimental Setup")
+  class root_1_0 style2_2
+  
+  root_1 --> root_1_1("Analysis Techniques")
+  class root_1_1 style2_3
+  
+  root --> root_2["Results"]
+  class root_2 style1_2
+  
+  root_2 --> root_2_0{{"Key Findings"}}
+  class root_2_0 style3_0
+  
+  root_2 --> root_2_1{{"Statistical Analysis"}}
+  class root_2_1 style3_1
+  
+  root --> root_3["Discussion"]
+  class root_3 style1_3
+  
+  root_3 --> root_3_0>"Implications"]
+  class root_3_0 style4_0
+  
+  root_3 --> root_3_1>"Limitations"]
+  class root_3_1 style4_1
+  
+  root --> root_4["Conclusion"]
+  class root_4 style1_4
+  
+  %% classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold
+  %% classDef style1_0 fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
+  %% classDef style1_1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
+  %% classDef style1_2 fill:#FDE1D3,stroke:#F97316,stroke-width:1px,color:#1A1F2C
+  %% classDef style1_3 fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#1A1F2C
+  %% classDef style1_4 fill:#F2FCE2,stroke:#6E59A5,stroke-width:1px,color:#1A1F2C
+  %% classDef style2_0 fill:#F6F6F7,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
+  %% classDef style2_1 fill:#F1F0FB,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
+  %% classDef style2_2 fill:#FEF7CD,stroke:#F97316,stroke-width:1px,color:#1A1F2C
+  %% classDef style2_3 fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#1A1F2C
+  %% classDef style3_0 fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C,font-style:italic
+  %% classDef style3_1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C,font-style:italic
+  %% classDef style4_0 fill:#F1F0FB,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
+  %% classDef style4_1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
 `;
         }
         

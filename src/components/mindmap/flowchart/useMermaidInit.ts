@@ -38,8 +38,7 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       logLevel: 3 // Enables warning logs for debugging
     });
     
-    // For flowcharts, apply the direction through the general mermaid config
-    // This avoids TypeScript errors with the flowchart config object
+    // For flowcharts, apply the direction through the general mermaid code
     if (direction === "LR") {
       // Force horizontal layout for flowcharts using the proper syntax that works with mermaid
       document.querySelectorAll('.mermaid').forEach(el => {
