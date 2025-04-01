@@ -17,11 +17,9 @@ export const useMermaidInit = (direction: "TB" | "LR" = "LR") => {
         defaultRenderer: 'dagre-wrapper',
         nodeSpacing: 50,
         rankSpacing: 70,
-        // Fix: For Mermaid v11+, use the correct property for direction
-        // The type definition is incorrect, but this is the property that actually works
-        flowchart: {
-          rankDir: direction
-        }
+        // Fix: For Mermaid v11+, direction is specified directly in the flowchart config
+        // not in a nested flowchart object
+        orientation: direction
       },
       sequence: {
         diagramMarginX: 50,
