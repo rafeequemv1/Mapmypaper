@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -44,12 +43,10 @@ const MindMap = () => {
               try {
                 // Get the node id from the data attribute
                 const nodeId = element.getAttribute('data-nodeid');
-                if (nodeId && mindElixirInstance.reshapeNode) {
-                  // Try to reshape (expand) the node
-                  const node = mindElixirInstance.findNodeByTopic(nodeId);
-                  if (node) {
-                    mindElixirInstance.expandNode(node);
-                  }
+                if (nodeId && mindElixirInstance.nodeData) {
+                  // Try to directly access nodes and expand using nodeData structure
+                  // Mind-elixir exposes a nodeData object that contains all nodes
+                  mindElixirInstance.expandNode?.(nodeId);
                 }
               } catch (nodeError) {
                 console.info("Error expanding individual node:", nodeError);
