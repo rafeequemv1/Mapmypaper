@@ -42,8 +42,11 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   // Format content for display
-  const formatContent = (content: string) => {
-    if (!content) return "";
+  const formatContent = (content: any): React.ReactNode => {
+    // Check if content is a string before attempting to split
+    if (!content || typeof content !== 'string') {
+      return content;
+    }
     
     // Handle bullet points (lines starting with - or *)
     return content.split('\n').map((line, index) => {
@@ -84,7 +87,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   // Copy section text to clipboard
   const copyToClipboard = (section: string) => {
     const text = summary[section as keyof Summary] || "";
-    navigator.clipboard.writeText(text).then(() => {
+    navigator.clipboard.writeText(typeof text === 'string' ? text : JSON.stringify(text)).then(() => {
       setCopiedSection(section);
       toast({ title: "Copied", description: `${section} copied to clipboard` });
       setTimeout(() => setCopiedSection(null), 2000);
@@ -96,7 +99,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     try {
       let content = "";
       Object.entries(summary).forEach(([key, value]) => {
-        content += `## ${key}\n\n${value}\n\n`;
+        content += `## ${key}\n\n${typeof value === 'string' ? value : JSON.stringify(value)}\n\n`;
       });
 
       const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
@@ -224,7 +227,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                         </Button>
                       </div>
                       <div className="pl-4">
-                        {value && value.includes('-') ? (
+                        {typeof value === 'string' && value.includes('-') ? (
                           <ul className="list-disc pl-4">
                             {formatContent(value)}
                           </ul>
