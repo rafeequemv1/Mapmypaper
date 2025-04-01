@@ -12,7 +12,6 @@ interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
   onScrollToPdfPosition?: (position: string) => void;
-  onExplainText?: (text: string) => void;  // Added the missing prop
 }
 
 const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanelProps) => {
@@ -93,22 +92,16 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
 
   // Activate citations in messages when they are rendered
   useEffect(() => {
-    // Use a longer timeout to ensure the DOM is fully rendered
-    const activationTimeout = setTimeout(() => {
-      const messageContainers = document.querySelectorAll('.ai-message-content');
-      
-      messageContainers.forEach(container => {
-        activateCitations(container as HTMLElement, (citation) => {
-          console.log("Desktop Citation clicked:", citation);
-          if (onScrollToPdfPosition) {
-            // Directly invoke the scroll function with sufficient delay to ensure proper handling
-            onScrollToPdfPosition(citation);
-          }
-        });
-      });
-    }, 200); // Increased timeout for more reliable activation
+    const messageContainers = document.querySelectorAll('.ai-message-content');
     
-    return () => clearTimeout(activationTimeout);
+    messageContainers.forEach(container => {
+      activateCitations(container as HTMLElement, (citation) => {
+        console.log("Citation clicked:", citation);
+        if (onScrollToPdfPosition) {
+          onScrollToPdfPosition(citation);
+        }
+      });
+    });
   }, [messages, onScrollToPdfPosition]);
 
   const handleSendMessage = async () => {

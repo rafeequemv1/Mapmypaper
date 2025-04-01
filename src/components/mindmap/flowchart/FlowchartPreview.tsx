@@ -8,19 +8,9 @@ interface FlowchartPreviewProps {
   isGenerating: boolean;
   theme: 'default' | 'forest' | 'dark' | 'neutral';
   previewRef?: RefObject<HTMLDivElement>;
-  hideEditor?: boolean;
-  zoomLevel?: number;
 }
 
-const FlowchartPreview = ({ 
-  code, 
-  error, 
-  isGenerating, 
-  theme, 
-  previewRef, 
-  hideEditor,
-  zoomLevel = 1
-}: FlowchartPreviewProps) => {
+const FlowchartPreview = ({ code, error, isGenerating, theme, previewRef }: FlowchartPreviewProps) => {
   const localRef = useRef<HTMLDivElement>(null);
   const ref = previewRef || localRef;
   
@@ -33,41 +23,12 @@ const FlowchartPreview = ({
         // Clear previous content
         ref.current.innerHTML = "";
         
-        // Set theme and configure for left-to-right layout with rounded nodes
+        // Set theme
         mermaid.initialize({
           theme: theme,
           securityLevel: 'loose',
           startOnLoad: false, // Prevent automatic rendering
-          flowchart: {
-            htmlLabels: true,
-            curve: 'basis',
-            diagramPadding: 8,
-            nodeSpacing: 50,
-            rankSpacing: 70,
-            useMaxWidth: false
-          }
         });
-        
-        // Add custom styling for rounded corners and light colors
-        const customStyles = `
-          .flowchart-node rect, .flowchart-label rect {
-            rx: 15px;
-            ry: 15px;
-            fill-opacity: 0.7 !important;
-          }
-          .flowchart-node .label {
-            font-size: 14px;
-          }
-          .edgeLabel {
-            background-color: white;
-            border-radius: 4px;
-            padding: 2px;
-            font-size: 12px;
-          }
-          .node-circle {
-            fill-opacity: 0.7 !important;
-          }
-        `;
         
         // Directly render to the element itself rather than creating a new element
         const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
@@ -80,43 +41,6 @@ const FlowchartPreview = ({
           if (svgElement) {
             svgElement.style.maxWidth = '100%';
             svgElement.style.height = 'auto';
-            
-            // Add custom styles to SVG
-            const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-            styleElement.textContent = customStyles;
-            svgElement.appendChild(styleElement);
-            
-            // Apply zoom level
-            if (zoomLevel !== 1) {
-              const g = svgElement.querySelector('g');
-              if (g) {
-                // Get SVG dimensions
-                const svgWidth = svgElement.viewBox.baseVal.width;
-                const svgHeight = svgElement.viewBox.baseVal.height;
-                
-                // Calculate center point
-                const centerX = svgWidth / 2;
-                const centerY = svgHeight / 2;
-                
-                // Apply transform for zooming centered on the middle
-                g.setAttribute('transform', 
-                  `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
-                );
-              }
-            }
-            
-            // Fit SVG to container
-            const viewBox = svgElement.getAttribute('viewBox')?.split(' ');
-            if (viewBox && viewBox.length === 4) {
-              const width = parseFloat(viewBox[2]);
-              const height = parseFloat(viewBox[3]);
-              const aspectRatio = width / height;
-              
-              // Set dimensions to maintain aspect ratio
-              svgElement.style.width = '100%';
-              svgElement.style.height = `${100 / aspectRatio}%`;
-              svgElement.style.maxHeight = '100%';
-            }
           }
         }
       } catch (err) {
@@ -128,7 +52,7 @@ const FlowchartPreview = ({
     };
     
     renderDiagram();
-  }, [code, theme, isGenerating, error, zoomLevel]);
+  }, [code, theme, isGenerating, error]);
   
   // Display appropriate content based on state
   if (isGenerating) {

@@ -2,13 +2,24 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  GitBranchPlus,
   GitCommitHorizontal,
+  ListOrdered,
+  Network,
   FileText,
   Download,
   Upload,
   MessageSquare,
+  PlusCircle,
+  FileIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +38,8 @@ interface HeaderProps {
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSequenceDiagram?: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMindmap?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Header = ({ 
@@ -34,6 +47,8 @@ const Header = ({
   toggleChat, 
   setShowSummary,
   setShowFlowchart,
+  setShowSequenceDiagram,
+  setShowMindmap
 }: HeaderProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [fileName, setFileName] = useState("mindmap");
@@ -108,13 +123,13 @@ const Header = ({
   return (
     <header className="bg-white border-b py-2 px-4">
       <div className="flex items-center justify-between">
-        {/* Left side - Logo with Beta tag, smaller font */}
+        {/* Left side - Logo with Beta tag */}
         <div className="flex items-center gap-2">
           <div className="bg-black text-white p-1.5 rounded-md">
             <Upload className="h-4 w-4" />
           </div>
           <div className="flex items-center">
-            <h1 className="text-sm font-bold">mapmypaper</h1>
+            <h1 className="text-lg font-bold">mapmypaper</h1>
             <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
           </div>
         </div>
@@ -132,13 +147,13 @@ const Header = ({
           </Button>
           
           <Button variant="ghost" onClick={() => setShowSummary(true)} className="flex items-center gap-1 text-black h-8 px-3">
-            <FileText className="h-3.5 w-3.5" />
+            <FileIcon className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
           
-          <Button variant="ghost" onClick={() => setShowFlowchart && setShowFlowchart(true)} className="flex items-center gap-1 text-black h-8 px-3">
-            <GitCommitHorizontal className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Flowchart</span>
+          <Button variant="ghost" onClick={() => setShowMindmap && setShowMindmap(true)} className="flex items-center gap-1 text-black h-8 px-3">
+            <PlusCircle className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Create</span>
           </Button>
         </div>
         
@@ -147,6 +162,28 @@ const Header = ({
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
             <Upload className="h-3.5 w-3.5 text-black" />
           </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 px-2">
+                <GitBranchPlus className="h-3.5 w-3.5 text-black" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowFlowchart && setShowFlowchart(true)}>
+                <GitCommitHorizontal className="h-3.5 w-3.5 mr-2" />
+                Flowchart
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowSequenceDiagram && setShowSequenceDiagram(true)}>
+                <ListOrdered className="h-3.5 w-3.5 mr-2" />
+                Sequence Diagram
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowMindmap && setShowMindmap(true)}>
+                <Network className="h-3.5 w-3.5 mr-2" />
+                Mindmap
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>
             <Download className="h-3.5 w-3.5 text-black" />

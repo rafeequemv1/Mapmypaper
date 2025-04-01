@@ -1,15 +1,6 @@
 
 import React from 'react';
-import { 
-  ContextMenu, 
-  ContextMenuContent, 
-  ContextMenuItem, 
-  ContextMenuTrigger,
-  ContextMenuSeparator
-} from "@/components/ui/context-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { Info } from "lucide-react";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 
 interface MindMapContextMenuProps {
   children: React.ReactNode;
@@ -18,7 +9,6 @@ interface MindMapContextMenuProps {
   onDelete?: () => void;
   onAddChild?: () => void;
   onAddSibling?: () => void;
-  onExplain?: () => void;
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -27,48 +17,32 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onPaste,
   onDelete,
   onAddChild,
-  onAddSibling,
-  onExplain
+  onAddSibling
 }) => {
-  const handleCopy = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleCopy = () => {
     if (onCopy) {
       onCopy();
+    } else {
+      // Default copy behavior
+      document.execCommand('copy', false, undefined);
     }
   };
 
-  const handlePaste = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handlePaste = () => {
     if (onPaste) {
       onPaste();
+    } else {
+      // Default paste behavior
+      document.execCommand('paste', false, undefined);
     }
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleDelete = () => {
     if (onDelete) {
       onDelete();
-    }
-  };
-
-  const handleAddChild = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onAddChild) {
-      onAddChild();
-    }
-  };
-
-  const handleAddSibling = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onAddSibling) {
-      onAddSibling();
-    }
-  };
-  
-  const handleExplain = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onExplain) {
-      onExplain();
+    } else {
+      // Default delete behavior - with required arguments
+      document.execCommand('delete', false, undefined);
     }
   };
 
@@ -77,51 +51,25 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
       <ContextMenuTrigger asChild>
         {children}
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-64 bg-white shadow-lg border rounded-lg z-50">
-        {onCopy && (
-          <ContextMenuItem onClick={handleCopy} className="cursor-pointer">
-            Copy
-          </ContextMenuItem>
-        )}
-        {onPaste && (
-          <ContextMenuItem onClick={handlePaste} className="cursor-pointer">
-            Paste
-          </ContextMenuItem>
-        )}
-        {onDelete && (
-          <ContextMenuItem onClick={handleDelete} className="cursor-pointer">
-            Delete
-          </ContextMenuItem>
-        )}
+      <ContextMenuContent className="w-64">
+        <ContextMenuItem onClick={handleCopy}>
+          Copy
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handlePaste}>
+          Paste
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handleDelete}>
+          Delete
+        </ContextMenuItem>
         {onAddChild && (
-          <ContextMenuItem onClick={handleAddChild} className="cursor-pointer">
+          <ContextMenuItem onClick={onAddChild}>
             Add Child Node
           </ContextMenuItem>
         )}
         {onAddSibling && (
-          <ContextMenuItem onClick={handleAddSibling} className="cursor-pointer">
+          <ContextMenuItem onClick={onAddSibling}>
             Add Sibling Node
           </ContextMenuItem>
-        )}
-        {onExplain && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={handleExplain} className="cursor-pointer flex items-center">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="bg-white text-primary border border-primary/20 hover:bg-primary/10 px-2 py-1 h-auto w-full flex justify-start">
-                      <Info className="h-4 w-4 mr-2" />
-                      Explain Content
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Generate explanation for this node</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </ContextMenuItem>
-          </>
         )}
       </ContextMenuContent>
     </ContextMenu>

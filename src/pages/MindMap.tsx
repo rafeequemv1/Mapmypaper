@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import SequenceDiagramModal from "@/components/mindmap/SequenceDiagramModal"; 
+import MindmapModal from "@/components/mindmap/MindmapModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 
@@ -12,11 +14,17 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
+  const [showSequenceDiagram, setShowSequenceDiagram] = useState(false);
+  const [showMindmap, setShowMindmap] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
-  const [explainText, setExplainText] = useState<string>('');
+  const [explainText, setExplainText] = useState<string>("");
   const { toast } = useToast();
-
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  
+  // Keep track of modal redirect sources to handle sequenceDiagram -> flowchart
+  const handleSequenceToFlowchart = useCallback(() => {
+    setShowFlowchart(true);
+    // The FlowchartModal component will handle showing the sequence diagram tab
+  }, []);
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -64,6 +72,10 @@ const MindMap = () => {
     setShowFlowchart(prev => !prev);
   }, []);
 
+  const toggleSequenceDiagram = useCallback(() => {
+    setShowSequenceDiagram(prev => !prev);
+  }, []);
+
   const handleExplainText = useCallback((text: string) => {
     setExplainText(text);
     if (!showChat) {
@@ -84,14 +96,14 @@ const MindMap = () => {
         // Process the root node
         const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          applyLineBreaksToNode(rootNodeElement, 3); // 3 words per line for root (reduced from 6)
+          applyLineBreaksToNode(rootNodeElement, 6); // 6 words per line for root (increased from 4)
         }
         
         // Process all topic nodes
         const topicElements = mindMap.container.querySelectorAll('.mind-elixir-topic');
         topicElements.forEach(topicElement => {
           if (topicElement.classList.contains('mind-elixir-root')) return; // Skip root, already handled
-          applyLineBreaksToNode(topicElement as HTMLElement, 7); // 7 words per line for other nodes
+          applyLineBreaksToNode(topicElement as HTMLElement, 7); // 7 words per line for other nodes (increased from 5)
         });
 
         // Verify all nodes have complete sentences
@@ -118,23 +130,6 @@ const MindMap = () => {
         if (!(element instanceof HTMLElement) || !element.textContent) return;
         
         const text = element.textContent;
-        
-        // For root node, make it shorter - extract only the title part
-        if (element.classList.contains('mind-elixir-root')) {
-          const titleText = text.split(/[.,;:]|(\n)/)[0].trim();
-          const words = titleText.split(' ');
-          
-          let formattedText = '';
-          for (let i = 0; i < words.length; i += wordsPerLine) {
-            const chunk = words.slice(i, i + wordsPerLine).join(' ');
-            formattedText += chunk + (i + wordsPerLine < words.length ? '<br>' : '');
-          }
-          
-          element.innerHTML = formattedText;
-          return;
-        }
-        
-        // Regular nodes
         const words = text.split(' ');
         
         if (words.length <= wordsPerLine) return; // No need for line breaks
@@ -159,7 +154,7 @@ const MindMap = () => {
       setTimeout(() => {
         const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          applyLineBreaksToNode(rootNodeElement, 3);
+          applyLineBreaksToNode(rootNodeElement, 6);
         }
       }, 100);
     };
@@ -218,13 +213,15 @@ const MindMap = () => {
   }, [mindMap, toast]);
 
   return (
-    <div ref={containerRef} className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Header with all icons */}
       <Header 
         togglePdf={togglePdf}
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
+        setShowSequenceDiagram={setShowSequenceDiagram}
+        setShowMindmap={setShowMindmap}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -250,6 +247,18 @@ const MindMap = () => {
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
+      />
+
+      {/* Sequence Diagram Modal - now redirects to Flowchart with sequence tab */}
+      <SequenceDiagramModal
+        open={showSequenceDiagram}
+        onOpenChange={setShowSequenceDiagram}
+      />
+      
+      {/* Mindmap Modal */}
+      <MindmapModal
+        open={showMindmap}
+        onOpenChange={setShowMindmap}
       />
     </div>
   );

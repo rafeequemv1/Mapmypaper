@@ -16,7 +16,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
-  onImageCaptured?: (imageData: string) => void;  // Added this prop
   renderTooltipContent?: () => React.ReactNode;
 }
 
@@ -90,10 +89,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     };
 
     // Handle tooltip click to send text to chat
-    const handleExplainClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
+    const handleExplainClick = () => {
       if (selectedText && onTextSelected) {
         onTextSelected(selectedText);
         setShowTooltip(false);
@@ -462,7 +458,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                           pointerEvents: 'all'
                         }}
                         onClick={handleExplainClick}
-                        onMouseDown={(e) => e.stopPropagation()} 
                       >
                         Explain
                       </div>
