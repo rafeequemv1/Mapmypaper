@@ -36,6 +36,8 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   // Generate mindmap only once when modal is first opened
   useEffect(() => {
     if (open && !initialGeneration) {
+      // Generate mindmap with the root node set as "title"
+      // This will ensure the first node is always the title
       generateMindmap();
       setInitialGeneration(true);
     }

@@ -213,7 +213,11 @@ const MindMap = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header with all icons */}
-      <Header />
+      <Header 
+        togglePdf={togglePdf}
+        toggleChat={toggleChat}
+        setShowSummary={setShowSummary}
+      />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 overflow-hidden">

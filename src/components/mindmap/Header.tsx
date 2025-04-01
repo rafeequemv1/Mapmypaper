@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   GitBranchPlus,
@@ -9,11 +9,7 @@ import {
   FileText,
   Download,
   Upload,
-  PanelLeft,
   MessageSquare,
-  Settings,
-  Share2,
-  Trash2,
   Save,
   FileUp,
 } from "lucide-react";
@@ -48,11 +44,8 @@ const Header = () => {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showMindmapModal, setShowMindmapModal] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showShareDialog, setShowShareDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [fileName, setFileName] = useState("mindmap");
-  const [shareLink, setShareLink] = useState("");
   const [mindElixirInstance, setMindElixirInstance] = useState<any | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -60,29 +53,6 @@ const Header = () => {
   // Handle mind map instance being ready
   const handleMindMapReady = (instance: any) => {
     setMindElixirInstance(instance);
-  };
-  
-  // Generate a shareable link (mock implementation)
-  const generateShareLink = () => {
-    const baseUrl = window.location.origin;
-    const randomId = Math.random().toString(36).substring(2, 10);
-    return `${baseUrl}/shared/${randomId}`;
-  };
-  
-  // Handle share button click
-  const handleShare = () => {
-    const link = generateShareLink();
-    setShareLink(link);
-    setShowShareDialog(true);
-  };
-  
-  // Copy share link to clipboard
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(shareLink);
-    toast({
-      title: "Link copied",
-      description: "Share link copied to clipboard"
-    });
   };
   
   // Handle export as PNG
@@ -132,22 +102,6 @@ const Header = () => {
     }
   };
   
-  // Handle delete confirmation
-  const handleDelete = () => {
-    // Clear session storage
-    sessionStorage.removeItem("mindMapData");
-    sessionStorage.removeItem("pdfText");
-    sessionStorage.removeItem("pdfData");
-    sessionStorage.removeItem("uploadedPdfData");
-    setShowDeleteDialog(false);
-    toast({
-      title: "Mind map deleted",
-      description: "Your mind map has been deleted"
-    });
-    // Navigate back to upload page
-    navigate("/");
-  };
-  
   // Handle save (mock implementation)
   const handleSave = () => {
     if (mindElixirInstance) {
@@ -164,7 +118,7 @@ const Header = () => {
   };
   
   // Check if we have PDF data
-  useEffect(() => {
+  React.useEffect(() => {
     const pdfData = sessionStorage.getItem("pdfData") || sessionStorage.getItem("uploadedPdfData");
     if (!pdfData) {
       toast({
@@ -173,9 +127,7 @@ const Header = () => {
         variant: "destructive"
       });
     }
-  }, [
-    toast
-  ]);
+  }, [toast]);
   
   return (
     <header className="bg-white border-b p-4 flex justify-between items-center">
@@ -183,18 +135,31 @@ const Header = () => {
         <div className="bg-black text-white p-2 rounded-md">
           <FileUp className="h-5 w-5" />
         </div>
-        <h1 className="text-xl font-bold">MapMyPaper</h1>
+        <h1 className="text-xl font-bold">mapmypaper</h1>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Middle section with PDF, Chat, Summary buttons with text */}
+        <Button variant="outline" size="sm" onClick={() => {}} className="flex items-center gap-1">
+          <FileText className="h-4 w-4" />
+          <span className="hidden md:inline">PDF</span>
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => {}} className="flex items-center gap-1">
+          <MessageSquare className="h-4 w-4" />
+          <span className="hidden md:inline">Chat</span>
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setShowSummaryModal(true)} className="flex items-center gap-1">
+          <FileText className="h-4 w-4" />
+          <span className="hidden md:inline">Summary</span>
+        </Button>
+        
+        {/* Right section with icon-only buttons */}
         <Button variant="outline" size="sm" onClick={() => navigate("/")}>
-          <Upload className="h-4 w-4 mr-2" />
-          Upload New
+          <Upload className="h-4 w-4" />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
-              <GitBranchPlus className="h-4 w-4 mr-2" />
-              Create
+              <GitBranchPlus className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -210,28 +175,13 @@ const Header = () => {
               <Network className="h-4 w-4 mr-2" />
               Mindmap
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setShowSummaryModal(true)}>
-              <FileText className="h-4 w-4 mr-2" />
-              Summary
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <Button variant="outline" size="sm" onClick={() => setShowExportDialog(true)}>
-          <Download className="h-4 w-4 mr-2" />
-          Export
+          <Download className="h-4 w-4" />
         </Button>
         <Button variant="outline" size="sm" onClick={() => setShowSaveDialog(true)}>
-          <Save className="h-4 w-4 mr-2" />
-          Save
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleShare}>
-          <Share2 className="h-4 w-4 mr-2" />
-          Share
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(true)}>
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
+          <Save className="h-4 w-4" />
         </Button>
       </div>
       <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
@@ -263,40 +213,6 @@ const Header = () => {
               Export as SVG
             </Button>
             <Button onClick={handleExportJSON}>Export as JSON</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Share Mind Map</DialogTitle>
-            <DialogDescription>
-              Share this link with others to view your mind map
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center space-x-2">
-            <Input value={shareLink} readOnly />
-            <Button variant="outline" onClick={copyShareLink}>
-              Copy
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Mind Map</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this mind map? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
