@@ -3,6 +3,7 @@ import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import SequenceDiagramModal from "@/components/mindmap/SequenceDiagramModal"; 
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 
@@ -12,9 +13,16 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
+  const [showSequenceDiagram, setShowSequenceDiagram] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
   const { toast } = useToast();
+  
+  // Keep track of modal redirect sources to handle sequenceDiagram -> flowchart
+  const handleSequenceToFlowchart = useCallback(() => {
+    setShowFlowchart(true);
+    // The FlowchartModal component will handle showing the sequence diagram tab
+  }, []);
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -60,6 +68,10 @@ const MindMap = () => {
 
   const toggleFlowchart = useCallback(() => {
     setShowFlowchart(prev => !prev);
+  }, []);
+
+  const toggleSequenceDiagram = useCallback(() => {
+    setShowSequenceDiagram(prev => !prev);
   }, []);
 
   const handleExplainText = useCallback((text: string) => {
@@ -210,7 +222,7 @@ const MindMap = () => {
         onExportMindMap={handleExportMindMap}
         onOpenSummary={toggleSummary}
         onOpenFlowchart={toggleFlowchart}
-        onOpenSequenceDiagram={() => {}} // Keep empty to avoid type errors
+        onOpenSequenceDiagram={toggleSequenceDiagram}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -236,6 +248,13 @@ const MindMap = () => {
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
+      />
+
+      {/* Sequence Diagram Modal - now redirects to Flowchart with sequence tab */}
+      <SequenceDiagramModal
+        open={showSequenceDiagram}
+        onOpenChange={setShowSequenceDiagram}
+        onSwitchToFlowchart={handleSequenceToFlowchart}
       />
     </div>
   );
