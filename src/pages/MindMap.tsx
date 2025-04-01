@@ -7,6 +7,11 @@ import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import { useAuth } from "@/hooks/useAuth";
 
+// Define a Topic type if it's not already defined elsewhere
+interface Topic {
+  text: string;
+}
+
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(true);

@@ -21,7 +21,7 @@ interface MindmapModalProps {
 
 const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
-  const { code, error, isGenerating, generateMindmap, handleCodeChange } = useMindmapGenerator();
+  const { code, error, isGenerating, generateMindmap } = useMindmapGenerator();
   
   // State for theme and editor visibility
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');

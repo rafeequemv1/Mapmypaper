@@ -1,96 +1,79 @@
 
 import { useState, useCallback } from 'react';
-import mermaid from 'mermaid';
 
-// Define TypeScript types for the hook return values
 export interface MindmapGeneratorReturn {
   code: string;
-  isGenerating: boolean;
   error: string | null;
-  generateMindmap: () => Promise<void>;
-  updateCode: (newCode: string) => void;
+  isGenerating: boolean;
+  generateMindmap: () => void;
 }
 
-// Custom hook for generating mindmaps with Mermaid
-export const useMindmapGenerator = (): MindmapGeneratorReturn => {
-  const [code, setCode] = useState<string>(`mindmap
-  root((Paper Topic))
-    Introduction
-      Background
-      Research Question
-    Methods
-      Data Collection
-      Analysis
-    Results
-      Finding 1
-      Finding 2
-    Discussion
-      Implications
-      Limitations
-    Conclusion`);
-  
-  const [isGenerating, setIsGenerating] = useState(false);
+// Default mindmap code
+export const defaultMindmap = `mindmap
+  root((Research Paper))
+    Origins
+      Big Bang
+      "Abiogenesis"
+    Evolution
+      ::icon(fa fa-book)
+      Dinosaurs
+      Extinction
+        ["Asteroid Impact"]
+        ::icon(fa fa-globe)
+    Concepts
+      Mammals
+        Primates
+          Humans
+`;
+
+const useMindmapGenerator = (): MindmapGeneratorReturn => {
+  const [code, setCode] = useState<string>(defaultMindmap);
   const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  // Function to update the code directly
-  const updateCode = useCallback((newCode: string) => {
-    setCode(newCode);
-  }, []);
-
-  // Function to generate the mindmap from PDF content
   const generateMindmap = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
-    
+
     try {
-      // Get the PDF text from session storage
-      const pdfText = sessionStorage.getItem('pdfText');
-      
-      if (!pdfText) {
-        throw new Error('No PDF text found. Please upload a PDF first.');
-      }
-      
-      // Simple mindmap template based on the PDF content
-      // In a real implementation, this would be generated from the PDF content
-      const mindmapTemplate = `mindmap
+      // For now, we'll just use the default mindmap
+      // In a real implementation, this would generate a mindmap based on the PDF content
+      const mockGeneratedMindmap = `mindmap
   root((Research Paper))
     Introduction
       Background
       Problem Statement
+      Research Questions
     Methodology
       Data Collection
-      Analysis Approach
+      Analysis Methods
     Results
       Key Findings
-      Statistical Data
+      Statistical Analysis
     Discussion
-      Implications
+      Interpretation
+      Comparison with Prior Work
       Limitations
     Conclusion
       Summary
       Future Work`;
-      
-      setCode(mindmapTemplate);
+
+      // Simulate a delay for API call
+      setTimeout(() => {
+        setCode(mockGeneratedMindmap);
+        setIsGenerating(false);
+      }, 1500);
     } catch (err) {
-      console.error('Error generating mindmap:', err);
-      setError(`Failed to generate mindmap: ${err instanceof Error ? err.message : String(err)}`);
-      
-      // Set a fallback mindmap on error
-      setCode(`mindmap
-  root((Error))
-    Failed to generate mindmap
-      Please try again`);
-    } finally {
+      setError(`Error generating mindmap: ${err instanceof Error ? err.message : String(err)}`);
       setIsGenerating(false);
     }
   }, []);
 
   return {
     code,
-    isGenerating,
     error,
-    generateMindmap,
-    updateCode
+    isGenerating,
+    generateMindmap
   };
 };
 
