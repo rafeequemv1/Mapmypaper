@@ -1,7 +1,146 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable (for security reasons)
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk");
+
+// Function to generate a mind map from text using Gemini API
+export const generateMindMapFromText = async (text: string): Promise<any> => {
+  try {
+    // First, store the text in session storage for later reference
+    sessionStorage.setItem('pdfText', text);
+
+    // Initialize the Generative Model for text generation
+    const model = genAI.getModel({ model: 'gemini-pro' });
+    
+    // Create a template for research paper structure as mind map
+    const researchPaperTemplate = {
+      id: 'root',
+      topic: 'Research Paper',
+      children: [
+        {
+          id: 'c1',
+          topic: 'Introduction',
+          children: [
+            { id: 'c1-1', topic: 'Background' },
+            { id: 'c1-2', topic: 'Problem Statement' },
+            { id: 'c1-3', topic: 'Research Questions' }
+          ]
+        },
+        {
+          id: 'c2',
+          topic: 'Methodology',
+          children: [
+            { id: 'c2-1', topic: 'Research Design' },
+            { id: 'c2-2', topic: 'Data Collection' },
+            { id: 'c2-3', topic: 'Analysis Methods' }
+          ]
+        },
+        {
+          id: 'c3',
+          topic: 'Results',
+          children: []
+        },
+        {
+          id: 'c4',
+          topic: 'Discussion',
+          children: [
+            { id: 'c4-1', topic: 'Interpretation of Findings' },
+            { id: 'c4-2', topic: 'Limitations' },
+            { id: 'c4-3', topic: 'Future Work' }
+          ]
+        },
+        {
+          id: 'c5',
+          topic: 'Conclusion',
+          children: []
+        }
+      ]
+    };
+    
+    // If the text is very short, return the template
+    if (text.length < 100) {
+      console.log("Text is too short, returning template");
+      return researchPaperTemplate;
+    }
+    
+    // Define prompt for Gemini API to generate structure
+    const prompt = `
+    I have a research paper with the following content (first 5000 characters):
+    "${text.slice(0, 5000)}..."
+
+    Please analyze this content and create a JSON structure for a mind map that represents the paper's structure.
+    The mind map should include key topics, findings, methodologies, and conclusions from the paper.
+    Format the response as a JSON object with the following structure:
+    {
+      "id": "root",
+      "topic": "[PAPER TITLE]",
+      "children": [
+        {
+          "id": "c1",
+          "topic": "[MAIN TOPIC 1]",
+          "children": [
+            { "id": "c1-1", "topic": "[SUBTOPIC 1]" },
+            { "id": "c1-2", "topic": "[SUBTOPIC 2]" }
+          ]
+        },
+        ...more main topics
+      ]
+    }
+
+    Make sure to:
+    1. Include at least 5 main topics (like Introduction, Methodology, Results, Discussion, Conclusion)
+    2. For each main topic, include 2-5 relevant subtopics based on the paper content
+    3. Keep topic names concise (1-5 words)
+    4. Ensure the structure accurately reflects the paper's content and organization
+    5. Use unique IDs for each node (like c1, c1-1, c2, etc.)
+    
+    ONLY return the JSON structure, nothing else.
+    `;
+
+    // Generate content with the prompt
+    try {
+      const result = await model.generateContent(prompt);
+      const response = result.response.text();
+      
+      // Extract JSON from the response
+      let jsonStr = response;
+      
+      // Handle cases where the response includes markdown code blocks
+      if (response.includes("```json")) {
+        jsonStr = response.split("```json")[1].split("```")[0].trim();
+      } else if (response.includes("```")) {
+        jsonStr = response.split("```")[1].split("```")[0].trim();
+      }
+      
+      // Parse the JSON response
+      let mindMapData;
+      try {
+        mindMapData = JSON.parse(jsonStr);
+        
+        // Ensure the structure is valid
+        if (!mindMapData.id || !mindMapData.topic || !Array.isArray(mindMapData.children)) {
+          console.warn("Invalid mind map structure returned by API, using template");
+          mindMapData = researchPaperTemplate;
+        }
+      } catch (parseError) {
+        console.error("Error parsing JSON from Gemini response:", parseError);
+        mindMapData = researchPaperTemplate;
+      }
+      
+      // Save the mind map data to session storage for use in MindMap component
+      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+      
+      return mindMapData;
+    } catch (apiError) {
+      console.error("Error calling Gemini API:", apiError);
+      return researchPaperTemplate;
+    }
+  } catch (error) {
+    console.error("Gemini API error:", error);
+    throw error;
+  }
+};
 
 // Function to chat with Gemini about the PDF content
 export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
@@ -47,7 +186,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     }
 
     // Initialize the Generative Model for text generation
-    const model = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").getModel({ model: 'gemini-pro' });
+    const model = genAI.getModel({ model: 'gemini-pro' });
     
     // Define detail level-specific instructions
     let detailInstructions = '';
@@ -111,11 +250,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     
     Document Content: 
     ${pdfText.slice(0, 15000)}
-    `)
-    .catch(error => {
-      console.error("Error in generateFlowchartFromPdf:", error);
-      throw error;
-    });
+    `);
     
     // Extract the Mermaid code from the result
     let mermaidCode = result.response.text();
@@ -277,5 +412,84 @@ const cleanMermaidSyntax = (code: string): string => {
       A[Error] --> B[Syntax Cleaning Failed]
       B --> C[Please try again]
       style A fill:#ffcccc,stroke:#ff0000,stroke-width:2px`;
+  }
+};
+
+// For generating mindmaps from PDF content
+export const generateMindmapFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `mindmap
+        root((Error))
+          No PDF Content`;
+    }
+
+    // Initialize the Generative Model for text generation
+    const model = genAI.getModel({ model: 'gemini-pro' });
+    
+    // Generate the mindmap from the PDF text with Gemini
+    const result = await model.generateContent(`
+    Create a detailed Mermaid mindmap based on this academic document text.
+    
+    CRITICAL MERMAID MINDMAP SYNTAX RULES:
+    1. Start with 'mindmap' keyword
+    2. Root node must use double parentheses: root((Root Topic))
+    3. Each level of indentation (using spaces, not tabs) creates a child node
+    4. Node formats:
+       - Root: root((Text))
+       - Circle: (Text)
+       - Square: [Text]
+       - Rounded: (Text)
+       - Default: Text
+    5. You can use icons: ::icon(fa fa-book)
+    6. You can define classes for styling: :::className
+    
+    EXAMPLE CORRECT SYNTAX:
+    mindmap
+      root((Paper Topic))
+        Introduction
+          Background:::highlight
+            Key Point 1
+            Key Point 2
+          Research Question
+            Question 1
+            Question 2::icon(fa fa-question)
+        Methodology
+          Data Collection
+          Analysis
+        Results
+          Finding 1:::important
+          Finding 2
+        Conclusion
+          Summary
+          Future Work
+
+    classDef highlight fill:#f9f,stroke:#333
+    classDef important fill:#bbf,stroke:#33f
+    
+    Document Content: 
+    ${pdfText.slice(0, 15000)}
+    `);
+    
+    // Extract the Mermaid code from the result
+    let mermaidCode = result.response.text();
+    
+    // If the response contains the Mermaid code block, extract just the code
+    if (mermaidCode.includes('```mermaid')) {
+      mermaidCode = mermaidCode.split('```mermaid')[1].split('```')[0].trim();
+    } else if (mermaidCode.includes('```')) {
+      mermaidCode = mermaidCode.split('```')[1].split('```')[0].trim();
+    }
+
+    return mermaidCode;
+  } catch (error) {
+    console.error("Gemini API mindmap generation error:", error);
+    return `mindmap
+      root((Error))
+        Failed to generate mindmap
+          Please try again`;
   }
 };
