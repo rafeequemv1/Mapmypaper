@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { generateMindmapFromPdf } from '@/services/geminiService';
 
@@ -66,12 +66,49 @@ const useMindmapGenerator = (): MindmapGeneratorReturn => {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const { toast } = useToast();
+  
+  // Function to extract text from PDF data
+  const extractPdfText = useCallback(() => {
+    // Get PDF text from sessionStorage - either directly stored or from PDF data
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      const pdfData = sessionStorage.getItem('pdfData');
+      
+      if (!pdfData) {
+        return null;
+      }
+      
+      // If we have PDF data but no text, we'll need to process it
+      // For now, we'll use a placeholder to acknowledge we found the PDF
+      return "PDF document found but text extraction is pending";
+    }
+    
+    return pdfText;
+  }, []);
+  
+  // Check for PDF text when component mounts
+  useEffect(() => {
+    const pdfText = extractPdfText();
+    if (!pdfText) {
+      setError("No PDF content found. Please upload a PDF document.");
+    } else {
+      setError(null);
+    }
+  }, [extractPdfText]);
 
   const generateMindmap = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
 
     try {
+      // First check if PDF data exists
+      const pdfText = extractPdfText();
+      
+      if (!pdfText) {
+        throw new Error("No PDF content found. Please upload a PDF document first.");
+      }
+      
       // Call the Gemini API to generate a mindmap based on PDF content
       const mindmapCode = await generateMindmapFromPdf();
       
@@ -103,7 +140,7 @@ const useMindmapGenerator = (): MindmapGeneratorReturn => {
     } finally {
       setIsGenerating(false);
     }
-  }, [toast]);
+  }, [toast, extractPdfText]);
 
   return {
     code,

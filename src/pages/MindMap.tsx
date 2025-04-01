@@ -1,89 +1,87 @@
 
-import { useState, useRef, useCallback } from "react";
-import { MindElixirInstance } from "mind-elixir";
+import { useState, useEffect } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
+import { MindElixirInstance } from "mind-elixir";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import MindmapModal from "@/components/mindmap/MindmapModal";
-import { useAuth } from "@/hooks/useAuth";
-
-interface Topic {
-  text: string;
-  // Add any other properties that the Topic type should have
-}
+import { useNavigate } from "react-router-dom";
 
 const MindMap = () => {
-  const [showPdf, setShowPdf] = useState(true);
-  const [showChat, setShowChat] = useState(true);
-  const [showSummary, setShowSummary] = useState(false);
-  const [showFlowchart, setShowFlowchart] = useState(false);
-  const [showMindmap, setShowMindmap] = useState(false);
-  const [explainText, setExplainText] = useState<Topic>({ text: "" });
-  const mindElixirInstance = useRef<MindElixirInstance | null>(null);
-  const { user, refreshSession } = useAuth();
-  
-  const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
-    mindElixirInstance.current = instance;
+  const navigate = useNavigate();
+  const [showPdf, setShowPdf] = useState<boolean>(true);
+  const [showChat, setShowChat] = useState<boolean>(false);
+  const [mindElixirInstance, setMindElixirInstance] = useState<MindElixirInstance | null>(null);
+  const [openSummaryModal, setOpenSummaryModal] = useState<boolean>(false);
+  const [openFlowchartModal, setOpenFlowchartModal] = useState<boolean>(false);
+  const [openMindmapModal, setOpenMindmapModal] = useState<boolean>(false);
+  const [explainText, setExplainText] = useState<string>("");
+
+  // Check for PDF data on mount
+  useEffect(() => {
+    const hasPdfData = Boolean(sessionStorage.getItem("pdfData")) || Boolean(sessionStorage.getItem("uploadedPdfData"));
     
-    // Auto-expand the map 
-    if (instance && instance.nodeData) {
+    if (!hasPdfData) {
+      navigate("/");
+    }
+    
+    // Expand all nodes when mindmap is ready
+    if (mindElixirInstance) {
       try {
-        // Get the root node and expand it
-        if (instance.nodeData.id) {
-          instance.expandNode(instance.nodeData.id);
+        console.log("Attempting to expand root node");
+        const rootNode = mindElixirInstance.nodeData.root;
+        if (rootNode) {
+          mindElixirInstance.expandNode(rootNode);
         }
-      } catch (err) {
-        console.log("Error expanding root node:", err);
+      } catch (error) {
+        console.info("Error expanding root node:", error);
       }
     }
-  }, []);
-  
+  }, [navigate, mindElixirInstance]);
+
   const togglePdf = () => setShowPdf(prev => !prev);
   const toggleChat = () => setShowChat(prev => !prev);
   
-  const onExplainText = (text: string) => {
-    // Trim text to avoid empty selections
-    const trimmedText = text.trim();
-    
-    if (trimmedText) {
-      setExplainText({ text: trimmedText });
-      
-      // Ensure chat panel is visible when text is selected
-      if (!showChat) {
-        setShowChat(true);
-      }
-    }
-  };
-  
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="h-screen flex flex-col bg-background">
       <Header 
         togglePdf={togglePdf} 
-        toggleChat={toggleChat} 
-        setShowSummary={setShowSummary}
-        setShowFlowchart={setShowFlowchart}
-        setShowMindmap={setShowMindmap}
-        user={user}
-        onAuthChange={refreshSession}
+        toggleChat={toggleChat}
+        showPdf={showPdf}
+        showChat={showChat}
+        onOpenSummary={() => setOpenSummaryModal(true)}
+        onOpenFlowchart={() => setOpenFlowchartModal(true)}
+        onOpenMindmap={() => setOpenMindmapModal(true)}
       />
       
       <div className="flex-1 overflow-hidden">
-        <PanelStructure
-          showPdf={showPdf}
-          showChat={showChat}
+        <PanelStructure 
+          showPdf={showPdf} 
+          showChat={showChat} 
           toggleChat={toggleChat}
           togglePdf={togglePdf}
-          onMindMapReady={handleMindMapReady}
-          explainText={explainText.text}
-          onExplainText={onExplainText}
+          onMindMapReady={setMindElixirInstance}
+          explainText={explainText}
+          onExplainText={setExplainText}
         />
       </div>
       
       {/* Modals */}
-      <SummaryModal open={showSummary} onOpenChange={setShowSummary} />
-      <FlowchartModal open={showFlowchart} onOpenChange={setShowFlowchart} />
-      <MindmapModal open={showMindmap} onOpenChange={setShowMindmap} />
+      <SummaryModal 
+        open={openSummaryModal} 
+        onOpenChange={setOpenSummaryModal} 
+      />
+      
+      <FlowchartModal
+        open={openFlowchartModal}
+        onOpenChange={setOpenFlowchartModal}
+      />
+      
+      <MindmapModal
+        open={openMindmapModal}
+        onOpenChange={setOpenMindmapModal}
+      />
     </div>
   );
 };
