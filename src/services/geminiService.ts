@@ -34,6 +34,94 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
   }
 };
 
+// Function to generate MindMap from text - Adding this missing function
+export const generateMindMapFromText = async (text: string): Promise<any> => {
+  try {
+    if (!text || text.trim() === '') {
+      throw new Error("No text provided to generate mind map");
+    }
+
+    // Initialize the Generative Model
+    const model = genAI.getModel({ model: 'gemini-pro' });
+
+    const prompt = `
+    Create a hierarchical mind map structure based on the following text:
+    ${text.substring(0, 15000)}
+    
+    Analyze the content and create a JSON structure following this format:
+    {
+      "nodeData": {
+        "id": "root",
+        "topic": "Main Topic",
+        "children": [
+          {
+            "id": "1",
+            "topic": "Subtopic 1",
+            "children": [
+              { "id": "1-1", "topic": "Detail 1" },
+              { "id": "1-2", "topic": "Detail 2" }
+            ]
+          },
+          {
+            "id": "2",
+            "topic": "Subtopic 2",
+            "children": []
+          }
+        ]
+      }
+    }
+    
+    Important guidelines:
+    1. Extract the main topic from the document title or first paragraph
+    2. Create logical subtopics based on document sections/themes
+    3. Add relevant details as child nodes
+    4. Ensure each node has a unique ID
+    5. Topic text should be concise (5-10 words maximum)
+    6. Don't exceed 3 levels of hierarchy
+    7. Include 5-10 main subtopics
+    8. Return ONLY the JSON structure with no additional text
+    `;
+
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = result.response.text();
+
+    // Extract JSON from response
+    let jsonStr = response;
+    if (response.includes('```json')) {
+      jsonStr = response.split('```json')[1].split('```')[0].trim();
+    } else if (response.includes('```')) {
+      jsonStr = response.split('```')[1].split('```')[0].trim();
+    }
+
+    try {
+      const parsedJson = JSON.parse(jsonStr);
+      return parsedJson;
+    } catch (parseError) {
+      console.error("Error parsing mind map JSON:", parseError);
+      // Return a basic structure if parsing fails
+      return {
+        nodeData: {
+          id: 'root',
+          topic: 'Document Analysis',
+          children: [
+            {
+              id: '1',
+              topic: 'Document Structure Error',
+              children: [
+                { id: '1-1', topic: 'Failed to parse content' }
+              ]
+            }
+          ]
+        }
+      };
+    }
+  } catch (error) {
+    console.error("Error generating mind map:", error);
+    throw error;
+  }
+};
+
 // New function to generate flowchart from PDF content with LR direction and detail level
 export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<string> => {
   try {
@@ -277,5 +365,54 @@ const cleanMermaidSyntax = (code: string): string => {
       A[Error] --> B[Syntax Cleaning Failed]
       B --> C[Please try again]
       style A fill:#ffcccc,stroke:#ff0000,stroke-width:2px`;
+  }
+};
+
+// Function to generate mindmap from PDF - referenced in useMindmapGenerator.ts
+export const generateMindmapFromPdf = async (text: string): Promise<any> => {
+  // This is essentially an alias for generateMindMapFromText for compatibility
+  return generateMindMapFromText(text);
+};
+
+// Function to generate sequence diagram from PDF - referenced in useSequenceDiagramGenerator.ts
+export const generateSequenceDiagramFromPdf = async (text: string): Promise<string> => {
+  try {
+    if (!text || text.trim() === '') {
+      return "sequenceDiagram\n  Note over A: No text provided\n  A->>A: Please upload a PDF first";
+    }
+
+    // Initialize the Generative Model
+    const model = genAI.getModel({ model: 'gemini-pro' });
+
+    const prompt = `
+    Create a Mermaid sequence diagram based on this document text:
+    ${text.substring(0, 10000)}
+    
+    CRITICAL MERMAID SYNTAX RULES:
+    1. Start with 'sequenceDiagram'
+    2. Use simple, short labels for actors
+    3. Use A->B: message format for messages
+    4. Use Note over A: text for notes
+    5. Keep it focused on the main process/flow described in the document
+    6. Limit to 10-15 interactions maximum
+    7. Return ONLY valid Mermaid sequence diagram syntax
+    `;
+
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = result.response.text();
+
+    // Extract the Mermaid code
+    let mermaidCode = response;
+    if (response.includes('```mermaid')) {
+      mermaidCode = response.split('```mermaid')[1].split('```')[0].trim();
+    } else if (response.includes('```')) {
+      mermaidCode = response.split('```')[1].split('```')[0].trim();
+    }
+
+    return mermaidCode;
+  } catch (error) {
+    console.error("Error generating sequence diagram:", error);
+    return "sequenceDiagram\n  Note over System: Error occurred\n  System->>User: Failed to generate diagram";
   }
 };
