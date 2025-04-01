@@ -6,40 +6,6 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MindMap AI</title>
-
-    <!-- Crisp Chat Configuration -->
-    <script type="text/javascript">
-      window.$crisp = [];
-      window.CRISP_WEBSITE_ID = "YOUR_CRISP_WEBSITE_ID"; // Replace with your actual Crisp Website ID
-      
-      // Hide the chat by default
-      window.$crisp.push(["do", "chat:hide"]);
-      
-      // Function to check if we're on the landing page and show chat if needed
-      function checkShowCrispOnLandingPage() {
-        // Only show on the landing page (root path)
-        if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-          // Add a delay to ensure page is loaded
-          setTimeout(() => {
-            window.$crisp.push(["do", "chat:hide"]); // Ensure it's hidden initially
-          }, 500);
-        } else {
-          window.$crisp.push(["do", "chat:hide"]); // Hide on other pages
-        }
-      }
-
-      // Check on page load and route changes
-      window.addEventListener('load', checkShowCrispOnLandingPage);
-      window.addEventListener('popstate', checkShowCrispOnLandingPage);
-      
-      (function() {
-        var d = document;
-        var s = d.createElement("script");
-        s.src = "https://client.crisp.chat/l.js";
-        s.async = 1;
-        d.getElementsByTagName("head")[0].appendChild(s);
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

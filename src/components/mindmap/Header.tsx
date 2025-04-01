@@ -7,6 +7,7 @@ import {
   Download,
   Upload,
   MessageSquare,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
+import { useAuth } from "@/context/AuthProvider";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -40,6 +42,7 @@ const Header = ({
   const [mindElixirInstance, setMindElixirInstance] = useState<any | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   
   // Handle mind map instance being ready
   const handleMindMapReady = (instance: any) => {
@@ -150,6 +153,10 @@ const Header = ({
           
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>
             <Download className="h-3.5 w-3.5 text-black" />
+          </Button>
+
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={signOut}>
+            <LogOut className="h-3.5 w-3.5 text-black" />
           </Button>
         </div>
       </div>
