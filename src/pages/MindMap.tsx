@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -219,6 +220,9 @@ const MindMap = () => {
         togglePdf={togglePdf}
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
+        setShowFlowchart={setShowFlowchart}
+        setShowSequenceDiagram={setShowSequenceDiagram}
+        setShowMindmap={setShowMindmap}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}

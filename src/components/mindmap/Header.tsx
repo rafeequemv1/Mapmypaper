@@ -37,12 +37,19 @@ interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSequenceDiagram?: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMindmap?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Header = ({ togglePdf, toggleChat, setShowSummary }: HeaderProps) => {
-  const [showFlowchartModal, setShowFlowchartModal] = useState(false);
-  const [showSequenceDiagramModal, setShowSequenceDiagramModal] = useState(false);
-  const [showMindmapModal, setShowMindmapModal] = useState(false);
+const Header = ({ 
+  togglePdf, 
+  toggleChat, 
+  setShowSummary,
+  setShowFlowchart,
+  setShowSequenceDiagram,
+  setShowMindmap
+}: HeaderProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [fileName, setFileName] = useState("mindmap");
@@ -163,15 +170,15 @@ const Header = ({ togglePdf, toggleChat, setShowSummary }: HeaderProps) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setShowFlowchartModal(true)}>
+            <DropdownMenuItem onClick={() => setShowFlowchart && setShowFlowchart(true)}>
               <GitCommitHorizontal className="h-4 w-4 mr-2" />
               Flowchart
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowSequenceDiagramModal(true)}>
+            <DropdownMenuItem onClick={() => setShowSequenceDiagram && setShowSequenceDiagram(true)}>
               <ListOrdered className="h-4 w-4 mr-2" />
               Sequence Diagram
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowMindmapModal(true)}>
+            <DropdownMenuItem onClick={() => setShowMindmap && setShowMindmap(true)}>
               <Network className="h-4 w-4 mr-2" />
               Mindmap
             </DropdownMenuItem>
