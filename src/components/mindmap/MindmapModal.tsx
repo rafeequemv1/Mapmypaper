@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Activity } from "lucide-react";
-import FlowchartEditor from "./flowchart/FlowchartEditor";
 import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
@@ -27,7 +26,6 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   
   // State for theme and editor visibility
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
-  const [hideEditor, setHideEditor] = useState(false);
   const [initialGeneration, setInitialGeneration] = useState(false);
   
   // Initialize mermaid library
@@ -51,11 +49,6 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
     setTheme(themes[nextIndex]);
   };
 
-  // Toggle editor visibility
-  const toggleEditor = () => {
-    setHideEditor(!hideEditor);
-  };
-
   // Manual regeneration handler
   const handleRegenerate = () => {
     generateMindmap();
@@ -63,26 +56,17 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Mindmap Editor</DialogTitle>
+          <DialogTitle>Mindmap</DialogTitle>
           <DialogDescription>
-            Create and edit mindmaps to organize concepts and ideas.
+            Visualize the paper structure as a mindmap.
           </DialogDescription>
         </DialogHeader>
         
         <div className="flex justify-end items-center gap-4 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleEditor}
-            className="flex items-center gap-1"
-          >
-            <Activity className="h-4 w-4" />
-            {hideEditor ? "Show Editor" : "Hide Editor"}
-          </Button>
           <Button 
-            variant="default"
+            variant="ghost"
             size="sm"
             onClick={handleRegenerate}
             disabled={isGenerating}
@@ -91,35 +75,20 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
           </Button>
         </div>
         
-        <div className={`grid ${hideEditor ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'} gap-4 flex-1 overflow-hidden`}>
-          {/* Code editor - conditionally rendered based on hideEditor */}
-          {!hideEditor && (
-            <div className="flex flex-col">
-              <FlowchartEditor
-                code={code}
-                error={error}
-                isGenerating={isGenerating}
-                onCodeChange={handleCodeChange}
-                onRegenerate={generateMindmap}
-              />
-            </div>
-          )}
-          
-          {/* Preview - Takes up all space when editor is hidden */}
-          <div className={`${hideEditor ? 'col-span-1' : 'md:col-span-2'} flex flex-col`}>
-            <FlowchartPreview
-              code={code}
-              error={error}
-              isGenerating={isGenerating}
-              theme={theme}
-              previewRef={previewRef}
-            />
-          </div>
+        {/* Preview - Takes up all space */}
+        <div className="flex-1 overflow-hidden">
+          <FlowchartPreview
+            code={code}
+            error={error}
+            isGenerating={isGenerating}
+            theme={theme}
+            previewRef={previewRef}
+          />
         </div>
         
         <DialogFooter className="flex justify-between sm:justify-between">
           <FlowchartExport previewRef={previewRef} onToggleTheme={toggleTheme} />
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -25,9 +25,6 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-        <div className="fixed top-0 right-0 p-2 m-3 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-          BETA
-        </div>
       </div>
     </TooltipProvider>
   </QueryClientProvider>

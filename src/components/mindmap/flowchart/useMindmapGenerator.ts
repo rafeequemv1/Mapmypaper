@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { generateMindmapFromPdf } from "@/services/geminiService";
 
@@ -11,26 +10,35 @@ export const defaultMindmap = `mindmap
       Significance:::summaryDetail
     Key Concept 1:::branch1
       Sub-concept 1.1:::subbranch1
+        Detail 1.1.1:::detail1
+        Detail 1.1.2:::detail1
       Sub-concept 1.2:::subbranch1
+        Detail 1.2.1:::detail1
     Key Concept 2:::branch2
       Sub-concept 2.1:::subbranch2
+        Detail 2.1.1:::detail2
+        Detail 2.1.2:::detail2
       Sub-concept 2.2:::subbranch2
     Key Concept 3:::branch3
       Sub-concept 3.1:::subbranch3
         Detail 3.1.1:::detail3
         Detail 3.1.2:::detail3
+        Sub-detail 3.1.2.1:::subdetail3
 
 %% Color styling for different branches
-classDef root fill:#8b5cf6,color:#ffffff,stroke:#6d28d9,stroke-width:4px,font-size:18px
-classDef summary fill:#f97316,color:#ffffff,stroke:#ea580c,stroke-width:2px,font-weight:bold
-classDef summaryDetail fill:#fdba74,color:#7c2d12,stroke:#f97316,font-style:italic
-classDef branch1 fill:#f97316,color:#ffffff,stroke:#ea580c,stroke-width:2px
-classDef branch2 fill:#06b6d4,color:#ffffff,stroke:#0891b2,stroke-width:2px
-classDef branch3 fill:#10b981,color:#ffffff,stroke:#059669,stroke-width:2px
-classDef subbranch1 fill:#fdba74,color:#7c2d12,stroke:#f97316
-classDef subbranch2 fill:#67e8f9,color:#164e63,stroke:#06b6d4
-classDef subbranch3 fill:#6ee7b7,color:#064e3b,stroke:#10b981
-classDef detail3 fill:#d1fae5,color:#064e3b,stroke:#10b981,stroke-dasharray:2
+classDef root fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-size:18px
+classDef summary fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-weight:bold
+classDef summaryDetail fill:#333333,color:#ffffff,stroke:#000000,font-style:italic
+classDef branch1 fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
+classDef branch2 fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
+classDef branch3 fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
+classDef subbranch1 fill:#333333,color:#ffffff,stroke:#000000
+classDef subbranch2 fill:#333333,color:#ffffff,stroke:#000000
+classDef subbranch3 fill:#333333,color:#ffffff,stroke:#000000
+classDef detail1 fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
+classDef detail2 fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
+classDef detail3 fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
+classDef subdetail3 fill:#777777,color:#ffffff,stroke:#000000,stroke-dasharray:3
 `;
 
 /**
@@ -59,8 +67,9 @@ const useMindmapGenerator = () => {
       const response = await generateMindmapFromPdf();
       
       if (response) {
-        // Add color styling to the response based on branches
-        const enhancedResponse = addColorStylingToMindmap(response);
+        // Fix potential multiple root issues and add color styling
+        const fixedResponse = fixMindmapSyntax(response);
+        const enhancedResponse = addColorStylingToMindmap(fixedResponse);
         setCode(enhancedResponse);
       } else {
         throw new Error("Failed to generate a valid mindmap diagram.");
@@ -78,12 +87,84 @@ const useMindmapGenerator = () => {
   };
 
   /**
+   * Fix mindmap syntax to ensure there's only one root node
+   */
+  const fixMindmapSyntax = (mindmapCode: string): string => {
+    // Check if the code starts with "mindmap" declaration
+    if (!mindmapCode.trim().startsWith("mindmap")) {
+      mindmapCode = "mindmap\n" + mindmapCode;
+    }
+    
+    // Split the code into lines for processing
+    const lines = mindmapCode.split('\n');
+    const processedLines: string[] = [];
+    let foundRoot = false;
+    let indentLevel = 0;
+    
+    // Process each line
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trimEnd();
+      
+      // Skip empty lines
+      if (!line.trim()) {
+        processedLines.push('');
+        continue;
+      }
+      
+      // Keep mindmap declaration
+      if (line.trim() === "mindmap") {
+        processedLines.push(line);
+        continue;
+      }
+      
+      // Check for class definitions - keep them as is
+      if (line.startsWith('classDef') || line.startsWith('%%')) {
+        processedLines.push(line);
+        continue;
+      }
+      
+      // Calculate indentation
+      const match = line.match(/^(\s*)/);
+      const currentIndent = match ? match[0].length : 0;
+      
+      // Handle root node (double parentheses)
+      if (line.includes('((') && line.includes('))') && !foundRoot) {
+        // This is a valid root node
+        foundRoot = true;
+        indentLevel = currentIndent;
+        processedLines.push(line);
+      } 
+      // Handle another root node or potential root
+      else if (line.includes('((') && line.includes('))') && foundRoot) {
+        // Convert to a regular node
+        const convertedLine = line.replace(/\(\(([^)]*)\)\)/, '($1)');
+        processedLines.push(convertedLine);
+      }
+      // Handle regular nodes
+      else {
+        processedLines.push(line);
+      }
+    }
+    
+    // If no root was found, add one at the beginning
+    if (!foundRoot) {
+      processedLines.splice(1, 0, "  root((Paper Topic))");
+    }
+    
+    return processedLines.join('\n');
+  };
+
+  /**
    * Add color styling to mindmap code based on branch structure and content
    */
   const addColorStylingToMindmap = (mindmapCode: string): string => {
     // Check if the mindmap already has styling
     if (mindmapCode.includes('classDef')) {
-      return mindmapCode;
+      // Replace existing color values with black monochrome theme
+      let updatedCode = mindmapCode.replace(/fill:#[a-fA-F0-9]+/g, 'fill:#000000');
+      updatedCode = updatedCode.replace(/stroke:#[a-fA-F0-9]+/g, 'stroke:#000000');
+      updatedCode = updatedCode.replace(/color:#[a-fA-F0-9]+/g, 'color:#ffffff');
+      return updatedCode;
     }
 
     // Fix any potential syntax issues with class assignments
@@ -234,9 +315,11 @@ const useMindmapGenerator = () => {
           }
         } 
         else {
-          const className = level === 2 ? 
-            `subbranch${parentBranch}` : 
-            `detail${parentBranch}`;
+          // Choose class name based on depth
+          let className = '';
+          if (level === 2) className = `subbranch${parentBranch}`;
+          else if (level === 3) className = `detail${parentBranch}`;
+          else className = `subdetail${parentBranch}`;
           
           if (line.includes(':::')) {
             // Already has class, fix format
@@ -259,46 +342,34 @@ const useMindmapGenerator = () => {
 
     // Add style definitions at the end of the mindmap if they don't exist
     if (!processedLines.some(line => line.startsWith('classDef'))) {
-      processedLines.push('\n%% Color styling for different branches');
-      processedLines.push('classDef root fill:#8b5cf6,color:#ffffff,stroke:#6d28d9,stroke-width:4px,font-size:18px');
-      processedLines.push('classDef summary fill:#f97316,color:#ffffff,stroke:#ea580c,stroke-width:2px,font-weight:bold');
-      processedLines.push('classDef summaryDetail fill:#fdba74,color:#7c2d12,stroke:#f97316,font-style:italic');
+      processedLines.push('\n%% Color styling for different branches - monochrome theme');
+      processedLines.push('classDef root fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-size:18px');
+      processedLines.push('classDef summary fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-weight:bold');
+      processedLines.push('classDef summaryDetail fill:#333333,color:#ffffff,stroke:#000000,font-style:italic');
       
-      // Define branch colors - use a vibrant palette
-      const branchColors = [
-        { base: '#f97316', light: '#fdba74', dark: '#ea580c', text: '#7c2d12' }, // orange
-        { base: '#06b6d4', light: '#67e8f9', dark: '#0891b2', text: '#164e63' }, // cyan
-        { base: '#10b981', light: '#6ee7b7', dark: '#059669', text: '#064e3b' }, // emerald
-        { base: '#8b5cf6', light: '#c4b5fd', dark: '#7c3aed', text: '#4c1d95' }, // violet
-        { base: '#ec4899', light: '#f9a8d4', dark: '#db2777', text: '#831843' }, // pink
-        { base: '#ef4444', light: '#fca5a5', dark: '#dc2626', text: '#7f1d1d' }, // red
-        { base: '#f59e0b', light: '#fcd34d', dark: '#d97706', text: '#78350f' }, // amber
-        { base: '#84cc16', light: '#bef264', dark: '#65a30d', text: '#3f6212' }, // lime
-      ];
-
-      // Add class definitions for each branch
+      // Define branch colors - black/gray monochrome theme
       for (let i = 1; i <= Math.max(branchCounter, 3); i++) {
-        const colorSet = branchColors[(i - 1) % branchColors.length];
-        processedLines.push(`classDef branch${i} fill:${colorSet.base},color:#ffffff,stroke:${colorSet.dark},stroke-width:2px`);
-        processedLines.push(`classDef subbranch${i} fill:${colorSet.light},color:${colorSet.text},stroke:${colorSet.base}`);
-        processedLines.push(`classDef detail${i} fill:#ffffff,color:${colorSet.text},stroke:${colorSet.base},stroke-dasharray:2`);
+        processedLines.push(`classDef branch${i} fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px`);
+        processedLines.push(`classDef subbranch${i} fill:#333333,color:#ffffff,stroke:#000000`);
+        processedLines.push(`classDef detail${i} fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2`);
+        processedLines.push(`classDef subdetail${i} fill:#777777,color:#ffffff,stroke:#000000,stroke-dasharray:3`);
       }
       
-      // Add content-based styling
-      processedLines.push('classDef intro fill:#f97316,color:#ffffff,stroke:#ea580c');
-      processedLines.push('classDef background fill:#94a3b8,color:#ffffff,stroke:#64748b');
-      processedLines.push('classDef method fill:#06b6d4,color:#ffffff,stroke:#0891b2');
-      processedLines.push('classDef experiment fill:#2dd4bf,color:#ffffff,stroke:#14b8a6');
-      processedLines.push('classDef result fill:#10b981,color:#ffffff,stroke:#059669');
-      processedLines.push('classDef discussion fill:#8b5cf6,color:#ffffff,stroke:#7c3aed');
-      processedLines.push('classDef conclusion fill:#6366f1,color:#ffffff,stroke:#4f46e5');
-      processedLines.push('classDef reference fill:#64748b,color:#ffffff,stroke:#475569');
-      processedLines.push('classDef limitation fill:#f43f5e,color:#ffffff,stroke:#e11d48');
-      processedLines.push('classDef future fill:#8b5cf6,color:#ffffff,stroke:#7c3aed');
-      processedLines.push('classDef theory fill:#f59e0b,color:#ffffff,stroke:#d97706');
-      processedLines.push('classDef analysis fill:#06b6d4,color:#ffffff,stroke:#0891b2');
-      processedLines.push('classDef synthesis fill:#10b981,color:#ffffff,stroke:#059669');
-      processedLines.push('classDef evaluation fill:#8b5cf6,color:#ffffff,stroke:#7c3aed');
+      // Add content-based styling in monochrome
+      processedLines.push('classDef intro fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef background fill:#111111,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef method fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef experiment fill:#111111,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef result fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef discussion fill:#111111,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef conclusion fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef reference fill:#111111,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef limitation fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef future fill:#111111,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef theory fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef analysis fill:#111111,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef synthesis fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef evaluation fill:#111111,color:#ffffff,stroke:#000000');
     }
 
     return processedLines.join('\n');

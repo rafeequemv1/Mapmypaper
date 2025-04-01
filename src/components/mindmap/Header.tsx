@@ -10,8 +10,7 @@ import {
   Download,
   Upload,
   MessageSquare,
-  Save,
-  FileUp,
+  PlusCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,60 +120,76 @@ const Header = ({
   }, [toast]);
   
   return (
-    <header className="bg-white border-b p-4 flex justify-between items-center">
-      <div className="flex items-center gap-3">
-        <div className="bg-black text-white p-2 rounded-md">
-          <FileUp className="h-5 w-5" />
+    <header className="bg-white border-b p-4">
+      <div className="flex items-center justify-between">
+        {/* Left side - Logo with Beta tag */}
+        <div className="flex items-center gap-3">
+          <div className="bg-black text-white p-2 rounded-md">
+            <Upload className="h-5 w-5" />
+          </div>
+          <div className="flex items-center">
+            <h1 className="text-xl font-bold">mapmypaper</h1>
+            <div className="ml-2 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">BETA</div>
+          </div>
         </div>
-        <div className="flex items-center">
-          <h1 className="text-xl font-bold">mapmypaper</h1>
-          <div className="ml-2 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">BETA</div>
-        </div>
-      </div>
-      <div className="flex items-center gap-2 md:gap-4">
-        {/* Middle section with PDF, Chat, Summary buttons with text */}
-        <Button size="sm" onClick={togglePdf} className="flex items-center gap-1">
-          <FileText className="h-4 w-4" />
-          <span className="hidden md:inline">PDF</span>
-        </Button>
-        <Button size="sm" onClick={toggleChat} className="flex items-center gap-1">
-          <MessageSquare className="h-4 w-4" />
-          <span className="hidden md:inline">Chat</span>
-        </Button>
-        <Button size="sm" onClick={() => setShowSummary(true)} className="flex items-center gap-1">
-          <FileText className="h-4 w-4" />
-          <span className="hidden md:inline">Summary</span>
-        </Button>
         
-        {/* Right section with icon-only buttons */}
-        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-          <Upload className="h-4 w-4" />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <GitBranchPlus className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setShowFlowchart && setShowFlowchart(true)}>
-              <GitCommitHorizontal className="h-4 w-4 mr-2" />
-              Flowchart
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowSequenceDiagram && setShowSequenceDiagram(true)}>
-              <ListOrdered className="h-4 w-4 mr-2" />
-              Sequence Diagram
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowMindmap && setShowMindmap(true)}>
-              <Network className="h-4 w-4 mr-2" />
-              Mindmap
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button variant="ghost" size="icon" onClick={() => setShowExportDialog(true)}>
-          <Download className="h-4 w-4" />
-        </Button>
+        {/* Center - Main Button Group */}
+        <div className="flex items-center gap-2 md:gap-4 absolute left-1/2 transform -translate-x-1/2">
+          <Button variant="ghost" onClick={togglePdf} className="flex items-center gap-1">
+            <FileText className="h-4 w-4" />
+            <span className="hidden md:inline">PDF</span>
+          </Button>
+          
+          <Button variant="ghost" onClick={toggleChat} className="flex items-center gap-1">
+            <MessageSquare className="h-4 w-4" />
+            <span className="hidden md:inline">Chat</span>
+          </Button>
+          
+          <Button variant="ghost" onClick={() => setShowSummary(true)} className="flex items-center gap-1">
+            <FileText className="h-4 w-4" />
+            <span className="hidden md:inline">Summary</span>
+          </Button>
+          
+          <Button variant="ghost" onClick={() => setShowMindmap && setShowMindmap(true)} className="flex items-center gap-1">
+            <PlusCircle className="h-4 w-4" />
+            <span className="hidden md:inline">Create</span>
+          </Button>
+        </div>
+        
+        {/* Right side - Action buttons */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <Upload className="h-4 w-4" />
+          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <GitBranchPlus className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowFlowchart && setShowFlowchart(true)}>
+                <GitCommitHorizontal className="h-4 w-4 mr-2" />
+                Flowchart
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowSequenceDiagram && setShowSequenceDiagram(true)}>
+                <ListOrdered className="h-4 w-4 mr-2" />
+                Sequence Diagram
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowMindmap && setShowMindmap(true)}>
+                <Network className="h-4 w-4 mr-2" />
+                Mindmap
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Button variant="ghost" size="icon" onClick={() => setShowExportDialog(true)}>
+            <Download className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+      
       <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
         <DialogContent>
           <DialogHeader>
