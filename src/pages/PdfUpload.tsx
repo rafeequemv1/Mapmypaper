@@ -1,9 +1,8 @@
-
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, Upload } from "lucide-react";
+import { Brain, Upload, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -15,6 +14,39 @@ const PdfUpload = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize Crisp when the component mounts (main landing page)
+  useEffect(() => {
+    // Show Crisp chat widget on main landing page
+    if (window.$crisp) {
+      window.$crisp.push(["do", "chat:show"]);
+    }
+    
+    // Hide Crisp chat when navigating away from this page
+    return () => {
+      if (window.$crisp) {
+        window.$crisp.push(["do", "chat:hide"]);
+      }
+    };
+  }, []);
+
+  // Function to open Crisp chat
+  const openCrispChat = () => {
+    if (window.$crisp) {
+      window.$crisp.push(["do", "chat:open"]);
+      
+      toast({
+        title: "Chat Opened",
+        description: "Our support team is ready to help you.",
+      });
+    } else {
+      toast({
+        title: "Chat Unavailable",
+        description: "The chat service is currently unavailable. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -178,15 +210,22 @@ const PdfUpload = () => {
             </div>
           )}
           
-          {/* Generate Button */}
-          <Button 
-            onClick={handleGenerateMindmap} 
-            className="w-full bg-[#333] hover:bg-[#444] text-white" 
-            disabled={!selectedFile || isProcessing}
-            size="lg"
-          >
-            {isProcessing ? "Processing..." : "Generate Mind Map"}
-          </Button>
+          <div className="flex w-full gap-2">
+            {/* Generate Button */}
+            <Button 
+              onClick={handleGenerateMindmap} 
+              className="flex-1 bg-[#333] hover:bg-[#444] text-white" 
+              disabled={!selectedFile || isProcessing}
+              size="lg"
+            >
+              {isProcessing ? "Processing..." : "Generate Mind Map"}
+            </Button>
+            
+            {/* Chat Support Button */}
+            <Button onClick={openCrispChat} variant="outline" size="lg" className="px-3">
+              <MessageCircle className="h-5 w-5" />
+            </Button>
+          </div>
           
           {extractionError && (
             <p className="text-red-500 text-sm mt-4">{extractionError}</p>

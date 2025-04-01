@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key (now using import.meta.env for Vite instead of process.env)
@@ -371,4 +370,5 @@ const parseStructuredResponse = (text: string) => {
   }
 };
 
+// Default export for backward compatibility
 export default generateStructuredSummary;
