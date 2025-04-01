@@ -14,7 +14,7 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
     // Enhanced prompt to provide more context and instructions
     const fullPrompt = `You are a research assistant helping a user understand a research paper.
@@ -34,6 +34,352 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
   }
 };
 
+// Function to generate structured summary of PDF content
+export const generateStructuredSummary = async (): Promise<any> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return {
+        Summary: "No PDF content found. Please upload a PDF first.",
+        "Key Findings": "N/A",
+        Objectives: "N/A",
+        Methods: "N/A",
+        Results: "N/A", 
+        Conclusions: "N/A",
+        "Key Concepts": "N/A"
+      };
+    }
+
+    // Initialize the Generative Model for text generation
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    
+    // Generate structured summary with Gemini
+    const result = await model.generateContent(`
+    Create a comprehensive structured summary of this academic paper or document. 
+    Include citations to specific pages where relevant using [citation:pageX] format.
+    
+    Return the result as a structured object with the following sections:
+    - Summary: Overall summary of the paper in 2-3 paragraphs
+    - Key Findings: 3-5 main findings or takeaways
+    - Objectives: What the paper aims to achieve
+    - Methods: How the research was conducted
+    - Results: Main results with citations
+    - Conclusions: Key conclusions and implications
+    - Key Concepts: List of 5-7 important concepts or terms
+
+    Document Content:
+    ${pdfText.slice(0, 15000)}
+    `);
+    
+    const response = result.response.text();
+    
+    // Parse the response to extract structured data
+    try {
+      // Try to parse as JSON if the format is clean
+      if (response.includes('{') && response.includes('}')) {
+        const jsonStr = response.substring(
+          response.indexOf('{'),
+          response.lastIndexOf('}') + 1
+        );
+        return JSON.parse(jsonStr);
+      }
+      
+      // Otherwise, parse section by section
+      const sections = {
+        Summary: extractSection(response, "Summary"),
+        "Key Findings": extractSection(response, "Key Findings"),
+        Objectives: extractSection(response, "Objectives"),
+        Methods: extractSection(response, "Methods"),
+        Results: extractSection(response, "Results"),
+        Conclusions: extractSection(response, "Conclusions"),
+        "Key Concepts": extractSection(response, "Key Concepts")
+      };
+      
+      return sections;
+    } catch (parseError) {
+      console.error("Error parsing structured summary:", parseError);
+      return {
+        Summary: response,
+        "Key Findings": "Parsing error",
+        Objectives: "Parsing error",
+        Methods: "Parsing error",
+        Results: "Parsing error",
+        Conclusions: "Parsing error",
+        "Key Concepts": "Parsing error"
+      };
+    }
+  } catch (error) {
+    console.error("Gemini API error generating summary:", error);
+    return {
+      Summary: "Failed to generate summary. Please try again.",
+      "Key Findings": "Error",
+      Objectives: "Error",
+      Methods: "Error",
+      Results: "Error",
+      Conclusions: "Error",
+      "Key Concepts": "Error"
+    };
+  }
+};
+
+// Helper function to extract sections from AI response
+const extractSection = (text: string, sectionName: string): string => {
+  const regex = new RegExp(`${sectionName}:\\s*([\\s\\S]*?)(?=\\w+:|$)`, 'i');
+  const match = text.match(regex);
+  return match ? match[1].trim() : `No ${sectionName} section found`;
+};
+
+// Function to generate mindmap from PDF text
+export const generateMindmapFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `mindmap
+  root((Error))
+    No PDF Content
+      Please upload a PDF first`;
+    }
+
+    // Initialize the Generative Model for text generation
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    
+    // Generate the mindmap from the PDF text with Gemini
+    const result = await model.generateContent(`
+    Create a detailed Mermaid mindmap based on this document text.
+    
+    CRITICAL MERMAID MINDMAP SYNTAX RULES:
+    1. Start with 'mindmap' on its own line
+    2. Use indentation to show hierarchy (2 spaces per level)
+    3. Use syntax for nodes:
+       - Root node: root((Text))
+       - Regular nodes: Text
+       - Node with ID: id[Text]
+       - Show node classes with triple colons: root((Text)):::className
+    4. Follow this structure for a paper:
+       - Root node: Main topic/title
+       - First level: Key sections (Summary, Key Concepts, Methods, Results, etc)
+       - Second level: Important sub-topics and findings
+       - Third level: Specific details and evidence
+       - Fourth level: Additional context where needed
+    
+    IMPORTANT: The mindmap MUST explain the entire structure of the paper from:
+    - WHY (motivation/problem statement)
+    - HOW (methodology/approach)
+    - WHAT (findings/conclusions)
+    
+    Also include branches for limitations and future work.
+    
+    For node styling, add several class definitions at the end to style different types of nodes.
+    
+    EXAMPLE CORRECT SYNTAX:
+    mindmap
+      root((Paper Topic))
+        Summary
+          Key Point 1
+          Key Point 2
+        Methods
+          Method 1
+            Detail 1.1
+            Detail 1.2
+        Results
+          Finding 1
+          Finding 2
+
+    Document Content: 
+    ${pdfText.slice(0, 15000)}
+    `);
+    
+    // Extract the mindmap code from the result
+    let mindmapCode = result.response.text();
+    
+    // If the response contains markdown code block, extract just the code
+    if (mindmapCode.includes('```mermaid')) {
+      mindmapCode = mindmapCode.split('```mermaid')[1].split('```')[0].trim();
+    } else if (mindmapCode.includes('```')) {
+      mindmapCode = mindmapCode.split('```')[1].split('```')[0].trim();
+    }
+    
+    // Ensure it starts with mindmap directive
+    if (!mindmapCode.trim().startsWith('mindmap')) {
+      mindmapCode = 'mindmap\n' + mindmapCode;
+    }
+    
+    return mindmapCode;
+  } catch (error) {
+    console.error("Gemini API mindmap generation error:", error);
+    return `mindmap
+  root((Error))
+    Failed to generate mindmap
+      Please try again`;
+  }
+};
+
+// Function to generate sequence diagram from PDF content
+export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `sequenceDiagram
+    participant User
+    participant System
+    User->>System: Interact
+    System->>User: No PDF Content
+    Note over User,System: Please upload a PDF first`;
+    }
+
+    // Initialize the Generative Model for text generation
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    
+    // Generate the sequence diagram from the PDF text with Gemini
+    const result = await model.generateContent(`
+    Create a detailed Mermaid sequence diagram based on this academic paper or document.
+    Focus on any processes, methodologies, or workflows described in the paper.
+    
+    CRITICAL MERMAID SEQUENCE DIAGRAM SYNTAX RULES:
+    1. Start with 'sequenceDiagram' on its own line
+    2. Define participants with: participant Name
+    3. Show interactions with arrows: ParticipantA->>ParticipantB: Action
+    4. Use -->> for response arrows
+    5. Add notes with: Note over ParticipantA,ParticipantB: Note text
+    6. Use loops and alternatives where appropriate:
+       loop Loop text
+         Actions
+       end
+       alt Alternative 1
+         Actions
+       else Alternative 2
+         Actions
+       end
+    
+    IMPORTANT: The sequence diagram should:
+    - Identify key actors/components in the process
+    - Show the flow of actions in the correct order
+    - Include important decision points
+    - Represent the core workflow or method described in the paper
+    - If the paper doesn't describe a clear process, create a sequence diagram of how the research was conducted
+    
+    Document Content: 
+    ${pdfText.slice(0, 15000)}
+    `);
+    
+    // Extract the sequence diagram code from the result
+    let diagramCode = result.response.text();
+    
+    // If the response contains markdown code block, extract just the code
+    if (diagramCode.includes('```mermaid')) {
+      diagramCode = diagramCode.split('```mermaid')[1].split('```')[0].trim();
+    } else if (diagramCode.includes('```')) {
+      diagramCode = diagramCode.split('```')[1].split('```')[0].trim();
+    }
+    
+    // Ensure it starts with sequenceDiagram directive
+    if (!diagramCode.trim().startsWith('sequenceDiagram')) {
+      diagramCode = 'sequenceDiagram\n' + diagramCode;
+    }
+    
+    return diagramCode;
+  } catch (error) {
+    console.error("Gemini API sequence diagram generation error:", error);
+    return `sequenceDiagram
+    participant Error
+    participant User
+    Error->>User: Failed to generate diagram
+    Note over Error,User: Please try again`;
+  }
+};
+
+// New function to generate mindmap from text - used in PDF upload
+export const generateMindMapFromText = async (text: string): Promise<any> => {
+  try {
+    if (!text || text.trim() === '') {
+      throw new Error("No text content provided");
+    }
+
+    // Store the extracted text in sessionStorage for other components to use
+    sessionStorage.setItem('pdfText', text);
+    
+    // Initialize the Generative Model for text generation
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    
+    // Generate structured mind map data with Gemini
+    const result = await model.generateContent(`
+    Create a structured mind map data structure based on this document text.
+    
+    Return the result as a JSON object with the following structure:
+    {
+      "title": "Main Paper Title",
+      "summary": "Brief 1-2 paragraph summary of the overall paper",
+      "keyPoints": ["Point 1", "Point 2", "Point 3"],
+      "branches": [
+        {
+          "name": "Branch Name (e.g., Introduction, Methods, etc)",
+          "children": [
+            {
+              "name": "Sub-topic 1",
+              "children": [
+                {"name": "Detail point 1"},
+                {"name": "Detail point 2"}
+              ]
+            },
+            {
+              "name": "Sub-topic 2",
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+    
+    Make sure to:
+    - Include 3-5 main branches representing key sections of the paper
+    - Each branch should have 2-4 sub-topics
+    - Add detail points where appropriate
+    - Be comprehensive but focused on the most important aspects
+    - The structure should follow the paper's flow from introduction to conclusion
+    
+    Document Content:
+    ${text.slice(0, 15000)}
+    `);
+    
+    const response = result.response.text();
+    
+    // Parse the response to extract JSON data
+    try {
+      // Find JSON content between curly braces
+      const jsonStr = response.substring(
+        response.indexOf('{'),
+        response.lastIndexOf('}') + 1
+      );
+      return JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error("Error parsing mind map JSON:", parseError);
+      // Return a basic structure if parsing fails
+      return {
+        title: "Document Analysis",
+        summary: "Failed to parse structured data from document.",
+        keyPoints: ["Please try regenerating the mind map"],
+        branches: [
+          {
+            name: "Document Content",
+            children: [
+              { name: "Content available in preview", children: [] }
+            ]
+          }
+        ]
+      };
+    }
+  } catch (error) {
+    console.error("Gemini API error generating mind map data:", error);
+    throw new Error("Failed to generate mind map data from text");
+  }
+};
+
 // New function to generate flowchart from PDF content with LR direction and detail level
 export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<string> => {
   try {
@@ -47,7 +393,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     }
 
     // Initialize the Generative Model for text generation
-    const model = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     
     // Define detail level-specific instructions
     let detailInstructions = '';

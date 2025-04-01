@@ -118,7 +118,7 @@ const useMindmapGenerator = () => {
       setIsGenerating(false);
     }
   };
-
+  
   /**
    * Process mindmap based on selected detail level
    */
@@ -720,32 +720,4 @@ const useMindmapGenerator = () => {
       processedLines.push('classDef discussion fill:#111111,color:#ffffff,stroke:#000000');
       processedLines.push('classDef conclusion fill:#000000,color:#ffffff,stroke:#000000');
       processedLines.push('classDef reference fill:#111111,color:#ffffff,stroke:#000000');
-      processedLines.push('classDef limitation fill:#000000,color:#ffffff,stroke:#000000');
-      processedLines.push('classDef future fill:#111111,color:#ffffff,stroke:#000000');
-      processedLines.push('classDef theory fill:#000000,color:#ffffff,stroke:#000000');
-      processedLines.push('classDef analysis fill:#111111,color:#ffffff,stroke:#000000');
-      processedLines.push('classDef synthesis fill:#000000,color:#ffffff,stroke:#000000');
-      processedLines.push('classDef evaluation fill:#111111,color:#ffffff,stroke:#000000');
-    }
-
-    return processedLines.join('\n');
-  };
-
-  /**
-   * Handle changes to the mindmap code in the editor
-   */
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setCode(e.target.value);
-    setError(null);
-  };
-
-  return {
-    code,
-    error,
-    isGenerating,
-    generateMindmap,
-    handleCodeChange,
-  };
-};
-
-export default useMindmapGenerator;
+      processedLines.push('classDef limitation fill:#000000,color:#ffffff,
