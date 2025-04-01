@@ -294,7 +294,7 @@ export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
   }
 };
 
-// New function to generate mindmap from text - used in PDF upload
+// Function to generate mind map from text - used in PDF upload
 export const generateMindMapFromText = async (text: string): Promise<any> => {
   try {
     if (!text || text.trim() === '') {
@@ -380,7 +380,7 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
   }
 };
 
-// New function to generate flowchart from PDF content with LR direction and detail level
+// Function to generate flowchart from PDF content with LR direction and detail level
 export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage
