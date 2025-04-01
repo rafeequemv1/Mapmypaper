@@ -34,6 +34,11 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         padding: 16,
         useMaxWidth: false
       },
+      treemap: {  // Add treemap (specialized mindmap) configuration
+        padding: 16,
+        useMaxWidth: false,
+        nodeSpacing: 50
+      },
       logLevel: 3 // Enables warning logs for debugging
     });
   }, [direction]);

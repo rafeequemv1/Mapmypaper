@@ -2,7 +2,7 @@
 /* Basic styles for the node menu */
 .mind-elixir-node-menu {
   position: absolute;
-  z-index: 999;
+  z-index: 9999;
   padding: 8px 0;
   border-radius: 6px;
   background-color: white;
@@ -10,6 +10,10 @@
   min-width: 160px;
   user-select: none;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  display: block !important;
 }
 
 .mind-elixir-node-menu button {
@@ -37,7 +41,7 @@
 
 /* Style for node contextmenu */
 .mind-elixir-contextmenu {
-  position: absolute !important;
+  position: fixed !important;
   z-index: 9999 !important;
   background-color: white;
   border-radius: 6px;
@@ -47,6 +51,7 @@
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+  display: block !important;
 }
 
 .mind-elixir-contextmenu-item {
@@ -76,6 +81,7 @@
   opacity: 1 !important;
   visibility: visible !important;
   display: block !important;
+  transform: none !important;
 }
 
 /* Disable text selection in the mind map to avoid conflicts with right-clicking */
@@ -100,6 +106,27 @@
 .react-flow__edge,
 .me-node {
   position: relative;
+}
+
+/* Fix for Radix UI context menu positioning and z-index */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important; 
+}
+
+.mindElixirBox,
+.map-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Position the context menu properly with high z-index */
+[data-state="open"].mindElixirBox .mind-elixir-node-menu,
+[data-state="open"].mindElixirBox .mind-elixir-contextmenu,
+.mindElixirBox .mind-elixir-node-menu,
+.mindElixirBox .mind-elixir-contextmenu {
+  z-index: 9999 !important;
+  position: fixed !important;
+  display: block !important;
 }
 
 /* Override any potential hiding styles */

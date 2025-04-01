@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 
 interface MindMapContextMenuProps {
@@ -19,63 +19,41 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onAddChild,
   onAddSibling
 }) => {
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
-    if (onCopy) {
-      onCopy();
+    if (handler) {
+      handler();
     }
-  };
-
-  const handlePaste = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onPaste) {
-      onPaste();
-    }
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onDelete) {
-      onDelete();
-    }
-  };
-
-  const handleAddChild = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onAddChild) {
-      onAddChild();
-    }
-  };
-
-  const handleAddSibling = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onAddSibling) {
-      onAddSibling();
-    }
-  };
+  }, []);
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         {children}
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-64 bg-white shadow-lg border rounded-lg z-50">
-        <ContextMenuItem onClick={handleCopy} className="cursor-pointer">
-          Copy
-        </ContextMenuItem>
-        <ContextMenuItem onClick={handlePaste} className="cursor-pointer">
-          Paste
-        </ContextMenuItem>
-        <ContextMenuItem onClick={handleDelete} className="cursor-pointer">
-          Delete
-        </ContextMenuItem>
+      <ContextMenuContent className="w-64 bg-white shadow-lg border rounded-lg z-[9999]">
+        {onCopy && (
+          <ContextMenuItem onClick={handleAction(onCopy)} className="cursor-pointer">
+            Copy
+          </ContextMenuItem>
+        )}
+        {onPaste && (
+          <ContextMenuItem onClick={handleAction(onPaste)} className="cursor-pointer">
+            Paste
+          </ContextMenuItem>
+        )}
+        {onDelete && (
+          <ContextMenuItem onClick={handleAction(onDelete)} className="cursor-pointer text-red-500 font-medium">
+            Delete
+          </ContextMenuItem>
+        )}
         {onAddChild && (
-          <ContextMenuItem onClick={handleAddChild} className="cursor-pointer">
+          <ContextMenuItem onClick={handleAction(onAddChild)} className="cursor-pointer text-blue-600">
             Add Child Node
           </ContextMenuItem>
         )}
         {onAddSibling && (
-          <ContextMenuItem onClick={handleAddSibling} className="cursor-pointer">
+          <ContextMenuItem onClick={handleAction(onAddSibling)} className="cursor-pointer text-emerald-600">
             Add Sibling Node
           </ContextMenuItem>
         )}

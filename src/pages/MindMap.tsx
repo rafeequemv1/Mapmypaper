@@ -3,8 +3,11 @@ import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import TreemapModal from "@/components/mindmap/TreemapModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Network } from "lucide-react";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -12,6 +15,7 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
+  const [showTreemap, setShowTreemap] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
   const { toast } = useToast();
@@ -62,6 +66,10 @@ const MindMap = () => {
 
   const toggleFlowchart = useCallback(() => {
     setShowFlowchart(prev => !prev);
+  }, []);
+  
+  const toggleTreemap = useCallback(() => {
+    setShowTreemap(prev => !prev);
   }, []);
 
   const handleExplainText = useCallback((text: string) => {
@@ -240,16 +248,33 @@ const MindMap = () => {
         />
       </div>
       
-      {/* Summary Modal */}
+      {/* Treemap Button */}
+      <div className="absolute bottom-4 right-4 z-10">
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="bg-white shadow-md border-primary text-primary hover:bg-primary hover:text-white"
+          onClick={toggleTreemap}
+        >
+          <Network className="mr-1" size={16} />
+          Tree View
+        </Button>
+      </div>
+      
+      {/* Modals */}
       <SummaryModal
         open={showSummary}
         onOpenChange={setShowSummary}
       />
 
-      {/* Flowchart Modal */}
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
+      />
+      
+      <TreemapModal
+        open={showTreemap}
+        onOpenChange={setShowTreemap}
       />
     </div>
   );
