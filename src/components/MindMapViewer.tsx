@@ -1,11 +1,10 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, Image } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -177,13 +176,110 @@ const stringToColor = (str: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+// Interface for PDF images
+interface PdfImage {
+  imageData: string;
+  pageNumber: number;
+  width: number;
+  height: number;
+}
+
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string>('');
+  const [pdfImages, setPdfImages] = useState<PdfImage[]>([]);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Extract images from PDF on component mount
+  useEffect(() => {
+    const extractImagesFromPdf = async () => {
+      try {
+        // Import pdfjs dynamically to avoid SSR issues
+        const pdfjs = await import('pdfjs-dist');
+        
+        // Set worker path
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+        
+        const pdfDataUrl = sessionStorage.getItem("pdfData");
+        
+        if (!pdfDataUrl) {
+          return;
+        }
+        
+        const pdfData = atob(pdfDataUrl.split(',')[1]);
+        const loadingTask = pdfjs.getDocument({ data: pdfData });
+        const pdf = await loadingTask.promise;
+        const extractedImages: PdfImage[] = [];
+        
+        // Process each page
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const operatorList = await page.getOperatorList();
+          
+          // Look for image operators in the page
+          for (let i = 0; i < operatorList.fnArray.length; i++) {
+            // Check for image operators
+            if (operatorList.fnArray[i] === pdfjs.OPS.paintImageXObject) {
+              const imgArgs = operatorList.argsArray[i];
+              const imgId = imgArgs[0];
+              
+              try {
+                // Get the image data
+                const objs = await page.objs.get(imgId);
+                
+                if (objs && objs.data && objs.width && objs.height) {
+                  // Create canvas to convert image data to data URL
+                  const canvas = document.createElement('canvas');
+                  canvas.width = objs.width;
+                  canvas.height = objs.height;
+                  const ctx = canvas.getContext('2d');
+                  
+                  if (ctx) {
+                    // Create ImageData object
+                    const imgData = new ImageData(
+                      new Uint8ClampedArray(objs.data),
+                      objs.width,
+                      objs.height
+                    );
+                    ctx.putImageData(imgData, 0, 0);
+                    
+                    // Get image as data URL
+                    const dataUrl = canvas.toDataURL('image/png');
+                    
+                    // Only add if image is not too small (likely not a meaningful figure)
+                    if (objs.width > 100 && objs.height > 100) {
+                      extractedImages.push({
+                        imageData: dataUrl,
+                        pageNumber: pageNum,
+                        width: objs.width,
+                        height: objs.height
+                      });
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error(`Error processing image ${imgId} on page ${pageNum}:`, error);
+              }
+            }
+          }
+        }
+        
+        setPdfImages(extractedImages);
+        console.log(`Extracted ${extractedImages.length} images from PDF`);
+      } catch (error) {
+        console.error('Error extracting images from PDF:', error);
+      }
+    };
+    
+    if (isMapGenerated) {
+      extractImagesFromPdf();
+    }
+  }, [isMapGenerated]);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -286,6 +382,26 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           
           // Add transition for smooth color changes
           tpc.style.transition = 'all 0.3s ease';
+          
+          // Check if node has image data
+          if (node.image) {
+            // Create image element
+            const imgContainer = document.createElement('div');
+            imgContainer.style.marginTop = '10px';
+            imgContainer.style.width = '100%';
+            imgContainer.style.display = 'flex';
+            imgContainer.style.justifyContent = 'center';
+            
+            const img = document.createElement('img');
+            img.src = node.image;
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '150px';
+            img.style.borderRadius = '4px';
+            img.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            
+            imgContainer.appendChild(img);
+            tpc.appendChild(imgContainer);
+          }
           
           // Add tags based on node content
           const addTags = (topic: string, element: HTMLElement) => {
@@ -393,7 +509,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Install the node menu plugin with full styling support
       const customNodeMenu = nodeMenu;
       
-      // Add summary option to node menu
+      // Add summary and image options to node menu
       const originalMenus = customNodeMenu.menus;
       customNodeMenu.menus = (node: any, mind: MindElixirInstance) => {
         const menus = originalMenus(node, mind);
@@ -406,6 +522,34 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             generateNodeSummary(node);
           }
         });
+        
+        // Add image option if PDF images are available
+        if (pdfImages.length > 0) {
+          menus.push({
+            name: '🖼️ Add Image',
+            onclick: () => {
+              // Show image picker
+              setSelectedNodeId(node.id);
+              setShowImagePicker(true);
+            }
+          });
+          
+          // Add option to remove image if node has one
+          if (node.image) {
+            menus.push({
+              name: '❌ Remove Image',
+              onclick: () => {
+                // Remove image from node
+                delete node.image;
+                mind.refresh();
+                toast({
+                  title: "Image removed",
+                  description: "The image has been removed from this node."
+                });
+              }
+            });
+          }
+        }
         
         return menus;
       };
@@ -667,7 +811,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Show a toast notification to inform users about right-click functionality
       toast({
         title: "Mind Map Ready",
-        description: "Click on any node to edit it. Right-click for more options.",
+        description: "Click on any node to edit it. Right-click for more options including adding images.",
         duration: 5000,
       });
       
@@ -682,7 +826,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         observer.disconnect();
       };
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfImages]);
 
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {
@@ -754,6 +898,32 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     setShowSummary(false);
   };
 
+  // Add image to node
+  const addImageToNode = (imageData: string) => {
+    if (!mindMapRef.current || !selectedNodeId) return;
+    
+    const node = mindMapRef.current.nodeData.children.find((n: any) => n.id === selectedNodeId) ||
+                 mindMapRef.current.nodeData.children.flatMap((n: any) => n.children || []).find((n: any) => n.id === selectedNodeId) ||
+                 (mindMapRef.current.nodeData.id === selectedNodeId ? mindMapRef.current.nodeData : null);
+    
+    if (node) {
+      // Add image data to node
+      node.image = imageData;
+      
+      // Refresh the mind map
+      mindMapRef.current.refresh();
+      
+      toast({
+        title: "Image added",
+        description: "The image has been added to the node. You may need to resize the node to see it better."
+      });
+    }
+    
+    // Close image picker
+    setShowImagePicker(false);
+    setSelectedNodeId(null);
+  };
+
   if (!isMapGenerated) {
     return null;
   }
@@ -774,6 +944,53 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         </div>
       )}
       
+      {showImagePicker && (
+        <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-lg p-4 w-[80%] max-w-3xl max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Select an image</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setShowImagePicker(false);
+                  setSelectedNodeId(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+            
+            <div className="overflow-auto flex-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {pdfImages.map((img, index) => (
+                  <div 
+                    key={index} 
+                    className="border rounded-lg p-2 cursor-pointer hover:border-blue-500 transition-colors"
+                    onClick={() => addImageToNode(img.imageData)}
+                  >
+                    <img 
+                      src={img.imageData} 
+                      alt={`PDF image ${index + 1}`} 
+                      className="w-full h-32 object-contain"
+                    />
+                    <div className="text-xs text-center mt-2">
+                      Page {img.pageNumber} • {img.width}×{img.height}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {pdfImages.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No images found in the PDF document.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="w-full h-full overflow-hidden relative">
         <div 
           ref={containerRef} 
@@ -783,6 +1000,25 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             transition: 'background-color 0.5s ease'
           }}
         />
+        
+        {pdfImages.length > 0 && (
+          <div className="absolute bottom-4 right-4">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-1"
+              onClick={() => {
+                toast({
+                  title: "Image Integration",
+                  description: `${pdfImages.length} images extracted from PDF. Right-click on any node to add an image.`
+                });
+              }}
+            >
+              <Image className="h-4 w-4" />
+              {pdfImages.length} PDF Images
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ const MindMap = () => {
   const [showMermaidMindmap, setShowMermaidMindmap] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
+  const [pdfImagesExtracted, setPdfImagesExtracted] = useState(false);
   const { toast } = useToast();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -173,7 +174,48 @@ const MindMap = () => {
     
     // Apply line breaks after a brief delay to ensure nodes are rendered
     setTimeout(applyLineBreaksToNodes, 200);
-  }, []);
+    
+    // Check for PDF images
+    const checkForPdfImages = async () => {
+      try {
+        const pdfDataUrl = sessionStorage.getItem("pdfData");
+        if (pdfDataUrl) {
+          // Load pdfjs dynamically
+          const pdfjs = await import('pdfjs-dist');
+          pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+          
+          const pdfData = atob(pdfDataUrl.split(',')[1]);
+          const loadingTask = pdfjs.getDocument({ data: pdfData });
+          const pdf = await loadingTask.promise;
+          
+          // Just check first page for images to quickly determine if extraction is worthwhile
+          const page = await pdf.getPage(1);
+          const operatorList = await page.getOperatorList();
+          
+          let hasImages = false;
+          for (let i = 0; i < operatorList.fnArray.length; i++) {
+            if (operatorList.fnArray[i] === pdfjs.OPS.paintImageXObject) {
+              hasImages = true;
+              break;
+            }
+          }
+          
+          if (hasImages) {
+            setPdfImagesExtracted(true);
+            toast({
+              title: "Images Available",
+              description: "This PDF contains images that can be added to your mind map. Right-click on nodes to add images.",
+              duration: 5000,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error checking for PDF images:", error);
+      }
+    };
+    
+    checkForPdfImages();
+  }, [toast]);
 
   const handleExportMindMap = useCallback(async () => {
     if (!mindMap) {
