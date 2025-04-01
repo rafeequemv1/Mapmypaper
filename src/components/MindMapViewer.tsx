@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -499,15 +500,15 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Enhanced clickability for nodes
+      // Enhanced clickability for nodes - Fixed TypeScript error by removing updateNodeStyle
       if (containerRef.current) {
         const topicElements = containerRef.current.querySelectorAll('.mind-elixir-topic');
         topicElements.forEach((element) => {
           element.addEventListener('click', (e) => {
-            // Ensure the click event propagates to the mind map
+            // Simply select the node when clicked - this triggers the default node menu
             if (mind.currentNode && mind.currentNode.nodeObj) {
-              // Force open the edit menu if needed
-              mind.updateNodeStyle(mind.currentNode);
+              // Node is already selected, no need to call updateNodeStyle
+              console.log('Node clicked:', mind.currentNode.nodeObj.topic);
             }
           });
         });
@@ -520,9 +521,10 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             mutation.addedNodes.forEach((node) => {
               if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
                 node.addEventListener('click', (e) => {
-                  // Force the editor to show
+                  // Fixed TypeScript error by removing updateNodeStyle
                   if (mind.currentNode && mind.currentNode.nodeObj) {
-                    mind.updateNodeStyle(mind.currentNode);
+                    // Node is already selected, the click will trigger the node menu
+                    console.log('New node clicked:', mind.currentNode.nodeObj.topic);
                   }
                 });
               }
