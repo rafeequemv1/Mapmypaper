@@ -231,7 +231,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Scroll to specific page with enhanced highlighting
+    // Enhanced scroll to page functionality with highlighting
     const scrollToPage = (pageNumber: number) => {
       if (pageNumber < 1 || pageNumber > numPages) {
         console.warn(`Invalid page number: ${pageNumber}. Pages range from 1 to ${numPages}`);
@@ -290,6 +290,22 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     useImperativeHandle(ref, () => ({
       scrollToPage
     }), [numPages]);
+    
+    // Listen for custom events to scroll to specific pages (from citations)
+    useEffect(() => {
+      const handleScrollToPdfPage = (event: any) => {
+        const { pageNumber } = event.detail;
+        if (pageNumber && typeof pageNumber === 'number') {
+          scrollToPage(pageNumber);
+        }
+      };
+      
+      window.addEventListener('scrollToPdfPage', handleScrollToPdfPage);
+      
+      return () => {
+        window.removeEventListener('scrollToPdfPage', handleScrollToPdfPage);
+      };
+    }, [numPages]);
 
     // Handle document loaded
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {

@@ -35,7 +35,7 @@ export const formatAIResponse = (content: string): string => {
   // Improved format for numeric page citations [citation:page123] -> small circular badge with just the number 123
   formattedContent = formattedContent.replace(
     /\[citation:page(\d+)\]/g, 
-    '<span class="citation" data-citation="page$1" role="button" tabindex="0" title="Click to navigate to page $1"><sup class="inline-flex items-center justify-center w-5 h-5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 cursor-pointer">$1</sup></span>'
+    '<span class="citation" data-citation="page$1" role="button" tabindex="0" title="Click to navigate to page $1"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm">$1</sup></span>'
   );
   
   // Standard citation format as fallback - showing citation text in circles
@@ -46,19 +46,19 @@ export const formatAIResponse = (content: string): string => {
       const pageMatch = citation.match(/page\s*(\d+)/i);
       if (pageMatch) {
         const pageNum = pageMatch[1];
-        return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 cursor-pointer">${pageNum}</sup></span>`;
+        return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm">${pageNum}</sup></span>`;
       }
       // If no page number found, just show the first few characters
       const shortCite = citation.length > 3 ? citation.substring(0, 3) : citation;
-      return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 cursor-pointer">${shortCite}</sup></span>`;
+      return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm">${shortCite}</sup></span>`;
     }
   );
   
   // Replace markdown headers with concise styling
   formattedContent = formattedContent
     // Format headers with minimalist styling
-    .replace(/^# (.*$)/gim, '<h1 class="text-lg font-bold mb-2 mt-3 text-blue-800">$1</h1>')
-    .replace(/^## (.*$)/gim, '<h2 class="text-base font-semibold mb-1 mt-2 text-blue-700">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="text-lg font-bold mb-2 mt-3 text-primary-800">$1</h1>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-base font-semibold mb-1 mt-2 text-primary-700">$1</h2>')
     .replace(/^### (.*$)/gim, '<h3 class="text-sm font-medium mb-1 mt-2 text-indigo-600">$1</h3>')
     .replace(/^#### (.*$)/gim, '<h4 class="text-xs font-medium mb-1 mt-1 text-indigo-500">$1</h4>')
     
@@ -70,20 +70,20 @@ export const formatAIResponse = (content: string): string => {
     // Format lists with compact styling
     .replace(/^\* (.*$)/gim, '<ul class="my-1 ml-3 list-disc"><li class="mb-0.5 text-sm">$1</li></ul>')
     .replace(/^- (.*$)/gim, '<ul class="my-1 ml-3 list-disc"><li class="mb-0.5 text-sm">$1</li></ul>')
-    .replace(/^\d\. (.*$)/gim, '<ol class="my-1 ml-3 list-decimal"><li class="mb-0.5 text-sm">$1</li></ol>')
+    .replace(/^(\d+)\. (.*$)/gim, '<ol class="my-1 ml-3 list-decimal"><li class="mb-0.5 text-sm" value="$1">$2</li></ol>')
     
     // Format code blocks with compact styling
     .replace(/```(.+?)```/gs, '<pre class="bg-gray-100 p-1 rounded my-1 overflow-x-auto text-xs font-mono shadow-sm">$1</pre>')
     .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-xs text-pink-600 font-mono">$1</code>')
     
     // Format links with minimal styling
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 underline hover:text-blue-800">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary underline hover:text-primary/90">$1</a>')
     
     // Format paragraphs with compact spacing
     .replace(/^\s*$(?:\r\n?|\n)/gm, '</p><p class="mb-1.5 text-sm leading-snug">')
     
     // Format blockquotes with minimal styling
-    .replace(/^> (.*$)/gim, '<blockquote class="border-l-2 border-blue-400 pl-2 italic my-1.5 bg-blue-50 py-1 text-sm text-gray-700">$1</blockquote>')
+    .replace(/^> (.*$)/gim, '<blockquote class="border-l-2 border-primary/40 pl-2 italic my-1.5 bg-primary/5 py-1 text-sm text-gray-700">$1</blockquote>')
     
     // Format horizontal rules
     .replace(/^---$/gim, '<hr class="my-2 border-t border-gray-300" />')
@@ -143,6 +143,15 @@ export const activateCitations = (container: HTMLElement, onCitationClick: (cita
           console.log("Citation activated by keyboard: ", citationData);
           onCitationClick(citationData);
         }
+      });
+      
+      // Add hover effect for better UX
+      newCitationElement.addEventListener('mouseenter', () => {
+        newCitationElement.classList.add('scale-110', 'shadow-md');
+      });
+      
+      newCitationElement.addEventListener('mouseleave', () => {
+        newCitationElement.classList.remove('scale-110', 'shadow-md');
       });
       
       // Add tooltip for better UX - show page info on hover

@@ -1,11 +1,14 @@
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect, useRef } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, Copy, Check } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Download, Loader2 } from "lucide-react";
 import { generateStructuredSummary } from "@/services/geminiService";
 import { useToast } from "@/hooks/use-toast";
+import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 // Define the Summary type to match the structure returned by the API
 interface Summary {
@@ -37,26 +40,9 @@ interface SummaryModalProps {
 const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const { toast } = useToast();
   const [summary, setSummary] = useState<Summary>(emptyMappedSummary);
-  const [activeTab, setActiveTab] = useState("summary");
   const [isLoading, setIsLoading] = useState(false);
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
-
-  // Format content for display
-  const formatContent = (content: any): React.ReactNode => {
-    // Check if content is a string before attempting to split
-    if (!content || typeof content !== 'string') {
-      return content;
-    }
-    
-    // Handle bullet points (lines starting with - or *)
-    return content.split('\n').map((line, index) => {
-      const trimmedLine = line.trim();
-      if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
-        return <li key={index}>{trimmedLine.substring(2)}</li>;
-      }
-      return <p key={index}>{line}</p>;
-    });
-  };
+  const [confirmDownload, setConfirmDownload] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
 
   // Generate summary when the modal is opened
   useEffect(() => {
@@ -84,166 +70,184 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     }
   };
 
-  // Copy section text to clipboard
-  const copyToClipboard = (section: string) => {
-    const text = summary[section as keyof Summary] || "";
-    navigator.clipboard.writeText(typeof text === 'string' ? text : JSON.stringify(text)).then(() => {
-      setCopiedSection(section);
-      toast({ title: "Copied", description: `${section} copied to clipboard` });
-      setTimeout(() => setCopiedSection(null), 2000);
-    });
+  // Handle citations click - scroll to PDF page
+  const handleCitationClick = (citation: string) => {
+    // Extract page number from citation
+    const pageMatch = citation.match(/page\s*(\d+)/i);
+    if (pageMatch) {
+      const pageNumber = parseInt(pageMatch[1], 10);
+      // Close the summary modal
+      onOpenChange(false);
+      
+      // Wait for modal to close before scrolling to page
+      setTimeout(() => {
+        // Create and dispatch a custom event to scroll PDF to the page
+        const scrollEvent = new CustomEvent("scrollToPdfPage", { detail: { pageNumber } });
+        window.dispatchEvent(scrollEvent);
+        
+        toast({
+          title: "PDF Navigation",
+          description: `Scrolling to page ${pageNumber}`,
+        });
+      }, 300);
+    }
   };
 
-  // Download summary as text file
-  const downloadSummary = () => {
+  // Process the summary content with citation formatting
+  useEffect(() => {
+    if (!isLoading && open && summaryRef.current) {
+      // Wait a bit to ensure content is rendered
+      const timer = setTimeout(() => {
+        // Find all sections that might contain citations
+        const contentElements = summaryRef.current?.querySelectorAll('.summary-section-content');
+        if (contentElements) {
+          contentElements.forEach(element => {
+            if (element instanceof HTMLElement) {
+              // Format AI response - convert markdown and add citations
+              const formattedContent = formatAIResponse(element.innerText);
+              element.innerHTML = formattedContent;
+              
+              // Activate citations to make them clickable
+              activateCitations(element, handleCitationClick);
+            }
+          });
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, open, summary]);
+
+  // Download summary as PDF
+  const downloadSummaryAsPDF = async () => {
+    if (!summaryRef.current) return;
+    
+    setConfirmDownload(false);
+    
     try {
-      let content = "";
-      Object.entries(summary).forEach(([key, value]) => {
-        content += `## ${key}\n\n${typeof value === 'string' ? value : JSON.stringify(value)}\n\n`;
-      });
-
-      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "paper_summary.txt";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
+      // Show loading toast
       toast({
-        title: "Downloaded",
-        description: "Summary downloaded as text file",
+        title: "Preparing PDF",
+        description: "Please wait while we generate your PDF...",
+      });
+      
+      const element = summaryRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate PDF dimensions to match the aspect ratio of the content
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      // Add title
+      pdf.setFontSize(20);
+      pdf.text("Paper Summary", 105, 15, { align: 'center' });
+      
+      // Add the captured content
+      pdf.addImage(imgData, 'PNG', 0, 25, imgWidth, imgHeight - 25);
+      
+      // Save the PDF
+      pdf.save("paper_summary.pdf");
+      
+      toast({
+        title: "PDF Generated",
+        description: "Your summary has been downloaded as PDF",
       });
     } catch (error) {
-      console.error("Error downloading summary:", error);
+      console.error("Error generating PDF:", error);
       toast({
-        title: "Download Failed",
-        description: "Could not download the summary. Please try again.",
+        title: "PDF Generation Failed",
+        description: "Could not generate PDF. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh]">
-        <DialogHeader>
-          <DialogTitle className="flex justify-between items-center">
-            <span>Paper Summary</span>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={downloadSummary}
-                className="flex gap-1"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
-              <Button
-                size="sm"
-                variant="default"
-                onClick={generateSummary}
-                disabled={isLoading}
-                className="flex gap-1"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  "Regenerate"
-                )}
-              </Button>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex justify-between items-center">
+              <span>Paper Summary</span>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm"
+                  onClick={() => setConfirmDownload(true)}
+                  className="flex gap-1"
+                >
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={generateSummary}
+                  disabled={isLoading}
+                  className="flex gap-1"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Regenerate"
+                  )}
+                </Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full p-8">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-center text-muted-foreground">
+                Generating comprehensive summary of the paper...
+              </p>
             </div>
-          </DialogTitle>
-          <DialogDescription>
-            AI-generated summary of the uploaded paper
-          </DialogDescription>
-        </DialogHeader>
-
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-center text-muted-foreground">
-              Generating comprehensive summary of the paper...
-            </p>
-          </div>
-        ) : (
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="flex flex-col h-full overflow-hidden"
-          >
-            <TabsList className="grid grid-cols-7 mb-4">
-              <TabsTrigger value="summary">Summary</TabsTrigger>
-              <TabsTrigger value="findings">Findings</TabsTrigger>
-              <TabsTrigger value="objectives">Objectives</TabsTrigger>
-              <TabsTrigger value="methods">Methods</TabsTrigger>
-              <TabsTrigger value="results">Results</TabsTrigger>
-              <TabsTrigger value="conclusions">Conclusions</TabsTrigger>
-              <TabsTrigger value="concepts">Keywords</TabsTrigger>
-            </TabsList>
-
+          ) : (
             <div className="flex-1 overflow-auto pr-2">
-              {Object.entries(summary).map(([key, value]) => {
-                const formattedKey = key.toLowerCase().replace(/\s+/g, '');
-                let tabId;
-                
-                switch (formattedKey) {
-                  case "summary": tabId = "summary"; break;
-                  case "keyfindings": tabId = "findings"; break;
-                  case "objectives": tabId = "objectives"; break;
-                  case "methods": tabId = "methods"; break;
-                  case "results": tabId = "results"; break;
-                  case "conclusions": tabId = "conclusions"; break;
-                  case "keyconcepts": tabId = "concepts"; break;
-                  default: tabId = ""; break;
-                }
-
-                return (
-                  <TabsContent
-                    key={key}
-                    value={tabId}
-                    className="mt-0 h-full relative"
-                  >
-                    <div className="prose prose-sm max-w-none">
-                      <div className="flex justify-between items-center">
-                        <h3>{key}</h3>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => copyToClipboard(key)}
-                          className="flex gap-1"
-                        >
-                          {copiedSection === key ? (
-                            <Check className="h-4 w-4" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <div className="pl-4">
-                        {typeof value === 'string' && value.includes('-') ? (
-                          <ul className="list-disc pl-4">
-                            {formatContent(value)}
-                          </ul>
-                        ) : (
-                          formatContent(value)
-                        )}
-                      </div>
+              <div ref={summaryRef} className="p-4 space-y-6">
+                {Object.entries(summary).map(([key, value]) => (
+                  <div key={key} className="summary-section">
+                    <h3 className="text-lg font-bold border-b pb-1 mb-2">{key}</h3>
+                    <div className="summary-section-content pl-2">
+                      {typeof value === 'string' ? value : JSON.stringify(value)}
                     </div>
-                  </TabsContent>
-                );
-              })}
+                  </div>
+                ))}
+              </div>
             </div>
-          </Tabs>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={confirmDownload} onOpenChange={setConfirmDownload}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Download Summary as PDF</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a PDF document containing the complete summary of the paper.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={downloadSummaryAsPDF}>
+              Download
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
