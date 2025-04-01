@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Download, Palette, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface FlowchartExportProps {
   previewRef: React.RefObject<HTMLDivElement>;
@@ -12,6 +12,14 @@ interface FlowchartExportProps {
 const FlowchartExport = ({ previewRef, onToggleTheme }: FlowchartExportProps) => {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
+
+  // Initialize Crisp in hidden state when component mounts
+  useEffect(() => {
+    if (window.$crisp) {
+      // Hide the chat widget initially
+      window.$crisp.push(["do", "chat:hide"]);
+    }
+  }, []);
 
   const exportSvg = () => {
     if (!previewRef.current) {
@@ -70,6 +78,10 @@ const FlowchartExport = ({ previewRef, onToggleTheme }: FlowchartExportProps) =>
   // Function to open Crisp chat
   const openCrispChat = () => {
     if (window.$crisp) {
+      // First, make the chat widget visible
+      window.$crisp.push(["do", "chat:show"]);
+      
+      // Then open the chat
       window.$crisp.push(["do", "chat:open"]);
       
       toast({
