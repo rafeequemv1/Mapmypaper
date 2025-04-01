@@ -213,17 +213,7 @@ const MindMap = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header with all icons */}
-      <Header 
-        showPdf={showPdf}
-        togglePdf={togglePdf}
-        pdfAvailable={pdfAvailable}
-        showChat={showChat}
-        toggleChat={toggleChat}
-        onExportMindMap={handleExportMindMap}
-        onOpenSummary={toggleSummary}
-        onOpenFlowchart={toggleFlowchart}
-        onOpenSequenceDiagram={toggleSequenceDiagram}
-      />
+      <Header />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 overflow-hidden">
@@ -254,7 +244,6 @@ const MindMap = () => {
       <SequenceDiagramModal
         open={showSequenceDiagram}
         onOpenChange={setShowSequenceDiagram}
-        onSwitchToFlowchart={handleSequenceToFlowchart}
       />
     </div>
   );

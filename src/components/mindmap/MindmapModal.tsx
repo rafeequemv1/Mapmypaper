@@ -1,148 +1,109 @@
 
-import React, { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { ReloadIcon } from "@radix-ui/react-icons";
-import { useMindmapGenerator, defaultMindmap } from "./flowchart/useMindmapGenerator";
+import FlowchartEditor from "./flowchart/FlowchartEditor";
+import FlowchartPreview from "./flowchart/FlowchartPreview";
+import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
+import { Activity } from "lucide-react";
+import useMindmapGenerator from "./flowchart/useMindmapGenerator";
 
 interface MindmapModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const MindmapModal = ({ isOpen, onClose }: MindmapModalProps) => {
-  const [activeTab, setActiveTab] = useState<string>("editor");
-  const [mermaidSvg, setMermaidSvg] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  const {
-    code,
-    error,
-    isGenerating,
-    generateMindmap,
-    handleCodeChange
-  } = useMindmapGenerator();
-
-  // Initialize mermaid
+const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
+  const previewRef = useRef<HTMLDivElement>(null);
+  const { code, error, isGenerating, generateMindmap, handleCodeChange } = useMindmapGenerator();
+  
+  // State for theme and editor visibility
+  const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
+  const [hideEditor, setHideEditor] = useState(false);
+  
+  // Initialize mermaid library
   useMermaidInit();
 
-  // Render the mindmap whenever code changes
+  // Generate mindmap when modal is opened
   useEffect(() => {
-    if (!isOpen) return;
-
-    const renderMindmap = async () => {
-      try {
-        const { svg } = await mermaid.render('mindmap-diagram', code);
-        setMermaidSvg(svg);
-      } catch (error) {
-        console.error('Error rendering mindmap:', error);
-        setMermaidSvg(`<div class="p-4 text-red-500">Error: Failed to render mindmap</div>`);
-        toast({
-          title: "Rendering Error",
-          description: "Failed to render mindmap. Please check your syntax.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    renderMindmap();
-  }, [code, isOpen, toast]);
-
-  // Reset to default when closed
-  useEffect(() => {
-    if (!isOpen) {
-      // Don't reset on close to preserve user's work
-      setActiveTab("editor");
+    if (open) {
+      generateMindmap();
     }
-  }, [isOpen]);
+  }, [open, generateMindmap]);
+
+  // Toggle color theme
+  const toggleTheme = () => {
+    const themes: Array<'default' | 'forest' | 'dark' | 'neutral'> = ['default', 'forest', 'dark', 'neutral'];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+  };
+
+  // Toggle editor visibility
+  const toggleEditor = () => {
+    setHideEditor(!hideEditor);
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Mermaid Mindmap</DialogTitle>
+          <DialogTitle>Mindmap Editor</DialogTitle>
           <DialogDescription>
-            Create a mindmap visualization based on your PDF content.
+            Create and edit mindmaps to organize concepts and ideas.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="flex gap-4 my-2">
-          <Button 
-            variant="outline" 
-            onClick={() => generateMindmap()}
-            disabled={isGenerating}
+        
+        <div className="flex justify-end items-center gap-4 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleEditor}
+            className="flex items-center gap-1"
           >
-            {isGenerating ? (
-              <>
-                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              "Generate from PDF"
-            )}
+            <Activity className="h-4 w-4" />
+            {hideEditor ? "Show Editor" : "Hide Editor"}
           </Button>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-md text-sm mb-4">
-            {error}
-          </div>
-        )}
-
-        <Tabs 
-          value={activeTab} 
-          onValueChange={setActiveTab}
-          className="flex-1 flex flex-col overflow-hidden"
-        >
-          <TabsList className="grid grid-cols-2">
-            <TabsTrigger value="editor">Editor</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-          </TabsList>
-          
-          {/* Editor Tab */}
-          <TabsContent 
-            value="editor" 
-            className="flex-1 overflow-hidden flex flex-col"
-          >
-            <textarea
-              value={code}
-              onChange={handleCodeChange}
-              className="flex-1 p-4 font-mono text-sm resize-none border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your mindmap code here..."
-              spellCheck="false"
-            />
-          </TabsContent>
-          
-          {/* Preview Tab */}
-          <TabsContent 
-            value="preview" 
-            className="flex-1 overflow-auto bg-white border rounded-md"
-          >
-            {mermaidSvg ? (
-              <div 
-                className="w-full h-full flex items-center justify-center overflow-auto p-4"
-                dangerouslySetInnerHTML={{ __html: mermaidSvg }}
+        
+        <div className={`grid ${hideEditor ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'} gap-4 flex-1 overflow-hidden`}>
+          {/* Code editor - conditionally rendered based on hideEditor */}
+          {!hideEditor && (
+            <div className="flex flex-col">
+              <FlowchartEditor
+                code={code}
+                error={error}
+                isGenerating={isGenerating}
+                onCodeChange={handleCodeChange}
+                onRegenerate={generateMindmap}
               />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <p className="text-gray-500">Loading preview...</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex justify-end">
-          <Button onClick={onClose} className="mr-2">Close</Button>
+            </div>
+          )}
+          
+          {/* Preview - Takes up all space when editor is hidden */}
+          <div className={`${hideEditor ? 'col-span-1' : 'md:col-span-2'} flex flex-col`}>
+            <FlowchartPreview
+              code={code}
+              error={error}
+              isGenerating={isGenerating}
+              theme={theme}
+              previewRef={previewRef}
+            />
+          </div>
         </div>
+        
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <FlowchartExport previewRef={previewRef} onToggleTheme={toggleTheme} />
+          <Button onClick={() => onOpenChange(false)}>Done</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

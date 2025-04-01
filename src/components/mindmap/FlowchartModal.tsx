@@ -45,7 +45,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     if (open) {
       if (code === defaultFlowchart && diagramType === 'flowchart') {
         generateFlowchart();
-      } else if (diagramType === 'sequence' && sequenceDiagramGenerator.code === sequenceDiagramGenerator.defaultSequenceDiagram) {
+      } else if (diagramType === 'sequence') {
         sequenceDiagramGenerator.generateDiagram();
       }
     }
@@ -148,7 +148,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               error={activeError}
               isGenerating={activeIsGenerating}
               theme={theme}
-              ref={previewRef}
+              previewRef={previewRef}
             />
           </div>
         </div>

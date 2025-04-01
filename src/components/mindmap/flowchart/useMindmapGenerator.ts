@@ -1,105 +1,96 @@
-
 import { useState } from "react";
-import mermaid from "mermaid";
-import { useToast } from "@/hooks/use-toast";
-import { generateMindmapFromPdf } from "@/services/geminiService";
+import { generateAiResponse } from "@/services/geminiService";
 
+// Default mindmap diagram
 export const defaultMindmap = `mindmap
-  root((Research Paper))
-    Introduction
-      Background
-      Problem Statement
-      Objectives
-    Methodology
-      Data Collection
-      Analysis Techniques
-    Results
-      Key Findings
-      Statistical Outcomes
-    Discussion
-      Interpretation
-      Limitations
-    Conclusion
-      Summary
-      Future Work`;
+  root((Paper Topic))
+    Key Concept 1
+      Sub-concept 1.1
+      Sub-concept 1.2
+    Key Concept 2
+      Sub-concept 2.1
+      Sub-concept 2.2
+    Key Concept 3
+      Sub-concept 3.1
+        Detail 3.1.1
+        Detail 3.1.2
+`;
 
-// Helper function to clean and validate Mermaid mindmap syntax
-export const cleanMindmapSyntax = (input: string): string => {
-  let cleaned = input.trim();
-  
-  // Ensure it starts with mindmap directive
-  if (!cleaned.startsWith("mindmap")) {
-    cleaned = "mindmap\n" + cleaned;
-  }
-  
-  // Process line by line for better formatting
-  const lines = cleaned.split('\n');
-  const processedLines = lines.map(line => {
-    // Skip empty lines or lines starting with mindmap
-    if (!line.trim() || line.trim().startsWith('mindmap')) {
-      return line;
-    }
-    
-    // Remove special characters that might break the syntax
-    let processedLine = line
-      .replace(/[;]/g, "")
-      .replace(/[<>]/g, "");
-      
-    return processedLine;
-  });
-  
-  return processedLines.join('\n');
-};
-
-export const useMindmapGenerator = () => {
-  const [code, setCode] = useState(defaultMindmap);
+/**
+ * Custom hook for generating and managing mindmap diagrams
+ */
+const useMindmapGenerator = () => {
+  const [code, setCode] = useState<string>(defaultMindmap);
   const [error, setError] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
+  /**
+   * Generate a mindmap based on the PDF content in session storage
+   */
   const generateMindmap = async () => {
+    setIsGenerating(true);
+    setError(null);
+
     try {
-      setIsGenerating(true);
-      setError(null);
-      const mindmapCode = await generateMindmapFromPdf();
+      // Get PDF text from session storage
+      const pdfText = sessionStorage.getItem("pdfText");
       
-      // Clean and validate the mermaid syntax
-      const cleanedCode = cleanMindmapSyntax(mindmapCode);
+      if (!pdfText) {
+        throw new Error("No PDF content found. Please upload a PDF document first.");
+      }
+
+      const prompt = `
+        Create a mindmap diagram using Mermaid syntax based on the following document text.
+        Focus on the main concepts and their relationships.
+        Use the mindmap syntax with a concise root node name that describes the document topic.
+        Include 3-5 key concepts with 2-3 subconcepts each.
+        Ensure the diagram is readable and compact.
+        
+        Document text:
+        ${pdfText.substring(0, 3000)}
+        
+        Return ONLY the mermaid diagram code starting with "mindmap" and nothing else.
+      `;
+
+      const response = await generateAiResponse(prompt);
       
-      // Check if the mindmap code is valid
-      try {
-        await mermaid.parse(cleanedCode);
-        setCode(cleanedCode);
-        toast({
-          title: "Mindmap Generated",
-          description: "A mindmap has been created based on your PDF content.",
-        });
-      } catch (parseError) {
-        console.error("Mermaid parse error:", parseError);
-        setError(`Invalid mindmap syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-        setCode(defaultMindmap);
-        toast({
-          title: "Syntax Error",
-          description: "The generated mindmap had syntax errors. Using a default template instead.",
-          variant: "destructive",
-        });
+      if (response) {
+        // Extract only the mindmap code from the response
+        let diagramCode = response.trim();
+        
+        // Make sure the response starts with 'mindmap'
+        if (!diagramCode.startsWith('mindmap')) {
+          // Try to find the mindmap section in the response
+          const mindmapMatch = diagramCode.match(/mindmap[\s\S]+/);
+          if (mindmapMatch) {
+            diagramCode = mindmapMatch[0];
+          } else {
+            throw new Error("Failed to generate a valid mindmap diagram.");
+          }
+        }
+        
+        setCode(diagramCode);
+      } else {
+        throw new Error("Failed to generate a response from the AI.");
       }
     } catch (err) {
-      console.error("Failed to generate mindmap:", err);
-      setCode(defaultMindmap);
-      setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate mindmap from PDF content.",
-        variant: "destructive",
-      });
+      console.error("Error generating mindmap:", err);
+      setError(err instanceof Error ? err.message : "Unknown error generating mindmap");
+      // Keep the default mindmap so there's something to display
+      if (code !== defaultMindmap) {
+        setCode(defaultMindmap);
+      }
     } finally {
       setIsGenerating(false);
     }
   };
 
+  /**
+   * Handle changes to the mindmap code in the editor
+   */
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCode(e.target.value);
+    setError(null);
   };
 
   return {
@@ -107,7 +98,7 @@ export const useMindmapGenerator = () => {
     error,
     isGenerating,
     generateMindmap,
-    handleCodeChange
+    handleCodeChange,
   };
 };
 

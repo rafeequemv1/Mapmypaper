@@ -35,10 +35,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { MindElixirInstance } from "mind-elixir";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
-import FlowchartModal from "./flowchart/FlowchartModal";
-import SequenceDiagramModal from "./flowchart/SequenceDiagramModal";
+import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import SequenceDiagramModal from "@/components/mindmap/SequenceDiagramModal";
 import SummaryModal from "./SummaryModal";
 import MindmapModal from "./MindmapModal";
 
@@ -53,29 +52,25 @@ const Header = () => {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [fileName, setFileName] = useState("mindmap");
   const [shareLink, setShareLink] = useState("");
-  const [mindElixirInstance, setMindElixirInstance] = useState<MindElixirInstance | null>(null);
+  const [mindElixirInstance, setMindElixirInstance] = useState<any | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-
   // Handle mind map instance being ready
-  const handleMindMapReady = (instance: MindElixirInstance) => {
+  const handleMindMapReady = (instance: any) => {
     setMindElixirInstance(instance);
   };
-
   // Generate a shareable link (mock implementation)
   const generateShareLink = () => {
     const baseUrl = window.location.origin;
     const randomId = Math.random().toString(36).substring(2, 10);
     return `${baseUrl}/shared/${randomId}`;
   };
-
   // Handle share button click
   const handleShare = () => {
     const link = generateShareLink();
     setShareLink(link);
     setShowShareDialog(true);
   };
-
   // Copy share link to clipboard
   const copyShareLink = () => {
     navigator.clipboard.writeText(shareLink);
@@ -84,7 +79,6 @@ const Header = () => {
       description: "Share link copied to clipboard",
     });
   };
-
   // Handle export as PNG
   const handleExportPNG = () => {
     if (mindElixirInstance) {
@@ -92,11 +86,10 @@ const Header = () => {
       setShowExportDialog(false);
       toast({
         title: "Export successful",
-        description: `Mind map exported as ${fileName}.png`,
+        description: `Mind map exported as ${fileName}.png`
       });
     }
   };
-
   // Handle export as SVG
   const handleExportSVG = () => {
     if (mindElixirInstance) {
@@ -104,17 +97,20 @@ const Header = () => {
       setShowExportDialog(false);
       toast({
         title: "Export successful",
-        description: `Mind map exported as ${fileName}.svg`,
+        description: `Mind map exported as ${fileName}.svg`
       });
     }
   };
-
   // Handle export as JSON
   const handleExportJSON = () => {
     if (mindElixirInstance) {
       const data = mindElixirInstance.getData();
       const dataStr = JSON.stringify(data, null, 2);
-      const blob = new Blob([dataStr], { type: "application/json" });
+      const blob = new Blob([
+        dataStr
+      ], {
+        type: "application/json"
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = `${fileName}.json`;
@@ -123,11 +119,10 @@ const Header = () => {
       setShowExportDialog(false);
       toast({
         title: "Export successful",
-        description: `Mind map exported as ${fileName}.json`,
+        description: `Mind map exported as ${fileName}.json`
       });
     }
   };
-
   // Handle delete confirmation
   const handleDelete = () => {
     // Clear session storage
@@ -135,17 +130,14 @@ const Header = () => {
     sessionStorage.removeItem("pdfText");
     sessionStorage.removeItem("pdfData");
     sessionStorage.removeItem("uploadedPdfData");
-    
     setShowDeleteDialog(false);
     toast({
       title: "Mind map deleted",
-      description: "Your mind map has been deleted",
+      description: "Your mind map has been deleted"
     });
-    
     // Navigate back to upload page
     navigate("/");
   };
-
   // Handle save (mock implementation)
   const handleSave = () => {
     if (mindElixirInstance) {
@@ -153,15 +145,13 @@ const Header = () => {
       // In a real app, you would save this to a database
       console.log("Saving mind map:", data);
       localStorage.setItem(`mindmap_${fileName}`, JSON.stringify(data));
-      
       setShowSaveDialog(false);
       toast({
         title: "Mind map saved",
-        description: `Your mind map "${fileName}" has been saved`,
+        description: `Your mind map "${fileName}" has been saved`
       });
     }
   };
-
   // Check if we have PDF data
   useEffect(() => {
     const pdfData = sessionStorage.getItem("pdfData") || sessionStorage.getItem("uploadedPdfData");
@@ -169,11 +159,12 @@ const Header = () => {
       toast({
         title: "No PDF loaded",
         description: "Please upload a PDF to use all features",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
-  }, [toast]);
-
+  }, [
+    toast
+  ]);
   return (
     <header className="bg-white border-b p-4 flex justify-between items-center">
       <div className="flex items-center gap-3">
@@ -182,13 +173,11 @@ const Header = () => {
         </div>
         <h1 className="text-xl font-bold">MapMyPaper</h1>
       </div>
-      
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => navigate("/")}>
           <Upload className="h-4 w-4 mr-2" />
           Upload New
         </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
@@ -216,29 +205,23 @@ const Header = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
         <Button variant="outline" size="sm" onClick={() => setShowExportDialog(true)}>
           <Download className="h-4 w-4 mr-2" />
           Export
         </Button>
-
         <Button variant="outline" size="sm" onClick={() => setShowSaveDialog(true)}>
           <Save className="h-4 w-4 mr-2" />
           Save
         </Button>
-
         <Button variant="outline" size="sm" onClick={handleShare}>
           <Share2 className="h-4 w-4 mr-2" />
           Share
         </Button>
-
         <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(true)}>
           <Trash2 className="h-4 w-4 mr-2" />
           Delete
         </Button>
       </div>
-
-      {/* Export Dialog */}
       <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
         <DialogContent>
           <DialogHeader>
@@ -271,8 +254,6 @@ const Header = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Share Dialog */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent>
           <DialogHeader>
@@ -289,8 +270,6 @@ const Header = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
@@ -309,8 +288,6 @@ const Header = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Save Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent>
           <DialogHeader>
@@ -340,29 +317,21 @@ const Header = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Flowchart Modal */}
       <FlowchartModal
-        isOpen={showFlowchartModal}
-        onClose={() => setShowFlowchartModal(false)}
+        open={showFlowchartModal}
+        onOpenChange={setShowFlowchartModal}
       />
-
-      {/* Sequence Diagram Modal */}
       <SequenceDiagramModal
-        isOpen={showSequenceDiagramModal}
-        onClose={() => setShowSequenceDiagramModal(false)}
+        open={showSequenceDiagramModal}
+        onOpenChange={setShowSequenceDiagramModal}
       />
-
-      {/* Summary Modal */}
       <SummaryModal
-        isOpen={showSummaryModal}
-        onClose={() => setShowSummaryModal(false)}
+        open={showSummaryModal}
+        onOpenChange={setShowSummaryModal}
       />
-      
-      {/* Mindmap Modal */}
       <MindmapModal
-        isOpen={showMindmapModal}
-        onClose={() => setShowMindmapModal(false)}
+        open={showMindmapModal}
+        onOpenChange={setShowMindmapModal}
       />
     </header>
   );

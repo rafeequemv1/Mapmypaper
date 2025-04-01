@@ -12,10 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 interface SequenceDiagramModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSwitchToFlowchart: () => void;
 }
 
-const SequenceDiagramModal = ({ open, onOpenChange, onSwitchToFlowchart }: SequenceDiagramModalProps) => {
+const SequenceDiagramModal = ({ open, onOpenChange }: SequenceDiagramModalProps) => {
   const { toast } = useToast();
 
   // Redirect to flowchart modal with sequence diagram tab when opened
@@ -25,13 +24,10 @@ const SequenceDiagramModal = ({ open, onOpenChange, onSwitchToFlowchart }: Seque
         title: "Redirecting",
         description: "Sequence diagrams are now available directly in the diagram editor.",
       });
-      // Close this modal and open the flowchart modal
+      // Close this modal
       onOpenChange(false);
-      setTimeout(() => {
-        onSwitchToFlowchart();
-      }, 100);
     }
-  }, [open, onOpenChange, onSwitchToFlowchart, toast]);
+  }, [open, onOpenChange, toast]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
