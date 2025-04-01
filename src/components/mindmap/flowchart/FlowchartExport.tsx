@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Download, Palette, LifeBuoy } from "lucide-react";
+import { Download, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 

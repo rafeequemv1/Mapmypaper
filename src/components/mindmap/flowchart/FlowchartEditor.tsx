@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RefreshCcw } from "lucide-react";
@@ -12,7 +11,7 @@ interface FlowchartEditorProps {
   onRegenerate: () => void;
 }
 
-const FlowchartEditor: React.FC<FlowchartEditorProps> = ({ 
+const FlowchartEditor = ({ 
   code, 
   error, 
   isGenerating, 

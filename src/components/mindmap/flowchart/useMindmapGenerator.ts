@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { generateMindmapFromPdf } from "@/services/geminiService";
 import { DetailLevel } from "../MindmapModal";
@@ -96,9 +95,7 @@ const useMindmapGenerator = () => {
         throw new Error("No PDF content found. Please upload a PDF document first.");
       }
 
-      console.log("Generating mindmap from PDF text...");
       const response = await generateMindmapFromPdf();
-      console.log("Received response:", response ? "Data received" : "No data");
       
       if (response) {
         // Fix potential multiple root issues and add color styling
@@ -121,7 +118,7 @@ const useMindmapGenerator = () => {
       setIsGenerating(false);
     }
   };
-  
+
   /**
    * Process mindmap based on selected detail level
    */
@@ -730,15 +727,24 @@ const useMindmapGenerator = () => {
       processedLines.push('classDef synthesis fill:#000000,color:#ffffff,stroke:#000000');
       processedLines.push('classDef evaluation fill:#111111,color:#ffffff,stroke:#000000');
     }
-    
+
     return processedLines.join('\n');
+  };
+
+  /**
+   * Handle changes to the mindmap code in the editor
+   */
+  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCode(e.target.value);
+    setError(null);
   };
 
   return {
     code,
     error,
     isGenerating,
-    generateMindmap
+    generateMindmap,
+    handleCodeChange,
   };
 };
 
