@@ -50,9 +50,8 @@ const PanelStructure = ({
     }
   }, [explainText, sendMessage, isChatLoading]);
 
-  // Add a handler for image capture
+  // Handle image capture from PDF
   const handleImageCaptured = (imageData: string) => {
-    // Send the captured image data to the chat
     if (onExplainText) {
       onExplainText(`[IMAGE CAPTURE]: Please explain this part of the PDF: ${imageData}`);
     }
@@ -67,6 +66,7 @@ const PanelStructure = ({
             <PdfViewer 
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
+              onPdfLoaded={handlePdfLoaded}
               onImageCaptured={handleImageCaptured}
             />
           </ResizablePanel>
