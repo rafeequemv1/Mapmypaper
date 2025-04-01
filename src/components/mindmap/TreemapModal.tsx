@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
@@ -12,6 +13,7 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import { useToast } from "@/hooks/use-toast";
+import { ZoomIn, ZoomOut, RefreshCw } from "lucide-react";
 
 interface TreemapModalProps {
   open: boolean;
@@ -25,12 +27,16 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   
-  // State for theme and editor visibility
+  // State for theme and zoom
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [initialGeneration, setInitialGeneration] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom for better fit
   
   // Initialize mermaid library with left-to-right direction
   useMermaidInit("LR");
+
+  // Show code syntax in error state so user can see the issue
+  const [showSyntax, setShowSyntax] = useState(false);
 
   // Generate treemap mindmap when modal opens
   useEffect(() => {
@@ -58,9 +64,14 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
           // Add root node - use custom styling
           const rootTopic = rootNode.topic.replace(/[\n\r]/g, ' ')
             .replace(/[-_]/g, ' ')
-            .replace(/[\(\)']/g, '');
-            
+            .replace(/[\(\)']/g, '')
+            .trim();
+          
+          // Add the root node as the first node with proper syntax  
           treemapCode += `  root((${rootTopic}))\n`;
+          
+          // Define the rootStyle class but don't apply it yet
+          const rootStyleDefinition = "classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold\n";
           
           // Helper function to recursively add nodes with color classes
           const addNodesRecursively = (node: any, parent: string, depth: number) => {
@@ -105,7 +116,7 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
               // Add class for styling directly to the node
               treemapCode += `${indent}class ${nodeId} style${depth}_${index % 5}\n`;
               
-              // Add style definition at the bottom
+              // Add style definition at the bottom if it hasn't been added already
               if (!treemapCode.includes(classDeclaration)) {
                 treemapCode += `${indent}%% ${classDeclaration}\n`;
               }
@@ -117,56 +128,56 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
             });
           };
           
-          // Add style for root - IMPORTANT: Add after defining root node
-          treemapCode += `  class root rootStyle\n`;
-          treemapCode += `  %% classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold\n`;
-          
           // Start recursive node addition
           addNodesRecursively(rootNode, "root", 1);
           
+          // Apply style for root - IMPORTANT: Add this after all nodes have been defined
+          treemapCode += `  class root rootStyle\n`;
+          treemapCode += `  %% ${rootStyleDefinition}`;
+          
         } else {
-          // If no data, create a colorful example mindmap
-          treemapCode += `
+          // If no data, create a simple example mindmap with properly formatted syntax
+          treemapCode = `mindmap
   root((Paper Structure))
   
-  root --> root_0["Introduction"]
-  class root_0 style1_0
+  root --> intro["Introduction"]
+  class intro style1_0
   
-  root_0 --> root_0_0("Background")
-  class root_0_0 style2_0
+  intro --> background("Background")
+  class background style2_0
   
-  root_0 --> root_0_1("Problem Statement")
-  class root_0_1 style2_1
+  intro --> problem("Problem Statement")
+  class problem style2_1
   
-  root --> root_1["Methodology"]
-  class root_1 style1_1
+  root --> methods["Methodology"]
+  class methods style1_1
   
-  root_1 --> root_1_0("Experimental Setup")
-  class root_1_0 style2_2
+  methods --> setup("Experimental Setup")
+  class setup style2_2
   
-  root_1 --> root_1_1("Analysis Techniques")
-  class root_1_1 style2_3
+  methods --> techniques("Analysis Techniques")
+  class techniques style2_3
   
-  root --> root_2["Results"]
-  class root_2 style1_2
+  root --> results["Results"]
+  class results style1_2
   
-  root_2 --> root_2_0{{"Key Findings"}}
-  class root_2_0 style3_0
+  results --> findings{{"Key Findings"}}
+  class findings style3_0
   
-  root_2 --> root_2_1{{"Statistical Analysis"}}
-  class root_2_1 style3_1
+  results --> analysis{{"Statistical Analysis"}}
+  class analysis style3_1
   
-  root --> root_3["Discussion"]
-  class root_3 style1_3
+  root --> discussion["Discussion"]
+  class discussion style1_3
   
-  root_3 --> root_3_0>"Implications"]
-  class root_3_0 style4_0
+  discussion --> implications>"Implications"]
+  class implications style4_0
   
-  root_3 --> root_3_1>"Limitations"]
-  class root_3_1 style4_1
+  discussion --> limitations>"Limitations"]
+  class limitations style4_1
   
-  root --> root_4["Conclusion"]
-  class root_4 style1_4
+  root --> conclusion["Conclusion"]
+  class conclusion style1_4
   
   class root rootStyle
   %% classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold
@@ -182,8 +193,7 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
   %% classDef style3_0 fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C,font-style:italic
   %% classDef style3_1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C,font-style:italic
   %% classDef style4_0 fill:#F1F0FB,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
-  %% classDef style4_1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
-`;
+  %% classDef style4_1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C`;
         }
         
         setCode(treemapCode);
@@ -210,6 +220,23 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
     const nextIndex = (currentIndex + 1) % themes.length;
     setTheme(themes[nextIndex]);
   };
+  
+  // Zoom controls
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  };
+  
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+  };
+  
+  const handleZoomReset = () => {
+    setZoomLevel(0.8); // Reset to fit diagram
+  };
+  
+  const toggleSyntax = () => {
+    setShowSyntax(!showSyntax);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -221,16 +248,62 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
           </DialogDescription>
         </DialogHeader>
         
-        {/* Preview - Takes up all space */}
+        {/* Toolbar with zoom controls */}
+        <div className="flex items-center gap-2 mb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomIn}
+            className="flex items-center gap-1"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomReset}
+            className="flex items-center gap-1"
+            title="Reset zoom to fit diagram"
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            {Math.round(zoomLevel * 100)}%
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomOut}
+            className="flex items-center gap-1"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleSyntax}
+            className="ml-auto"
+          >
+            {showSyntax ? "Hide Syntax" : "Show Syntax"}
+          </Button>
+        </div>
+        
+        {/* Preview or syntax display */}
         <div className="flex-1 overflow-hidden">
-          <FlowchartPreview
-            code={code}
-            error={error}
-            isGenerating={isGenerating}
-            theme={theme}
-            previewRef={previewRef}
-            hideEditor={true}
-          />
+          {showSyntax ? (
+            <div className="h-full w-full overflow-auto bg-gray-100 p-4 rounded-md">
+              <pre className="text-xs">{code}</pre>
+            </div>
+          ) : (
+            <FlowchartPreview
+              code={code}
+              error={error}
+              isGenerating={isGenerating}
+              theme={theme}
+              previewRef={previewRef}
+              hideEditor={true}
+              zoomLevel={zoomLevel}
+            />
+          )}
         </div>
         
         <DialogFooter className="flex justify-between sm:justify-between">

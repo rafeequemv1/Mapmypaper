@@ -46,9 +46,10 @@ const FlowchartPreview = ({
             rankSpacing: 70,
             useMaxWidth: true, // Enable responsive diagrams
           },
-          // Ensure mindmaps don't have forced layout
+          // Ensure mindmaps have proper layout
           mindmap: {
             padding: 10,
+            maxWidth: true, // Enable responsive mindmaps
           }
         });
         
@@ -145,8 +146,10 @@ const FlowchartPreview = ({
           
           /* Make sure SVG is responsive */
           svg {
-            max-width: 100%;
+            max-width: 100% !important;
             height: auto !important;
+            display: block;
+            margin: 0 auto;
           }
         `;
         
@@ -159,11 +162,19 @@ const FlowchartPreview = ({
           // Add zoom and pan functionality
           const svgElement = ref.current.querySelector('svg');
           if (svgElement) {
-            // Make SVG responsive
+            // Make SVG responsive - force it to fill container while maintaining aspect ratio
             svgElement.setAttribute('width', '100%');
-            svgElement.setAttribute('height', 'auto');
+            svgElement.setAttribute('height', '100%');
             svgElement.style.maxWidth = '100%';
             svgElement.style.maxHeight = '100%';
+            svgElement.style.display = 'block';
+            
+            // Force the viewbox to ensure the diagram fits
+            const viewBox = svgElement.getAttribute('viewBox');
+            if (!viewBox) {
+              const bbox = (svgElement as SVGSVGElement).getBBox();
+              svgElement.setAttribute('viewBox', `0 0 ${bbox.width} ${bbox.height}`);
+            }
             
             // Add custom styles to SVG
             const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');

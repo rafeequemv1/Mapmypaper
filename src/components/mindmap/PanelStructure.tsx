@@ -33,10 +33,10 @@ const PanelStructure = ({
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full w-full">
-      {/* PDF Panel */}
+      {/* PDF Panel - Fixed to 40% width */}
       {showPdf && (
         <>
-          <ResizablePanel defaultSize={30} minSize={15} maxSize={50} className="h-full">
+          <ResizablePanel defaultSize={40} minSize={30} maxSize={50} className="h-full" collapsible={false}>
             <PdfViewer 
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
@@ -47,7 +47,11 @@ const PanelStructure = ({
       )}
 
       {/* Mind Map Panel - Takes up remaining space */}
-      <ResizablePanel defaultSize={showChat ? 50 : 70} className="h-full">
+      <ResizablePanel 
+        defaultSize={showPdf && showChat ? 30 : (showPdf || showChat ? 60 : 100)} 
+        className="h-full" 
+        collapsible={false}
+      >
         <MindMapViewer
           isMapGenerated={isMapGenerated}
           onMindMapReady={onMindMapReady}
@@ -55,11 +59,11 @@ const PanelStructure = ({
         />
       </ResizablePanel>
 
-      {/* Chat Panel */}
+      {/* Chat Panel - Fixed to 30% width */}
       {showChat && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="h-full">
+          <ResizablePanel defaultSize={30} minSize={20} maxSize={40} className="h-full" collapsible={false}>
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}

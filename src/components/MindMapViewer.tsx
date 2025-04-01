@@ -14,7 +14,7 @@ interface MindMapViewerProps {
 }
 
 // Enhanced helper function to format node text with line breaks and add emojis
-const formatNodeText = (text: string, wordsPerLine: number = 7, isRoot: boolean = false): string => {
+const formatNodeText = (text: string, wordsPerLine: number = 5, isRoot: boolean = false): string => {
   if (!text) return '';
   
   // Use fewer words per line for root node
@@ -42,7 +42,7 @@ const formatNodeText = (text: string, wordsPerLine: number = 7, isRoot: boolean 
     processedText = ensureCompleteSentence(processedText);
   }
   
-  // Apply line breaks for better readability
+  // Apply line breaks for better readability - strictly limit to 5 words per line
   const words = processedText.split(' ');
   if (words.length <= effectiveWordsPerLine) return processedText;
   

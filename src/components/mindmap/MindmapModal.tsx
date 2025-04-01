@@ -14,7 +14,7 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useMindmapGenerator from "./flowchart/useMindmapGenerator";
 import { useToast } from "@/hooks/use-toast";
-import { ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
+import { ZoomIn, ZoomOut, RefreshCw } from "lucide-react";
 
 interface MindmapModalProps {
   open: boolean;
@@ -30,6 +30,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [initialGeneration, setInitialGeneration] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom for better fit
+  const [showSyntax, setShowSyntax] = useState(false);
   
   // Initialize mermaid library
   useMermaidInit();
@@ -68,6 +69,10 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   
   const handleZoomReset = () => {
     setZoomLevel(0.8); // Reset to fit diagram
+  };
+  
+  const toggleSyntax = () => {
+    setShowSyntax(!showSyntax);
   };
   
   // Auto-fit on window resize
@@ -119,24 +124,39 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleSyntax}
+            className="ml-auto"
+          >
+            {showSyntax ? "Hide Syntax" : "Show Syntax"}
+          </Button>
         </div>
         
         {/* Preview - Takes up all space */}
         <div className="flex-1 overflow-hidden">
-          <FlowchartPreview
-            code={code}
-            error={error}
-            isGenerating={isGenerating}
-            theme={theme}
-            previewRef={previewRef}
-            hideEditor={true}
-            zoomLevel={zoomLevel}
-          />
+          {showSyntax ? (
+            <div className="h-full w-full overflow-auto bg-gray-100 p-4 rounded-md">
+              <pre className="text-xs">{code}</pre>
+            </div>
+          ) : (
+            <FlowchartPreview
+              code={code}
+              error={error}
+              isGenerating={isGenerating}
+              theme={theme}
+              previewRef={previewRef}
+              hideEditor={true}
+              zoomLevel={zoomLevel}
+            />
+          )}
         </div>
         
         <DialogFooter className="flex justify-between sm:justify-between">
           <FlowchartExport previewRef={previewRef} onToggleTheme={toggleTheme} />
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-black">Done</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
