@@ -1,17 +1,12 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   GitBranchPlus,
   GitCommitHorizontal,
-  ListOrdered,
-  Network,
   FileText,
   Download,
   Upload,
   MessageSquare,
-  PlusCircle,
-  FileIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,8 +42,6 @@ const Header = ({
   toggleChat, 
   setShowSummary,
   setShowFlowchart,
-  setShowSequenceDiagram,
-  setShowMindmap
 }: HeaderProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [fileName, setFileName] = useState("mindmap");
@@ -147,13 +140,13 @@ const Header = ({
           </Button>
           
           <Button variant="ghost" onClick={() => setShowSummary(true)} className="flex items-center gap-1 text-black h-8 px-3">
-            <FileIcon className="h-3.5 w-3.5" />
+            <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
           
-          <Button variant="ghost" onClick={() => setShowMindmap && setShowMindmap(true)} className="flex items-center gap-1 text-black h-8 px-3">
-            <PlusCircle className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Create</span>
+          <Button variant="ghost" onClick={() => setShowFlowchart && setShowFlowchart(true)} className="flex items-center gap-1 text-black h-8 px-3">
+            <GitCommitHorizontal className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
         </div>
         
@@ -163,27 +156,9 @@ const Header = ({
             <Upload className="h-3.5 w-3.5 text-black" />
           </Button>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 px-2">
-                <GitBranchPlus className="h-3.5 w-3.5 text-black" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowFlowchart && setShowFlowchart(true)}>
-                <GitCommitHorizontal className="h-3.5 w-3.5 mr-2" />
-                Flowchart
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowSequenceDiagram && setShowSequenceDiagram(true)}>
-                <ListOrdered className="h-3.5 w-3.5 mr-2" />
-                Sequence Diagram
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowMindmap && setShowMindmap(true)}>
-                <Network className="h-3.5 w-3.5 mr-2" />
-                Mindmap
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowFlowchart && setShowFlowchart(true)}>
+            <GitBranchPlus className="h-3.5 w-3.5 text-black" />
+          </Button>
           
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>
             <Download className="h-3.5 w-3.5 text-black" />

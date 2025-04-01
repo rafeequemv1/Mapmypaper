@@ -225,8 +225,6 @@ const MindMap = () => {
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
-        setShowSequenceDiagram={() => {}} // Keep empty function but don't show sequence diagram
-        setShowMindmap={() => {}} // Keep empty function but don't show mermaid mindmap
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
