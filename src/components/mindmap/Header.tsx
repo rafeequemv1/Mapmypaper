@@ -1,7 +1,7 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  GitBranchPlus,
   GitCommitHorizontal,
   FileText,
   Download,
@@ -9,12 +9,6 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -33,8 +27,6 @@ interface HeaderProps {
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowSequenceDiagram?: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowMindmap?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Header = ({ 
@@ -154,10 +146,6 @@ const Header = ({
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
             <Upload className="h-3.5 w-3.5 text-black" />
-          </Button>
-          
-          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowFlowchart && setShowFlowchart(true)}>
-            <GitBranchPlus className="h-3.5 w-3.5 text-black" />
           </Button>
           
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>

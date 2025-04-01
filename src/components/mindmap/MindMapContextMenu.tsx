@@ -19,30 +19,38 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onAddChild,
   onAddSibling
 }) => {
-  const handleCopy = () => {
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
     if (onCopy) {
       onCopy();
-    } else {
-      // Default copy behavior
-      document.execCommand('copy', false, undefined);
     }
   };
 
-  const handlePaste = () => {
+  const handlePaste = (e: React.MouseEvent) => {
+    e.preventDefault();
     if (onPaste) {
       onPaste();
-    } else {
-      // Default paste behavior
-      document.execCommand('paste', false, undefined);
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
     if (onDelete) {
       onDelete();
-    } else {
-      // Default delete behavior - with required arguments
-      document.execCommand('delete', false, undefined);
+    }
+  };
+
+  const handleAddChild = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onAddChild) {
+      onAddChild();
+    }
+  };
+
+  const handleAddSibling = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onAddSibling) {
+      onAddSibling();
     }
   };
 
@@ -51,23 +59,23 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
       <ContextMenuTrigger asChild>
         {children}
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-64">
-        <ContextMenuItem onClick={handleCopy}>
+      <ContextMenuContent className="w-64 bg-white shadow-lg border rounded-lg z-50">
+        <ContextMenuItem onClick={handleCopy} className="cursor-pointer">
           Copy
         </ContextMenuItem>
-        <ContextMenuItem onClick={handlePaste}>
+        <ContextMenuItem onClick={handlePaste} className="cursor-pointer">
           Paste
         </ContextMenuItem>
-        <ContextMenuItem onClick={handleDelete}>
+        <ContextMenuItem onClick={handleDelete} className="cursor-pointer">
           Delete
         </ContextMenuItem>
         {onAddChild && (
-          <ContextMenuItem onClick={onAddChild}>
+          <ContextMenuItem onClick={handleAddChild} className="cursor-pointer">
             Add Child Node
           </ContextMenuItem>
         )}
         {onAddSibling && (
-          <ContextMenuItem onClick={onAddSibling}>
+          <ContextMenuItem onClick={handleAddSibling} className="cursor-pointer">
             Add Sibling Node
           </ContextMenuItem>
         )}

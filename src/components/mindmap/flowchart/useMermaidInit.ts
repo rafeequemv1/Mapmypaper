@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import mermaid from "mermaid";
 
-export const useMermaidInit = () => {
+export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
   // Initialize mermaid with safe configuration
   useEffect(() => {
     mermaid.initialize({
@@ -11,7 +11,13 @@ export const useMermaidInit = () => {
       securityLevel: "loose",
       flowchart: {
         useMaxWidth: false,
-        htmlLabels: true
+        htmlLabels: true,
+        curve: 'basis',
+        diagramPadding: 8,
+        defaultRenderer: 'dagre-wrapper',
+        nodeSpacing: 50,
+        rankSpacing: 70,
+        rankDir: direction
       },
       sequence: {
         diagramMarginX: 50,
@@ -30,7 +36,7 @@ export const useMermaidInit = () => {
       },
       logLevel: 3 // Enables warning logs for debugging
     });
-  }, []);
+  }, [direction]);
 };
 
 export default useMermaidInit;

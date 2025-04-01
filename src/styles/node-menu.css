@@ -37,13 +37,16 @@
 
 /* Style for node contextmenu */
 .mind-elixir-contextmenu {
-  position: absolute;
-  z-index: 999;
+  position: absolute !important;
+  z-index: 9999 !important;
   background-color: white;
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   min-width: 160px;
   user-select: none;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .mind-elixir-contextmenu-item {
@@ -72,6 +75,7 @@
 .mind-elixir-contextmenu {
   opacity: 1 !important;
   visibility: visible !important;
+  display: block !important;
 }
 
 /* Disable text selection in the mind map to avoid conflicts with right-clicking */
@@ -83,4 +87,23 @@
 /* Add positioning context to mind map nodes */
 .me-node {
   position: relative !important;
+}
+
+/* Ensure the contextmenu is visible above all other elements */
+.mind-elixir-contextmenu,
+.mind-elixir-node-menu {
+  pointer-events: auto !important;
+}
+
+/* Fix for context menu positioning */
+.react-flow__node, 
+.react-flow__edge,
+.me-node {
+  position: relative;
+}
+
+/* Override any potential hiding styles */
+.mind-elixir-node-menu[style*="display: none"],
+.mind-elixir-contextmenu[style*="display: none"] {
+  display: block !important;
 }
