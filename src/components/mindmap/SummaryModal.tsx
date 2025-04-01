@@ -1,225 +1,180 @@
 
-import React, { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, FileDown } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { generateStructuredSummary } from "@/services/geminiService";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2 } from 'lucide-react';
+import { generateStructuredSummary } from '@/services/geminiService';
+import { useToast } from '@/hooks/use-toast';
 
 interface SummaryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface SummaryData {
-  [key: string]: string;
+interface Summary {
+  Summary: string;
+  'Key Findings': string;
+  Objectives: string;
+  Methods: string;
+  Results: string;
+  Conclusions: string;
+  'Key Concepts': string;
 }
 
 const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
-  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
-  const summaryRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Generate summary when modal is opened
   useEffect(() => {
-    if (open && !summaryData && !loading) {
-      generateSummary();
-    }
-  }, [open]);
-
-  const generateSummary = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const data = await generateStructuredSummary();
+    const generateSummary = async () => {
+      if (!open) return;
       
-      // Ensure Key Findings is not empty and is a string
-      if (!data["Key Findings"] || typeof data["Key Findings"] !== 'string' || data["Key Findings"].trim() === '') {
-        data["Key Findings"] = "• The paper identifies several statistical correlations between variables\n• Results demonstrate significant effects at p < 0.05\n• Multiple factors were found to influence the main outcome variables";
+      const pdfText = sessionStorage.getItem('pdfText');
+      if (!pdfText) {
+        setError('No PDF content found. Please upload a PDF document first.');
+        return;
       }
       
-      setSummaryData(data);
-    } catch (err) {
-      console.error("Error generating summary:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate summary");
-      toast({
-        title: "Summary Generation Failed",
-        description: err instanceof Error ? err.message : "Failed to generate summary",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const summaryData = await generateStructuredSummary();
+        setSummary(summaryData as Summary);
+      } catch (err) {
+        console.error('Error generating summary:', err);
+        setError('Failed to generate summary. Please try again.');
+        toast({
+          title: 'Error',
+          description: 'Failed to generate summary. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    generateSummary();
+  }, [open, toast]);
 
-  // Function to download as PDF
-  const downloadAsPDF = async () => {
-    if (!summaryRef.current || !summaryData) return;
+  // Format the content with Markdown-like syntax
+  const formatContent = (content: string) => {
+    if (!content) return '';
     
-    setDownloading(true);
-    
-    try {
-      const contentElement = summaryRef.current;
-      
-      // Create a PDF document
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      // Create a canvas from the content
-      const canvas = await html2canvas(contentElement, {
-        scale: 2, // Higher scale for better quality
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff"
-      });
-      
-      // Convert canvas to image and add to PDF
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      
-      // Calculate dimensions for PDF
-      const imgWidth = 210; // A4 width in mm (portrait)
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      
-      // Save PDF
-      pdf.save('document-summary.pdf');
-      
-      toast({
-        title: "Summary Downloaded",
-        description: "The summary has been downloaded as a PDF file.",
-      });
-    } catch (err) {
-      console.error("Error generating PDF:", err);
-      toast({
-        title: "Download Failed",
-        description: "There was an error creating the PDF file.",
-        variant: "destructive"
-      });
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  // Helper function to safely format text with bullet points and paragraphs
-  const formatText = (text: string | null | undefined): string => {
-    if (!text || typeof text !== 'string') {
-      return '';
-    }
-
-    // Replace bullet points
-    let formatted = text.replace(/•/g, '&bull;');
-    
-    // Convert newlines to <br> tags
-    formatted = formatted.replace(/\n/g, '<br>');
-    
-    // Format bullet points with proper indentation
-    formatted = formatted.replace(/- /g, '&bull; ');
-    
-    return formatted;
+    // Handle bullet points
+    return content.split('\n').map((line, i) => {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('- ')) {
+        return (
+          <div key={i} className="flex mb-1">
+            <span className="mr-2">•</span>
+            <span>{trimmedLine.substring(2)}</span>
+          </div>
+        );
+      }
+      return <p key={i} className="mb-3">{trimmedLine}</p>;
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[80vh] flex flex-col bg-white">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-primary">Document Summary</DialogTitle>
-          <DialogDescription className="flex justify-between items-center">
-            <span>AI-generated structured summary of the document</span>
-            <div className="flex gap-2">
-              {summaryData && !loading && (
-                <Button 
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white" 
-                  onClick={downloadAsPDF}
-                  disabled={downloading}
-                >
-                  {downloading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileDown className="h-4 w-4" />
-                  )}
-                  <span>Download as PDF</span>
-                </Button>
-              )}
-            </div>
+          <DialogTitle>Paper Summary</DialogTitle>
+          <DialogDescription>
+            AI-generated summary of the key points in your document
           </DialogDescription>
         </DialogHeader>
         
-        {loading ? (
-          <div className="flex flex-col items-center justify-center flex-1">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">Generating summary...</p>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+            <p>Generating summary...</p>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center flex-1 p-4">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={generateSummary}>Try Again</Button>
+          <div className="bg-destructive/10 p-4 rounded-md text-destructive">
+            {error}
           </div>
-        ) : summaryData ? (
-          <ScrollArea className="flex-1 pr-4">
-            <div ref={summaryRef} className="p-6 bg-white">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-center mb-6">Structured Summary</h2>
-                
-                {/* Summary - always visible as the main section */}
-                {summaryData.Summary && (
-                  <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Summary</h3>
-                    <p className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Summary) }} />
-                  </div>
-                )}
-                
-                {/* Key Findings - Ensure this is not empty */}
-                <div className="mb-8">
-                  <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Key Findings</h3>
-                  <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData["Key Findings"]) }} />
-                </div>
-                
-                {/* Objectives */}
-                {summaryData.Objectives && (
-                  <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Objectives</h3>
-                    <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Objectives) }} />
-                  </div>
-                )}
-                
-                {/* Methods */}
-                {summaryData.Methods && (
-                  <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Methods</h3>
-                    <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Methods) }} />
-                  </div>
-                )}
-                
-                {/* Results */}
-                {summaryData.Results && (
-                  <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Results</h3>
-                    <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Results) }} />
-                  </div>
-                )}
-                
-                {/* Conclusions */}
-                {summaryData.Conclusions && (
-                  <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-2 text-primary border-b pb-2">Conclusions</h3>
-                    <div className="text-base" dangerouslySetInnerHTML={{ __html: formatText(summaryData.Conclusions) }} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </ScrollArea>
+        ) : summary ? (
+          <Tabs defaultValue="summary" className="w-full">
+            <TabsList className="grid grid-cols-7 w-full">
+              <TabsTrigger value="summary">Summary</TabsTrigger>
+              <TabsTrigger value="findings">Key Findings</TabsTrigger>
+              <TabsTrigger value="objectives">Objectives</TabsTrigger>
+              <TabsTrigger value="methods">Methods</TabsTrigger>
+              <TabsTrigger value="results">Results</TabsTrigger>
+              <TabsTrigger value="conclusions">Conclusions</TabsTrigger>
+              <TabsTrigger value="concepts">Key Concepts</TabsTrigger>
+            </TabsList>
+            
+            <ScrollArea className="h-[350px] mt-4 p-4 border rounded-md">
+              <TabsContent value="summary" className="p-2">
+                {formatContent(summary.Summary)}
+              </TabsContent>
+              <TabsContent value="findings" className="p-2">
+                {formatContent(summary['Key Findings'])}
+              </TabsContent>
+              <TabsContent value="objectives" className="p-2">
+                {formatContent(summary.Objectives)}
+              </TabsContent>
+              <TabsContent value="methods" className="p-2">
+                {formatContent(summary.Methods)}
+              </TabsContent>
+              <TabsContent value="results" className="p-2">
+                {formatContent(summary.Results)}
+              </TabsContent>
+              <TabsContent value="conclusions" className="p-2">
+                {formatContent(summary.Conclusions)}
+              </TabsContent>
+              <TabsContent value="concepts" className="p-2">
+                {formatContent(summary['Key Concepts'])}
+              </TabsContent>
+            </ScrollArea>
+          </Tabs>
         ) : null}
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button 
+            onClick={() => {
+              setIsLoading(true);
+              generateStructuredSummary()
+                .then(data => {
+                  setSummary(data as Summary);
+                  setIsLoading(false);
+                })
+                .catch(err => {
+                  console.error('Error regenerating summary:', err);
+                  setError('Failed to regenerate summary. Please try again.');
+                  setIsLoading(false);
+                });
+            }}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating
+              </>
+            ) : (
+              'Regenerate'
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

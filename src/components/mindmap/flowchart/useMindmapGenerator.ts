@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateAiResponse } from "@/services/geminiService";
+import { generateMindmapFromPdf } from "@/services/geminiService";
 
 // Default mindmap diagram
 export const defaultMindmap = `mindmap
@@ -39,39 +39,12 @@ const useMindmapGenerator = () => {
         throw new Error("No PDF content found. Please upload a PDF document first.");
       }
 
-      const prompt = `
-        Create a mindmap diagram using Mermaid syntax based on the following document text.
-        Focus on the main concepts and their relationships.
-        Use the mindmap syntax with a concise root node name that describes the document topic.
-        Include 3-5 key concepts with 2-3 subconcepts each.
-        Ensure the diagram is readable and compact.
-        
-        Document text:
-        ${pdfText.substring(0, 3000)}
-        
-        Return ONLY the mermaid diagram code starting with "mindmap" and nothing else.
-      `;
-
-      const response = await generateAiResponse(prompt);
+      const response = await generateMindmapFromPdf();
       
       if (response) {
-        // Extract only the mindmap code from the response
-        let diagramCode = response.trim();
-        
-        // Make sure the response starts with 'mindmap'
-        if (!diagramCode.startsWith('mindmap')) {
-          // Try to find the mindmap section in the response
-          const mindmapMatch = diagramCode.match(/mindmap[\s\S]+/);
-          if (mindmapMatch) {
-            diagramCode = mindmapMatch[0];
-          } else {
-            throw new Error("Failed to generate a valid mindmap diagram.");
-          }
-        }
-        
-        setCode(diagramCode);
+        setCode(response);
       } else {
-        throw new Error("Failed to generate a response from the AI.");
+        throw new Error("Failed to generate a valid mindmap diagram.");
       }
     } catch (err) {
       console.error("Error generating mindmap:", err);

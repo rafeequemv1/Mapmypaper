@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -55,30 +56,35 @@ const Header = () => {
   const [mindElixirInstance, setMindElixirInstance] = useState<any | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
   // Handle mind map instance being ready
   const handleMindMapReady = (instance: any) => {
     setMindElixirInstance(instance);
   };
+  
   // Generate a shareable link (mock implementation)
   const generateShareLink = () => {
     const baseUrl = window.location.origin;
     const randomId = Math.random().toString(36).substring(2, 10);
     return `${baseUrl}/shared/${randomId}`;
   };
+  
   // Handle share button click
   const handleShare = () => {
     const link = generateShareLink();
     setShareLink(link);
     setShowShareDialog(true);
   };
+  
   // Copy share link to clipboard
   const copyShareLink = () => {
     navigator.clipboard.writeText(shareLink);
     toast({
       title: "Link copied",
-      description: "Share link copied to clipboard",
+      description: "Share link copied to clipboard"
     });
   };
+  
   // Handle export as PNG
   const handleExportPNG = () => {
     if (mindElixirInstance) {
@@ -90,6 +96,7 @@ const Header = () => {
       });
     }
   };
+  
   // Handle export as SVG
   const handleExportSVG = () => {
     if (mindElixirInstance) {
@@ -101,6 +108,7 @@ const Header = () => {
       });
     }
   };
+  
   // Handle export as JSON
   const handleExportJSON = () => {
     if (mindElixirInstance) {
@@ -123,6 +131,7 @@ const Header = () => {
       });
     }
   };
+  
   // Handle delete confirmation
   const handleDelete = () => {
     // Clear session storage
@@ -138,6 +147,7 @@ const Header = () => {
     // Navigate back to upload page
     navigate("/");
   };
+  
   // Handle save (mock implementation)
   const handleSave = () => {
     if (mindElixirInstance) {
@@ -152,6 +162,7 @@ const Header = () => {
       });
     }
   };
+  
   // Check if we have PDF data
   useEffect(() => {
     const pdfData = sessionStorage.getItem("pdfData") || sessionStorage.getItem("uploadedPdfData");
@@ -165,6 +176,7 @@ const Header = () => {
   }, [
     toast
   ]);
+  
   return (
     <header className="bg-white border-b p-4 flex justify-between items-center">
       <div className="flex items-center gap-3">
