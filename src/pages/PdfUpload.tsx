@@ -1,241 +1,248 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import PdfToText from "react-pdftotext";
-import { Brain, Upload, MessageCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useUpload } from "@/hooks/use-upload";
 import { generateMindMapFromText } from "@/services/geminiService";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { UploadCloud } from "lucide-react";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfText, setPdfText] = useState<string>("");
+  const [mindMapData, setMindMapData] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [extractionError, setExtractionError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [manualText, setManualText] = useState<string>("");
+  const { toast } = useToast();
+  const { upload, fileUrl, isLoading, progress } = useUpload();
+  const isMobile = useIsMobile();
 
-  // Initialize Crisp when the component mounts (main landing page)
+  // Load PDF text from session storage on component mount
   useEffect(() => {
-    // Show Crisp chat widget on main landing page
-    if (window.$crisp) {
-      window.$crisp.push(["do", "chat:show"]);
+    const storedPdfText = sessionStorage.getItem("pdfText");
+    if (storedPdfText) {
+      setPdfText(storedPdfText);
     }
-    
-    // Hide Crisp chat when navigating away from this page
-    return () => {
-      if (window.$crisp) {
-        window.$crisp.push(["do", "chat:hide"]);
-      }
-    };
   }, []);
 
-  // Function to open Crisp chat
-  const openCrispChat = () => {
-    if (window.$crisp) {
-      window.$crisp.push(["do", "chat:open"]);
-      
-      toast({
-        title: "Chat Opened",
-        description: "Our support team is ready to help you.",
-      });
+  // Handle file selection
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files && event.target.files[0];
+    if (file && file.type === "application/pdf") {
+      setPdfFile(file);
     } else {
+      setPdfFile(null);
       toast({
-        title: "Chat Unavailable",
-        description: "The chat service is currently unavailable. Please try again later.",
+        title: "Invalid file format",
+        description: "Please upload a PDF file.",
         variant: "destructive",
       });
     }
   };
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type === "application/pdf") {
-        setSelectedFile(file);
-        toast({
-          title: "PDF uploaded successfully",
-          description: `File: ${file.name}`,
-        });
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF file",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [toast]);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.type === "application/pdf") {
-        setSelectedFile(file);
-        toast({
-          title: "PDF uploaded successfully",
-          description: `File: ${file.name}`,
-        });
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF file",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [toast]);
-
-  const handleGenerateMindmap = useCallback(async () => {
-    if (!selectedFile) {
+  // Handle PDF upload
+  const handleUpload = async () => {
+    if (!pdfFile) {
       toast({
         title: "No file selected",
-        description: "Please upload a PDF file first",
+        description: "Please select a PDF file to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Upload the PDF file
+      const url = await upload(pdfFile);
+      if (url) {
+        console.log("PDF uploaded successfully:", url);
+        toast({
+          title: "Upload successful",
+          description: "Your PDF file has been uploaded.",
+        });
+      } else {
+        throw new Error("Failed to upload the PDF file.");
+      }
+
+      // Extract text from PDF
+      setIsProcessing(true);
+      const extractedText = await extractTextFromPdf(pdfFile);
+      setPdfText(extractedText);
+      sessionStorage.setItem("pdfText", extractedText);
+
+      // Store the uploaded PDF data in session storage
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          sessionStorage.setItem("uploadedPdfData", reader.result as string);
+        }
+      };
+      reader.readAsDataURL(pdfFile);
+    } catch (error) {
+      console.error("Error during upload and processing:", error);
+      toast({
+        title: "Upload failed",
+        description:
+          error instanceof Error ? error.message : "Failed to upload the PDF file.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Extract text from PDF
+  const extractTextFromPdf = async (pdf: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async function () {
+        try {
+          const typedArray = new Uint8Array(this.result as ArrayBuffer);
+          const pdfjsLib = await import("pdfjs-dist");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+          const pdfDocument = await pdfjsLib.getDocument(typedArray).promise;
+          let fullText = "";
+
+          for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+            const page = await pdfDocument.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item) => (item as any).str)
+              .join(" ");
+            fullText += pageText + "\n";
+          }
+
+          resolve(fullText);
+        } catch (error) {
+          console.error("Error extracting text from PDF:", error);
+          reject(error);
+        }
+      };
+      reader.onerror = (error) => {
+        console.error("Error reading PDF:", error);
+        reject(error);
+      };
+      reader.readAsArrayBuffer(pdf);
+    });
+  };
+
+  // Handle manual text submission
+  const handleSubmitText = useCallback(async () => {
+    if (!manualText.trim()) {
+      toast({
+        title: "No text entered",
+        description: "Please enter text to generate the mind map.",
         variant: "destructive",
       });
       return;
     }
 
     setIsProcessing(true);
-    setExtractionError(null);
-    
-    toast({
-      title: "Processing PDF",
-      description: "Extracting text and generating mind map...",
-    });
-
     try {
-      // First, read the PDF as DataURL for viewing later
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64data = e.target?.result as string;
-        // Store PDF data under both keys for compatibility
-        sessionStorage.setItem('pdfData', base64data);
-        sessionStorage.setItem('uploadedPdfData', base64data);
-        console.log("PDF data stored, length:", base64data.length);
-      };
-      reader.readAsDataURL(selectedFile);
-      
-      // Extract text from PDF
-      const extractedText = await PdfToText(selectedFile);
-      
-      if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
-        throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
-      }
-      
-      // Process the text with Gemini to generate mind map data
-      const mindMapData = await generateMindMapFromText(extractedText);
-      
-      // Store the generated mind map data in sessionStorage
-      sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
-      
-      // Navigate to the mind map view
-      toast({
-        title: "Success",
-        description: "Mind map generated successfully!",
-      });
+      // Generate mind map data from manual text
+      console.log("PDF processing started");
+      const mindMapData = await generateMindMapFromText(manualText);
+      console.log("Mind map data generated:", mindMapData ? "Successfully" : "Failed");
+      setMindMapData(mindMapData);
+
+      // Store the manual text and mind map data in session storage
+      sessionStorage.setItem("pdfText", manualText);
+      sessionStorage.setItem("mindMapData", JSON.stringify({ nodeData: {
+        id: 'root',
+        topic: 'Mind Map',
+        children: []
+      } }));
+
+      // Navigate to the mind map page
       navigate("/mindmap");
     } catch (error) {
-      console.error("Error processing PDF:", error);
-      setExtractionError(error instanceof Error ? error.message : "Failed to process PDF");
+      console.error("Error generating mind map:", error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to process PDF",
+        title: "Failed to generate mind map",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate the mind map.",
         variant: "destructive",
       });
+    } finally {
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast]);
+  }, [manualText, navigate, toast]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-4 mb-3">
-            <Brain className="h-10 w-10 text-[#333]" />
-            <h1 className="text-4xl font-bold text-[#333]">MapMyPaper</h1>
-          </div>
-          <p className="text-lg text-gray-600 max-w-2xl">
-            Upload your academic paper or research document to automatically generate interactive mind maps, summaries, and AI-powered insights
-          </p>
-        </div>
-        
-        <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
-          {/* Dropzone */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${
-              dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"
-            } cursor-pointer flex flex-col items-center justify-center gap-4`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
+    <div className="container mx-auto py-10 flex flex-col gap-6">
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl">Generate Mind Map</CardTitle>
+          <CardDescription>
+            Upload a PDF file or enter text manually to generate a mind map.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="pdf">Upload PDF File</Label>
+            <Input
+              id="pdf"
               type="file"
-              accept=".pdf"
-              className="hidden"
+              accept="application/pdf"
               onChange={handleFileChange}
+              disabled={isProcessing}
             />
-            <Upload className="h-12 w-12 text-gray-400" />
-            <div className="text-center">
-              <p className="text-lg font-medium">Drag and drop your PDF here</p>
-              <p className="text-gray-500">or select a file from your computer</p>
-            </div>
-          </div>
-          
-          {/* Selected File Info */}
-          {selectedFile && (
-            <div className="p-4 bg-gray-50 rounded-lg flex items-center justify-between mb-6">
-              <p className="font-medium truncate">{selectedFile.name}</p>
-              <p className="text-sm text-gray-500">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
-            </div>
-          )}
-          
-          <div className="flex w-full gap-2">
-            {/* Generate Button */}
-            <Button 
-              onClick={handleGenerateMindmap} 
-              className="flex-1 bg-[#333] hover:bg-[#444] text-white" 
-              disabled={!selectedFile || isProcessing}
-              size="lg"
-            >
-              {isProcessing ? "Processing..." : "Generate Mind Map"}
+            <Button onClick={handleUpload} disabled={isProcessing || isLoading}>
+              {isLoading ? (
+                <>
+                  Uploading...
+                  <Progress className="w-full mt-2" value={progress} />
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="h-4 w-4 mr-2" />
+                  Upload PDF
+                </>
+              )}
             </Button>
-            
-            {/* Chat Support Button */}
-            <Button onClick={openCrispChat} variant="outline" size="lg" className="px-3">
-              <MessageCircle className="h-5 w-5" />
-            </Button>
+            {fileUrl && (
+              <a
+                href={fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline"
+              >
+                View Uploaded File
+              </a>
+            )}
           </div>
-          
-          {extractionError && (
-            <p className="text-red-500 text-sm mt-4">{extractionError}</p>
-          )}
-        </div>
-      </div>
-      
-      <footer className="py-4 text-center text-gray-500 text-sm">
-        MapMyPaper — Transform research into visual knowledge
-      </footer>
+          <Separator />
+          <div className="grid gap-2">
+            <Label htmlFor="manual-text">Enter Text Manually</Label>
+            <Textarea
+              id="manual-text"
+              placeholder="Enter text here..."
+              value={manualText}
+              onChange={(e) => setManualText(e.target.value)}
+              disabled={isProcessing}
+            />
+          </div>
+          <Button onClick={handleSubmitText} disabled={isProcessing}>
+            {isProcessing ? "Generating..." : "Generate Mind Map"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 };

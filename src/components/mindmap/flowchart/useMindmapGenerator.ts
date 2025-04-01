@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { generateMindmapFromPdf } from "@/services/geminiService";
 import { DetailLevel } from "../MindmapModal";
@@ -95,7 +96,9 @@ const useMindmapGenerator = () => {
         throw new Error("No PDF content found. Please upload a PDF document first.");
       }
 
+      console.log("Generating mindmap from PDF text...");
       const response = await generateMindmapFromPdf();
+      console.log("Received response:", response ? "Data received" : "No data");
       
       if (response) {
         // Fix potential multiple root issues and add color styling
