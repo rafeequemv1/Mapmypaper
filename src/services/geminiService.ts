@@ -12,7 +12,7 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
     sessionStorage.setItem('pdfText', text);
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     
     // Create a template for research paper structure as mind map
     const researchPaperTemplate = {
@@ -154,7 +154,7 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
     // Enhanced prompt to provide more context and instructions
     const fullPrompt = `You are a research assistant helping a user understand a research paper.
@@ -187,7 +187,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     
     // Define detail level-specific instructions
     let detailInstructions = '';
@@ -429,7 +429,7 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     
     // Generate the mindmap from the PDF text with Gemini
     const result = await model.generateContent(`
@@ -514,7 +514,7 @@ export const generateStructuredSummary = async (): Promise<any> => {
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     
     // Generate a structured summary from the PDF text
     const result = await model.generateContent(`
@@ -599,5 +599,94 @@ export const generateStructuredSummary = async (): Promise<any> => {
       Conclusions: "API Error",
       "Key Concepts": "API Error"
     };
+  }
+};
+
+// Function to generate sequence diagram from PDF content
+export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `sequenceDiagram
+        participant User
+        participant System
+        User->>System: No PDF content
+        System->>User: Please upload a PDF first`;
+    }
+
+    // Initialize the Generative Model for text generation
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    
+    // Generate the sequence diagram from the PDF text with Gemini
+    const result = await model.generateContent(`
+    Create a Mermaid sequence diagram based on this document text.
+    The diagram should show the interactions, processes, or flow described in the document.
+    
+    CRITICAL MERMAID SEQUENCE DIAGRAM SYNTAX RULES:
+    1. Start with 'sequenceDiagram'
+    2. Define participants, e.g., 'participant Alice'
+    3. Show interactions with arrows, e.g., 'Alice->>Bob: Hello Bob'
+    4. Use different arrow types:
+       - ->> for asynchronous arrows
+       - --> for dotted arrows
+       - --x for lost messages
+    5. Add notes, e.g., 'Note right of Alice: Thinking'
+    6. Add activation with '+' and deactivation with '-'
+    7. Add loops, e.g., 'loop Every minute\\n...\\nend'
+    8. Add alternatives, e.g., 'alt Success\\n...\\nelse Error\\n...\\nend'
+    
+    EXAMPLE CORRECT SYNTAX:
+    sequenceDiagram
+        participant Researcher
+        participant Experiment
+        participant Data
+        
+        Researcher->>Experiment: Setup parameters
+        activate Experiment
+        Experiment->>Data: Generate results
+        activate Data
+        Data-->>Experiment: Raw data
+        deactivate Data
+        Experiment-->>Researcher: Processed results
+        deactivate Experiment
+        Note right of Researcher: Analyze findings
+        
+        alt Significant results
+            Researcher->>Researcher: Document findings
+        else Inconclusive
+            Researcher->>Experiment: Modify parameters
+            Experiment->>Data: Rerun experiment
+        end
+    
+    Document Content: 
+    ${pdfText.slice(0, 10000)}
+    `);
+    
+    // Extract the Mermaid code from the result
+    let mermaidCode = result.response.text();
+    
+    // If the response contains the Mermaid code block, extract just the code
+    if (mermaidCode.includes('```mermaid')) {
+      mermaidCode = mermaidCode.split('```mermaid')[1].split('```')[0].trim();
+    } else if (mermaidCode.includes('```')) {
+      mermaidCode = mermaidCode.split('```')[1].split('```')[0].trim();
+    }
+    
+    // Ensure the code starts with sequenceDiagram
+    if (!mermaidCode.trim().startsWith('sequenceDiagram')) {
+      mermaidCode = 'sequenceDiagram\n' + mermaidCode;
+    }
+
+    return mermaidCode;
+  } catch (error) {
+    console.error("Gemini API sequence diagram generation error:", error);
+    return `sequenceDiagram
+      participant User
+      participant System
+      User->>System: Request diagram
+      System->>User: Error generating diagram
+      Note over System: Failed to process document`;
   }
 };
