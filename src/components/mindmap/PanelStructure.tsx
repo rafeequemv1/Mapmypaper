@@ -84,44 +84,21 @@ const PanelStructure = ({
               className="w-full relative"
               onResize={(size) => setPdfPanelSize(size)}
             >
-              <TooltipProvider>
-                <PdfViewer 
-                  onTextSelected={(text) => {
-                    // Store selected text but don't send to chat yet
-                    // The tooltip button will handle sending text to chat
-                    sessionStorage.setItem('selectedPdfText', text || '');
-                  }}
-                  onPdfLoaded={() => setPdfLoaded(true)}
-                  ref={pdfViewerRef}
-                  renderTooltipContent={() => (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          className="bg-primary text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-                          onClick={() => {
-                            const selectedText = sessionStorage.getItem('selectedPdfText');
-                            if (selectedText) {
-                              onExplainText(selectedText);
-                              // Clear the selection after sending to chat
-                              sessionStorage.removeItem('selectedPdfText');
-                              
-                              // Open chat panel if not already open
-                              if (!showChat) {
-                                toggleChat();
-                              }
-                            }
-                          }}
-                        >
-                          Explain
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="p-2">
-                        <p className="text-xs">Click to explain selected text in chat</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                />
-              </TooltipProvider>
+              <PdfViewer 
+                onTextSelected={(text) => {
+                  // When text is selected, immediately send it to chat
+                  if (text) {
+                    onExplainText(text);
+                    
+                    // Open chat panel if not already open
+                    if (!showChat) {
+                      toggleChat();
+                    }
+                  }
+                }}
+                onPdfLoaded={() => setPdfLoaded(true)}
+                ref={pdfViewerRef}
+              />
             </ResizablePanel>
             <ResizableHandle withHandle />
           </>

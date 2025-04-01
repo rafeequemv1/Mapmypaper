@@ -104,11 +104,23 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           contentElements.forEach(element => {
             if (element instanceof HTMLElement) {
               // Format AI response - convert markdown and add citations
-              const formattedContent = formatAIResponse(element.innerText);
+              let formattedContent = formatAIResponse(element.innerText);
+              
+              // Convert citation format to small circles with page numbers
+              formattedContent = formattedContent.replace(/\[citation:page(\d+)\]/gi, '<span class="citation-circle">$1</span>');
+              
               element.innerHTML = formattedContent;
               
               // Activate citations to make them clickable
-              activateCitations(element, handleCitationClick);
+              const circles = element.querySelectorAll('.citation-circle');
+              circles.forEach(circle => {
+                if (circle instanceof HTMLElement) {
+                  circle.addEventListener('click', () => {
+                    const pageNumber = circle.textContent;
+                    handleCitationClick(`page${pageNumber}`);
+                  });
+                }
+              });
             }
           });
         }
@@ -174,7 +186,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex justify-between items-center">
               <span>Paper Summary</span>
@@ -182,17 +194,18 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                 <Button 
                   size="sm"
                   onClick={() => setConfirmDownload(true)}
-                  className="flex gap-1"
+                  className="flex gap-1 text-black"
+                  variant="outline"
                 >
                   <Download className="h-4 w-4" />
                   Download PDF
                 </Button>
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="outline"
                   onClick={generateSummary}
                   disabled={isLoading}
-                  className="flex gap-1"
+                  className="flex gap-1 text-black"
                 >
                   {isLoading ? (
                     <>

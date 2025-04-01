@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, forwardRef, RefObject } from "react";
+import { useEffect, useRef, RefObject } from "react";
 import mermaid from "mermaid";
 
 interface FlowchartPreviewProps {
@@ -17,19 +17,23 @@ const FlowchartPreview = ({ code, error, isGenerating, theme, previewRef }: Flow
   // Render mermaid diagram when code or theme changes
   useEffect(() => {
     const renderDiagram = async () => {
-      if (ref.current && code && !isGenerating && !error) {
-        try {
-          // Clear previous content
-          ref.current.innerHTML = "";
-          
-          // Set theme
-          mermaid.initialize({
-            theme: theme,
-            securityLevel: 'loose',
-          });
-          
-          // Render the diagram
-          const { svg } = await mermaid.render('diagram', code);
+      if (!ref.current || !code || isGenerating || error) return;
+      
+      try {
+        // Clear previous content
+        ref.current.innerHTML = "";
+        
+        // Set theme
+        mermaid.initialize({
+          theme: theme,
+          securityLevel: 'loose',
+          startOnLoad: false, // Prevent automatic rendering
+        });
+        
+        // Directly render to the element itself rather than creating a new element
+        const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
+        
+        if (ref.current) { // Check again in case component unmounted during async operation
           ref.current.innerHTML = svg;
           
           // Add zoom and pan functionality
@@ -37,10 +41,11 @@ const FlowchartPreview = ({ code, error, isGenerating, theme, previewRef }: Flow
           if (svgElement) {
             svgElement.style.maxWidth = '100%';
             svgElement.style.height = 'auto';
-            // Optional: add zoom and pan functionality here if needed
           }
-        } catch (err) {
-          console.error('Error rendering diagram:', err);
+        }
+      } catch (err) {
+        console.error('Error rendering diagram:', err);
+        if (ref.current) {
           ref.current.innerHTML = `<div class="text-red-500">Error rendering diagram: ${err.message || 'Unknown error'}</div>`;
         }
       }
@@ -51,7 +56,12 @@ const FlowchartPreview = ({ code, error, isGenerating, theme, previewRef }: Flow
   
   // Display appropriate content based on state
   if (isGenerating) {
-    return <div className="flex-1 flex items-center justify-center">Generating diagram...</div>;
+    return <div className="flex-1 flex items-center justify-center p-8">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="h-8 w-8 rounded-full bg-gray-300 mb-4"></div>
+        <div className="h-4 w-48 bg-gray-300 rounded"></div>
+      </div>
+    </div>;
   }
   
   if (error) {

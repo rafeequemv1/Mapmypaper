@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -67,19 +68,18 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Handle text selection with tooltip
+    // Handle text selection with tooltip positioned closer to cursor
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "") {
         const text = selection.toString().trim();
         setSelectedText(text);
         
-        if (text.length > 10) {
-          // Show tooltip near the selection
-          const rect = selection.getRangeAt(0).getBoundingClientRect();
+        if (text.length > 3) { // Reduced minimum length for better usability
+          // Show tooltip very close to the cursor
           setTooltipPosition({
             x: e.clientX,
-            y: e.clientY - 10
+            y: e.clientY - 5 // Position tooltip just above the cursor
           });
           setShowTooltip(true);
         }
@@ -350,9 +350,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-1">
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="icon" 
-              className="h-8 w-8" 
+              className="h-8 w-8 text-black hover:bg-gray-100 border-0" 
               onClick={zoomOut}
               title="Zoom Out"
             >
@@ -362,18 +362,18 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               {Math.round(scale * 100)}%
             </span>
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="icon" 
-              className="h-8 w-8" 
+              className="h-8 w-8 text-black hover:bg-gray-100 border-0" 
               onClick={zoomIn}
               title="Zoom In"
             >
               <ZoomIn className="h-4 w-4" />
             </Button>
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="icon" 
-              className="h-8 w-8" 
+              className="h-8 w-8 text-black hover:bg-gray-100 border-0" 
               onClick={resetZoom}
               title="Reset Zoom"
             >
@@ -392,9 +392,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
               <Button 
-                variant="secondary" 
+                variant="outline" 
                 size="sm" 
-                className="h-8 flex items-center gap-1"
+                className="h-8 flex items-center gap-1 text-black border-0"
                 onClick={handleSearch}
               >
                 <Search className="h-3.5 w-3.5" />
@@ -413,7 +413,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-8 px-2"
+                  className="h-8 px-2 text-black border-0"
                   onClick={() => navigateSearch('prev')}
                 >
                   ←
@@ -421,7 +421,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-8 px-2"
+                  className="h-8 px-2 text-black border-0"
                   onClick={() => navigateSearch('next')}
                 >
                   →
@@ -440,18 +440,19 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 onMouseUp={handleDocumentMouseUp}
                 style={{ position: 'relative' }}
               >
-                {/* Selection Tooltip */}
+                {/* Selection Tooltip - positioned very close to cursor */}
                 {showTooltip && (
                   <>
                     {renderTooltipContent ? (
                       renderTooltipContent()
                     ) : (
                       <div 
-                        className="fixed bg-primary text-white px-3 py-2 rounded-md shadow-lg z-10 cursor-pointer"
+                        className="fixed bg-black text-white px-2 py-1 text-sm rounded shadow-lg z-10 cursor-pointer"
                         style={{ 
                           left: `${tooltipPosition.x}px`, 
-                          top: `${tooltipPosition.y - 40}px`,
-                          transform: 'translateX(-50%)'
+                          top: `${tooltipPosition.y - 30}px`,
+                          transform: 'translateX(-50%)',
+                          pointerEvents: 'all'
                         }}
                         onClick={handleExplainClick}
                       >
