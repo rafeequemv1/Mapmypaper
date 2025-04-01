@@ -2,10 +2,10 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, BookOpen } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { TooltipProvider } from "./ui/tooltip";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -15,7 +15,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
-  onImageCaptured?: (imageData: string) => void;  // Added this prop
   renderTooltipContent?: () => React.ReactNode;
 }
 
@@ -68,7 +67,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Enhanced text selection with improved tooltip positioned closer to cursor
+    // Handle text selection with tooltip positioned closer to cursor
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "") {
@@ -76,63 +75,26 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         setSelectedText(text);
         
         if (text.length > 2) { // Even shorter minimum length for better usability
-          // Calculate the selection bounds for better tooltip placement
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          
-          // Show tooltip very close to the end of the selection
+          // Show tooltip very close to the cursor
           setTooltipPosition({
-            x: rect.right, // Position at the end of the selection
-            y: rect.top - 10 // Position just above the selection
+            x: e.clientX,
+            y: e.clientY - 10 // Position tooltip just above the cursor
           });
           setShowTooltip(true);
-          
-          // Apply visual highlight to the selected text
-          const selectedElement = document.createElement('span');
-          selectedElement.className = 'pdf-selected-text';
-          selectedElement.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-          selectedElement.style.borderRadius = '2px';
-          
-          // Briefly apply highlight effect
-          try {
-            range.surroundContents(selectedElement);
-            setTimeout(() => {
-              // Remove highlight after a delay
-              if (selectedElement.parentNode) {
-                selectedElement.outerHTML = selectedElement.innerHTML;
-              }
-            }, 2000);
-          } catch (e) {
-            // Ignore errors from complex selections
-            console.log("Could not highlight complex selection");
-          }
         }
       } else {
         setShowTooltip(false);
       }
     };
 
-    // Handle tooltip click to send text to chat with enhanced animation
+    // Handle tooltip click to send text to chat
     const handleExplainClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       
       if (selectedText && onTextSelected) {
-        // Apply a visual feedback animation
-        const target = e.currentTarget as HTMLElement;
-        target.classList.add('explain-click-animation');
-        
-        setTimeout(() => {
-          target.classList.remove('explain-click-animation');
-          onTextSelected(selectedText);
-          setShowTooltip(false);
-          
-          // Show confirmation toast
-          toast({
-            title: "Text sent to chat",
-            description: "The selected text has been sent for explanation.",
-          });
-        }, 300);
+        onTextSelected(selectedText);
+        setShowTooltip(false);
       }
     };
     
@@ -386,55 +348,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
-    // Custom CSS for the enhanced tooltip
-    useEffect(() => {
-      const style = document.createElement('style');
-      style.innerHTML = `
-        .explain-tooltip {
-          position: fixed;
-          z-index: 1000;
-          background-color: #2563EB;
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transform: translateX(-50%);
-          transition: all 0.2s ease;
-        }
-        
-        .explain-tooltip:hover {
-          background-color: #1d4ed8;
-          transform: translateX(-50%) scale(1.05);
-        }
-        
-        .explain-click-animation {
-          animation: pulse 0.3s ease-in-out;
-        }
-        
-        @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); }
-        }
-        
-        .pdf-selected-text {
-          background-color: rgba(59, 130, 246, 0.2);
-          border-radius: 2px;
-          transition: background-color 0.3s;
-        }
-      `;
-      document.head.appendChild(style);
-      
-      return () => {
-        document.head.removeChild(style);
-      };
-    }, []);
-
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
@@ -466,7 +379,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               variant="ghost" 
               size="icon" 
               className="h-7 w-7 text-black" 
-              onClick={() => setScale(1)}
+              onClick={resetZoom}
               title="Reset Zoom"
             >
               <RotateCw className="h-3.5 w-3.5" />
@@ -532,23 +445,23 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 onMouseUp={handleDocumentMouseUp}
                 style={{ position: 'relative' }}
               >
-                {/* Enhanced Selection Tooltip - positioned very close to cursor */}
+                {/* Selection Tooltip - positioned very close to cursor */}
                 {showTooltip && (
                   <>
                     {renderTooltipContent ? (
                       renderTooltipContent()
                     ) : (
                       <div 
-                        className="explain-tooltip"
+                        className="fixed bg-black text-white px-2 py-1 text-xs rounded shadow-lg z-50 cursor-pointer"
                         style={{ 
                           left: `${tooltipPosition.x}px`, 
-                          top: `${tooltipPosition.y - 30}px`,
+                          top: `${tooltipPosition.y - 25}px`,
+                          transform: 'translateX(-50%)',
                           pointerEvents: 'all'
                         }}
                         onClick={handleExplainClick}
                         onMouseDown={(e) => e.stopPropagation()} 
                       >
-                        <BookOpen className="h-4 w-4" />
                         Explain
                       </div>
                     )}
