@@ -17,8 +17,8 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         defaultRenderer: 'dagre-wrapper',
         nodeSpacing: 50,
         rankSpacing: 70,
-        // Using the correct property name 'rankDir' instead of 'direction'
-        rankDir: direction
+        // According to Mermaid's v11+ typings, orientation is used instead of rankDir
+        orientation: direction
       },
       sequence: {
         diagramMarginX: 50,
