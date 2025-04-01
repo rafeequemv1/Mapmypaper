@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -89,7 +88,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     };
 
     // Handle tooltip click to send text to chat
-    const handleExplainClick = () => {
+    const handleExplainClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
       if (selectedText && onTextSelected) {
         onTextSelected(selectedText);
         setShowTooltip(false);
@@ -458,6 +460,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                           pointerEvents: 'all'
                         }}
                         onClick={handleExplainClick}
+                        onMouseDown={(e) => e.stopPropagation()} 
                       >
                         Explain
                       </div>

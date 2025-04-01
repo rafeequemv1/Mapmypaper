@@ -1,8 +1,13 @@
 
+import { useRef } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
-import { useRef } from "react";
+import { 
+  ResizablePanelGroup, 
+  ResizablePanel, 
+  ResizableHandle 
+} from "@/components/ui/resizable";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -27,37 +32,49 @@ const PanelStructure = ({
   const pdfViewerRef = useRef(null);
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
       {/* PDF Panel */}
       {showPdf && (
-        <div className="pdf-panel h-full transition-width duration-300 ease-in-out overflow-hidden">
-          <PdfViewer 
-            ref={pdfViewerRef}
-            onTextSelected={onExplainText}
-          />
-        </div>
+        <>
+          <ResizablePanel defaultSize={30} minSize={15} maxSize={50} className="h-full">
+            <PdfViewer 
+              ref={pdfViewerRef}
+              onTextSelected={onExplainText}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+        </>
       )}
 
       {/* Mind Map Panel - Takes up remaining space */}
-      <div className="flex-1 h-full overflow-hidden">
+      <ResizablePanel defaultSize={showChat ? 50 : 70} className="h-full">
         <MindMapViewer
           isMapGenerated={isMapGenerated}
           onMindMapReady={onMindMapReady}
           onExplainText={onExplainText}
         />
-      </div>
+      </ResizablePanel>
 
       {/* Chat Panel */}
       {showChat && (
-        <div className="w-80 h-full border-l border-gray-200 overflow-hidden">
-          <ChatPanel
-            toggleChat={toggleChat}
-            explainText={explainText}
-            onExplainText={onExplainText}
-          />
-        </div>
+        <>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="h-full">
+            <ChatPanel
+              toggleChat={toggleChat}
+              explainText={explainText}
+              onExplainText={onExplainText}
+              onScrollToPdfPosition={(position) => {
+                if (pdfViewerRef.current) {
+                  // @ts-ignore - we know this method exists
+                  pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
+                }
+              }}
+            />
+          </ResizablePanel>
+        </>
       )}
-    </div>
+    </ResizablePanelGroup>
   );
 };
 

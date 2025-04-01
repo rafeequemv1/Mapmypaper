@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -6,7 +5,6 @@ import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
-import { Slider } from "@/components/ui/slider";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -16,7 +14,6 @@ const MindMap = () => {
   const [showFlowchart, setShowFlowchart] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
-  const [pdfWidth, setPdfWidth] = useState<number>(30); // Default PDF width percentage
   const { toast } = useToast();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -50,28 +47,6 @@ const MindMap = () => {
     // Execute PDF check immediately
     checkPdfAvailability();
   }, [toast]);
-
-  // Apply PDF width when it changes
-  useEffect(() => {
-    const applyPdfWidth = () => {
-      const pdfPanel = document.querySelector('.pdf-panel');
-      if (pdfPanel && containerRef.current) {
-        const containerWidth = containerRef.current.clientWidth;
-        const widthInPixels = Math.min(containerWidth * (pdfWidth / 100), containerWidth / 2);
-        (pdfPanel as HTMLElement).style.width = `${widthInPixels}px`;
-        
-        // Update any relevant elements after width change
-        window.dispatchEvent(new Event('resize'));
-      }
-    };
-    
-    applyPdfWidth();
-    window.addEventListener('resize', applyPdfWidth);
-    
-    return () => {
-      window.removeEventListener('resize', applyPdfWidth);
-    };
-  }, [pdfWidth]);
 
   const togglePdf = useCallback(() => {
     setShowPdf(prev => !prev);
@@ -253,24 +228,6 @@ const MindMap = () => {
         setShowSequenceDiagram={() => {}} // Keep empty function but don't show sequence diagram
         setShowMindmap={() => {}} // Keep empty function but don't show mermaid mindmap
       />
-
-      {/* PDF Width Slider */}
-      {showPdf && pdfAvailable && (
-        <div className="bg-gray-50 px-4 py-2 flex items-center space-x-4">
-          <span className="text-xs text-gray-500 whitespace-nowrap">PDF Width:</span>
-          <div className="w-40">
-            <Slider
-              min={15}
-              max={50}
-              step={1}
-              value={[pdfWidth]}
-              onValueChange={(value) => setPdfWidth(value[0])}
-              className="w-full"
-            />
-          </div>
-          <span className="text-xs text-gray-500">{pdfWidth}%</span>
-        </div>
-      )}
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 overflow-hidden">
