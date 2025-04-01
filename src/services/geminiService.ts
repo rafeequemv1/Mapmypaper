@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable (for security reasons)
@@ -14,7 +15,7 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
     // Enhanced prompt to provide more context and instructions
     const fullPrompt = `You are a research assistant helping a user understand a research paper.
@@ -34,7 +35,7 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
   }
 };
 
-// Function to generate MindMap from text - Adding this missing function
+// Function to generate MindMap from text
 export const generateMindMapFromText = async (text: string): Promise<any> => {
   try {
     if (!text || text.trim() === '') {
@@ -42,7 +43,7 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
     }
 
     // Initialize the Generative Model
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
     const prompt = `
     Create a hierarchical mind map structure based on the following text:
@@ -135,7 +136,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     }
 
     // Initialize the Generative Model for text generation
-    const model = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").getModel({ model: 'gemini-pro' });
+    const model = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").getGenerativeModel({ model: 'gemini-pro' });
     
     // Define detail level-specific instructions
     let detailInstructions = '';
@@ -382,7 +383,7 @@ export const generateSequenceDiagramFromPdf = async (text: string): Promise<stri
     }
 
     // Initialize the Generative Model
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
     const prompt = `
     Create a Mermaid sequence diagram based on this document text:
@@ -414,5 +415,87 @@ export const generateSequenceDiagramFromPdf = async (text: string): Promise<stri
   } catch (error) {
     console.error("Error generating sequence diagram:", error);
     return "sequenceDiagram\n  Note over System: Error occurred\n  System->>User: Failed to generate diagram";
+  }
+};
+
+// Add the missing generateStructuredSummary function
+export const generateStructuredSummary = async (): Promise<any> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return {
+        Summary: "No PDF content available. Please upload a PDF first.",
+        "Key Findings": "No content available",
+        Objectives: "No content available",
+        Methods: "No content available",
+        Results: "No content available",
+        Conclusions: "No content available",
+        "Key Concepts": "No content available"
+      };
+    }
+
+    // Initialize the Generative Model for text generation
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    
+    // Generate structured summary with Gemini
+    const result = await model.generateContent(`
+    Analyze the following academic paper and create a structured summary with the following sections:
+    1. Summary (1-2 paragraphs overview)
+    2. Key Findings (3-5 bullet points)
+    3. Objectives (what the paper aims to achieve)
+    4. Methods (how the research was conducted)
+    5. Results (main outcomes)
+    6. Conclusions (what the results imply)
+    7. Key Concepts (important terms and definitions from the paper)
+
+    For each point in the Key Findings section, include a citation to the relevant page number like this: [citation:pageX] where X is the page number.
+    
+    Format your response as JSON with these exact keys: "Summary", "Key Findings", "Objectives", "Methods", "Results", "Conclusions", and "Key Concepts".
+    
+    Paper content:
+    ${pdfText.slice(0, 15000)}
+    `);
+    
+    // Extract the response text and parse it as JSON
+    let responseText = result.response.text();
+    
+    // Extract JSON portion if wrapped in markdown code blocks
+    if (responseText.includes('```json')) {
+      responseText = responseText.split('```json')[1].split('```')[0].trim();
+    } else if (responseText.includes('```')) {
+      responseText = responseText.split('```')[1].split('```')[0].trim();
+    }
+    
+    try {
+      // Attempt to parse the JSON response
+      const structuredSummary = JSON.parse(responseText);
+      return structuredSummary;
+    } catch (error) {
+      console.error("Error parsing JSON summary:", error);
+      
+      // If JSON parsing fails, return a basic structure with an error message
+      return {
+        Summary: "Failed to generate a structured summary. The AI response could not be parsed correctly.",
+        "Key Findings": "Parse error occurred",
+        Objectives: "Parse error occurred",
+        Methods: "Parse error occurred",
+        Results: "Parse error occurred",
+        Conclusions: "Parse error occurred",
+        "Key Concepts": "Parse error occurred"
+      };
+    }
+  } catch (error) {
+    console.error("Error in generateStructuredSummary:", error);
+    return {
+      Summary: "An error occurred while generating the summary.",
+      "Key Findings": "Error",
+      Objectives: "Error",
+      Methods: "Error",
+      Results: "Error",
+      Conclusions: "Error",
+      "Key Concepts": "Error"
+    };
   }
 };
