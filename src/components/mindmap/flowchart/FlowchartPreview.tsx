@@ -49,7 +49,8 @@ const FlowchartPreview = ({
           // Ensure mindmaps have proper layout
           mindmap: {
             padding: 10,
-            maxWidth: true, // Enable responsive mindmaps
+            // Fix: Remove maxWidth property as it's not in the MindmapDiagramConfig type
+            useMaxWidth: true // This property is valid
           }
         });
         

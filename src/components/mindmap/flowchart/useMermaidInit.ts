@@ -31,7 +31,7 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       },
       mindmap: {
         padding: 16,
-        useMaxWidth: false
+        useMaxWidth: false // Use correct property
       },
       // Add our custom mindmap config (mermaid will ignore extra properties)
       // TypeScript doesn't know about this yet

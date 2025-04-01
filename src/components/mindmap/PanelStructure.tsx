@@ -36,7 +36,11 @@ const PanelStructure = ({
       {/* PDF Panel - Fixed to 40% width */}
       {showPdf && (
         <>
-          <ResizablePanel defaultSize={40} minSize={30} maxSize={50} className="h-full" collapsible={false}>
+          <ResizablePanel 
+            defaultSize={40} // Fixed at 40% as requested
+            className="h-full" 
+            collapsible={false}
+          >
             <PdfViewer 
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
@@ -63,7 +67,11 @@ const PanelStructure = ({
       {showChat && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={30} minSize={20} maxSize={40} className="h-full" collapsible={false}>
+          <ResizablePanel 
+            defaultSize={30} // Fixed at 30% as requested
+            className="h-full" 
+            collapsible={false}
+          >
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}
