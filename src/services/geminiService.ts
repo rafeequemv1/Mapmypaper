@@ -1,7 +1,8 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable (for security reasons)
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(import.meta.env.NEXT_PUBLIC_GEMINI_API_KEY || "");
 
 // Function to chat with Gemini about the PDF content
 export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
