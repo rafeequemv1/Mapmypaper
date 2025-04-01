@@ -17,8 +17,6 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         diagramPadding: 8,
         nodeSpacing: 50,
         rankSpacing: 70,
-        // Set direction for the flowchart
-        direction: direction 
       },
       sequence: {
         diagramMarginX: 50,
@@ -40,16 +38,18 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       logLevel: 3 // Enables warning logs for debugging
     });
     
-    // Explicitly set the direction in the flowchart config
-    // by re-initializing with updated config that focuses just on the direction
-    mermaid.initialize({
-      flowchart: {
-        direction: direction,
-        curve: 'basis',
-        useMaxWidth: false,
-        htmlLabels: true,
-      }
-    });
+    // For flowcharts, apply the direction through the general mermaid config
+    // This avoids TypeScript errors with the flowchart config object
+    if (direction === "LR") {
+      // Force horizontal layout for flowcharts using the proper syntax that works with mermaid
+      document.querySelectorAll('.mermaid').forEach(el => {
+        if (el.textContent && el.textContent.trim().startsWith('flowchart')) {
+          if (!el.textContent.includes('flowchart LR')) {
+            el.textContent = el.textContent.replace(/flowchart\s+[A-Z]{2}/, 'flowchart LR');
+          }
+        }
+      });
+    }
     
   }, [direction]);
 };

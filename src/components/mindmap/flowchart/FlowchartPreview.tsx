@@ -45,9 +45,14 @@ const FlowchartPreview = ({
             nodeSpacing: 50,
             rankSpacing: 70,
             useMaxWidth: false,
-            direction: "LR" // Always use LR for left-to-right layout
           }
         });
+        
+        // Ensure flowcharts use LR direction by modifying the code if needed
+        let processedCode = code;
+        if (processedCode.trim().startsWith('flowchart') && !processedCode.trim().startsWith('flowchart LR')) {
+          processedCode = processedCode.replace(/flowchart\s+[A-Z]{2}/, 'flowchart LR');
+        }
         
         // Add custom styling for enhanced colors
         const customStyles = `
@@ -136,7 +141,7 @@ const FlowchartPreview = ({
         `;
         
         // Directly render to the element itself rather than creating a new element
-        const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
+        const { svg } = await mermaid.render(`diagram-${Date.now()}`, processedCode);
         
         if (ref.current) { // Check again in case component unmounted during async operation
           ref.current.innerHTML = svg;
