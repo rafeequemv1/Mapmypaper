@@ -8,9 +8,10 @@ interface FlowchartPreviewProps {
   isGenerating: boolean;
   theme: 'default' | 'forest' | 'dark' | 'neutral';
   previewRef?: RefObject<HTMLDivElement>;
+  hideEditor?: boolean;
 }
 
-const FlowchartPreview = ({ code, error, isGenerating, theme, previewRef }: FlowchartPreviewProps) => {
+const FlowchartPreview = ({ code, error, isGenerating, theme, previewRef, hideEditor }: FlowchartPreviewProps) => {
   const localRef = useRef<HTMLDivElement>(null);
   const ref = previewRef || localRef;
   
