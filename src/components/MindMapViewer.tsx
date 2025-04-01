@@ -229,6 +229,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         draggable: true,
         editable: true,
         contextMenu: true, 
+        nodeMenu: true, // Ensure node menu is enabled
         tools: {
           zoom: true,
           create: true, // Enable create button
@@ -236,7 +237,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           layout: true, // Enable layout button
         },
         theme: colorfulTheme,
-        nodeMenu: true,
         autoFit: true,
         // Add custom style to nodes based on their level and content
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
@@ -343,7 +343,54 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Create mind map instance
       const mind = new MindElixir(options);
       
-      // Install the node menu plugin with additional summary option
+      // Add custom styles to node-menu and style-panel elements when they appear
+      const observeStylePanel = () => {
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach(mutation => {
+            if (mutation.addedNodes.length) {
+              mutation.addedNodes.forEach(node => {
+                if (node instanceof HTMLElement) {
+                  // Style panel/node menu appeared - ensure it's visible
+                  if (node.classList.contains('mind-elixir-style-panel') || 
+                      node.classList.contains('node-style-panel') ||
+                      node.classList.contains('style-wrap') ||
+                      node.classList.contains('mind-elixir-node-menu')) {
+                    
+                    node.style.display = 'block';
+                    node.style.visibility = 'visible';
+                    node.style.opacity = '1';
+                    node.style.zIndex = '9999';
+                    
+                    // Ensure the panel stays in view
+                    setTimeout(() => {
+                      const rect = node.getBoundingClientRect();
+                      if (rect.right > window.innerWidth) {
+                        node.style.left = (window.innerWidth - rect.width - 20) + 'px';
+                      }
+                      if (rect.bottom > window.innerHeight) {
+                        node.style.top = (window.innerHeight - rect.height - 20) + 'px';
+                      }
+                    }, 0);
+                  }
+                }
+              });
+            }
+          });
+        });
+        
+        // Start observing the body for any style panel additions
+        observer.observe(document.body, { 
+          childList: true, 
+          subtree: true 
+        });
+        
+        return observer;
+      };
+      
+      // Start observing for style panels
+      const styleObserver = observeStylePanel();
+      
+      // Install the node menu plugin with full styling support
       const customNodeMenu = nodeMenu;
       
       // Add summary option to node menu
@@ -363,6 +410,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         return menus;
       };
       
+      // Install the node menu
       mind.install(customNodeMenu);
       
       // Get the generated mind map data from sessionStorage or use a default structure
@@ -500,19 +548,43 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Enhanced clickability for nodes - Fixed TypeScript error by removing updateNodeStyle
+      // Enhanced clickability for nodes with style panel support
       if (containerRef.current) {
         const topicElements = containerRef.current.querySelectorAll('.mind-elixir-topic');
         topicElements.forEach((element) => {
           element.addEventListener('click', (e) => {
-            // Simply select the node when clicked - this triggers the default node menu
+            // Node is clicked - no need to call any additional methods
             if (mind.currentNode && mind.currentNode.nodeObj) {
-              // Node is already selected, no need to call updateNodeStyle
               console.log('Node clicked:', mind.currentNode.nodeObj.topic);
+              
+              // Force style panel visibility after a short delay
+              setTimeout(() => {
+                const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
+                if (stylePanel && stylePanel instanceof HTMLElement) {
+                  stylePanel.style.display = 'block';
+                  stylePanel.style.visibility = 'visible';
+                  stylePanel.style.opacity = '1';
+                }
+              }, 100);
             }
           });
         });
       }
+      
+      // Add event listeners for node selection to ensure style panel visibility
+      mind.bus.addListener('selectNode', (nodeObj: any) => {
+        console.log('Node selected:', nodeObj);
+        
+        // Ensure style panels appear
+        setTimeout(() => {
+          const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
+          if (stylePanel && stylePanel instanceof HTMLElement) {
+            stylePanel.style.display = 'block';
+            stylePanel.style.visibility = 'visible';
+            stylePanel.style.opacity = '1';
+          }
+        }, 100);
+      });
       
       // Add observer for node additions to ensure they're properly initialized
       const observer = new MutationObserver((mutations) => {
@@ -520,10 +592,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           if (mutation.addedNodes.length > 0) {
             mutation.addedNodes.forEach((node) => {
               if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
-                node.addEventListener('click', (e) => {
-                  // Fixed TypeScript error by removing updateNodeStyle
+                node.addEventListener('click', () => {
+                  // Node is clicked - let Mind Elixir handle it
                   if (mind.currentNode && mind.currentNode.nodeObj) {
-                    // Node is already selected, the click will trigger the node menu
                     console.log('New node clicked:', mind.currentNode.nodeObj.topic);
                   }
                 });
@@ -604,6 +675,12 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       setTimeout(() => {
         setIsReady(true);
       }, 300);
+      
+      // Cleanup function
+      return () => {
+        styleObserver.disconnect();
+        observer.disconnect();
+      };
     }
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 

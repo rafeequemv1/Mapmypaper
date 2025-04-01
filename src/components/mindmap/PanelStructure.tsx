@@ -3,11 +3,6 @@ import { useRef } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
-import { 
-  ResizablePanelGroup, 
-  ResizablePanel, 
-  ResizableHandle 
-} from "@/components/ui/resizable";
 
 interface PanelStructureProps {
   showPdf: boolean;
