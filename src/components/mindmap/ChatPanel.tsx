@@ -12,6 +12,7 @@ interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
   onScrollToPdfPosition?: (position: string) => void;
+  onExplainText?: (text: string) => void;  // Added the missing prop
 }
 
 const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanelProps) => {
