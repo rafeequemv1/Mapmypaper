@@ -1,8 +1,8 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Access your API key as an environment variable (for security reasons)
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "");
+// Access your API key using Vite's import.meta.env instead of process.env
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
 
 // Function to chat with Gemini about the PDF content
 export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
@@ -136,7 +136,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     }
 
     // Initialize the Generative Model for text generation
-    const model = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").getGenerativeModel({ model: 'gemini-pro' });
+    const model = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "").getGenerativeModel({ model: 'gemini-pro' });
     
     // Define detail level-specific instructions
     let detailInstructions = '';
@@ -418,7 +418,7 @@ export const generateSequenceDiagramFromPdf = async (text: string): Promise<stri
   }
 };
 
-// Add the missing generateStructuredSummary function
+// Add the generateStructuredSummary function
 export const generateStructuredSummary = async (): Promise<any> => {
   try {
     // Retrieve stored PDF text from sessionStorage
