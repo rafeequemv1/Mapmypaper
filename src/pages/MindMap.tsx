@@ -22,7 +22,9 @@ const MindMap = () => {
     // Auto-expand the map 
     if (instance) {
       try {
-        instance.expandNode(instance.nodeData.root);
+        // Get the root node and expand it
+        const rootNode = instance.nodeData.root as string;
+        instance.expandNode(rootNode);
       } catch (err) {
         console.log("Error expanding root node:", err);
       }

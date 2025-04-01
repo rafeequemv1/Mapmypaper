@@ -9,6 +9,7 @@ import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
+import Footer from "./components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -32,8 +33,11 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <div className="relative">
-        <AppRoutes />
+      <div className="relative flex flex-col min-h-screen">
+        <div className="flex-1">
+          <AppRoutes />
+        </div>
+        <Footer />
       </div>
     </TooltipProvider>
   </QueryClientProvider>

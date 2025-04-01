@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -94,15 +95,18 @@
 @layer base {
   * {
     @apply border-border;
+    font-family: 'Roboto', sans-serif;
   }
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Roboto', sans-serif;
   }
   
   /* Enhanced typography for AI responses */
   .prose {
     @apply text-base leading-relaxed;
+    font-family: 'Roboto', sans-serif;
   }
   
   .prose h1 {

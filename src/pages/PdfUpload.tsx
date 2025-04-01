@@ -1,9 +1,11 @@
 
-import React, { useState } from "react";
+import { useState, useCallback, useRef } from "react";
+import { useDropzone } from "react-dropzone";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText, Linkedin, Twitter } from "lucide-react";
+import { Upload, FileText, BookText } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import AuthButton from "@/components/auth/AuthButton";
 
@@ -13,190 +15,218 @@ interface PdfUploadProps {
 }
 
 const PdfUpload = ({ user, onAuthChange }: PdfUploadProps) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const selectedFile = acceptedFiles[0];
     
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-  
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(e.dataTransfer.files[0]);
-    }
-  };
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    
-    if (e.target.files && e.target.files[0]) {
-      handleFiles(e.target.files[0]);
-    }
-  };
-  
-  const handleFiles = async (file: File) => {
-    if (file.type !== "application/pdf") {
+    if (selectedFile && selectedFile.type === "application/pdf") {
+      setFile(selectedFile);
+      setError(null);
+    } else {
+      setFile(null);
+      setError("Please upload a valid PDF file");
       toast({
         title: "Invalid file type",
-        description: "Please upload a PDF file.",
+        description: "Please upload a PDF file",
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf']
+    },
+    maxFiles: 1
+  });
+
+  const handleFileSelection = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile && selectedFile.type === "application/pdf") {
+      setFile(selectedFile);
+      setError(null);
+    } else {
+      setFile(null);
+      setError("Please select a valid PDF file");
+      toast({
+        title: "Invalid file type",
+        description: "Please select a PDF file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!file) {
+      setError("Please select a PDF file first");
+      toast({
+        title: "No file selected",
+        description: "Please select a PDF file first",
         variant: "destructive"
       });
       return;
     }
-    
-    setIsUploading(true);
-    
+
+    setIsLoading(true);
+    setProgress(0);
+
+    // Simulate upload progress
+    const interval = setInterval(() => {
+      setProgress((prevProgress) => {
+        if (prevProgress >= 90) {
+          clearInterval(interval);
+          return 90;
+        }
+        return prevProgress + 10;
+      });
+    }, 300);
+
     try {
-      // Store PDF as base64 string
+      // Read the file as base64
       const reader = new FileReader();
-      reader.readAsDataURL(file);
-      
-      reader.onload = () => {
-        const pdfData = reader.result as string;
-        sessionStorage.setItem("uploadedPdfData", pdfData);
-        sessionStorage.setItem("uploadedPdfName", file.name);
+      reader.onload = (e) => {
+        const base64String = e.target?.result as string;
         
-        // Navigate to mind map page
-        toast({
-          title: "PDF uploaded successfully",
-          description: "Redirecting to mind map viewer..."
-        });
+        // Save in session storage
+        sessionStorage.setItem("pdfData", base64String);
+        sessionStorage.setItem("pdfName", file.name);
+        
+        // Complete the progress
+        clearInterval(interval);
+        setProgress(100);
         
         setTimeout(() => {
+          toast({
+            title: "Upload Successful",
+            description: "Your PDF has been uploaded successfully.",
+          });
+          // Navigate to the mindmap page
           navigate("/mindmap");
-        }, 1500);
+        }, 400);
       };
-      
+
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error("PDF upload error:", error);
+      clearInterval(interval);
+      setIsLoading(false);
+      setError("Error uploading file. Please try again.");
       toast({
-        title: "Upload failed",
-        description: "An error occurred while uploading the PDF.",
+        title: "Upload Failed",
+        description: "Error uploading file. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsUploading(false);
     }
   };
-  
+
+  const isButton = !isDragActive && !file;
+  const isDragActiveClass = isDragActive ? "bg-blue-50 border-blue-300" : "border-gray-300";
+  const hasFileClass = file ? "bg-green-50 border-green-300" : "";
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="bg-white p-4 border-b flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="bg-black text-white p-1.5 rounded-md">
-            <Upload className="h-4 w-4" />
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="border-b py-4">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="bg-black text-white p-1.5 rounded-md">
+              <Upload className="h-5 w-5" />
+            </div>
+            <h1 className="text-xl font-medium">mapmypaper</h1>
+            <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
           </div>
-          <h1 className="text-lg font-bold">mapmypaper</h1>
-          <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">
-            BETA
-          </div>
+
+          <AuthButton
+            user={user}
+            onAuthChange={onAuthChange}
+            variant="outline"
+            size="sm"
+          />
         </div>
-        
-        <AuthButton user={user} onAuthChange={onAuthChange} />
       </header>
-      
-      <main className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="max-w-2xl w-full text-center space-y-6">
-          <h1 className="text-3xl md:text-4xl font-bold">
-            Transform Research Papers into Interactive Mind Maps
-          </h1>
-          
-          <p className="text-gray-600 max-w-lg mx-auto">
-            Upload your PDF and our AI will create a visual, navigable mind map of key concepts,
-            making complex research papers easier to understand.
+
+      {/* Main Content */}
+      <main className="flex-1 container mx-auto px-4 py-10 flex flex-col items-center justify-center">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold mb-3">Generate interactive mindmaps from PDFs</h2>
+          <p className="text-gray-600 max-w-xl mx-auto">
+            Upload your research paper or document to instantly create an interactive mindmap. 
+            Explore concepts, follow connections, and gain deeper insights.
           </p>
-          
-          {/* Upload Area */}
+        </div>
+
+        <div className="w-full max-w-2xl">
           <div
-            className={`border-2 border-dashed rounded-lg p-10 transition-all ${
-              dragActive ? "border-black bg-gray-50" : "border-gray-300"
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActiveClass} ${hasFileClass}`}
           >
-            <input
-              id="pdf-upload"
-              type="file"
-              accept="application/pdf"
-              onChange={handleFileChange}
-              className="hidden"
-              disabled={isUploading}
-            />
-            
-            <label
-              htmlFor="pdf-upload"
-              className="flex flex-col items-center gap-4 cursor-pointer"
-            >
-              <div className="bg-gray-100 rounded-full p-3">
-                <FileText className="h-8 w-8 text-gray-700" />
+            <input {...getInputProps()} />
+            {isDragActive ? (
+              <div className="py-6">
+                <FileText className="mx-auto h-12 w-12 text-blue-500 mb-3" />
+                <p className="text-lg font-medium">Drop your PDF here</p>
               </div>
-              
-              <div className="space-y-1 text-center">
-                <p className="text-gray-700 font-medium">
-                  {isUploading ? "Uploading..." : "Drop your PDF here or click to browse"}
+            ) : file ? (
+              <div className="py-6">
+                <FileText className="mx-auto h-12 w-12 text-green-500 mb-3" />
+                <p className="text-lg font-medium mb-1">{file.name}</p>
+                <p className="text-sm text-gray-500 mb-3">
+                  {(file.size / (1024 * 1024)).toFixed(2)} MB
                 </p>
-                <p className="text-sm text-gray-500">
-                  Accepts PDF documents (max 30MB)
-                </p>
+                <Button variant="outline" onClick={() => setFile(null)}>
+                  Choose a different file
+                </Button>
               </div>
-              
-              <Button
-                disabled={isUploading}
-                variant="default"
-                className="mt-2"
-              >
-                {isUploading ? "Uploading..." : "Upload PDF"}
-              </Button>
-            </label>
+            ) : (
+              <div className="py-10">
+                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-lg mb-2">
+                  Drag & drop your PDF here, or <span className="text-blue-600 font-medium">browse</span>
+                </p>
+                <p className="text-sm text-gray-500">Supported format: PDF (max 20MB)</p>
+              </div>
+            )}
           </div>
+
+          {error && (
+            <div className="mt-3 text-red-500 text-sm">{error}</div>
+          )}
+
+          {isLoading ? (
+            <div className="mt-8">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-medium">Uploading...</span>
+                <span>{progress}%</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
+          ) : (
+            <div className="mt-8 flex justify-center">
+              <Button 
+                onClick={handleFileUpload} 
+                disabled={!file || isLoading} 
+                className="px-8 py-6 text-lg"
+              >
+                <BookText className="mr-2 h-5 w-5" />
+                Generate Mindmap
+              </Button>
+            </div>
+          )}
         </div>
       </main>
-      
-      <footer className="bg-white border-t p-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <p className="text-sm text-gray-600">
-              &copy; {new Date().getFullYear()} MapMyPaper. All rights reserved.
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <a 
-              href="https://linkedin.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-gray-600 hover:text-blue-600 transition-colors"
-              aria-label="LinkedIn"
-            >
-              <Linkedin className="h-5 w-5" />
-            </a>
-            <a 
-              href="https://twitter.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-gray-600 hover:text-blue-400 transition-colors"
-              aria-label="Twitter"
-            >
-              <Twitter className="h-5 w-5" />
-            </a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

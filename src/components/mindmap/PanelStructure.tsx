@@ -7,12 +7,6 @@ import ChatPanel from "./ChatPanel";
 import MobileChatSheet from "./MobileChatSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MindElixirInstance } from "mind-elixir";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -34,8 +28,6 @@ const PanelStructure = ({
   onExplainText
 }: PanelStructureProps) => {
   const [pdfLoaded, setPdfLoaded] = useState(false);
-  const [pdfPanelSize, setPdfPanelSize] = useState(35);
-  const [chatPanelSize, setChatPanelSize] = useState(30);
   const pdfViewerRef = useRef<{ scrollToPage: (pageNumber: number) => void } | null>(null);
   const isMobile = useIsMobile();
 
@@ -72,17 +64,16 @@ const PanelStructure = ({
         direction="horizontal"
         className="flex-1"
       >
-        {/* Left Panel - PDF Viewer (Conditionally Rendered) */}
+        {/* Left Panel - PDF Viewer (Conditionally Rendered) with fixed 40% width */}
         {showPdf && (
           <>
             <ResizablePanel 
-              defaultSize={pdfPanelSize} 
-              minSize={20}
-              maxSize={55}
+              defaultSize={40} 
+              minSize={40}
+              maxSize={40}
               id="pdf-panel"
               order={1}
               className="w-full relative"
-              onResize={(size) => setPdfPanelSize(size)}
             >
               <PdfViewer 
                 onTextSelected={(text) => {
@@ -106,7 +97,7 @@ const PanelStructure = ({
 
         {/* Middle Panel - Mind Map */}
         <ResizablePanel 
-          defaultSize={showPdf && showChat ? 35 : showPdf || showChat ? 60 : 100}
+          defaultSize={showPdf && showChat ? 30 : showPdf || showChat ? 70 : 100}
           minSize={30}
           id="mindmap-panel"
           order={2}
@@ -117,17 +108,16 @@ const PanelStructure = ({
           />
         </ResizablePanel>
 
-        {/* Right Panel - Chat (Conditionally Rendered) */}
+        {/* Right Panel - Chat (Conditionally Rendered) with fixed 30% width */}
         {showChat && !isMobile && (
           <>
             <ResizableHandle withHandle />
             <ResizablePanel 
-              defaultSize={chatPanelSize} 
-              minSize={20}
-              maxSize={50}
+              defaultSize={30} 
+              minSize={30}
+              maxSize={30}
               id="chat-panel"
               order={3}
-              onResize={(size) => setChatPanelSize(size)}
               className="relative"
             >
               <ChatPanel 

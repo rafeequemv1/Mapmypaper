@@ -3,10 +3,9 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
+import { ZoomIn, ZoomOut, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { TooltipProvider } from "./ui/tooltip";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -16,7 +15,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
-  renderTooltipContent?: () => React.ReactNode;
 }
 
 interface PdfViewerHandle {
@@ -24,13 +22,11 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onPdfLoaded }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
     const [selectedText, setSelectedText] = useState<string>("");
-    const [showTooltip, setShowTooltip] = useState<boolean>(false);
-    const [tooltipPosition, setTooltipPosition] = useState<{x: number, y: number}>({x: 0, y: 0});
     const [scale, setScale] = useState<number>(1);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [searchResults, setSearchResults] = useState<string[]>([]);
@@ -68,45 +64,18 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Handle text selection with tooltip positioned closer to cursor
+    // Handle text selection
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "") {
         const text = selection.toString().trim();
         setSelectedText(text);
         
-        if (text.length > 2) { // Even shorter minimum length for better usability
-          // Show tooltip very close to the cursor
-          setTooltipPosition({
-            x: e.clientX,
-            y: e.clientY - 10 // Position tooltip just above the cursor
-          });
-          setShowTooltip(true);
+        if (text.length > 2 && onTextSelected) {
+          onTextSelected(text);
         }
-      } else {
-        setShowTooltip(false);
       }
     };
-
-    // Handle tooltip click to send text to chat
-    const handleExplainClick = () => {
-      if (selectedText && onTextSelected) {
-        onTextSelected(selectedText);
-        setShowTooltip(false);
-      }
-    };
-    
-    // Hide tooltip when clicking elsewhere
-    useEffect(() => {
-      const handleClickOutside = () => {
-        setShowTooltip(false);
-      };
-      
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
 
     // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
@@ -335,7 +304,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Zoom handlers
     const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
-    const resetZoom = () => setScale(1);
 
     // Calculate optimal width for PDF pages
     const getOptimalPageWidth = () => {
@@ -372,15 +340,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               title="Zoom In"
             >
               <ZoomIn className="h-3.5 w-3.5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7 text-black" 
-              onClick={resetZoom}
-              title="Reset Zoom"
-            >
-              <RotateCw className="h-3.5 w-3.5" />
             </Button>
           </div>
           
@@ -436,73 +395,49 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
         {/* PDF Content with full width */}
         {pdfData ? (
-          <TooltipProvider>
-            <ScrollArea className="flex-1" ref={pdfContainerRef}>
-              <div 
-                className="flex flex-col items-center py-4" 
-                onMouseUp={handleDocumentMouseUp}
-                style={{ position: 'relative' }}
+          <ScrollArea className="flex-1" ref={pdfContainerRef}>
+            <div 
+              className="flex flex-col items-center py-4" 
+              onMouseUp={handleDocumentMouseUp}
+              style={{ position: 'relative' }}
+            >
+              <Document
+                file={pdfData}
+                onLoadSuccess={onDocumentLoadSuccess}
+                className="w-full"
+                loading={<div className="text-center py-4">Loading PDF...</div>}
+                error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
               >
-                {/* Selection Tooltip - positioned very close to cursor */}
-                {showTooltip && (
-                  <>
-                    {renderTooltipContent ? (
-                      renderTooltipContent()
-                    ) : (
-                      <div 
-                        className="fixed bg-black text-white px-2 py-1 text-xs rounded shadow-lg z-50 cursor-pointer"
-                        style={{ 
-                          left: `${tooltipPosition.x}px`, 
-                          top: `${tooltipPosition.y - 25}px`,
-                          transform: 'translateX(-50%)',
-                          pointerEvents: 'all'
-                        }}
-                        onClick={handleExplainClick}
-                      >
-                        Explain
-                      </div>
-                    )}
-                  </>
-                )}
-              
-                <Document
-                  file={pdfData}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  className="w-full"
-                  loading={<div className="text-center py-4">Loading PDF...</div>}
-                  error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
-                >
-                  {Array.from(new Array(numPages), (_, index) => (
-                    <div
-                      key={`page_${index + 1}`}
-                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                      ref={setPageRef(index)}
-                      style={{ width: 'fit-content', maxWidth: '100%' }}
-                      data-page-number={index + 1}
-                    >
-                      <Page
-                        pageNumber={index + 1}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={false}
-                        onRenderSuccess={onPageRenderSuccess}
-                        scale={scale}
-                        width={getOptimalPageWidth()}
-                        className="mx-auto"
-                        loading={
-                          <div className="flex items-center justify-center h-[600px] w-full">
-                            <div className="animate-pulse bg-gray-200 h-full w-full"></div>
-                          </div>
-                        }
-                      />
-                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
-                        Page {index + 1} of {numPages}
-                      </div>
+                {Array.from(new Array(numPages), (_, index) => (
+                  <div
+                    key={`page_${index + 1}`}
+                    className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
+                    ref={setPageRef(index)}
+                    style={{ width: 'fit-content', maxWidth: '100%' }}
+                    data-page-number={index + 1}
+                  >
+                    <Page
+                      pageNumber={index + 1}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={false}
+                      onRenderSuccess={onPageRenderSuccess}
+                      scale={scale}
+                      width={getOptimalPageWidth()}
+                      className="mx-auto"
+                      loading={
+                        <div className="flex items-center justify-center h-[600px] w-full">
+                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
+                        </div>
+                      }
+                    />
+                    <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
+                      Page {index + 1} of {numPages}
                     </div>
-                  ))}
-                </Document>
-              </div>
-            </ScrollArea>
-          </TooltipProvider>
+                  </div>
+                ))}
+              </Document>
+            </div>
+          </ScrollArea>
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-gray-500">Loading PDF...</p>
