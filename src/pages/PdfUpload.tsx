@@ -135,10 +135,14 @@ const PdfUpload = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-4 mb-3">
             <Brain className="h-10 w-10 text-[#333]" />
-            <h1 className="text-4xl font-bold text-[#333]">MapMyPaper</h1>
+            <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl">
-            Upload your academic paper or research document to automatically generate interactive mind maps, summaries, and AI-powered insights
+            Transform academic papers into visual knowledge maps. Read research papers faster, save time, 
+            increase comprehension, and boost retention with our AI-powered visualization tools.
+          </p>
+          <p className="mt-3 text-sm text-gray-500 max-w-xl mx-auto">
+            Perfect for visual learners, researchers, scientists, and students who want to quickly grasp and remember complex information.
           </p>
         </div>
         
@@ -192,10 +196,26 @@ const PdfUpload = () => {
             <p className="text-red-500 text-sm mt-4">{extractionError}</p>
           )}
         </div>
+        
+        {/* Benefits */}
+        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
+          <div className="bg-white p-5 rounded-lg shadow-sm">
+            <h3 className="font-semibold text-lg mb-2">Save Time</h3>
+            <p className="text-gray-600">Quickly grasp the structure and key points of any research paper without reading every word.</p>
+          </div>
+          <div className="bg-white p-5 rounded-lg shadow-sm">
+            <h3 className="font-semibold text-lg mb-2">Enhance Comprehension</h3>
+            <p className="text-gray-600">Visual representations help you understand complex relationships and hierarchies in the content.</p>
+          </div>
+          <div className="bg-white p-5 rounded-lg shadow-sm">
+            <h3 className="font-semibold text-lg mb-2">Improve Retention</h3>
+            <p className="text-gray-600">Visual memory aids increase recall of key information when you need it most.</p>
+          </div>
+        </div>
       </div>
       
       <footer className="py-4 text-center text-gray-500 text-sm">
-        MapMyPaper — Transform research into visual knowledge
+        mapmypaper — Transform research into visual knowledge for better learning
       </footer>
     </div>
   );

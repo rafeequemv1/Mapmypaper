@@ -14,7 +14,7 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useMindmapGenerator from "./flowchart/useMindmapGenerator";
 import { useToast } from "@/hooks/use-toast";
-import { ZoomIn, ZoomOut, MousePointer } from "lucide-react";
+import { ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
 
 interface MindmapModalProps {
   open: boolean;
@@ -29,7 +29,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   // State for theme and editor visibility
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [initialGeneration, setInitialGeneration] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom for better fit
   
   // Initialize mermaid library
   useMermaidInit();
@@ -44,7 +44,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
       // Show toast when mindmap is being generated
       toast({
         title: "Generating Mindmap",
-        description: "Creating a mindmap visualization from your document...",
+        description: "Creating a detailed mindmap visualization from your document...",
       });
     }
   }, [open, generateMindmap, initialGeneration, toast]);
@@ -67,8 +67,19 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   };
   
   const handleZoomReset = () => {
-    setZoomLevel(1);
+    setZoomLevel(0.8); // Reset to fit diagram
   };
+  
+  // Auto-fit on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      // Reset zoom to ensure diagram fits
+      setZoomLevel(0.8);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -76,7 +87,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
         <DialogHeader className="space-y-1">
           <DialogTitle>Mindmap</DialogTitle>
           <DialogDescription className="text-xs">
-            Visualize the paper structure as a mindmap with specific content from your document.
+            Visualize the paper structure as a detailed mindmap with key content and relationships from your document.
           </DialogDescription>
         </DialogHeader>
         
@@ -95,8 +106,9 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
             size="sm"
             onClick={handleZoomReset}
             className="flex items-center gap-1"
+            title="Reset zoom to fit diagram"
           >
-            <MousePointer className="h-4 w-4" />
+            <RefreshCw className="h-4 w-4 mr-1" />
             {Math.round(zoomLevel * 100)}%
           </Button>
           <Button
