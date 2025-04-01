@@ -5,6 +5,7 @@ import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import MindmapModal from "@/components/mindmap/MindmapModal";
 import { useAuth } from "@/hooks/useAuth";
 
 // Define a Topic type if it's not already defined elsewhere
@@ -17,6 +18,7 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(true);
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
+  const [showMindmap, setShowMindmap] = useState(false);
   const [explainText, setExplainText] = useState<string>("");
   const mindElixirInstance = useRef<MindElixirInstance | null>(null);
   const { user, refreshSession } = useAuth();
@@ -62,6 +64,7 @@ const MindMap = () => {
         toggleChat={toggleChat} 
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
+        setShowMindmap={setShowMindmap}
         user={user}
         onAuthChange={refreshSession}
       />
@@ -81,6 +84,7 @@ const MindMap = () => {
       {/* Modals */}
       <SummaryModal open={showSummary} onOpenChange={setShowSummary} />
       <FlowchartModal open={showFlowchart} onOpenChange={setShowFlowchart} />
+      <MindmapModal open={showMindmap} onOpenChange={setShowMindmap} />
     </div>
   );
 };

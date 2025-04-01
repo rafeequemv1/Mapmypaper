@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,20 +11,22 @@ import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
+  selectedImage?: string | null;
   onScrollToPdfPosition?: (position: string) => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText, selectedImage, onScrollToPdfPosition }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; isImage?: boolean; imageUrl?: string }[]>([
     { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
+  const [processingImage, setProcessingImage] = useState(false);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -89,6 +91,65 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
     
     processExplainText();
   }, [explainText, toast]);
+
+  // Process selected image when it changes
+  useEffect(() => {
+    const processSelectedImage = async () => {
+      if (selectedImage && !processingImage) {
+        setProcessingImage(true);
+        
+        // Add user message with the image
+        setMessages(prev => [...prev, { 
+          role: 'user', 
+          content: 'Please analyze and explain this part of the document:',
+          isImage: true,
+          imageUrl: selectedImage
+        }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          // Enhanced prompt to encourage detailed analysis of the image
+          const response = await chatWithGeminiAboutPdf(
+            `This is a screenshot from a research paper. Please analyze the content, explain what it shows in detail, and provide relevant context. Include specific page citations in [citation:pageX] format if you can determine the page. Add emojis relevant to the content to make your response engaging.`
+          );
+          
+          // Hide typing indicator and add AI response with formatting
+          setIsTyping(false);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: formatAIResponse(response),
+              isHtml: true 
+            }
+          ]);
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("Image analysis error:", error);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: "Sorry, I encountered an error analyzing that image. Please try again." 
+            }
+          ]);
+          
+          toast({
+            title: "Image Analysis Error",
+            description: "Failed to analyze the selected area.",
+            variant: "destructive"
+          });
+        } finally {
+          setProcessingImage(false);
+        }
+      }
+    };
+    
+    processSelectedImage();
+  }, [selectedImage, toast]);
 
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -218,6 +279,17 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
                     : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
                 }`}
               >
+                {message.isImage && message.imageUrl && (
+                  <div className="mb-2">
+                    <img 
+                      src={message.imageUrl} 
+                      alt="Selected area from PDF" 
+                      className="max-w-full rounded border border-gray-200"
+                      style={{ maxHeight: '300px' }}
+                    />
+                  </div>
+                )}
+                
                 {message.isHtml ? (
                   <div 
                     className="ai-message-content" 
