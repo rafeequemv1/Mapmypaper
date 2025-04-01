@@ -3,7 +3,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
-import { generateMindMapFromText, extractAndStorePdfText } from "@/services/geminiService";
+import { generateMindMapFromText } from "@/services/geminiService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,6 @@ const PdfUpload = () => {
     const file = event.target.files && event.target.files[0];
     if (file && file.type === "application/pdf") {
       setPdfFile(file);
-      console.log("File selected:", file.name);
     } else {
       setPdfFile(null);
       toast({
@@ -75,9 +74,10 @@ const PdfUpload = () => {
 
       // Extract text from PDF
       setIsProcessing(true);
-      const extractedText = await extractAndStorePdfText(pdfFile);
+      const extractedText = await extractTextFromPdf(pdfFile);
       setPdfText(extractedText);
-      
+      sessionStorage.setItem("pdfText", extractedText);
+
       // Store the uploaded PDF data in session storage
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -87,9 +87,6 @@ const PdfUpload = () => {
         }
       };
       reader.readAsDataURL(pdfFile);
-      
-      // Navigate to mindmap view
-      navigate("/mindmap");
     } catch (error) {
       console.error("Error during upload and processing:", error);
       toast({
@@ -100,6 +97,42 @@ const PdfUpload = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Extract text from PDF
+  const extractTextFromPdf = async (pdf: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async function() {
+        try {
+          const typedArray = new Uint8Array(this.result as ArrayBuffer);
+          const pdfjsLib = await import("pdfjs-dist");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+          
+          const pdfDocument = await pdfjsLib.getDocument(typedArray).promise;
+          let fullText = "";
+          
+          for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+            const page = await pdfDocument.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item: any) => item.str).join(" ");
+            fullText += pageText + "\n";
+          }
+          
+          resolve(fullText);
+        } catch (error) {
+          console.error("Error extracting text from PDF:", error);
+          reject(error);
+        }
+      };
+      
+      reader.onerror = (error) => {
+        console.error("Error reading PDF:", error);
+        reject(error);
+      };
+      
+      reader.readAsArrayBuffer(pdf);
+    });
   };
 
   // Handle manual text submission

@@ -2,82 +2,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable (for security reasons)
-const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk";
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-// Helper function to clean and validate Mermaid syntax
-export const cleanMermaidSyntax = (input: string): string => {
-  let cleaned = input.trim();
-  
-  // Fix common syntax errors
-  cleaned = cleaned
-    // Fix arrows if needed
-    .replace(/-+>/g, "-->")
-    // Replace any hyphens in node IDs with underscores
-    .replace(/(\w+)-(\w+)/g, "$1_$2");
-  
-  // Ensure it starts with flowchart directive and uses LR direction
-  if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart LR\n" + cleaned;
-  } else if (cleaned.startsWith("flowchart TD")) {
-    // Replace TD with LR if found at the beginning
-    cleaned = cleaned.replace("flowchart TD", "flowchart LR");
-  }
-  
-  // Process line by line to ensure each line is valid
-  const lines = cleaned.split('\n');
-  const processedLines = lines.map(line => {
-    // Skip empty lines or lines starting with flowchart, subgraph, or end
-    if (!line.trim() || 
-        line.trim().startsWith('flowchart') || 
-        line.trim().startsWith('subgraph') || 
-        line.trim() === 'end') {
-      return line;
-    }
-    
-    // Handle node definitions with text containing hyphens
-    // Replace hyphens inside node text brackets
-    let processedLine = line;
-    
-    // Handle square brackets []
-    processedLine = processedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
-      return '[' + p1 + ' ' + p2 + ']';
-    });
-    
-    // Handle parentheses ()
-    processedLine = processedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
-      return '(' + p1 + ' ' + p2 + ')';
-    });
-    
-    // Handle curly braces {}
-    processedLine = processedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
-      return '{' + p1 + ' ' + p2 + '}';
-    });
-    
-    // Replace all remaining dashes in node text with spaces or underscores
-    // This needs to run multiple times to catch all hyphens in text
-    for (let i = 0; i < 3; i++) {
-      // Handle square brackets []
-      processedLine = processedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
-        return '[' + p1 + ' ' + p2 + ']';
-      });
-      
-      // Handle parentheses ()
-      processedLine = processedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
-        return '(' + p1 + ' ' + p2 + ')';
-      });
-      
-      // Handle curly braces {}
-      processedLine = processedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
-        return '{' + p1 + ' ' + p2 + '}';
-      });
-    }
-    
-    return processedLine;
-  });
-  
-  return processedLines.join('\n');
-};
+const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk");
 
 // Function to generate a mind map from text using Gemini API
 export const generateMindMapFromText = async (text: string): Promise<any> => {
@@ -86,7 +11,7 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
     sessionStorage.setItem('pdfText', text);
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getModel({ model: 'gemini-pro' });
     
     // Create a template for research paper structure as mind map
     const researchPaperTemplate = {
@@ -176,7 +101,7 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
     // Generate content with the prompt
     try {
       const result = await model.generateContent(prompt);
-      const response = await result.response.text();
+      const response = result.response.text();
       
       // Extract JSON from the response
       let jsonStr = response;
@@ -228,7 +153,7 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getModel({ model: 'gemini-pro' });
 
     // Enhanced prompt to provide more context and instructions
     const fullPrompt = `You are a research assistant helping a user understand a research paper.
@@ -239,90 +164,12 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
 
     // Generate content with the enhanced prompt
     const result = await model.generateContent(fullPrompt);
-    const response = await result.response.text();
+    const response = result.response.text();
 
     return response;
   } catch (error) {
     console.error("Gemini API error:", error);
     return "Sorry, I encountered an error. Please try again.";
-  }
-};
-
-// Add missing structured summary generator function
-export const generateStructuredSummary = async (): Promise<Record<string, string>> => {
-  try {
-    // Retrieve stored PDF text from sessionStorage
-    const pdfText = sessionStorage.getItem('pdfText');
-    
-    if (!pdfText || pdfText.trim() === '') {
-      return {
-        error: "No PDF content available. Please upload a document first."
-      };
-    }
-
-    // Initialize the Generative Model for text generation
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
-    // Define prompt for structured summary generation
-    const prompt = `
-    Generate a structured summary of this research paper. The text is:
-    
-    ${pdfText.slice(0, 15000)}
-    
-    Create sections for:
-    1. Key Findings
-    2. Methodology
-    3. Limitations
-    4. Future Research
-    5. Practical Applications
-    
-    Format your response as plain text with section headers.
-    Make each section concise but comprehensive (3-5 sentences each).
-    Use academic language appropriate for the paper's field.
-    Include specific details from the paper, not generic statements.
-    `;
-
-    // Generate the structured summary
-    const result = await model.generateContent(prompt);
-    const response = await result.response.text();
-    
-    // Split response into sections
-    const sections = {
-      "Key Findings": "",
-      "Methodology": "",
-      "Limitations": "",
-      "Future Research": "",
-      "Practical Applications": ""
-    };
-    
-    let currentSection = "";
-    
-    // Parse the response into sections
-    const lines = response.split('\n');
-    for (const line of lines) {
-      // Check if line is a section header
-      if (line.match(/^[0-9]\.\s*Key Findings/i)) {
-        currentSection = "Key Findings";
-      } else if (line.match(/^[0-9]\.\s*Methodology/i)) {
-        currentSection = "Methodology";
-      } else if (line.match(/^[0-9]\.\s*Limitations/i)) {
-        currentSection = "Limitations";
-      } else if (line.match(/^[0-9]\.\s*Future Research/i)) {
-        currentSection = "Future Research";
-      } else if (line.match(/^[0-9]\.\s*Practical Applications/i)) {
-        currentSection = "Practical Applications";
-      } else if (currentSection && line.trim()) {
-        // Add content to current section
-        sections[currentSection] += line + "\n";
-      }
-    }
-    
-    return sections;
-  } catch (error) {
-    console.error("Error generating structured summary:", error);
-    return {
-      error: "Failed to generate summary. Please try again."
-    };
   }
 };
 
@@ -339,7 +186,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getModel({ model: 'gemini-pro' });
     
     // Define detail level-specific instructions
     let detailInstructions = '';
@@ -406,17 +253,16 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     `);
     
     // Extract the Mermaid code from the result
-    const mermaidCode = await result.response.text();
+    let mermaidCode = result.response.text();
     
     // If the response contains the Mermaid code block, extract just the code
-    let cleanedCode = mermaidCode;
     if (mermaidCode.includes('```mermaid')) {
-      cleanedCode = mermaidCode.split('```mermaid')[1].split('```')[0].trim();
+      mermaidCode = mermaidCode.split('```mermaid')[1].split('```')[0].trim();
     } else if (mermaidCode.includes('```')) {
-      cleanedCode = mermaidCode.split('```')[1].split('```')[0].trim();
+      mermaidCode = mermaidCode.split('```')[1].split('```')[0].trim();
     }
     
-    return cleanMermaidSyntax(cleanedCode);
+    return cleanMermaidSyntax(mermaidCode);
   } catch (error) {
     console.error("Gemini API flowchart generation error:", error);
     return `flowchart LR
@@ -428,109 +274,148 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
   }
 };
 
-// Generate sequence diagrams from PDF content
-export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
-  try {
-    // Retrieve stored PDF text from sessionStorage
-    const pdfText = sessionStorage.getItem('pdfText');
-    
-    if (!pdfText || pdfText.trim() === '') {
-      return `sequenceDiagram
-        participant U as User
-        participant S as System
-        U->>S: Request
-        S->>U: Error (No PDF Content)
-        Note over U,S: Please upload a PDF first`;
-    }
-
-    // Initialize the Generative Model for text generation
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
-    // Generate the sequence diagram from the PDF text with Gemini
-    const result = await model.generateContent(`
-    Create a Mermaid sequence diagram based on this document text.
-    
-    CRITICAL MERMAID SEQUENCE DIAGRAM SYNTAX RULES:
-    1. Start with 'sequenceDiagram'
-    2. Define participants with labels: participant A as System A
-    3. Show interactions with arrows: A->>B: Request data
-    4. Use solid arrows for synchronous calls: A->>B
-    5. Use dashed arrows for responses: B-->>A
-    6. Add notes: Note over A,B: This is a note
-    7. Add loops: loop Every minute
-    8. Add conditionals: alt Successful case
-    9. Keep participant names short (1-2 words max)
-    10. Use clear, concise messages (3-5 words)
-    
-    Document content:
-    ${pdfText.slice(0, 15000)}
-    
-    Create a sequence diagram that represents the key processes, interactions, or methodology described in the document.
-    If the document doesn't explicitly describe a sequence or process, create a diagram showing how the concepts presented might interact in a practical application.
-    Keep the diagram to 5-10 participants and 10-20 interactions maximum.
-    `);
-    
-    // Extract the sequence diagram code from the result
-    const sequenceCode = await result.response.text();
-    
-    // Process the response to extract just the diagram code
-    let cleanedCode = sequenceCode;
-    if (sequenceCode.includes('```mermaid')) {
-      cleanedCode = sequenceCode.split('```mermaid')[1].split('```')[0].trim();
-    } else if (sequenceCode.includes('```')) {
-      cleanedCode = sequenceCode.split('```')[1].split('```')[0].trim();
-    }
-    
-    // Further clean the code to handle common syntax issues
-    return cleanSequenceDiagramSyntax(cleanedCode);
-  } catch (error) {
-    console.error("Gemini API sequence diagram generation error:", error);
-    return `sequenceDiagram
-      participant U as User
-      participant S as System
-      participant E as Error
-      U->>S: Generate diagram
-      S->>E: Processing failed
-      E-->>U: Error message
-      Note over U,S: Please try again`;
-  }
-};
-
-// Clean sequence diagram syntax
-const cleanSequenceDiagramSyntax = (code: string): string => {
+// Helper function to clean and fix common Mermaid syntax issues
+const cleanMermaidSyntax = (code: string): string => {
   if (!code || !code.trim()) {
-    return `sequenceDiagram
-      participant U as User
-      participant S as System
-      U->>S: Request
-      S-->>U: Response`;
+    return `flowchart LR
+      A[Error] --> B[Empty flowchart]
+      B --> C[Please try again]
+      style A fill:#ffcccc,stroke:#ff0000,stroke-width:2px`;
   }
 
   try {
-    // Ensure the code starts with sequenceDiagram directive
+    // Ensure the code starts with flowchart directive and uses LR direction
     let cleaned = code.trim();
-    if (!cleaned.startsWith("sequenceDiagram")) {
-      cleaned = "sequenceDiagram\n" + cleaned;
+    if (!cleaned.startsWith("flowchart")) {
+      cleaned = "flowchart LR\n" + cleaned;
+    } else if (cleaned.startsWith("flowchart TD")) {
+      // Replace TD with LR if found at the beginning
+      cleaned = cleaned.replace("flowchart TD", "flowchart LR");
     }
 
-    // Remove any empty lines
-    cleaned = cleaned
-      .split('\n')
-      .filter(line => line.trim())
-      .join('\n');
+    // Process line by line to ensure each line is valid
+    const lines = cleaned.split('\n').map(line => line.trim());
+    const validLines = [];
+
+    // Flag to track whether style definitions are present
+    let hasStyleDefinitions = false;
     
-    return cleaned;
+    // Track node IDs to ensure they're unique
+    const nodeIds = new Set();
+    
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+      
+      // Skip empty lines
+      if (!line) continue;
+      
+      // Handle flowchart directive
+      if (line.startsWith("flowchart")) {
+        validLines.push(line);
+        continue;
+      }
+      
+      // Check for style definitions
+      if (line.startsWith("style ")) {
+        hasStyleDefinitions = true;
+        validLines.push(line);
+        continue;
+      }
+      
+      // Handle subgraph 
+      if (line.startsWith("subgraph") || line === "end") {
+        validLines.push(line);
+        continue;
+      }
+      
+      // Skip comment lines
+      if (line.startsWith("%%")) {
+        continue;
+      }
+      
+      // Extract node IDs from connections
+      const nodeMatch = line.match(/^([A-Za-z0-9_]+)(\[|\(|\{)/);
+      if (nodeMatch) {
+        const nodeId = nodeMatch[1];
+        nodeIds.add(nodeId);
+      }
+      
+      // Fix arrow syntax
+      line = line.replace(/([A-Za-z0-9_]+)\s*-+>\s*([A-Za-z0-9_]+)/g, "$1 --> $2");
+      
+      // Fix labeled arrow syntax
+      line = line.replace(/([A-Za-z0-9_]+)\s*-+>\|([^|]+)\|\s*([A-Za-z0-9_]+)/g, "$1 -->|$2| $3");
+      
+      // Handle node text with hyphens by replacing them with spaces
+      line = line.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
+        return '[' + p1 + ' ' + p2 + ']';
+      });
+      
+      // Handle node text with hyphens in parentheses
+      line = line.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
+        return '(' + p1 + ' ' + p2 + ')';
+      });
+      
+      // Handle node text with hyphens in curly braces
+      line = line.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
+        return '{' + p1 + ' ' + p2 + '}';
+      });
+      
+      validLines.push(line);
+    }
+    
+    // Add default style definitions if none present
+    if (!hasStyleDefinitions && nodeIds.size > 0) {
+      const nodeIdArray = Array.from(nodeIds);
+      
+      // Add style for decision nodes (typically with { })
+      const decisionNodes = validLines
+        .filter(line => /[A-Za-z0-9_]+\{[^}]*\}/.test(line))
+        .map(line => {
+          const match = line.match(/([A-Za-z0-9_]+)\{/);
+          return match ? match[1] : null;
+        })
+        .filter(id => id !== null);
+      
+      if (decisionNodes.length > 0) {
+        validLines.push(`style ${decisionNodes[0]} fill:#bbf,stroke:#33f,stroke-width:2px`);
+      }
+      
+      // Add style for first node
+      if (nodeIdArray.length > 0) {
+        validLines.push(`style ${nodeIdArray[0]} fill:#d0e0ff,stroke:#3080ff,stroke-width:2px`);
+      }
+      
+      // Add style for last node
+      if (nodeIdArray.length > 1) {
+        validLines.push(`style ${nodeIdArray[nodeIdArray.length - 1]} fill:#ffe0d0,stroke:#ff8030,stroke-width:2px`);
+      }
+      
+      // Add some random colors to other nodes
+      const colors = [
+        'fill:#d0ffe0,stroke:#30ff80', 
+        'fill:#ffd0e0,stroke:#ff3080',
+        'fill:#e0d0ff,stroke:#8030ff',
+        'fill:#ffffd0,stroke:#aaaa30'
+      ];
+      
+      for (let i = 1; i < Math.min(nodeIdArray.length - 1, colors.length + 1); i++) {
+        const colorIndex = (i - 1) % colors.length;
+        validLines.push(`style ${nodeIdArray[i]} ${colors[colorIndex]}`);
+      }
+    }
+    
+    return validLines.join('\n');
   } catch (error) {
-    console.error("Error cleaning sequence diagram syntax:", error);
-    return `sequenceDiagram
-      participant E as Error
-      participant S as System
-      E->>S: Syntax cleaning failed
-      S-->>E: Using default diagram`;
+    console.error("Error cleaning Mermaid syntax:", error);
+    return `flowchart LR
+      A[Error] --> B[Syntax Cleaning Failed]
+      B --> C[Please try again]
+      style A fill:#ffcccc,stroke:#ff0000,stroke-width:2px`;
   }
 };
 
-// Generate mindmap from PDF content
+// For generating mindmaps from PDF content
 export const generateMindmapFromPdf = async (): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage
@@ -543,7 +428,7 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getModel({ model: 'gemini-pro' });
     
     // Generate the mindmap from the PDF text with Gemini
     const result = await model.generateContent(`
@@ -590,75 +475,21 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     `);
     
     // Extract the Mermaid code from the result
-    const mermaidCode = await result.response.text();
+    let mermaidCode = result.response.text();
     
     // If the response contains the Mermaid code block, extract just the code
-    let cleanedCode = mermaidCode;
     if (mermaidCode.includes('```mermaid')) {
-      cleanedCode = mermaidCode.split('```mermaid')[1].split('```')[0].trim();
+      mermaidCode = mermaidCode.split('```mermaid')[1].split('```')[0].trim();
     } else if (mermaidCode.includes('```')) {
-      cleanedCode = mermaidCode.split('```')[1].split('```')[0].trim();
+      mermaidCode = mermaidCode.split('```')[1].split('```')[0].trim();
     }
 
-    return cleanedCode;
+    return mermaidCode;
   } catch (error) {
     console.error("Gemini API mindmap generation error:", error);
     return `mindmap
       root((Error))
         Failed to generate mindmap
           Please try again`;
-  }
-};
-
-// New function to extract text from PDFs
-export const extractAndStorePdfText = async (pdfFile: File): Promise<string> => {
-  try {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = async function() {
-        try {
-          // Load PDF.js
-          const pdfjsLib = await import("pdfjs-dist");
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
-          
-          // Get document
-          const typedArray = new Uint8Array(this.result as ArrayBuffer);
-          const pdfDocument = await pdfjsLib.getDocument(typedArray).promise;
-          
-          // Extract text from all pages
-          let fullText = "";
-          
-          for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-            const page = await pdfDocument.getPage(pageNum);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map((item: any) => item.str).join(" ");
-            fullText += pageText + "\n";
-          }
-          
-          // Store in session storage
-          sessionStorage.setItem("pdfText", fullText);
-          
-          // Also store the pdf name
-          sessionStorage.setItem("pdfName", pdfFile.name);
-          
-          console.log(`Extracted ${fullText.length} characters from ${pdfFile.name}`);
-          resolve(fullText);
-        } catch (error) {
-          console.error("Error extracting text from PDF:", error);
-          reject(error);
-        }
-      };
-      
-      reader.onerror = (error) => {
-        console.error("Error reading PDF:", error);
-        reject(error);
-      };
-      
-      reader.readAsArrayBuffer(pdfFile);
-    });
-  } catch (error) {
-    console.error("Overall PDF extraction error:", error);
-    throw error;
   }
 };
