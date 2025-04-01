@@ -1,310 +1,370 @@
-
-import { Brain, ArrowLeft, FileText, MessageSquare, Keyboard, Download, Upload, FileDigit, Search, GitBranch, Network } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  GitBranchPlus,
+  GitCommitHorizontal,
+  ListOrdered,
+  Network,
+  FileText,
+  Download,
+  Upload,
+  PanelLeft,
+  MessageSquare,
+  Settings,
+  Share2,
+  Trash2,
+  Save,
+  FileUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { MindElixirInstance } from "mind-elixir";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
+import FlowchartModal from "./flowchart/FlowchartModal";
+import SequenceDiagramModal from "./flowchart/SequenceDiagramModal";
+import SummaryModal from "./SummaryModal";
+import MindmapModal from "./MindmapModal";
 
-interface HeaderProps {
-  showPdf: boolean;
-  togglePdf: () => void;
-  pdfAvailable: boolean;
-  showChat: boolean;
-  toggleChat: () => void;
-  onExportMindMap?: (type: 'svg' | 'png') => void;
-  onOpenSummary?: () => void;
-  onOpenFlowchart?: () => void;
-  onOpenSequenceDiagram?: () => void;
-}
-
-// Define keyboard shortcuts for the mind map
-const keyboardShortcuts = [
-  { key: "Enter", description: "Insert sibling node" },
-  { key: "Shift + Enter", description: "Insert sibling node before" },
-  { key: "Tab", description: "Insert child node" },
-  { key: "Ctrl + Enter", description: "Insert parent node" },
-  { key: "F1", description: "Center mind map" },
-  { key: "F2", description: "Edit current node" },
-  { key: "↑", description: "Select previous node" },
-  { key: "↓", description: "Select next node" },
-  { key: "← / →", description: "Select nodes on the left/right" },
-  { key: "PageUp / Alt + ↑", description: "Move up" },
-  { key: "PageDown / Alt + ↓", description: "Move down" },
-  { key: "Ctrl + ↑", description: "Use two-sided layout" },
-  { key: "Ctrl + ←", description: "Use left-sided layout" },
-  { key: "Ctrl + →", description: "Use right-sided layout" },
-  { key: "Ctrl + C", description: "Copy" },
-  { key: "Ctrl + V", description: "Paste" },
-  { key: "Ctrl + \"+\"", description: "Zoom in mind map" },
-  { key: "Ctrl + \"-\"", description: "Zoom out mind map" },
-  { key: "Ctrl + 0", description: "Reset size" },
-  { key: "Delete", description: "Remove node" },
-];
-
-const Header = ({ 
-  showPdf, 
-  togglePdf, 
-  pdfAvailable, 
-  showChat, 
-  toggleChat,
-  onExportMindMap,
-  onOpenSummary,
-  onOpenFlowchart,
-  onOpenSequenceDiagram,
-}: HeaderProps) => {
-  const navigate = useNavigate();
+const Header = () => {
+  const [showFlowchartModal, setShowFlowchartModal] = useState(false);
+  const [showSequenceDiagramModal, setShowSequenceDiagramModal] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showMindmapModal, setShowMindmapModal] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [fileName, setFileName] = useState("mindmap");
+  const [shareLink, setShareLink] = useState("");
+  const [mindElixirInstance, setMindElixirInstance] = useState<MindElixirInstance | null>(null);
   const { toast } = useToast();
-  const [showShortcuts, setShowShortcuts] = useState(false);
+  const navigate = useNavigate();
 
-  const handleBack = () => {
+  // Handle mind map instance being ready
+  const handleMindMapReady = (instance: MindElixirInstance) => {
+    setMindElixirInstance(instance);
+  };
+
+  // Generate a shareable link (mock implementation)
+  const generateShareLink = () => {
+    const baseUrl = window.location.origin;
+    const randomId = Math.random().toString(36).substring(2, 10);
+    return `${baseUrl}/shared/${randomId}`;
+  };
+
+  // Handle share button click
+  const handleShare = () => {
+    const link = generateShareLink();
+    setShareLink(link);
+    setShowShareDialog(true);
+  };
+
+  // Copy share link to clipboard
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(shareLink);
+    toast({
+      title: "Link copied",
+      description: "Share link copied to clipboard",
+    });
+  };
+
+  // Handle export as PNG
+  const handleExportPNG = () => {
+    if (mindElixirInstance) {
+      downloadMindMapAsPNG(mindElixirInstance, fileName);
+      setShowExportDialog(false);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.png`,
+      });
+    }
+  };
+
+  // Handle export as SVG
+  const handleExportSVG = () => {
+    if (mindElixirInstance) {
+      downloadMindMapAsSVG(mindElixirInstance, fileName);
+      setShowExportDialog(false);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.svg`,
+      });
+    }
+  };
+
+  // Handle export as JSON
+  const handleExportJSON = () => {
+    if (mindElixirInstance) {
+      const data = mindElixirInstance.getData();
+      const dataStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `${fileName}.json`;
+      link.href = url;
+      link.click();
+      setShowExportDialog(false);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.json`,
+      });
+    }
+  };
+
+  // Handle delete confirmation
+  const handleDelete = () => {
+    // Clear session storage
+    sessionStorage.removeItem("mindMapData");
+    sessionStorage.removeItem("pdfText");
+    sessionStorage.removeItem("pdfData");
+    sessionStorage.removeItem("uploadedPdfData");
+    
+    setShowDeleteDialog(false);
+    toast({
+      title: "Mind map deleted",
+      description: "Your mind map has been deleted",
+    });
+    
+    // Navigate back to upload page
     navigate("/");
   };
 
-  const handleUploadClick = () => {
-    navigate("/");
+  // Handle save (mock implementation)
+  const handleSave = () => {
+    if (mindElixirInstance) {
+      const data = mindElixirInstance.getData();
+      // In a real app, you would save this to a database
+      console.log("Saving mind map:", data);
+      localStorage.setItem(`mindmap_${fileName}`, JSON.stringify(data));
+      
+      setShowSaveDialog(false);
+      toast({
+        title: "Mind map saved",
+        description: `Your mind map "${fileName}" has been saved`,
+      });
+    }
   };
 
-  const toggleShortcuts = () => {
-    setShowShortcuts(prev => !prev);
-  };
+  // Check if we have PDF data
+  useEffect(() => {
+    const pdfData = sessionStorage.getItem("pdfData") || sessionStorage.getItem("uploadedPdfData");
+    if (!pdfData) {
+      toast({
+        title: "No PDF loaded",
+        description: "Please upload a PDF to use all features",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
 
   return (
-    <div className="flex h-12 border-b shadow-sm">
-      {/* Left sidebar with brain logo and back button */}
-      <div className="w-14 bg-white flex flex-col items-center py-3 border-r">
-        {/* App logo */}
-        <div className="mb-2">
-          <Brain className="h-6 w-6 text-gray-700" />
+    <header className="bg-white border-b p-4 flex justify-between items-center">
+      <div className="flex items-center gap-3">
+        <div className="bg-black text-white p-2 rounded-md">
+          <FileUp className="h-5 w-5" />
         </div>
-        
-        {/* Back button */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-gray-700 h-8 w-8 p-0" onClick={handleBack}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>Back to home</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <h1 className="text-xl font-bold">MapMyPaper</h1>
       </div>
       
-      {/* Top header with icons */}
-      <div className="h-12 bg-white flex items-center justify-between px-4 w-full">
-        {/* Left spacing */}
-        <div className="w-20"></div>
-        
-        {/* Center section with main tools */}
-        <div className="flex items-center justify-center space-x-4">
-          <TooltipProvider>
-            {/* PDF toggle */}
-            {pdfAvailable && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost" 
-                    size="sm"
-                    onClick={togglePdf}
-                    className={`px-2 h-8 ${showPdf ? 'text-blue-600' : 'text-gray-500'}`}
-                  >
-                    <FileText className="h-5 w-5 mr-1" />
-                    <span className="text-xs">PDF</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Toggle PDF view</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            
-            {/* Chat toggle */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost" 
-                  size="sm"
-                  onClick={toggleChat}
-                  className={`px-2 h-8 ${showChat ? 'text-blue-600' : 'text-gray-500'}`}
-                >
-                  <MessageSquare className="h-5 w-5 mr-1" />
-                  <span className="text-xs">Chat</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Toggle research assistant</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            {/* Flowchart button */}
-            {onOpenFlowchart && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={onOpenFlowchart}
-                    className="text-gray-500 px-2 h-8"
-                  >
-                    <GitBranch className="h-5 w-5 mr-1" />
-                    <span className="text-xs">Flowchart</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Generate flowchart</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            
-            {/* Sequence Diagram button */}
-            {onOpenSequenceDiagram && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={onOpenSequenceDiagram}
-                    className="text-gray-500 px-2 h-8"
-                  >
-                    <Network className="h-5 w-5 mr-1" />
-                    <span className="text-xs">Sequence</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Generate sequence diagram</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            
-            {/* Summary button */}
-            {onOpenSummary && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={onOpenSummary}
-                    className="text-gray-500 px-2 h-8"
-                  >
-                    <FileDigit className="h-5 w-5 mr-1" />
-                    <span className="text-xs">Summary</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>View summary</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </TooltipProvider>
-        </div>
-        
-        {/* Right section with utility tools */}
-        <div className="flex items-center space-x-2">
-          <TooltipProvider>
-            {/* Upload button */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="text-gray-500 h-8 w-8"
-                  onClick={handleUploadClick}
-                >
-                  <Upload className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Upload new PDF</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            {/* Export dropdown */}
-            {onExportMindMap && (
-              <DropdownMenu>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-gray-500 h-8 w-8">
-                        <Download className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Export mind map</p>
-                  </TooltipContent>
-                </Tooltip>
-                <DropdownMenuContent align="end" side="bottom">
-                  <DropdownMenuItem onClick={() => onExportMindMap('svg')}>
-                    Download as SVG
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onExportMindMap('png')}>
-                    Download as PNG
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            
-            {/* Keyboard shortcuts */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="text-gray-500 h-8 w-8"
-                  onClick={toggleShortcuts}
-                >
-                  <Keyboard className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Keyboard shortcuts</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+      <div className="flex items-center gap-3">
+        <Button variant="outline" size="sm" onClick={() => navigate("/")}>
+          <Upload className="h-4 w-4 mr-2" />
+          Upload New
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <GitBranchPlus className="h-4 w-4 mr-2" />
+              Create
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setShowFlowchartModal(true)}>
+              <GitCommitHorizontal className="h-4 w-4 mr-2" />
+              Flowchart
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowSequenceDiagramModal(true)}>
+              <ListOrdered className="h-4 w-4 mr-2" />
+              Sequence Diagram
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowMindmapModal(true)}>
+              <Network className="h-4 w-4 mr-2" />
+              Mindmap
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowSummaryModal(true)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Summary
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Button variant="outline" size="sm" onClick={() => setShowExportDialog(true)}>
+          <Download className="h-4 w-4 mr-2" />
+          Export
+        </Button>
+
+        <Button variant="outline" size="sm" onClick={() => setShowSaveDialog(true)}>
+          <Save className="h-4 w-4 mr-2" />
+          Save
+        </Button>
+
+        <Button variant="outline" size="sm" onClick={handleShare}>
+          <Share2 className="h-4 w-4 mr-2" />
+          Share
+        </Button>
+
+        <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(true)}>
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </Button>
       </div>
-      
-      {/* Keyboard shortcuts panel */}
-      {showShortcuts && (
-        <div 
-          className="absolute top-12 right-4 p-4 bg-white shadow-md rounded-md w-72 max-h-96 overflow-y-auto z-50"
-        >
-          <div className="flex justify-between items-center mb-3">
-            <h4 className="text-sm font-medium">Keyboard Shortcuts</h4>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-6 w-6 p-0" 
-              onClick={toggleShortcuts}
-            >
-              ✕
+
+      {/* Export Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Mind Map</DialogTitle>
+            <DialogDescription>
+              Choose a format to export your mind map
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="filename" className="text-right">
+                File name
+              </Label>
+              <Input
+                id="filename"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleExportPNG}>
+              Export as PNG
+            </Button>
+            <Button variant="outline" onClick={handleExportSVG}>
+              Export as SVG
+            </Button>
+            <Button onClick={handleExportJSON}>Export as JSON</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Mind Map</DialogTitle>
+            <DialogDescription>
+              Share this link with others to view your mind map
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center space-x-2">
+            <Input value={shareLink} readOnly />
+            <Button variant="outline" onClick={copyShareLink}>
+              Copy
             </Button>
           </div>
-          <div className="space-y-2 text-xs">
-            {keyboardShortcuts.map((shortcut, index) => (
-              <div key={index} className="flex justify-between">
-                <span className="font-medium px-1.5 py-0.5 bg-gray-100 rounded">{shortcut.key}</span>
-                <span className="text-gray-600">{shortcut.description}</span>
-              </div>
-            ))}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Mind Map</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this mind map? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Mind Map</DialogTitle>
+            <DialogDescription>
+              Enter a name to save your mind map
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="save-filename" className="text-right">
+                File name
+              </Label>
+              <Input
+                id="save-filename"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Flowchart Modal */}
+      <FlowchartModal
+        isOpen={showFlowchartModal}
+        onClose={() => setShowFlowchartModal(false)}
+      />
+
+      {/* Sequence Diagram Modal */}
+      <SequenceDiagramModal
+        isOpen={showSequenceDiagramModal}
+        onClose={() => setShowSequenceDiagramModal(false)}
+      />
+
+      {/* Summary Modal */}
+      <SummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+      />
+      
+      {/* Mindmap Modal */}
+      <MindmapModal
+        isOpen={showMindmapModal}
+        onClose={() => setShowMindmapModal(false)}
+      />
+    </header>
   );
 };
 

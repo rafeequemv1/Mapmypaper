@@ -24,6 +24,10 @@ export const useMermaidInit = () => {
         noteMargin: 10,
         messageMargin: 35
       },
+      mindmap: {
+        padding: 16,
+        useMaxWidth: false
+      },
       logLevel: 3 // Enables warning logs for debugging
     });
   }, []);
