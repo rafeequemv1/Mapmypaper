@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -43,10 +44,14 @@ const MindMap = () => {
               try {
                 // Get the node id from the data attribute
                 const nodeId = element.getAttribute('data-nodeid');
-                if (nodeId && mindElixirInstance.nodeData) {
-                  // Try to directly access nodes and expand using nodeData structure
-                  // Mind-elixir exposes a nodeData object that contains all nodes
-                  mindElixirInstance.expandNode?.(nodeId);
+                if (nodeId) {
+                  // Use a workaround to find and expand nodes
+                  // We need to find the Topic object that corresponds to this node ID
+                  // Some versions of mind-elixir require a Topic object, not a string ID
+                  const nodeObj = mindElixirInstance.get(nodeId);
+                  if (nodeObj) {
+                    mindElixirInstance.expandNode?.(nodeObj);
+                  }
                 }
               } catch (nodeError) {
                 console.info("Error expanding individual node:", nodeError);
