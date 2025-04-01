@@ -4,9 +4,9 @@ import { useSearchParams } from "@/hooks/useSearchParams";
 import { useToast } from "@/hooks/use-toast";
 import { useChat } from "@/components/chat/useChat";
 import { Skeleton } from "@/components/ui/skeleton";
+import MindElixirWrapper from "./MindElixirWrapper";
 
-// Use React.lazy instead of Next.js dynamic import
-const MindElixir = lazy(() => import('mind-elixir'));
+// Use React.lazy for PdfViewer only
 const PdfViewer = lazy(() => import('@/components/PdfViewer'));
 
 interface PanelStructureProps {
@@ -19,7 +19,6 @@ interface PanelStructureProps {
   onExplainText: (text: string) => void;
 }
 
-// Add a new prop to handle image capture
 const PanelStructure: React.FC<PanelStructureProps> = ({
   showPdf,
   showChat,
@@ -64,10 +63,9 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   };
 
   const options = {
-    el: '#mindmap',
     newTopicName: 'Topic',
     data: initialData,
-    direction: 'LEFT', // We'll apply the direction property to MindElixir component
+    direction: 'LEFT', // String value instead of MindElixir.LEFT
     locale: 'en',
     draggable: true,
     editable: true,
@@ -96,7 +94,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
         console.log('focusNode', node);
         return true;
       },
-    },
+    }
   };
 
   const handleMindMapReady = (mindMap: any) => {
@@ -133,23 +131,17 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
       {/* MindMap Panel */}
       <div className={`flex-1 h-full ${showChat ? 'border-r border-gray-200' : ''} overflow-hidden`}>
         <div className="h-full" style={{ overflow: 'auto' }}>
-          <div id="mindmap" className="h-full" style={{ overflow: 'hidden' }}>
+          <div className="h-full" style={{ overflow: 'hidden' }}>
             {loadingMindmap ? (
               <div className="h-full flex items-center justify-center">
                 <Skeleton className="w-[200px] h-[30px]" />
               </div>
             ) : null}
-            <Suspense fallback={<div className="h-full flex items-center justify-center"><Skeleton className="w-[200px] h-[30px]" /></div>}>
-              <MindElixir
-                options={options}
-                onload={(mind: any) => {
-                  console.log("Mind map loaded:", mind);
-                  handleMindMapReady(mind);
-                  setLoadingMindmap(false);
-                }}
-                className="h-full"
-              />
-            </Suspense>
+            <MindElixirWrapper
+              options={options}
+              onMindMapReady={handleMindMapReady}
+              setLoadingMindmap={setLoadingMindmap}
+            />
           </div>
         </div>
       </div>
