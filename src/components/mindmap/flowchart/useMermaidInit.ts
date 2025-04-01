@@ -31,7 +31,6 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       },
       mindmap: {
         padding: 16,
-        useMaxWidth: false // Use correct property
       },
       // Add custom flowchart styles
       themeVariables: {

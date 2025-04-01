@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, RefObject } from "react";
 import mermaid from "mermaid";
 
@@ -49,8 +48,7 @@ const FlowchartPreview = ({
           // Ensure mindmaps have proper layout
           mindmap: {
             padding: 10,
-            // Fix: Remove maxWidth property as it's not in the MindmapDiagramConfig type
-            useMaxWidth: true // This property is valid
+            // Remove invalid useMaxWidth property
           }
         });
         
@@ -118,6 +116,8 @@ const FlowchartPreview = ({
             font-weight: 500;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           }
+          
+          /* Add more styles */
           .node-circle {
             fill-opacity: 0.8 !important;
           }
@@ -192,20 +192,8 @@ const FlowchartPreview = ({
             fill: #F1F0FB !important;
             stroke: #D946EF !important;
           }
-          .node.decision > path {
-            fill: #E5DEFF !important;
-            stroke: #8B5CF6 !important;
-          }
-          .node.start > circle {
-            fill: #F2FCE2 !important;
-            stroke: #22C55E !important;
-          }
-          .node.end > circle {
-            fill: #FFDEE2 !important;
-            stroke: #EF4444 !important;
-          }
           
-          /* Also apply these styles for mindmap nodes */
+          /* Enhanced mindmap node styles */
           .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse, .mindmap-node > polygon {
             rx: 10px;
             ry: 10px;

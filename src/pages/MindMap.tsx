@@ -168,7 +168,7 @@ const MindMap = () => {
     setTimeout(applyLineBreaksToNodes, 200);
   }, []);
 
-  const handleExportMindMap = useCallback(async (type: 'svg' | 'png') => {
+  const handleExportMindMap = useCallback(async () => {
     if (!mindMap) {
       toast({
         title: "Export Failed",
@@ -179,13 +179,8 @@ const MindMap = () => {
     }
 
     try {
-      let blob;
-      
-      if (type === 'svg') {
-        blob = mindMap.exportSvg();
-      } else if (type === 'png') {
-        blob = await mindMap.exportPng();
-      }
+      // Only export SVG
+      const blob = mindMap.exportSvg();
 
       if (!blob) {
         throw new Error("Failed to generate export data");
@@ -195,7 +190,7 @@ const MindMap = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `mindmap.${type}`;
+      a.download = `mindmap.svg`;
       document.body.appendChild(a);
       a.click();
       
@@ -205,7 +200,7 @@ const MindMap = () => {
 
       toast({
         title: "Export Successful",
-        description: `Your mind map has been exported as ${type.toUpperCase()}.`
+        description: "Your mind map has been exported as SVG."
       });
     } catch (error) {
       console.error("Export error:", error);

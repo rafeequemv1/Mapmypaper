@@ -230,8 +230,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         contextMenu: true, 
         tools: {
           zoom: true,
-          create: false, // Remove create button
+          create: true, // Enable create button
           edit: true,
+          layout: true, // Enable layout button
         },
         theme: colorfulTheme,
         nodeMenu: true,
@@ -498,6 +499,42 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
+      // Enhanced clickability for nodes
+      if (containerRef.current) {
+        const topicElements = containerRef.current.querySelectorAll('.mind-elixir-topic');
+        topicElements.forEach((element) => {
+          element.addEventListener('click', (e) => {
+            // Ensure the click event propagates to the mind map
+            if (mind.currentNode && mind.currentNode.nodeObj) {
+              // Force open the edit menu if needed
+              mind.updateNodeStyle(mind.currentNode);
+            }
+          });
+        });
+      }
+      
+      // Add observer for node additions to ensure they're properly initialized
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach((node) => {
+              if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
+                node.addEventListener('click', (e) => {
+                  // Force the editor to show
+                  if (mind.currentNode && mind.currentNode.nodeObj) {
+                    mind.updateNodeStyle(mind.currentNode);
+                  }
+                });
+              }
+            });
+          }
+        });
+      });
+      
+      if (containerRef.current) {
+        observer.observe(containerRef.current, { childList: true, subtree: true });
+      }
+      
       // Enhance connection lines with arrows and colors from theme
       const enhanceConnectionLines = () => {
         // Add arrowhead definition to SVG
@@ -557,7 +594,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Show a toast notification to inform users about right-click functionality
       toast({
         title: "Mind Map Ready",
-        description: "Right-click on any node to access options including summary generation.",
+        description: "Click on any node to edit it. Right-click for more options.",
         duration: 5000,
       });
       
