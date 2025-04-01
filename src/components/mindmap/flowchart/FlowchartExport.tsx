@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Download, Palette } from "lucide-react";
+import { Download, Palette, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
@@ -67,6 +67,24 @@ const FlowchartExport = ({ previewRef, onToggleTheme }: FlowchartExportProps) =>
     }
   };
 
+  // Function to open Crisp chat
+  const openCrispChat = () => {
+    if (window.$crisp) {
+      window.$crisp.push(["do", "chat:open"]);
+      
+      toast({
+        title: "Chat Opened",
+        description: "Our support team is ready to help you.",
+      });
+    } else {
+      toast({
+        title: "Chat Unavailable",
+        description: "The chat service is currently unavailable. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex gap-2">
       <Button onClick={exportSvg} variant="outline" size="sm" disabled={isExporting}>
@@ -79,6 +97,9 @@ const FlowchartExport = ({ previewRef, onToggleTheme }: FlowchartExportProps) =>
           Change Theme
         </Button>
       )}
+      <Button onClick={openCrispChat} variant="outline" size="sm">
+        <MessageCircle className="h-4 w-4" />
+      </Button>
     </div>
   );
 };
