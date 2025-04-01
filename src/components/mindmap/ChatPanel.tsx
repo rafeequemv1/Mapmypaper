@@ -92,16 +92,22 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
 
   // Activate citations in messages when they are rendered
   useEffect(() => {
-    const messageContainers = document.querySelectorAll('.ai-message-content');
-    
-    messageContainers.forEach(container => {
-      activateCitations(container as HTMLElement, (citation) => {
-        console.log("Citation clicked:", citation);
-        if (onScrollToPdfPosition) {
-          onScrollToPdfPosition(citation);
-        }
+    // Use a longer timeout to ensure the DOM is fully rendered
+    const activationTimeout = setTimeout(() => {
+      const messageContainers = document.querySelectorAll('.ai-message-content');
+      
+      messageContainers.forEach(container => {
+        activateCitations(container as HTMLElement, (citation) => {
+          console.log("Desktop Citation clicked:", citation);
+          if (onScrollToPdfPosition) {
+            // Directly invoke the scroll function with sufficient delay to ensure proper handling
+            onScrollToPdfPosition(citation);
+          }
+        });
       });
-    });
+    }, 200); // Increased timeout for more reliable activation
+    
+    return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
   const handleSendMessage = async () => {

@@ -35,7 +35,7 @@ export const formatAIResponse = (content: string): string => {
   // Improved format for numeric page citations [citation:page123] -> small circular badge with just the number 123
   formattedContent = formattedContent.replace(
     /\[citation:page(\d+)\]/g, 
-    '<span class="citation" data-citation="page$1" role="button" tabindex="0" title="Click to navigate to page $1"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm">$1</sup></span>'
+    '<span class="citation" data-citation="page$1" role="button" tabindex="0" title="Click to navigate to page $1"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">$1</sup></span>'
   );
   
   // Standard citation format as fallback - showing citation text in circles
@@ -46,11 +46,11 @@ export const formatAIResponse = (content: string): string => {
       const pageMatch = citation.match(/page\s*(\d+)/i);
       if (pageMatch) {
         const pageNum = pageMatch[1];
-        return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to page ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm">${pageNum}</sup></span>`;
+        return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to page ${pageNum}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${pageNum}</sup></span>`;
       }
       // If no page number found, just show the first few characters
       const shortCite = citation.length > 3 ? citation.substring(0, 3) : citation;
-      return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm">${shortCite}</sup></span>`;
+      return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${shortCite}</sup></span>`;
     }
   );
   
@@ -139,31 +139,29 @@ export const activateCitations = (container: HTMLElement, onCitationClick: (cita
         e.stopPropagation();
         console.log("Citation clicked: ", citationData);
         
-        // Dispatch a custom event to scroll to the page
+        // First directly call the callback to ensure it's processed
+        onCitationClick(citationData);
+        
+        // Dispatch the custom event with a slight delay to ensure main callback completes first
         if (citationData.toLowerCase().startsWith('page')) {
           const pageNumber = parseInt(citationData.replace(/[^\d]/g, ''), 10);
           if (!isNaN(pageNumber)) {
             // Create and dispatch custom event with page number
-            const event = new CustomEvent('scrollToPdfPage', { 
-              detail: { pageNumber }
-            });
-            window.dispatchEvent(event);
-            
-            // Also try direct access to PDF viewer if available
-            const pdfViewerElement = document.querySelector('[data-pdf-viewer]');
-            if (pdfViewerElement && typeof (pdfViewerElement as any).scrollToPage === 'function') {
-              (pdfViewerElement as any).scrollToPage(pageNumber);
-            }
+            setTimeout(() => {
+              const event = new CustomEvent('scrollToPdfPage', { 
+                detail: { pageNumber }
+              });
+              window.dispatchEvent(event);
+            }, 50);
           }
         }
-        
-        onCitationClick(citationData);
       });
       
       // Add keyboard event listener for accessibility
       newCitationElement.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          e.stopPropagation();
           console.log("Citation activated by keyboard: ", citationData);
           onCitationClick(citationData);
         }
@@ -171,11 +169,13 @@ export const activateCitations = (container: HTMLElement, onCitationClick: (cita
       
       // Add hover effect for better UX
       newCitationElement.addEventListener('mouseenter', () => {
-        newCitationElement.classList.add('scale-110', 'shadow-md');
+        newCitationElement.style.transform = 'scale(1.1)';
+        newCitationElement.style.boxShadow = '0 0 3px 2px rgba(0,0,0,0.1)';
       });
       
       newCitationElement.addEventListener('mouseleave', () => {
-        newCitationElement.classList.remove('scale-110', 'shadow-md');
+        newCitationElement.style.transform = 'scale(1)';
+        newCitationElement.style.boxShadow = '';
       });
       
       // Add tooltip for better UX - show page info on hover

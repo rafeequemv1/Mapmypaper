@@ -41,7 +41,10 @@ const PanelStructure = ({
 
   // Function to handle citation clicks and scroll PDF to that position
   const handleScrollToPdfPosition = (position: string) => {
-    if (!pdfViewerRef.current) return;
+    if (!pdfViewerRef.current) {
+      console.log("PDF viewer reference is not available yet");
+      return;
+    }
     
     console.log("Scrolling to position:", position);
     
@@ -54,14 +57,23 @@ const PanelStructure = ({
         // Ensure PDF panel is visible first - ALWAYS open PDF if closed
         if (!showPdf) {
           togglePdf(); // Always open the PDF panel when citation is clicked
+          
+          // Use a longer timeout to ensure the panel is fully visible before scrolling
+          setTimeout(() => {
+            if (pdfViewerRef.current) {
+              console.log("Executing delayed scroll to page:", pageNumber);
+              pdfViewerRef.current.scrollToPage(pageNumber);
+            }
+          }, 500); // Increased timeout for panel transition
+        } else {
+          // If PDF is already visible, scroll immediately with a small delay
+          setTimeout(() => {
+            if (pdfViewerRef.current) {
+              console.log("Executing immediate scroll to page:", pageNumber);
+              pdfViewerRef.current.scrollToPage(pageNumber);
+            }
+          }, 100);
         }
-        
-        // Use setTimeout to ensure the panel is visible before scrolling
-        setTimeout(() => {
-          if (pdfViewerRef.current) {
-            pdfViewerRef.current.scrollToPage(pageNumber);
-          }
-        }, 100);
       }
     }
   };

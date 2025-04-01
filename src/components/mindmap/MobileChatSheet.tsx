@@ -30,14 +30,17 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
         
         messageContainers.forEach(container => {
           activateCitations(container as HTMLElement, (citation) => {
-            console.log("Citation clicked:", citation);
+            console.log("Mobile Citation clicked:", citation);
             if (onScrollToPdfPosition) {
               onScrollToPdfPosition(citation);
-              setIsSheetOpen(false); // Close sheet after citation click on mobile
+              // Small delay to ensure event is processed before closing sheet
+              setTimeout(() => {
+                setIsSheetOpen(false); // Close sheet after citation click on mobile
+              }, 50);
             }
           });
         });
-      }, 100); // Small delay to ensure DOM is ready
+      }, 200); // Increased timeout to ensure DOM is fully ready
     }
   }, [messages, isSheetOpen, onScrollToPdfPosition]);
   
