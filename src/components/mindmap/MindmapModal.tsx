@@ -9,11 +9,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Activity } from "lucide-react";
 import FlowchartEditor from "./flowchart/FlowchartEditor";
 import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
-import { Activity } from "lucide-react";
 import useMindmapGenerator from "./flowchart/useMindmapGenerator";
 
 interface MindmapModalProps {
