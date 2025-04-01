@@ -31,15 +31,24 @@ const MindMap = () => {
     // Expand all nodes when mindmap is ready
     if (mindElixirInstance) {
       try {
-        console.log("Attempting to expand root node");
+        console.log("Attempting to expand all nodes");
         
-        // Fix: Properly type-check and access the root node to match the Topic type
-        if (mindElixirInstance.nodeData && mindElixirInstance.nodeData.root) {
-          // Use the expandAll method instead which is safer
-          mindElixirInstance.expandAll();
+        // Use the correct approach to expand nodes based on the MindElixir API
+        if (mindElixirInstance.nodeData) {
+          // Try to find all nodes and expand them manually
+          const nodes = mindElixirInstance.getAllDataNodes();
+          if (nodes && nodes.length > 0) {
+            nodes.forEach(node => {
+              try {
+                mindElixirInstance.expandNode(node);
+              } catch (nodeError) {
+                console.info("Error expanding individual node:", nodeError);
+              }
+            });
+          }
         }
       } catch (error) {
-        console.info("Error expanding root node:", error);
+        console.info("Error expanding nodes:", error);
       }
     }
   }, [navigate, mindElixirInstance]);
