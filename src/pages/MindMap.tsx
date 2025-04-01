@@ -33,18 +33,30 @@ const MindMap = () => {
       try {
         console.log("Attempting to expand all nodes");
         
-        // Use the correct approach to expand nodes based on the MindElixir API
+        // Use available methods in the MindElixir API to expand nodes
         if (mindElixirInstance.nodeData) {
-          // Try to find all nodes and expand them manually
-          const nodes = mindElixirInstance.getAllDataNodes();
-          if (nodes && nodes.length > 0) {
-            nodes.forEach(node => {
+          // Get access to the DOM elements representing the nodes
+          const topicElements = document.querySelectorAll('.map-title');
+          
+          // Loop through each node element
+          if (topicElements && topicElements.length > 0) {
+            topicElements.forEach((element) => {
               try {
-                mindElixirInstance.expandNode(node);
+                // Get the node id from the data attribute
+                const nodeId = element.getAttribute('data-nodeid');
+                if (nodeId && mindElixirInstance.reshapeNode) {
+                  // Try to reshape (expand) the node
+                  const node = mindElixirInstance.findNodeByTopic(nodeId);
+                  if (node) {
+                    mindElixirInstance.expandNode(node);
+                  }
+                }
               } catch (nodeError) {
                 console.info("Error expanding individual node:", nodeError);
               }
             });
+          } else {
+            console.info("No topic elements found to expand");
           }
         }
       } catch (error) {
