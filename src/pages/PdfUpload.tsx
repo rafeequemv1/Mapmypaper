@@ -76,6 +76,7 @@ const PdfUpload = () => {
       // Extract text from PDF
       setIsProcessing(true);
       const extractedText = await extractAndStorePdfText(pdfFile);
+      console.log("PDF text extracted, length:", extractedText.length);
       setPdfText(extractedText);
       
       // Store the uploaded PDF data in session storage
@@ -87,6 +88,16 @@ const PdfUpload = () => {
         }
       };
       reader.readAsDataURL(pdfFile);
+      
+      // Generate mindmap from the extracted text
+      try {
+        const generatedMindMap = await generateMindMapFromText(extractedText);
+        console.log("Mind map generated successfully");
+        setMindMapData(generatedMindMap);
+      } catch (mindmapError) {
+        console.error("Failed to generate mindmap:", mindmapError);
+        // Continue to mindmap page even if mindmap generation fails
+      }
       
       // Navigate to mindmap view
       navigate("/mindmap");
@@ -117,21 +128,14 @@ const PdfUpload = () => {
     
     try {
       // Generate mind map data from manual text
-      console.log("PDF processing started");
+      console.log("Text processing started");
       const mindMapData = await generateMindMapFromText(manualText);
       console.log("Mind map data generated:", mindMapData ? "Successfully" : "Failed");
       setMindMapData(mindMapData);
 
       // Store the manual text and mind map data in session storage
       sessionStorage.setItem("pdfText", manualText);
-      sessionStorage.setItem("mindMapData", JSON.stringify({
-        nodeData: {
-          id: 'root',
-          topic: 'Mind Map',
-          children: []
-        }
-      }));
-
+      
       // Navigate to the mind map page
       navigate("/mindmap");
     } catch (error) {
