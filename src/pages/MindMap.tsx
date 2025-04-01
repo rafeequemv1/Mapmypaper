@@ -32,10 +32,12 @@ const MindMap = () => {
     if (mindElixirInstance) {
       try {
         console.log("Attempting to expand root node");
-        // Access root safely using optional chaining
-        const rootNode = mindElixirInstance.nodeData?.root;
-        if (rootNode) {
-          mindElixirInstance.expandNode(rootNode);
+        // Check if nodeData and its root property exist before accessing
+        if (mindElixirInstance.nodeData && 'root' in mindElixirInstance.nodeData) {
+          const rootNode = mindElixirInstance.nodeData.root;
+          if (rootNode) {
+            mindElixirInstance.expandNode(rootNode);
+          }
         }
       } catch (error) {
         console.info("Error expanding root node:", error);
