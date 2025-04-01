@@ -11,7 +11,7 @@ interface MindMapViewerProps {
   onExplainText?: (text: string) => void;
 }
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText }: MindMapViewerProps) => {
+const MindMapViewer: React.FC<MindMapViewerProps> = ({ isMapGenerated, onMindMapReady, onExplainText }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<any>(null);
   const { toast } = useToast();

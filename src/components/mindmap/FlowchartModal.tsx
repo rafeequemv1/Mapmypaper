@@ -1,12 +1,14 @@
+
 import React, { useState, useCallback } from 'react';
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalCloseButton,
-} from "@/components/ui/modal"
-import { Button } from "@/components/ui/button"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogClose,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFlowchartGenerator } from './flowchart/useFlowchartGenerator';
 import FlowchartEditor from './flowchart/FlowchartEditor';
@@ -18,7 +20,6 @@ interface FlowchartModalProps {
 
 const FlowchartModal: React.FC<FlowchartModalProps> = ({ open, onOpenChange }) => {
   const { toast } = useToast();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { mermaidCode, loading, error, generateFlowchart, handleCodeChange } = useFlowchartGenerator();
 
   const handleGenerateFlowchart = useCallback(async () => {
@@ -35,38 +36,33 @@ const FlowchartModal: React.FC<FlowchartModalProps> = ({ open, onOpenChange }) =
   }, [generateFlowchart, toast]);
 
   return (
-    <Modal open={open} onOpenChange={onOpenChange}>
-      <ModalContent className="max-w-[90%]" style={{ height: '80vh' }}>
-        <ModalHeader>
-          <p className="text-lg font-semibold">Generate Flowchart</p>
-          <ModalCloseButton />
-        </ModalHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[90%]" style={{ height: '80vh' }}>
+        <DialogHeader>
+          <DialogTitle>Generate Flowchart</DialogTitle>
+          <DialogClose />
+        </DialogHeader>
 
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-auto">
           <FlowchartEditor 
-            mermaidCode={mermaidCode}
+            code={mermaidCode}
+            error={error}
             isGenerating={loading}
-            generateFlowchart={generateFlowchart}
-            handleCodeChange={handleCodeChange}
+            onCodeChange={(e) => handleCodeChange(e.target.value)}
+            onRegenerate={handleGenerateFlowchart}
           />
-
-          {error && (
-            <div className="text-red-500 mt-2">
-              Error: {error}
-            </div>
-          )}
         </div>
 
-        <ModalFooter>
+        <DialogFooter>
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" onClick={handleGenerateFlowchart} disabled={loading}>
             {loading ? "Generating..." : "Generate Flowchart"}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

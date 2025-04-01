@@ -16,7 +16,7 @@ declare module 'mind-elixir' {
   }
 
   export interface MindElixirInstance {
-    init: (options: any) => void;
+    init: (options?: any) => void;
     getData: () => MindElixirData;
     setData: (data: MindElixirData) => void;
     expandNode: (id: string) => void;

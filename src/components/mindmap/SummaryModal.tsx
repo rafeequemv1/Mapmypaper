@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import {
   AlertDialog,
@@ -8,12 +9,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { generateStructuredSummary } from '@/services/geminiService';
+import { Loader2 } from "lucide-react";
 
 interface SummaryModalProps {
   open: boolean;
@@ -69,7 +70,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             placeholder="Generated summary will appear here..."
             value={summaryText}
             readOnly
-            className="resize-none"
+            className="resize-none h-72 overflow-auto"
           />
         </div>
         <AlertDialogFooter>
@@ -78,8 +79,9 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             type="button" 
             onClick={handleGenerate} 
             disabled={isGenerating}
-            isLoading={isGenerating}
+            className="gap-2"
           >
+            {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
             {isGenerating ? 'Generating...' : 'Generate Summary'}
           </Button>
           <Button 

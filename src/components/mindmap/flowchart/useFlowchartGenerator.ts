@@ -15,12 +15,12 @@ export const defaultFlowchart = `flowchart TD
 export function useFlowchartGenerator() {
   const [mermaidCode, setMermaidCode] = useState<string>(defaultFlowchart);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   // Generate flowchart from PDF text
-  const generateFlowchart = async (pdfText: string) => {
+  const generateFlowchart = async (pdfText: string): Promise<string> => {
     setLoading(true);
-    setError('');
+    setError(null);
     
     try {
       if (!pdfText || pdfText.trim() === '') {
@@ -33,7 +33,7 @@ export function useFlowchartGenerator() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate flowchart';
       setError(errorMessage);
-      return null;
+      return defaultFlowchart;
     } finally {
       setLoading(false);
     }

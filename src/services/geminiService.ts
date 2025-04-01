@@ -1,131 +1,140 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize the Google Generative AI client
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
+// Initialize the Google Generative AI with API key
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
 
-// Generate a mind map from text
-export async function generateMindMapFromText(text: string) {
+// Generate mind map data from PDF text
+export const generateMindMapFromText = async (text: string) => {
   try {
+    // Create a generative model instance
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    
-    const prompt = `Create a mind map based on the following text. Format the response as a JSON object with a 'nodeData' property that has an 'id', 'topic', and 'children' array. Each child should have an 'id' and 'topic'. Make it detailed but focused, with clear hierarchical relationships:
 
-    ${text}`;
-    
+    // Prepare the prompt for mind map generation
+    const prompt = `
+      Create a hierarchical mind map structure from the following text. 
+      Format the response as a JSON object with the following structure:
+      {
+        "nodeData": {
+          "id": "root",
+          "topic": "Main Topic",
+          "children": [
+            {
+              "id": "1",
+              "topic": "Subtopic 1",
+              "children": [...]
+            },
+            {
+              "id": "2",
+              "topic": "Subtopic 2",
+              "children": [...]
+            }
+          ]
+        }
+      }
+      
+      Make sure to:
+      1. Identify the main topic as the central node
+      2. Extract key concepts as first-level nodes
+      3. Break down each concept into relevant subtopics
+      4. Use clear, concise language for each node
+      5. Maintain proper hierarchical relationships
+      6. Ensure each node has a unique ID
+      7. Keep topics short (under 10 words)
+      
+      Here's the text to analyze:
+      ${text.substring(0, 15000)}
+    `;
+
+    // Generate content
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const responseText = response.text();
+    const textResponse = response.text();
     
     // Extract JSON from the response
-    const jsonMatch = responseText.match(/```json([\s\S]*?)```/) || 
-                     responseText.match(/```([\s\S]*?)```/) ||
-                     [null, responseText];
-    
-    let jsonText = jsonMatch[1] || responseText;
-    
-    // Clean up the JSON text
-    jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '').trim();
-    
-    // Parse the JSON
-    const mindMapData = JSON.parse(jsonText);
-    return mindMapData;
+    const jsonMatch = textResponse.match(/```json\n([\s\S]*?)\n```/) || 
+                      textResponse.match(/```\n([\s\S]*?)\n```/) ||
+                      textResponse.match(/{[\s\S]*}/);
+                      
+    if (jsonMatch) {
+      const jsonStr = jsonMatch[0].replace(/```json\n|```\n|```/g, '');
+      return JSON.parse(jsonStr);
+    } else {
+      try {
+        return JSON.parse(textResponse);
+      } catch (e) {
+        console.error("Failed to parse JSON response:", e);
+        throw new Error("Invalid mind map data format received");
+      }
+    }
   } catch (error) {
     console.error("Error generating mind map:", error);
-    throw new Error("Failed to generate mind map");
+    throw new Error("Failed to generate mind map from text");
   }
-}
+};
 
-// Chat with Gemini about PDF content
-export async function chatWithGeminiAboutPdf(message: string) {
+// Add necessary exports for functions referenced in other components
+export const generateStructuredSummary = async (pdfText: string): Promise<string> => {
   try {
+    // Create a generative model instance
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    
-    const chat = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: "I'll share text from a PDF document. Please help me understand it." }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "I'd be happy to help you understand text from your PDF document. Please share the content or specific sections you'd like me to explain." }],
-        },
-      ],
-    });
-    
-    const result = await chat.sendMessage(message);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Error chatting with Gemini:", error);
-    throw new Error("Failed to chat with AI");
-  }
-}
 
-// Generate a structured summary from the PDF
-export async function generateStructuredSummary(text: string) {
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    
-    const prompt = `Create a structured summary of the following text. Include key points, main ideas, and conclusions. Format it with clear headings and bullet points:
+    // Prepare the prompt for summary generation
+    const prompt = `
+      Create a comprehensive, structured summary of the following text.
+      Include:
+      - Main topic and key points
+      - Important details and findings
+      - Conclusions or recommendations
+      
+      Format the summary with clear headings, bullet points, and paragraphs.
+      
+      Text to summarize:
+      ${pdfText.substring(0, 15000)}
+    `;
 
-    ${text}`;
-    
+    // Generate content
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
   } catch (error) {
-    console.error("Error generating summary:", error);
-    throw new Error("Failed to generate summary");
+    console.error('Error generating structured summary:', error);
+    throw new Error('Failed to generate summary');
   }
-}
+};
 
-// Generate a flowchart from PDF text
-export async function generateFlowchartFromPdf(text: string) {
+export const generateFlowchartFromPdf = async (pdfText: string): Promise<string> => {
   try {
+    // Create a generative model instance
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    
-    const prompt = `Create a Mermaid.js flowchart diagram based on the following text. Focus on processes, sequences, or hierarchies:
 
-    ${text}
-    
-    Please provide only the Mermaid.js code without any explanations. Use the flowchart syntax.`;
-    
+    // Prepare the prompt for flowchart generation
+    const prompt = `
+      Create a flowchart in Mermaid syntax based on the following text.
+      The flowchart should:
+      - Represent the main process or decision flow described in the text
+      - Use proper Mermaid flowchart syntax (TD direction)
+      - Include decision points with yes/no branches where appropriate
+      - Keep node text concise and clear
+      - Use appropriate shapes for different node types (process, decision, etc.)
+      
+      Return ONLY the Mermaid code without any explanation or markdown formatting.
+      
+      Text to analyze:
+      ${pdfText.substring(0, 10000)}
+    `;
+
+    // Generate content
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const mermaidCode = response.text().replace(/```mermaid\s|\s```/g, '').trim();
+    const flowchartCode = response.text().trim();
     
-    return mermaidCode;
+    // Clean up the response to ensure it's valid Mermaid code
+    return flowchartCode
+      .replace(/```mermaid\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
   } catch (error) {
-    console.error("Error generating flowchart:", error);
-    throw new Error("Failed to generate flowchart");
+    console.error('Error generating flowchart from PDF:', error);
+    throw new Error('Failed to generate flowchart');
   }
-}
-
-// Generate a mindmap representation from PDF text
-export async function generateMindmapFromPdf(text: string) {
-  return generateMindMapFromText(text); // Reuse existing function
-}
-
-// Generate a sequence diagram from PDF text
-export async function generateSequenceDiagramFromPdf(text: string) {
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    
-    const prompt = `Create a Mermaid.js sequence diagram based on the following text. Focus on interactions and flows between entities:
-
-    ${text}
-    
-    Please provide only the Mermaid.js code without any explanations. Use the sequenceDiagram syntax.`;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const mermaidCode = response.text().replace(/```mermaid\s|\s```/g, '').trim();
-    
-    return mermaidCode;
-  } catch (error) {
-    console.error("Error generating sequence diagram:", error);
-    throw new Error("Failed to generate sequence diagram");
-  }
-}
+};
