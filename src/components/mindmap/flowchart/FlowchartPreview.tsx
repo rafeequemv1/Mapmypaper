@@ -24,6 +24,7 @@ const FlowchartPreview = ({
 }: FlowchartPreviewProps) => {
   const [renderedSvg, setRenderedSvg] = useState<string>('');
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [scale, setScale] = useState<number>(1);
   
   // Format the code with theme
   const getFormattedCode = (): string => {
@@ -53,7 +54,7 @@ const FlowchartPreview = ({
         // First clear any previous errors
         setRenderError(null);
         
-        // Initialize Mermaid with the selected theme
+        // Initialize Mermaid with the selected theme and appropriate settings
         mermaid.initialize({
           startOnLoad: false,
           theme: theme,
@@ -65,6 +66,7 @@ const FlowchartPreview = ({
             diagramPadding: 8,
             htmlLabels: true,
             curve: 'basis',
+            useMaxWidth: !fitGraph, // Set to false for large diagrams
           },
           mindmap: {
             padding: fitGraph ? 50 : 100,
@@ -87,8 +89,48 @@ const FlowchartPreview = ({
     renderDiagram();
   }, [code, isGenerating, theme, fitGraph]);
 
+  // Add zoom controls
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(prev + 0.1, 2)); // Max zoom 200%
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => Math.max(prev - 0.1, 0.5)); // Min zoom 50%
+  };
+
+  const handleResetZoom = () => {
+    setScale(1);
+  };
+
   return (
     <div className="h-full flex flex-col">
+      {/* Zoom controls */}
+      {!isGenerating && renderedSvg && (
+        <div className="flex justify-end mb-2 gap-2">
+          <button 
+            onClick={handleZoomOut}
+            className="p-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            title="Zoom out"
+          >
+            -
+          </button>
+          <button 
+            onClick={handleResetZoom}
+            className="p-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            title="Reset zoom"
+          >
+            {Math.round(scale * 100)}%
+          </button>
+          <button 
+            onClick={handleZoomIn}
+            className="p-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            title="Zoom in"
+          >
+            +
+          </button>
+        </div>
+      )}
+      
       {/* Preview area */}
       <div 
         ref={previewRef}
@@ -99,7 +141,7 @@ const FlowchartPreview = ({
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
               <Skeleton className="w-[600px] h-[400px] mb-4 mx-auto rounded-md" />
-              <p className="text-gray-500">Generating mindmap...</p>
+              <p className="text-gray-500">Generating flowchart...</p>
             </div>
           </div>
         ) : renderError || error ? (
@@ -112,6 +154,11 @@ const FlowchartPreview = ({
         ) : (
           <div
             className="w-full h-full flex items-center justify-center"
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center',
+              transition: 'transform 0.2s ease-out'
+            }}
             dangerouslySetInnerHTML={{ __html: renderedSvg }}
           />
         )}

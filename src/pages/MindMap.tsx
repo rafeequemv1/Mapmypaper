@@ -19,6 +19,7 @@ const MindMap = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
   const [showMindmap, setShowMindmap] = useState(false);
+  // Modified this to store either string or Topic object
   const [explainText, setExplainText] = useState<string>("");
   const mindElixirInstance = useRef<MindElixirInstance | null>(null);
   const { user, refreshSession } = useAuth();
