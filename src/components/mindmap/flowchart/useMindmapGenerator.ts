@@ -720,4 +720,23 @@ const useMindmapGenerator = () => {
       processedLines.push('classDef discussion fill:#111111,color:#ffffff,stroke:#000000');
       processedLines.push('classDef conclusion fill:#000000,color:#ffffff,stroke:#000000');
       processedLines.push('classDef reference fill:#111111,color:#ffffff,stroke:#000000');
-      processedLines.push('classDef limitation fill:#000000,color:#ffffff,
+      processedLines.push('classDef limitation fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef future fill:#111111,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef theory fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef analysis fill:#111111,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef synthesis fill:#000000,color:#ffffff,stroke:#000000');
+      processedLines.push('classDef evaluation fill:#111111,color:#ffffff,stroke:#000000');
+    }
+    
+    return processedLines.join('\n');
+  };
+
+  return {
+    code,
+    error,
+    isGenerating,
+    generateMindmap
+  };
+};
+
+export default useMindmapGenerator;
