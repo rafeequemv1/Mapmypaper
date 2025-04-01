@@ -7,6 +7,7 @@ import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import MermaidMindmapModal from "@/components/mindmap/MermaidMindmapModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
+import TreemapModal from "@/components/mindmap/TreemapModal";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -15,6 +16,7 @@ const MindMap = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
   const [showMermaidMindmap, setShowMermaidMindmap] = useState(false);
+  const [showTreemap, setShowTreemap] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
   const [pdfImagesExtracted, setPdfImagesExtracted] = useState(false);
@@ -182,7 +184,7 @@ const MindMap = () => {
         if (pdfDataUrl) {
           // Load pdfjs dynamically
           const pdfjs = await import('pdfjs-dist');
-          // Set worker path explicitly with CDNJS URL that matches the exact version
+          // Set worker path explicitly with HTTPS URL that matches the exact version
           pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
           
           const pdfData = atob(pdfDataUrl.split(',')[1]);
@@ -303,6 +305,11 @@ const MindMap = () => {
       <MermaidMindmapModal
         open={showMermaidMindmap}
         onOpenChange={setShowMermaidMindmap}
+      />
+      
+      <TreemapModal 
+        open={showTreemap}
+        onOpenChange={setShowTreemap}
       />
     </div>
   );

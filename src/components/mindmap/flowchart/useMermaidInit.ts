@@ -31,6 +31,7 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       },
       mindmap: {
         padding: 16,
+        useMaxWidth: false,
       },
       // Add custom flowchart styles
       themeVariables: {
@@ -48,7 +49,6 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         noteBorderColor: '#F59E0B',
         lineColor: '#64748B',
       },
-      // TypeScript doesn't know about this yet
       logLevel: 3 // Enables warning logs for debugging
     });
     
@@ -64,18 +64,26 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       });
     }
     
-    // Add custom styles for prettier flowcharts
+    // Add custom styles for prettier flowcharts and mindmaps
     const style = document.createElement('style');
     style.innerHTML = `
+      /* Flowchart styles */
       .flowchart-node rect {
         fill-opacity: 0.9 !important;
         rx: 10px;
         ry: 10px; 
       }
+      
       .edgeLabel {
         background-color: white !important;
         padding: 2px 4px !important;
         border-radius: 4px !important;
+      }
+      
+      /* Force all node types to have rounded corners */
+      .node rect, .node circle, .node ellipse, .node polygon, .node path {
+        rx: 10px !important;
+        ry: 10px !important;
       }
       
       /* Custom node colors for classes */
@@ -86,8 +94,58 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       .node.class-5 rect { fill: #FFDEE2 !important; stroke: #EF4444 !important; }
       .node.class-6 rect { fill: #FEF7CD !important; stroke: #F59E0B !important; }
       .node.class-7 rect { fill: #F1F0FB !important; stroke: #D946EF !important; }
+      
+      /* Mindmap specific styles */
+      .mindmap-node > circle {
+        fill: #9b87f5 !important;
+        stroke: #6E59A5 !important;
+      }
+      
+      .mindmap-node > g > rect {
+        rx: 10px !important;
+        ry: 10px !important;
+        fill: #F2FCE2 !important;
+        stroke: #22C55E !important;
+      }
+      
+      .mindmap-node text {
+        fill: #1A1F2C !important;
+      }
+      
+      /* Root node styling */
+      .root rect, .root circle {
+        fill: #9b87f5 !important;
+        stroke: #6E59A5 !important;
+        stroke-width: 2px !important;
+      }
+      
+      .root text {
+        fill: white !important;
+        font-weight: bold !important;
+      }
+      
+      /* Make edges more visible */
+      .edge {
+        stroke-width: 2px !important;
+      }
     `;
     document.head.appendChild(style);
+    
+    // Retry rendering of diagrams if they failed
+    setTimeout(() => {
+      try {
+        document.querySelectorAll('.mermaid').forEach(el => {
+          if (el.innerHTML === el.textContent) {
+            // This is likely an unrendered diagram
+            console.log("Retrying mermaid render for:", el.textContent?.substring(0, 50));
+            mermaid.init(undefined, el);
+          }
+        });
+      } catch (err) {
+        console.error("Error in retry mermaid rendering:", err);
+      }
+    }, 1000);
+    
   }, [direction]);
 };
 

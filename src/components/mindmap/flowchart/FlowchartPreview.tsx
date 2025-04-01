@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, RefObject } from "react";
 import mermaid from "mermaid";
 
@@ -48,7 +49,6 @@ const FlowchartPreview = ({
           // Ensure mindmaps have proper layout
           mindmap: {
             padding: 10,
-            // Remove invalid useMaxWidth property
           }
         });
         
@@ -99,15 +99,23 @@ const FlowchartPreview = ({
         
         // Add custom styling for enhanced colors
         const customStyles = `
-          .flowchart-node rect, .flowchart-label rect {
-            rx: 15px;
-            ry: 15px;
+          /* Force all nodes to have rounded corners */
+          .flowchart-node rect, .flowchart-label rect, .node rect {
+            rx: 15px !important;
+            ry: 15px !important;
             fill-opacity: 0.8 !important;
           }
+          
+          /* Apply rounded corners to all node types */
+          .node circle, .node ellipse, .node polygon, .node path {
+            stroke-width: 2px !important;
+          }
+          
           .flowchart-node .label {
             font-size: 14px;
             font-weight: 500;
           }
+          
           .edgeLabel {
             background-color: white;
             border-radius: 4px;
@@ -121,73 +129,93 @@ const FlowchartPreview = ({
           .node-circle {
             fill-opacity: 0.8 !important;
           }
+          
           .cluster rect {
             fill: #f1f5f9 !important;
             stroke: #cbd5e1 !important;
             rx: 5px;
             ry: 5px;
           }
+          
           .cluster-label {
             font-weight: bold !important;
           }
+          
           .node rect, .node circle, .node ellipse, .node polygon, .node path {
             stroke-width: 2px !important;
           }
+          
           .flowchart-link {
             stroke-width: 2px !important;
           }
+          
+          /* Vibrant color palette for nodes */
           .node.default > rect, .node.default > circle, .node.default > ellipse, .node.default > polygon {
             fill: #E5DEFF !important;
             stroke: #8B5CF6 !important;
           }
+          
           .node.primary > rect, .node.primary > circle, .node.primary > ellipse, .node.primary > polygon {
             fill: #D3E4FD !important;
             stroke: #0EA5E9 !important;
           }
+          
           .node.success > rect, .node.success > circle, .node.success > ellipse, .node.success > polygon {
             fill: #F2FCE2 !important;
             stroke: #22C55E !important;
           }
+          
           .node.warning > rect, .node.warning > circle, .node.warning > ellipse, .node.warning > polygon {
             fill: #FEF7CD !important;
             stroke: #F59E0B !important;
           }
+          
           .node.danger > rect, .node.danger > circle, .node.danger > ellipse, .node.danger > polygon {
             fill: #FFDEE2 !important;
             stroke: #EF4444 !important;
           }
+          
           .node.info > rect, .node.info > circle, .node.info > ellipse, .node.info > polygon {
             fill: #D3E4FD !important;
             stroke: #3B82F6 !important;
           }
+          
           .node.neutral > rect, .node.neutral > circle, .node.neutral > ellipse, .node.neutral > polygon {
             fill: #FDE1D3 !important;
             stroke: #F97316 !important;
           }
+          
+          /* Color classes for automatic coloring */
           .node.class-1 > rect, .node.class-1 > circle, .node.class-1 > ellipse, .node.class-1 > polygon {
             fill: #E5DEFF !important;
             stroke: #8B5CF6 !important;
           }
+          
           .node.class-2 > rect, .node.class-2 > circle, .node.class-2 > ellipse, .node.class-2 > polygon {
             fill: #D3E4FD !important;
             stroke: #0EA5E9 !important;
           }
+          
           .node.class-3 > rect, .node.class-3 > circle, .node.class-3 > ellipse, .node.class-3 > polygon {
             fill: #FDE1D3 !important;
             stroke: #F97316 !important;
           }
+          
           .node.class-4 > rect, .node.class-4 > circle, .node.class-4 > ellipse, .node.class-4 > polygon {
             fill: #F2FCE2 !important;
             stroke: #22C55E !important;
           }
+          
           .node.class-5 > rect, .node.class-5 > circle, .node.class-5 > ellipse, .node.class-5 > polygon {
             fill: #FFDEE2 !important;
             stroke: #EF4444 !important;
           }
+          
           .node.class-6 > rect, .node.class-6 > circle, .node.class-6 > ellipse, .node.class-6 > polygon {
             fill: #FEF7CD !important;
             stroke: #F59E0B !important;
           }
+          
           .node.class-7 > rect, .node.class-7 > circle, .node.class-7 > ellipse, .node.class-7 > polygon {
             fill: #F1F0FB !important;
             stroke: #D946EF !important;
@@ -195,9 +223,22 @@ const FlowchartPreview = ({
           
           /* Enhanced mindmap node styles */
           .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse, .mindmap-node > polygon {
-            rx: 10px;
-            ry: 10px;
+            rx: 10px !important;
+            ry: 10px !important;
             fill-opacity: 0.8 !important;
+          }
+          
+          /* Mindmap specific styles */
+          g.mindmap-node > circle {
+            fill: #E5DEFF !important;
+            stroke: #8B5CF6 !important;
+          }
+          
+          g.mindmap-node > g > rect {
+            rx: 10px !important;
+            ry: 10px !important;
+            fill: #F2FCE2 !important;
+            stroke: #22C55E !important;
           }
           
           /* Make sure SVG is responsive */

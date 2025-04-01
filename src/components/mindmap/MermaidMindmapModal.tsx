@@ -9,14 +9,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RefreshCw, Download } from "lucide-react";
+import { ZoomIn, ZoomOut, RefreshCw, Download, Code, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import html2canvas from "html2canvas";
 import * as pdfjs from "pdfjs-dist";
+import { Textarea } from "@/components/ui/textarea";
+import FlowchartPreview from "./flowchart/FlowchartPreview";
 
-// Set the worker source
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set the worker source with HTTPS to avoid CORS issues
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface MermaidMindmapModalProps {
   open: boolean;
@@ -39,6 +41,9 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   const [zoomLevel, setZoomLevel] = useState(1); // Start with 100% zoom
   const [pdfImages, setPdfImages] = useState<PdfImage[]>([]);
   const { toast } = useToast();
+  const [showSyntax, setShowSyntax] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
   
   // Initialize mermaid library
   useMermaidInit();
@@ -66,10 +71,11 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           })
           .catch((error) => {
             console.error("Error extracting images:", error);
+            setError(`Error extracting images: ${error instanceof Error ? error.message : String(error)}`);
           });
       }
       
-      // Simulate generation delay
+      // Generate mindmap
       setTimeout(() => {
         generateMindmapWithImages(pdfData);
         setIsGenerating(false);
@@ -135,6 +141,8 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       Discussion
     Figures
       ${pdfImages.length > 0 ? `${pdfImages.length} images were found but couldn't be categorized` : 'No images found'}`);
+      
+      setError(`Error generating mindmap: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -393,6 +401,24 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       });
     }
   };
+  
+  // Toggle syntax view
+  const toggleSyntaxView = () => {
+    setShowSyntax(!showSyntax);
+  };
+  
+  // Handle code changes in the editor
+  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMermaidCode(e.target.value);
+  };
+  
+  // Toggle through themes
+  const toggleTheme = () => {
+    const themes: Array<'default' | 'forest' | 'dark' | 'neutral'> = ['default', 'forest', 'dark', 'neutral'];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -404,8 +430,18 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           </DialogDescription>
         </DialogHeader>
         
-        {/* Zoom and Export controls */}
+        {/* Toolbar with toggle, zoom and export controls */}
         <div className="flex items-center gap-2 mb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleSyntaxView}
+            className="flex items-center gap-1"
+          >
+            {showSyntax ? <Eye className="h-4 w-4" /> : <Code className="h-4 w-4" />}
+            {showSyntax ? "Show Preview" : "Show Syntax"}
+          </Button>
+          
           <Button
             variant="outline"
             size="sm"
@@ -414,6 +450,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
+          
           <Button
             variant="outline"
             size="sm"
@@ -424,6 +461,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
             <RefreshCw className="h-4 w-4 mr-1" />
             {Math.round(zoomLevel * 100)}%
           </Button>
+          
           <Button
             variant="outline"
             size="sm"
@@ -436,32 +474,58 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           <Button 
             variant="outline" 
             size="sm" 
+            onClick={toggleTheme}
+            className="ml-2"
+          >
+            Theme: {theme}
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
             onClick={handleExportAsPNG}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 ml-auto"
           >
             <Download className="h-4 w-4" />
             Export as PNG
           </Button>
         </div>
         
-        {/* Mindmap Preview */}
-        <div className="flex-1 overflow-auto bg-white rounded-md p-4 border">
-          {isGenerating ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p>Generating mindmap with integrated images...</p>
-              </div>
+        {/* Mindmap Preview or Editor */}
+        <div className="flex-1 overflow-hidden">
+          {showSyntax ? (
+            <div className="h-full flex flex-col">
+              <Textarea
+                value={mermaidCode}
+                onChange={handleCodeChange}
+                placeholder="Enter your Mermaid mindmap code here..."
+                className="flex-1 font-mono text-sm resize-none p-4 h-full"
+              />
+              {error && (
+                <div className="mt-2 text-red-500 text-sm p-2 bg-red-50 rounded border border-red-100">
+                  {error}
+                </div>
+              )}
             </div>
           ) : (
-            <div 
-              ref={previewRef} 
-              className="min-h-full h-full w-full flex items-center justify-center overflow-hidden"
-              style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
-            >
-              <div className="mermaid bg-white p-6 rounded-lg w-full h-full flex items-center justify-center">
-                {mermaidCode}
-              </div>
+            <div className="h-full">
+              {isGenerating ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p>Generating mindmap with integrated images...</p>
+                  </div>
+                </div>
+              ) : (
+                <FlowchartPreview
+                  code={mermaidCode}
+                  error={error}
+                  isGenerating={false}
+                  theme={theme}
+                  previewRef={previewRef}
+                  zoomLevel={zoomLevel}
+                />
+              )}
             </div>
           )}
         </div>
