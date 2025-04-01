@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable (for security reasons)
@@ -491,5 +490,112 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
       root((Error))
         Failed to generate mindmap
           Please try again`;
+  }
+};
+
+// New function to generate a structured summary of the PDF content
+export const generateStructuredSummary = async (): Promise<any> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return {
+        Summary: "No PDF content found. Please upload a PDF first.",
+        "Key Findings": "N/A",
+        Objectives: "N/A",
+        Methods: "N/A",
+        Results: "N/A",
+        Conclusions: "N/A",
+        "Key Concepts": "N/A"
+      };
+    }
+
+    // Initialize the Generative Model for text generation
+    const model = genAI.getModel({ model: 'gemini-pro' });
+    
+    // Generate a structured summary from the PDF text
+    const result = await model.generateContent(`
+    Analyze this academic paper or document and create a comprehensive, structured summary with the following sections.
+    Each section should contain citations to specific pages in the format [citation:pageX] where X is the page number:
+
+    Document Content:
+    ${pdfText.slice(0, 20000)}
+    
+    Please provide the following structure EXACTLY, maintaining these exact headings in this order:
+    
+    1. Summary: A concise overview of the entire document in 3-5 sentences
+    2. Key Findings: The 3-5 most important discoveries or conclusions
+    3. Objectives: The main goals or research questions of the document
+    4. Methods: The approach, techniques, or methodologies used
+    5. Results: The outcomes or findings from the research
+    6. Conclusions: The implications and significance of the findings
+    7. Key Concepts: A list of 5-10 important terms or concepts introduced or discussed
+    
+    IMPORTANT FORMATTING INSTRUCTIONS:
+    - Include page citations in the format [citation:pageX] where X is the page number
+    - Be concise but comprehensive
+    - Use bullet points for lists when appropriate
+    - Make each section clearly distinct
+    - Return the response as a valid JSON object with each section as a property
+    - Do NOT include any explanations or additional text outside the JSON structure
+    - Do NOT use properties that are not in the list above
+    - Include at least 2-3 citations per section
+    
+    EXAMPLE OUTPUT FORMAT:
+    {
+      "Summary": "This paper explores...[citation:page2] The authors find...[citation:page5]",
+      "Key Findings": "1. Finding one...[citation:page3]\n2. Finding two...[citation:page4]",
+      "Objectives": "...",
+      "Methods": "...",
+      "Results": "...",
+      "Conclusions": "...",
+      "Key Concepts": "..."
+    }
+    
+    Only provide the JSON output, nothing else.
+    `);
+    
+    // Extract the JSON response
+    const responseText = result.response.text();
+    
+    // Parse the JSON from the response
+    try {
+      // Try to parse the direct response
+      const jsonResponse = JSON.parse(responseText);
+      return jsonResponse;
+    } catch (parseError) {
+      // If direct parsing fails, try to extract JSON from markdown code blocks
+      if (responseText.includes('```json')) {
+        const jsonContent = responseText.split('```json')[1].split('```')[0].trim();
+        return JSON.parse(jsonContent);
+      } else if (responseText.includes('```')) {
+        const jsonContent = responseText.split('```')[1].split('```')[0].trim();
+        return JSON.parse(jsonContent);
+      } else {
+        // If JSON parsing fails, return a structured error
+        console.error("Failed to parse Gemini API response", parseError);
+        return {
+          Summary: "Could not generate a proper summary. The AI response was not in the expected format.",
+          "Key Findings": "Error in processing",
+          Objectives: "Error in processing",
+          Methods: "Error in processing",
+          Results: "Error in processing",
+          Conclusions: "Error in processing",
+          "Key Concepts": "Error in processing"
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Gemini API summary generation error:", error);
+    return {
+      Summary: "An error occurred while generating the summary.",
+      "Key Findings": "API Error",
+      Objectives: "API Error",
+      Methods: "API Error",
+      Results: "API Error",
+      Conclusions: "API Error",
+      "Key Concepts": "API Error"
+    };
   }
 };
