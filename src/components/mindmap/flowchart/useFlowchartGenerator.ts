@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
-export const defaultFlowchart = `flowchart LR
+export const defaultFlowchart = `flowchart TD
     A[Start] --> B{Is it working?}
     B -->|Yes| C[Great!]
     B -->|No| D[Debug]
@@ -21,12 +20,9 @@ export const cleanMermaidSyntax = (input: string): string => {
     // Replace any hyphens in node IDs with underscores
     .replace(/(\w+)-(\w+)/g, "$1_$2");
   
-  // Ensure it starts with flowchart directive and uses LR direction
+  // Ensure it starts with flowchart directive
   if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart LR\n" + cleaned;
-  } else if (cleaned.startsWith("flowchart TD")) {
-    // Replace TD with LR if found at the beginning
-    cleaned = cleaned.replace("flowchart TD", "flowchart LR");
+    cleaned = "flowchart TD\n" + cleaned;
   }
   
   // Process line by line to ensure each line is valid
@@ -90,11 +86,11 @@ export const useFlowchartGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const generateFlowchart = async (detailLevel: 'low' | 'medium' | 'high' = 'medium') => {
+  const generateFlowchart = async () => {
     try {
       setIsGenerating(true);
       setError(null);
-      const flowchartCode = await generateFlowchartFromPdf(detailLevel);
+      const flowchartCode = await generateFlowchartFromPdf();
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
@@ -105,7 +101,7 @@ export const useFlowchartGenerator = () => {
         setCode(cleanedCode);
         toast({
           title: "Flowchart Generated",
-          description: `A ${detailLevel} detail flowchart has been created based on your PDF content.`,
+          description: "A flowchart has been created based on your PDF content.",
         });
       } catch (parseError) {
         console.error("Mermaid parse error:", parseError);
