@@ -21,7 +21,7 @@ interface MindmapModalProps {
 
 const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
-  const { code, error, isGenerating, generateMindmap, handleCodeChange } = useMindmapGenerator();
+  const { code, error, isGenerating, generateMindmap } = useMindmapGenerator();
   
   // State for theme and editor visibility
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
@@ -48,11 +48,6 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
     setTheme(themes[nextIndex]);
   };
 
-  // Manual regeneration handler
-  const handleRegenerate = () => {
-    generateMindmap();
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
@@ -62,18 +57,6 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
             Visualize the paper structure as a mindmap.
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="flex justify-end items-center gap-4 mb-2">
-          <Button 
-            variant="ghost"
-            size="sm"
-            onClick={handleRegenerate}
-            disabled={isGenerating}
-            className="text-black"
-          >
-            {isGenerating ? "Generating..." : "Regenerate Mindmap"}
-          </Button>
-        </div>
         
         {/* Preview - Takes up all space */}
         <div className="flex-1 overflow-hidden">

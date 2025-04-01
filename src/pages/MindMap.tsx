@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+
+import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
-import SequenceDiagramModal from "@/components/mindmap/SequenceDiagramModal"; 
-import MindmapModal from "@/components/mindmap/MindmapModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
+import { Slider } from "@/components/ui/slider";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -14,17 +14,12 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
-  const [showSequenceDiagram, setShowSequenceDiagram] = useState(false);
-  const [showMindmap, setShowMindmap] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
-  const [explainText, setExplainText] = useState<string>("");
+  const [explainText, setExplainText] = useState<string>('');
+  const [pdfWidth, setPdfWidth] = useState<number>(30); // Default PDF width percentage
   const { toast } = useToast();
-  
-  // Keep track of modal redirect sources to handle sequenceDiagram -> flowchart
-  const handleSequenceToFlowchart = useCallback(() => {
-    setShowFlowchart(true);
-    // The FlowchartModal component will handle showing the sequence diagram tab
-  }, []);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
@@ -56,6 +51,28 @@ const MindMap = () => {
     checkPdfAvailability();
   }, [toast]);
 
+  // Apply PDF width when it changes
+  useEffect(() => {
+    const applyPdfWidth = () => {
+      const pdfPanel = document.querySelector('.pdf-panel');
+      if (pdfPanel && containerRef.current) {
+        const containerWidth = containerRef.current.clientWidth;
+        const widthInPixels = Math.min(containerWidth * (pdfWidth / 100), containerWidth / 2);
+        (pdfPanel as HTMLElement).style.width = `${widthInPixels}px`;
+        
+        // Update any relevant elements after width change
+        window.dispatchEvent(new Event('resize'));
+      }
+    };
+    
+    applyPdfWidth();
+    window.addEventListener('resize', applyPdfWidth);
+    
+    return () => {
+      window.removeEventListener('resize', applyPdfWidth);
+    };
+  }, [pdfWidth]);
+
   const togglePdf = useCallback(() => {
     setShowPdf(prev => !prev);
   }, []);
@@ -70,10 +87,6 @@ const MindMap = () => {
 
   const toggleFlowchart = useCallback(() => {
     setShowFlowchart(prev => !prev);
-  }, []);
-
-  const toggleSequenceDiagram = useCallback(() => {
-    setShowSequenceDiagram(prev => !prev);
   }, []);
 
   const handleExplainText = useCallback((text: string) => {
@@ -96,14 +109,14 @@ const MindMap = () => {
         // Process the root node
         const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          applyLineBreaksToNode(rootNodeElement, 6); // 6 words per line for root (increased from 4)
+          applyLineBreaksToNode(rootNodeElement, 3); // 3 words per line for root (reduced from 6)
         }
         
         // Process all topic nodes
         const topicElements = mindMap.container.querySelectorAll('.mind-elixir-topic');
         topicElements.forEach(topicElement => {
           if (topicElement.classList.contains('mind-elixir-root')) return; // Skip root, already handled
-          applyLineBreaksToNode(topicElement as HTMLElement, 7); // 7 words per line for other nodes (increased from 5)
+          applyLineBreaksToNode(topicElement as HTMLElement, 7); // 7 words per line for other nodes
         });
 
         // Verify all nodes have complete sentences
@@ -130,6 +143,23 @@ const MindMap = () => {
         if (!(element instanceof HTMLElement) || !element.textContent) return;
         
         const text = element.textContent;
+        
+        // For root node, make it shorter - extract only the title part
+        if (element.classList.contains('mind-elixir-root')) {
+          const titleText = text.split(/[.,;:]|(\n)/)[0].trim();
+          const words = titleText.split(' ');
+          
+          let formattedText = '';
+          for (let i = 0; i < words.length; i += wordsPerLine) {
+            const chunk = words.slice(i, i + wordsPerLine).join(' ');
+            formattedText += chunk + (i + wordsPerLine < words.length ? '<br>' : '');
+          }
+          
+          element.innerHTML = formattedText;
+          return;
+        }
+        
+        // Regular nodes
         const words = text.split(' ');
         
         if (words.length <= wordsPerLine) return; // No need for line breaks
@@ -154,7 +184,7 @@ const MindMap = () => {
       setTimeout(() => {
         const rootNodeElement = mindMap.container.querySelector('.mind-elixir-root');
         if (rootNodeElement && rootNodeElement.textContent) {
-          applyLineBreaksToNode(rootNodeElement, 6);
+          applyLineBreaksToNode(rootNodeElement, 3);
         }
       }, 100);
     };
@@ -213,16 +243,34 @@ const MindMap = () => {
   }, [mindMap, toast]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div ref={containerRef} className="h-screen flex flex-col overflow-hidden">
       {/* Header with all icons */}
       <Header 
         togglePdf={togglePdf}
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
-        setShowSequenceDiagram={setShowSequenceDiagram}
-        setShowMindmap={setShowMindmap}
+        setShowSequenceDiagram={() => {}} // Keep empty function but don't show sequence diagram
+        setShowMindmap={() => {}} // Keep empty function but don't show mermaid mindmap
       />
+
+      {/* PDF Width Slider */}
+      {showPdf && pdfAvailable && (
+        <div className="bg-gray-50 px-4 py-2 flex items-center space-x-4">
+          <span className="text-xs text-gray-500 whitespace-nowrap">PDF Width:</span>
+          <div className="w-40">
+            <Slider
+              min={15}
+              max={50}
+              step={1}
+              value={[pdfWidth]}
+              onValueChange={(value) => setPdfWidth(value[0])}
+              className="w-full"
+            />
+          </div>
+          <span className="text-xs text-gray-500">{pdfWidth}%</span>
+        </div>
+      )}
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 overflow-hidden">
@@ -247,18 +295,6 @@ const MindMap = () => {
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
-      />
-
-      {/* Sequence Diagram Modal - now redirects to Flowchart with sequence tab */}
-      <SequenceDiagramModal
-        open={showSequenceDiagram}
-        onOpenChange={setShowSequenceDiagram}
-      />
-      
-      {/* Mindmap Modal */}
-      <MindmapModal
-        open={showMindmap}
-        onOpenChange={setShowMindmap}
       />
     </div>
   );

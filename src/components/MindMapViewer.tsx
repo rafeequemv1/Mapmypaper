@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -15,124 +14,146 @@ interface MindMapViewerProps {
 }
 
 // Enhanced helper function to format node text with line breaks and add emojis
-const formatNodeText = (text: string, wordsPerLine: number = 7): string => {
+const formatNodeText = (text: string, wordsPerLine: number = 7, isRoot: boolean = false): string => {
   if (!text) return '';
   
-  // Add emoji based on topic content if one doesn't exist already
-  const addEmoji = (topic: string) => {
-    // Check if the topic already starts with an emoji - fixed regex pattern
-    if (/^\p{Emoji}/u.test(topic)) {
-      return topic; // Already has an emoji
-    }
-    
-    const topicLower = topic.toLowerCase();
-    
-    // Main sections
-    if (topicLower.includes('introduction')) return '🔍 ' + topic;
-    if (topicLower.includes('methodology')) return '⚙️ ' + topic;
-    if (topicLower.includes('results')) return '📊 ' + topic;
-    if (topicLower.includes('discussion')) return '💭 ' + topic;
-    if (topicLower.includes('conclusion')) return '🎯 ' + topic;
-    if (topicLower.includes('references')) return '📚 ' + topic;
-    if (topicLower.includes('supplementary')) return '📎 ' + topic;
-    
-    // Introduction subsections
-    if (topicLower.includes('background') || topicLower.includes('context')) return '📘 ' + topic;
-    if (topicLower.includes('motivation') || topicLower.includes('problem')) return '⚠️ ' + topic;
-    if (topicLower.includes('gap')) return '🧩 ' + topic;
-    if (topicLower.includes('objective') || topicLower.includes('hypothesis')) return '🎯 ' + topic;
-    
-    // Methodology subsections
-    if (topicLower.includes('experimental') || topicLower.includes('data collection')) return '🧪 ' + topic;
-    if (topicLower.includes('model') || topicLower.includes('theory') || topicLower.includes('framework')) return '🔬 ' + topic;
-    if (topicLower.includes('procedure') || topicLower.includes('algorithm')) return '📋 ' + topic;
-    if (topicLower.includes('variable') || topicLower.includes('parameter')) return '🔢 ' + topic;
-    
-    // Results subsections
-    if (topicLower.includes('key finding')) return '✨ ' + topic;
-    if (topicLower.includes('figure') || topicLower.includes('table') || topicLower.includes('visualization')) return '📈 ' + topic;
-    if (topicLower.includes('statistical') || topicLower.includes('analysis')) return '📏 ' + topic;
-    if (topicLower.includes('observation')) return '👁️ ' + topic;
-    
-    // Discussion subsections
-    if (topicLower.includes('interpretation')) return '🔎 ' + topic;
-    if (topicLower.includes('comparison') || topicLower.includes('previous work')) return '🔄 ' + topic;
-    if (topicLower.includes('implication')) return '💡 ' + topic;
-    if (topicLower.includes('limitation')) return '🛑 ' + topic;
-    
-    // Conclusion subsections
-    if (topicLower.includes('summary') || topicLower.includes('contribution')) return '✅ ' + topic;
-    if (topicLower.includes('future work')) return '🔮 ' + topic;
-    if (topicLower.includes('final') || topicLower.includes('remark')) return '🏁 ' + topic;
-    
-    // References subsections
-    if (topicLower.includes('key paper') || topicLower.includes('cited')) return '📄 ' + topic;
-    if (topicLower.includes('dataset') || topicLower.includes('tool')) return '🛠️ ' + topic;
-    
-    // Supplementary subsections
-    if (topicLower.includes('additional') || topicLower.includes('experiment')) return '🧮 ' + topic;
-    if (topicLower.includes('appendix') || topicLower.includes('appendices')) return '📑 ' + topic;
-    if (topicLower.includes('code') || topicLower.includes('data availability')) return '💾 ' + topic;
-    
-    // Generic topics
-    if (topicLower.includes('start') || topicLower.includes('begin')) return '🚀 ' + topic;
-    if (topicLower.includes('organization') || topicLower.includes('structure')) return '📊 ' + topic;
-    if (topicLower.includes('learn') || topicLower.includes('study')) return '📚 ' + topic;
-    if (topicLower.includes('habit')) return '⏰ ' + topic;
-    if (topicLower.includes('goal')) return '🎯 ' + topic;
-    if (topicLower.includes('motivation')) return '💪 ' + topic;
-    if (topicLower.includes('review')) return '✅ ' + topic;
-    if (topicLower.includes('research')) return '🔍 ' + topic;
-    if (topicLower.includes('read')) return '📖 ' + topic;
-    if (topicLower.includes('write') || topicLower.includes('note')) return '✏️ ' + topic;
-    if (topicLower.includes('discuss') || topicLower.includes('talk')) return '💬 ' + topic;
-    if (topicLower.includes('listen')) return '👂 ' + topic;
-    if (topicLower.includes('present')) return '🎤 ' + topic;
-    if (topicLower.includes('plan')) return '📝 ' + topic;
-    if (topicLower.includes('time')) return '⏱️ ' + topic;
-    if (topicLower.includes('break')) return '☕ ' + topic;
-    if (topicLower.includes('focus')) return '🧠 ' + topic;
-    if (topicLower.includes('idea')) return '💡 ' + topic;
-    if (topicLower.includes('question')) return '❓ ' + topic;
-    if (topicLower.includes('answer')) return '✓ ' + topic;
-    if (topicLower.includes('problem')) return '⚠️ ' + topic;
-    if (topicLower.includes('solution')) return '🔧 ' + topic;
-    
-    // Default emoji for unmatched topics
-    return '📌 ' + topic;
-  };
+  // Use fewer words per line for root node
+  const effectiveWordsPerLine = isRoot ? 3 : wordsPerLine;
   
-  // Ensure the topic text is a complete sentence by checking for period at the end
-  const ensureCompleteSentence = (topic: string) => {
-    const trimmedTopic = topic.trim();
-    // Don't modify if it's just an emoji or very short
-    if (trimmedTopic.length <= 3) return trimmedTopic;
-    
-    // If already ends with punctuation, return as is
-    if (/[.!?;:]$/.test(trimmedTopic)) return trimmedTopic;
-    
-    // Add a period if it looks like a sentence (starts with capital letter or has spaces)
-    if (/^[A-Z]/.test(trimmedTopic) || trimmedTopic.includes(' ')) {
-      return trimmedTopic + '.';
+  // For root nodes, extract just the title part (first sentence or phrase)
+  let processedText = text;
+  if (isRoot) {
+    // Extract the title - take first sentence, or first part before a comma/semicolon
+    const titleMatch = text.match(/^(?:\p{Emoji}\s*)?(.*?)(?:[.,:;]|$)/u);
+    if (titleMatch && titleMatch[1]) {
+      processedText = titleMatch[1].trim();
+      // Add emoji if it was present
+      if (/^\p{Emoji}/u.test(text)) {
+        const emojiMatch = text.match(/^(\p{Emoji})/u);
+        if (emojiMatch) {
+          processedText = emojiMatch[1] + ' ' + processedText;
+        }
+      }
     }
-    
-    return trimmedTopic;
-  };
-  
-  // Add emoji to the text and ensure it's a complete sentence
-  const processedText = ensureCompleteSentence(addEmoji(text));
+  } else {
+    // Add emoji based on topic content if one doesn't exist already
+    processedText = addEmoji(text);
+    // Ensure the topic text is a complete sentence
+    processedText = ensureCompleteSentence(processedText);
+  }
   
   // Apply line breaks for better readability
   const words = processedText.split(' ');
-  if (words.length <= wordsPerLine) return processedText;
+  if (words.length <= effectiveWordsPerLine) return processedText;
   
   let result = '';
-  for (let i = 0; i < words.length; i += wordsPerLine) {
-    const chunk = words.slice(i, i + wordsPerLine).join(' ');
-    result += chunk + (i + wordsPerLine < words.length ? '\n' : '');
+  for (let i = 0; i < words.length; i += effectiveWordsPerLine) {
+    const chunk = words.slice(i, i + effectiveWordsPerLine).join(' ');
+    result += chunk + (i + effectiveWordsPerLine < words.length ? '\n' : '');
   }
   
   return result;
+};
+
+// Add emoji based on topic content
+const addEmoji = (topic: string): string => {
+  // Check if the topic already starts with an emoji
+  if (/^\p{Emoji}/u.test(topic)) {
+    return topic; // Already has an emoji
+  }
+  
+  const topicLower = topic.toLowerCase();
+  
+  // Main sections
+  if (topicLower.includes('introduction')) return '🔍 ' + topic;
+  if (topicLower.includes('methodology')) return '⚙️ ' + topic;
+  if (topicLower.includes('results')) return '📊 ' + topic;
+  if (topicLower.includes('discussion')) return '💭 ' + topic;
+  if (topicLower.includes('conclusion')) return '🎯 ' + topic;
+  if (topicLower.includes('references')) return '📚 ' + topic;
+  if (topicLower.includes('supplementary')) return '📎 ' + topic;
+  
+  // Introduction subsections
+  if (topicLower.includes('background') || topicLower.includes('context')) return '📘 ' + topic;
+  if (topicLower.includes('motivation') || topicLower.includes('problem')) return '⚠️ ' + topic;
+  if (topicLower.includes('gap')) return '🧩 ' + topic;
+  if (topicLower.includes('objective') || topicLower.includes('hypothesis')) return '🎯 ' + topic;
+  
+  // Methodology subsections
+  if (topicLower.includes('experimental') || topicLower.includes('data collection')) return '🧪 ' + topic;
+  if (topicLower.includes('model') || topicLower.includes('theory') || topicLower.includes('framework')) return '🔬 ' + topic;
+  if (topicLower.includes('procedure') || topicLower.includes('algorithm')) return '📋 ' + topic;
+  if (topicLower.includes('variable') || topicLower.includes('parameter')) return '🔢 ' + topic;
+  
+  // Results subsections
+  if (topicLower.includes('key finding')) return '✨ ' + topic;
+  if (topicLower.includes('figure') || topicLower.includes('table') || topicLower.includes('visualization')) return '📈 ' + topic;
+  if (topicLower.includes('statistical') || topicLower.includes('analysis')) return '📏 ' + topic;
+  if (topicLower.includes('observation')) return '👁️ ' + topic;
+  
+  // Discussion subsections
+  if (topicLower.includes('interpretation')) return '🔎 ' + topic;
+  if (topicLower.includes('comparison') || topicLower.includes('previous work')) return '🔄 ' + topic;
+  if (topicLower.includes('implication')) return '💡 ' + topic;
+  if (topicLower.includes('limitation')) return '🛑 ' + topic;
+  
+  // Conclusion subsections
+  if (topicLower.includes('summary') || topicLower.includes('contribution')) return '✅ ' + topic;
+  if (topicLower.includes('future work')) return '🔮 ' + topic;
+  if (topicLower.includes('final') || topicLower.includes('remark')) return '🏁 ' + topic;
+  
+  // References subsections
+  if (topicLower.includes('key paper') || topicLower.includes('cited')) return '📄 ' + topic;
+  if (topicLower.includes('dataset') || topicLower.includes('tool')) return '🛠️ ' + topic;
+  
+  // Supplementary subsections
+  if (topicLower.includes('additional') || topicLower.includes('experiment')) return '🧮 ' + topic;
+  if (topicLower.includes('appendix') || topicLower.includes('appendices')) return '📑 ' + topic;
+  if (topicLower.includes('code') || topicLower.includes('data availability')) return '💾 ' + topic;
+  
+  // Generic topics
+  if (topicLower.includes('start') || topicLower.includes('begin')) return '🚀 ' + topic;
+  if (topicLower.includes('organization') || topicLower.includes('structure')) return '📊 ' + topic;
+  if (topicLower.includes('learn') || topicLower.includes('study')) return '📚 ' + topic;
+  if (topicLower.includes('habit')) return '⏰ ' + topic;
+  if (topicLower.includes('goal')) return '🎯 ' + topic;
+  if (topicLower.includes('motivation')) return '💪 ' + topic;
+  if (topicLower.includes('review')) return '✅ ' + topic;
+  if (topicLower.includes('research')) return '🔍 ' + topic;
+  if (topicLower.includes('read')) return '📖 ' + topic;
+  if (topicLower.includes('write') || topicLower.includes('note')) return '✏️ ' + topic;
+  if (topicLower.includes('discuss') || topicLower.includes('talk')) return '💬 ' + topic;
+  if (topicLower.includes('listen')) return '👂 ' + topic;
+  if (topicLower.includes('present')) return '🎤 ' + topic;
+  if (topicLower.includes('plan')) return '📝 ' + topic;
+  if (topicLower.includes('time')) return '⏱️ ' + topic;
+  if (topicLower.includes('break')) return '☕ ' + topic;
+  if (topicLower.includes('focus')) return '🧠 ' + topic;
+  if (topicLower.includes('idea')) return '💡 ' + topic;
+  if (topicLower.includes('question')) return '❓ ' + topic;
+  if (topicLower.includes('answer')) return '✓ ' + topic;
+  if (topicLower.includes('problem')) return '⚠️ ' + topic;
+  if (topicLower.includes('solution')) return '🔧 ' + topic;
+  
+  // Default emoji for unmatched topics
+  return '📌 ' + topic;
+};
+
+// Ensure the topic text is a complete sentence 
+const ensureCompleteSentence = (topic: string): string => {
+  const trimmedTopic = topic.trim();
+  // Don't modify if it's just an emoji or very short
+  if (trimmedTopic.length <= 3) return trimmedTopic;
+  
+  // If already ends with punctuation, return as is
+  if (/[.!?;:]$/.test(trimmedTopic)) return trimmedTopic;
+  
+  // Add a period if it looks like a sentence (starts with capital letter or has spaces)
+  if (/^[A-Z]/.test(trimmedTopic) || trimmedTopic.includes(' ')) {
+    return trimmedTopic + '.';
+  }
+  
+  return trimmedTopic;
 };
 
 // Generate a color from a string (for consistent node colors based on content)
@@ -209,7 +230,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         contextMenu: true, 
         tools: {
           zoom: true,
-          create: true,
+          create: false, // Remove create button
           edit: true,
         },
         theme: colorfulTheme,
@@ -259,6 +280,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           tpc.style.fontSize = level === 0 ? '20px' : '16px';
           tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
           tpc.style.lineHeight = '1.5';
+          tpc.style.maxWidth = level === 0 ? '220px' : '320px'; // Limit width of nodes, especially root
           
           // Add transition for smooth color changes
           tpc.style.transition = 'all 0.3s ease';
@@ -352,7 +374,12 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           // Apply line breaks, emojis, and complete sentences to node topics
           const formatNodes = (node: any) => {
             if (node.topic) {
-              node.topic = formatNodeText(node.topic);
+              // Special handling for root node - only keep title with 3-4 words per line
+              if (node.id === 'root') {
+                node.topic = formatNodeText(node.topic, 3, true);
+              } else {
+                node.topic = formatNodeText(node.topic);
+              }
             }
             
             if (node.children && node.children.length > 0) {
@@ -373,7 +400,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           data = {
             nodeData: {
               id: 'root',
-              topic: '🧠 Research Paper Title',
+              topic: '🧠 Research\nPaper Title',
               children: [
                 {
                   id: 'bd1',
@@ -457,7 +484,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         data = {
           nodeData: {
             id: 'root',
-            topic: '⚠️ Error Loading Mind Map',
+            topic: '⚠️ Error\nLoading\nMind Map',
             children: [
               { id: 'error1', topic: 'There was an error loading the mind map data. Please try refreshing the page.', direction: 0 as const }
             ]
