@@ -1,24 +1,29 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import dynamic from 'next/dynamic';
+import { useToast } from "@/hooks/use-toast";
+import { useChat } from "@/components/chat/useChat";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { useRef } from "react";
-import PdfViewer from "@/components/PdfViewer";
-import MindMapViewer from "@/components/MindMapViewer";
-import ChatPanel from "@/components/mindmap/ChatPanel";
-import { 
-  ResizablePanelGroup, 
-  ResizablePanel, 
-  ResizableHandle 
-} from "@/components/ui/resizable";
+const MindElixir = dynamic(() => import('@mind-elixir/next'), {
+  ssr: false,
+});
+
+const PdfViewer = dynamic(() => import('@/components/PdfViewer'), {
+  ssr: false
+});
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady: any;
+  onMindMapReady: (mindMap: any) => void;
   explainText: string;
   onExplainText: (text: string) => void;
 }
 
+// Add a new prop to handle image capture
 const PanelStructure = ({
   showPdf,
   showChat,
@@ -27,54 +32,167 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
-}: PanelStructureProps) => {
-  const isMapGenerated = true;
-  const pdfViewerRef = useRef(null);
+}) => {
+  const searchParams = useSearchParams();
+  const pdfViewerRef = useRef<any>(null);
+  const [loadingMindmap, setLoadingMindmap] = useState(true);
+  const { toast } = useToast();
+  const { messages, input, handleInputChange, sendMessage, isLoading: isChatLoading } = useChat(explainText);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+
+  const handlePdfLoaded = useCallback(() => {
+    setPdfLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (explainText && !isChatLoading) {
+      sendMessage(explainText);
+    }
+  }, [explainText, sendMessage, isChatLoading]);
+
+  const initialData = {
+    "nodeData": {
+      "id": "4p5jnix2x9j0",
+      "topic": "Central Topic",
+      "root": true,
+      "children": [],
+      "tags": [],
+      "icons": [],
+      "hyperLink": "",
+      "note": "",
+      "style": {
+        "fontSize": "24px"
+      }
+    },
+    "linkData": {}
+  };
+
+  const options = {
+    el: '#mindmap',
+    newTopicName: 'Topic',
+    data: initialData,
+    direction: MindElixir.LEFT,
+    locale: 'en',
+    draggable: true,
+    editable: true,
+    contextMenu: true,
+    toolBar: false,
+    nodeMenu: true,
+    keypress: true,
+    before: {
+      insertNode: (newNode, node) => {
+        console.log('insertNode', newNode, node)
+        return true
+      },
+      moveNode: (node, newParent, originParent) => {
+        console.log('moveNode', node, newParent, originParent)
+        return true
+      },
+       টেক্সটEdit: (originText, newText, node) => {
+        console.log('textEdit', originText, newText, node)
+        return true
+      },
+      removeNode: (node) => {
+        console.log('removeNode', node)
+        return true
+      },
+      focusNode: (node) => {
+        console.log('focusNode', node)
+        return true
+      },
+    },
+    //   });
+  }
+
+  const handleMindMapReady = (mindMap: any) => {
+    // Set up the mind map instance with proper line breaks for nodes
+    if (onMindMapReady) {
+      onMindMapReady(mindMap);
+    }
+  };
+
+  // Add a handler for image capture
+  const handleImageCaptured = (imageData: string) => {
+    // Send the captured image data to the chat
+    if (onExplainText) {
+      onExplainText(`[IMAGE CAPTURE]: Please explain this part of the PDF: ${imageData}`);
+    }
+  };
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+    <div className="flex h-full overflow-hidden">
       {/* PDF Panel */}
       {showPdf && (
-        <>
-          <ResizablePanel defaultSize={30} minSize={15} maxSize={50} className="h-full">
-            <PdfViewer 
-              ref={pdfViewerRef}
-              onTextSelected={onExplainText}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-        </>
+        <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden">
+          <PdfViewer
+            onTextSelected={onExplainText}
+            onPdfLoaded={handlePdfLoaded}
+            ref={pdfViewerRef}
+            onImageCaptured={handleImageCaptured}
+          />
+        </div>
       )}
 
-      {/* Mind Map Panel - Takes up remaining space */}
-      <ResizablePanel defaultSize={showChat ? 50 : 70} className="h-full">
-        <MindMapViewer
-          isMapGenerated={isMapGenerated}
-          onMindMapReady={onMindMapReady}
-          onExplainText={onExplainText}
-        />
-      </ResizablePanel>
+      {/* MindMap Panel */}
+      <div className={`flex-1 h-full ${showChat ? 'border-r border-gray-200' : ''} overflow-hidden`}>
+        <div className="h-full" style={{ overflow: 'auto' }}>
+          <div id="mindmap" className="h-full" style={{ overflow: 'hidden' }}>
+            {loadingMindmap ? (
+              <div className="h-full flex items-center justify-center">
+                <Skeleton className="w-[200px] h-[30px]" />
+              </div>
+            ) : null}
+            <MindElixir
+              options={options}
+              onload={(mind) => {
+                console.log("Mind map loaded:", mind);
+                handleMindMapReady(mind);
+                setLoadingMindmap(false);
+              }}
+              className="h-full"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Chat Panel */}
       {showChat && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="h-full">
-            <ChatPanel
-              toggleChat={toggleChat}
-              explainText={explainText}
-              onExplainText={onExplainText}
-              onScrollToPdfPosition={(position) => {
-                if (pdfViewerRef.current) {
-                  // @ts-ignore - we know this method exists
-                  pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
-                }
-              }}
-            />
-          </ResizablePanel>
-        </>
+        <div className="w-1/3 h-full flex flex-col bg-gray-50">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold">Chat</h2>
+          </div>
+          <div className="flex-1 p-4 overflow-y-auto">
+            {messages.map((message, index) => (
+              <div key={index} className={`mb-2 p-3 rounded-md ${message.isUser ? 'bg-blue-100 text-blue-800 self-end' : 'bg-gray-100 text-gray-800 self-start'}`}>
+                {message.text}
+              </div>
+            ))}
+            {isChatLoading && (
+              <div className="mb-2 p-3 rounded-md bg-gray-100 text-gray-800 self-start">
+                Loading...
+              </div>
+            )}
+          </div>
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex rounded-md shadow-sm">
+              <input
+                type="text"
+                className="flex-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300"
+                placeholder="Enter text"
+                value={input}
+                onChange={handleInputChange}
+              />
+              <button
+                className="bg-indigo-600 hover:bg-indigo-700 border-indigo-600 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-medium rounded-r-md text-white py-2 px-4 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                onClick={sendMessage}
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-    </ResizablePanelGroup>
+    </div>
   );
 };
 

@@ -21,6 +21,7 @@ export default {
 		extend: {
 			fontFamily: {
 				roboto: ['Roboto', 'system-ui', 'sans-serif'],
+				sans: ['Roboto', 'system-ui', 'sans-serif'], // Make Roboto the default font
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -98,6 +99,7 @@ export default {
 				DEFAULT: {
 					css: {
 						maxWidth: 'none',
+						fontFamily: ['Roboto', 'system-ui', 'sans-serif'].join(','),
 					},
 				},
 			},
