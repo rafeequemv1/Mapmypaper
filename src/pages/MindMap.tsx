@@ -7,9 +7,11 @@ import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import MindmapModal from "@/components/mindmap/MindmapModal";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const MindMap = () => {
   const navigate = useNavigate();
+  const { user, refreshSession } = useAuth();
   const [showPdf, setShowPdf] = useState<boolean>(true);
   const [showChat, setShowChat] = useState<boolean>(false);
   const [mindElixirInstance, setMindElixirInstance] = useState<MindElixirInstance | null>(null);
@@ -30,7 +32,8 @@ const MindMap = () => {
     if (mindElixirInstance) {
       try {
         console.log("Attempting to expand root node");
-        const rootNode = mindElixirInstance.nodeData.root;
+        // Access root safely using optional chaining
+        const rootNode = mindElixirInstance.nodeData?.root;
         if (rootNode) {
           mindElixirInstance.expandNode(rootNode);
         }
@@ -48,11 +51,11 @@ const MindMap = () => {
       <Header 
         togglePdf={togglePdf} 
         toggleChat={toggleChat}
-        showPdf={showPdf}
-        showChat={showChat}
-        onOpenSummary={() => setOpenSummaryModal(true)}
-        onOpenFlowchart={() => setOpenFlowchartModal(true)}
-        onOpenMindmap={() => setOpenMindmapModal(true)}
+        setShowSummary={setOpenSummaryModal}
+        setShowFlowchart={setOpenFlowchartModal}
+        setShowMindmap={setOpenMindmapModal}
+        user={user}
+        onAuthChange={refreshSession}
       />
       
       <div className="flex-1 overflow-hidden">

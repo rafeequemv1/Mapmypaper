@@ -76,7 +76,7 @@ const FlowchartPreview = ({
             // Mindmap specific config
             mindmap: {
               padding: 20,
-              wrap: true,
+              // Remove the wrap property as it doesn't exist in MindmapDiagramConfig
               useMaxWidth: true,
             }
           });
@@ -164,12 +164,13 @@ const FlowchartPreview = ({
       
       {/* Preview area */}
       <div
-        ref={el => {
+        ref={(el) => {
           // Set both refs if previewRef is provided
           if (el) {
             containerRef.current = el;
-            if (previewRef && typeof previewRef === 'object') {
-              previewRef.current = el;
+            if (previewRef && 'current' in previewRef) {
+              // Use type assertion to fix TypeScript error
+              (previewRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
             }
           }
         }}

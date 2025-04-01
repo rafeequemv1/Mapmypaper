@@ -1,9 +1,9 @@
 
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, MessageSquare, ChevronLeft, BookText, BarChart, FileText, User } from "lucide-react";
+import { LayoutDashboard, MessageSquare, ChevronLeft, BookText, BarChart, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import AuthButton from "../auth/AuthButton";
-import { User as TUser } from "@supabase/supabase-js";
+import { User } from "@supabase/supabase-js";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -11,7 +11,7 @@ interface HeaderProps {
   setShowSummary: (show: boolean) => void;
   setShowFlowchart: (show: boolean) => void;
   setShowMindmap: (show: boolean) => void;
-  user: TUser | null;
+  user: User | null;
   onAuthChange: () => Promise<void>;
 }
 
