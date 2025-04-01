@@ -182,7 +182,8 @@ const MindMap = () => {
         if (pdfDataUrl) {
           // Load pdfjs dynamically
           const pdfjs = await import('pdfjs-dist');
-          pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+          // Set worker path explicitly with CDNJS URL that matches the exact version
+          pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
           
           const pdfData = atob(pdfDataUrl.split(',')[1]);
           const loadingTask = pdfjs.getDocument({ data: pdfData });
@@ -272,6 +273,7 @@ const MindMap = () => {
         setShowMermaidMindmap={setShowMermaidMindmap}
         isPdfActive={showPdf && pdfAvailable}
         isChatActive={showChat}
+        onExportMindMap={handleExportMindMap}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}

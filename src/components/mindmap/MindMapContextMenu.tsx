@@ -9,6 +9,7 @@ interface MindMapContextMenuProps {
   onDelete?: () => void;
   onAddChild?: () => void;
   onAddSibling?: () => void;
+  onAddImage?: () => void;
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -17,7 +18,8 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onPaste,
   onDelete,
   onAddChild,
-  onAddSibling
+  onAddSibling,
+  onAddImage
 }) => {
   const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -42,11 +44,6 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
             Paste
           </ContextMenuItem>
         )}
-        {onDelete && (
-          <ContextMenuItem onClick={handleAction(onDelete)} className="cursor-pointer text-red-500 font-medium">
-            Delete
-          </ContextMenuItem>
-        )}
         {onAddChild && (
           <ContextMenuItem onClick={handleAction(onAddChild)} className="cursor-pointer text-blue-600">
             Add Child Node
@@ -55,6 +52,16 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {onAddSibling && (
           <ContextMenuItem onClick={handleAction(onAddSibling)} className="cursor-pointer text-emerald-600">
             Add Sibling Node
+          </ContextMenuItem>
+        )}
+        {onAddImage && (
+          <ContextMenuItem onClick={handleAction(onAddImage)} className="cursor-pointer text-purple-600">
+            Add Image
+          </ContextMenuItem>
+        )}
+        {onDelete && (
+          <ContextMenuItem onClick={handleAction(onDelete)} className="cursor-pointer text-red-500 font-medium">
+            Delete
           </ContextMenuItem>
         )}
       </ContextMenuContent>

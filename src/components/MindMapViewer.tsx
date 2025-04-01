@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
-import nodeMenu from "@mind-elixir/node-menu-neo";
+import nodeMenuNeo from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileText, Image } from "lucide-react";
+import { FileText, Image, ZoomIn, ZoomOut } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -182,6 +182,8 @@ interface PdfImage {
   pageNumber: number;
   width: number;
   height: number;
+  caption?: string;
+  relevantTopics?: string[];
 }
 
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
@@ -193,6 +195,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [pdfImages, setPdfImages] = useState<PdfImage[]>([]);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const { toast } = useToast();
 
   // Extract images from PDF on component mount
@@ -202,8 +205,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         // Import pdfjs dynamically to avoid SSR issues
         const pdfjs = await import('pdfjs-dist');
         
-        // Set worker path
-        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+        // Set worker path explicitly with CDNJS URL that matches the exact version
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
         
         const pdfDataUrl = sessionStorage.getItem("pdfData");
         
@@ -217,9 +220,19 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         const extractedImages: PdfImage[] = [];
         
         // Process each page
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        for (let pageNum = 1; pageNum <= Math.min(pdf.numPages, 20); pageNum++) {
           const page = await pdf.getPage(pageNum);
           const operatorList = await page.getOperatorList();
+          const textContent = await page.getTextContent();
+          
+          // Extract all text items with their positions for caption analysis
+          const textItems = textContent.items.map(item => ({
+            text: 'str' in item ? item.str : '',
+            x: 'transform' in item ? item.transform[4] : 0,
+            y: 'transform' in item ? item.transform[5] : 0,
+            height: 'height' in item ? item.height : 0,
+            width: 'width' in item ? item.width : 0
+          }));
           
           // Look for image operators in the page
           for (let i = 0; i < operatorList.fnArray.length; i++) {
@@ -253,11 +266,19 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
                     
                     // Only add if image is not too small (likely not a meaningful figure)
                     if (objs.width > 100 && objs.height > 100) {
+                      // Try to find caption by looking for text positioned below the image
+                      const potentialCaptions = findPotentialCaptions(textItems, { 
+                        width: objs.width,
+                        height: objs.height
+                      });
+                      
                       extractedImages.push({
                         imageData: dataUrl,
                         pageNumber: pageNum,
                         width: objs.width,
-                        height: objs.height
+                        height: objs.height,
+                        caption: potentialCaptions.length > 0 ? potentialCaptions.join(" ") : undefined,
+                        relevantTopics: deriveTopicsFromCaption(potentialCaptions.join(" "))
                       });
                     }
                   }
@@ -270,9 +291,21 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         }
         
         setPdfImages(extractedImages);
-        console.log(`Extracted ${extractedImages.length} images from PDF`);
+        console.log(`Extracted ${extractedImages.length} images from PDF with captions`);
+        
+        if (extractedImages.length > 0) {
+          // Auto-add images to relevant nodes in the mind map
+          setTimeout(() => {
+            autoPlaceImagesInMindMap(extractedImages);
+          }, 1000);
+        }
       } catch (error) {
         console.error('Error extracting images from PDF:', error);
+        toast({
+          title: "Error extracting images",
+          description: "There was an error extracting images from the PDF. Some features may not work correctly.",
+          variant: "destructive"
+        });
       }
     };
     
@@ -280,6 +313,227 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       extractImagesFromPdf();
     }
   }, [isMapGenerated]);
+
+  // Find potential captions by analyzing text positioned near an image
+  const findPotentialCaptions = (textItems: any[], imgObj: any): string[] => {
+    // Look for text that might be captions
+    // Common patterns: "Figure X:", "Table X:", text that starts with "Fig."
+    const captions: string[] = [];
+    
+    for (let i = 0; i < textItems.length; i++) {
+      const text = textItems[i].text.trim();
+      
+      // Skip empty text
+      if (!text) continue;
+      
+      // Check for caption patterns
+      if (
+        text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) || 
+        text.match(/^(figure|fig\.?|table|diagram|chart):/i)
+      ) {
+        // Found potential caption start, collect this and following text
+        let captionText = text;
+        let j = i + 1;
+        
+        // Collect continuation text (usually captions span multiple text items)
+        while (j < textItems.length && 
+              !textItems[j].text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) &&
+              Math.abs(textItems[j].y - textItems[i].y) < 20) {
+          captionText += " " + textItems[j].text.trim();
+          j++;
+        }
+        
+        captions.push(captionText);
+        i = j - 1; // Skip processed items
+      }
+    }
+    
+    return captions;
+  };
+  
+  // Derive potential topics from caption text
+  const deriveTopicsFromCaption = (caption: string): string[] => {
+    if (!caption) return [];
+    
+    const topics: string[] = [];
+    const captionLower = caption.toLowerCase();
+    
+    // Extract key terms that might indicate topic relevance
+    const keyTerms = [
+      { term: "method", topic: "Methodology" },
+      { term: "approach", topic: "Methodology" },
+      { term: "result", topic: "Results" },
+      { term: "finding", topic: "Results" },
+      { term: "data", topic: "Results" },
+      { term: "analysis", topic: "Discussion" },
+      { term: "performance", topic: "Results" },
+      { term: "accuracy", topic: "Results" },
+      { term: "model", topic: "Methodology" },
+      { term: "framework", topic: "Methodology" },
+      { term: "architecture", topic: "Methodology" },
+      { term: "comparison", topic: "Discussion" },
+      { term: "overview", topic: "Introduction" },
+      { term: "system", topic: "Methodology" },
+      { term: "process", topic: "Methodology" },
+      { term: "workflow", topic: "Methodology" },
+      { term: "conclusion", topic: "Conclusion" }
+    ];
+    
+    // Check if caption contains any key terms
+    keyTerms.forEach(({ term, topic }) => {
+      if (captionLower.includes(term) && !topics.includes(topic)) {
+        topics.push(topic);
+      }
+    });
+    
+    return topics;
+  };
+
+  // Auto-place images in mind map based on caption analysis
+  const autoPlaceImagesInMindMap = (images: PdfImage[]) => {
+    if (!mindMapRef.current || images.length === 0) return;
+    
+    const mind = mindMapRef.current;
+    const data = mind.nodeData;
+    
+    // Find nodes that match topics
+    const findNodesForTopics = (topicList: string[] = []): string[] => {
+      if (!topicList || topicList.length === 0) return [];
+      
+      const matchingNodeIds: string[] = [];
+      
+      // Helper function to recursively search nodes
+      const searchNodes = (node: any) => {
+        if (!node) return;
+        
+        // Check if node topic matches any of the topics
+        const nodeTopic = node.topic ? node.topic.toLowerCase() : '';
+        
+        for (const topic of topicList) {
+          if (nodeTopic.includes(topic.toLowerCase())) {
+            matchingNodeIds.push(node.id);
+            break;
+          }
+        }
+        
+        // Check children
+        if (node.children && node.children.length > 0) {
+          node.children.forEach(searchNodes);
+        }
+      };
+      
+      // Start search from root
+      searchNodes(data);
+      
+      return matchingNodeIds;
+    };
+    
+    // Categorize images by content section
+    const sectionImages: Record<string, PdfImage[]> = {
+      "Introduction": [],
+      "Methodology": [],
+      "Results": [],
+      "Discussion": [],
+      "Conclusion": [],
+      "Other": []
+    };
+    
+    // Assign images to sections based on their topics or page position
+    images.forEach(img => {
+      let assigned = false;
+      
+      if (img.relevantTopics && img.relevantTopics.length > 0) {
+        // Assign to the first matching section
+        for (const topic of img.relevantTopics) {
+          if (topic in sectionImages) {
+            sectionImages[topic].push(img);
+            assigned = true;
+            break;
+          }
+        }
+      }
+      
+      // If not assigned to a specific section, use page number as a heuristic
+      if (!assigned) {
+        const pageRatio = img.pageNumber / 20; // Assumes max 20 pages
+        
+        if (pageRatio < 0.2) {
+          sectionImages["Introduction"].push(img);
+        } else if (pageRatio < 0.4) {
+          sectionImages["Methodology"].push(img);
+        } else if (pageRatio < 0.6) {
+          sectionImages["Results"].push(img);
+        } else if (pageRatio < 0.8) {
+          sectionImages["Discussion"].push(img);
+        } else {
+          sectionImages["Conclusion"].push(img);
+        }
+      }
+    });
+    
+    // Place images in matching nodes
+    Object.entries(sectionImages).forEach(([section, sectionImgs]) => {
+      if (sectionImgs.length === 0) return;
+      
+      // Find nodes for this section
+      const nodeIds = findNodesForTopics([section]);
+      
+      if (nodeIds.length > 0) {
+        // Distribute images among matching nodes, focusing on leaf nodes
+        const maxImagesPerNode = Math.ceil(sectionImgs.length / nodeIds.length);
+        
+        let imageIndex = 0;
+        for (const nodeId of nodeIds) {
+          if (imageIndex >= sectionImgs.length) break;
+          
+          // Find the node by ID
+          const node = mind.findNodeById(nodeId);
+          if (!node) continue;
+          
+          // Add image to the node
+          node.image = sectionImgs[imageIndex].imageData;
+          imageIndex++;
+          
+          // If this node has children, add images to them too
+          if (node.children && node.children.length > 0 && imageIndex < sectionImgs.length) {
+            for (let i = 0; i < Math.min(node.children.length, maxImagesPerNode - 1); i++) {
+              if (imageIndex >= sectionImgs.length) break;
+              
+              const childNode = node.children[i];
+              childNode.image = sectionImgs[imageIndex].imageData;
+              imageIndex++;
+            }
+          }
+        }
+        
+        // If we still have images, add them to "Other" nodes
+        if (imageIndex < sectionImgs.length) {
+          const otherNodeIds = findNodesForTopics(["Figure", "Image", "Diagram", "Chart", "Table", "Visual"]);
+          
+          for (const nodeId of otherNodeIds) {
+            if (imageIndex >= sectionImgs.length) break;
+            
+            const node = mind.findNodeById(nodeId);
+            if (!node || node.image) continue; // Skip if already has an image
+            
+            node.image = sectionImgs[imageIndex].imageData;
+            imageIndex++;
+          }
+        }
+      }
+    });
+    
+    // Refresh the mind map to show images
+    mind.refresh();
+    
+    if (images.length > 0) {
+      toast({
+        title: "Images added to mind map",
+        description: `${Math.min(images.length, 5)} images from the PDF have been added to relevant sections.`,
+        duration: 5000,
+      });
+    }
+  };
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -328,9 +582,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         nodeMenu: true, // Ensure node menu is enabled
         tools: {
           zoom: true,
-          create: true, // Enable create button
+          create: true,
           edit: true,
-          layout: true, // Enable layout button
+          layout: true,
         },
         theme: colorfulTheme,
         autoFit: true,
@@ -507,51 +761,63 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       const styleObserver = observeStylePanel();
       
       // Install the node menu plugin with full styling support
-      const customNodeMenu = nodeMenu;
+      const customNodeMenu = nodeMenuNeo;
       
-      // Add summary and image options to node menu
-      const originalMenus = customNodeMenu.menus;
+      // Add custom options to node menu
       customNodeMenu.menus = (node: any, mind: MindElixirInstance) => {
-        const menus = originalMenus(node, mind);
-        
-        // Add summary option
-        menus.push({
-          name: '✨ Generate Summary',
-          onclick: () => {
-            // Get the node and its children
-            generateNodeSummary(node);
-          }
-        });
-        
-        // Add image option if PDF images are available
-        if (pdfImages.length > 0) {
-          menus.push({
+        return [
+          {
+            name: 'Delete',
+            handler: () => {
+              mind.removeNode();
+            }
+          },
+          {
+            name: 'Edit',
+            handler: () => {
+              mind.beginEdit();
+            }
+          },
+          {
+            name: 'Add Child',
+            handler: () => {
+              const topic = prompt('Enter the child topic name', 'New Topic');
+              if (topic) {
+                mind.addChild(topic);
+              }
+            }
+          },
+          {
+            name: 'Add Sibling',
+            handler: () => {
+              if (node.id === 'root') return; // Can't add sibling to root
+              const topic = prompt('Enter the sibling topic name', 'New Topic');
+              if (topic) {
+                mind.insertSibling(topic);
+              }
+            }
+          },
+          {
+            name: '✨ Generate Summary',
+            handler: () => {
+              generateNodeSummary(node);
+            }
+          },
+          {
             name: '🖼️ Add Image',
-            onclick: () => {
-              // Show image picker
+            handler: () => {
               setSelectedNodeId(node.id);
               setShowImagePicker(true);
             }
-          });
-          
-          // Add option to remove image if node has one
-          if (node.image) {
-            menus.push({
-              name: '❌ Remove Image',
-              onclick: () => {
-                // Remove image from node
-                delete node.image;
-                mind.refresh();
-                toast({
-                  title: "Image removed",
-                  description: "The image has been removed from this node."
-                });
-              }
-            });
-          }
-        }
-        
-        return menus;
+          },
+          ...(node.image ? [{
+            name: '❌ Remove Image',
+            handler: () => {
+              delete node.image;
+              mind.refresh();
+            }
+          }] : [])
+        ];
       };
       
       // Install the node menu
@@ -692,116 +958,29 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
       
-      // Enhanced clickability for nodes with style panel support
-      if (containerRef.current) {
-        const topicElements = containerRef.current.querySelectorAll('.mind-elixir-topic');
-        topicElements.forEach((element) => {
-          element.addEventListener('click', (e) => {
-            // Node is clicked - no need to call any additional methods
-            if (mind.currentNode && mind.currentNode.nodeObj) {
-              console.log('Node clicked:', mind.currentNode.nodeObj.topic);
-              
-              // Force style panel visibility after a short delay
-              setTimeout(() => {
-                const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
-                if (stylePanel && stylePanel instanceof HTMLElement) {
-                  stylePanel.style.display = 'block';
-                  stylePanel.style.visibility = 'visible';
-                  stylePanel.style.opacity = '1';
-                }
-              }, 100);
-            }
-          });
+      // Attach zoom controls to the mind map
+      const zoomIn = () => {
+        setZoomLevel(prev => {
+          const newZoom = Math.min(prev + 0.1, 2);
+          mind.scale(newZoom);
+          return newZoom;
         });
-      }
-      
-      // Add event listeners for node selection to ensure style panel visibility
-      mind.bus.addListener('selectNode', (nodeObj: any) => {
-        console.log('Node selected:', nodeObj);
-        
-        // Ensure style panels appear
-        setTimeout(() => {
-          const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
-          if (stylePanel && stylePanel instanceof HTMLElement) {
-            stylePanel.style.display = 'block';
-            stylePanel.style.visibility = 'visible';
-            stylePanel.style.opacity = '1';
-          }
-        }, 100);
-      });
-      
-      // Add observer for node additions to ensure they're properly initialized
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.addedNodes.length > 0) {
-            mutation.addedNodes.forEach((node) => {
-              if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
-                node.addEventListener('click', () => {
-                  // Node is clicked - let Mind Elixir handle it
-                  if (mind.currentNode && mind.currentNode.nodeObj) {
-                    console.log('New node clicked:', mind.currentNode.nodeObj.topic);
-                  }
-                });
-              }
-            });
-          }
-        });
-      });
-      
-      if (containerRef.current) {
-        observer.observe(containerRef.current, { childList: true, subtree: true });
-      }
-      
-      // Enhance connection lines with arrows and colors from theme
-      const enhanceConnectionLines = () => {
-        // Add arrowhead definition to SVG
-        const svg = containerRef.current?.querySelector('svg');
-        if (svg) {
-          // Create a defs element if it doesn't exist
-          let defs = svg.querySelector('defs');
-          if (!defs) {
-            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            svg.appendChild(defs);
-          }
-          
-          // Create arrowhead marker
-          const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-          marker.setAttribute('id', 'arrowhead');
-          marker.setAttribute('viewBox', '0 0 10 10');
-          marker.setAttribute('refX', '6');
-          marker.setAttribute('refY', '5');
-          marker.setAttribute('markerWidth', '6');
-          marker.setAttribute('markerHeight', '6');
-          marker.setAttribute('orient', 'auto-start-reverse');
-          
-          // Create arrowhead path
-          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
-          path.setAttribute('fill', colorfulTheme.cssVar['--line-color']);
-          
-          // Add path to marker and marker to defs
-          marker.appendChild(path);
-          defs.appendChild(marker);
-        }
-        
-        // Style all connection lines
-        const linkElements = containerRef.current?.querySelectorAll('.fne-link');
-        if (linkElements) {
-          linkElements.forEach((link: Element) => {
-            const linkElement = link as SVGElement;
-            linkElement.setAttribute('stroke-width', colorfulTheme.cssVar['--line-width'].replace('px', ''));
-            linkElement.setAttribute('stroke', colorfulTheme.cssVar['--line-color']);
-            linkElement.setAttribute('marker-end', 'url(#arrowhead)');
-          });
-        }
       };
       
-      // Apply enhanced connections after a short delay to ensure DOM is ready
-      setTimeout(() => {
-        enhanceConnectionLines();
-      }, 100);
+      const zoomOut = () => {
+        setZoomLevel(prev => {
+          const newZoom = Math.max(prev - 0.1, 0.5);
+          mind.scale(newZoom);
+          return newZoom;
+        });
+      };
       
+      // Add the mind map instance to the ref for external access
       mindMapRef.current = mind;
+      
+      // Make the zoom methods available on the mind map instance
+      (mindMapRef.current as any).zoomIn = zoomIn;
+      (mindMapRef.current as any).zoomOut = zoomOut;
       
       // Notify parent component that mind map is ready
       if (onMindMapReady) {
@@ -811,7 +990,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Show a toast notification to inform users about right-click functionality
       toast({
         title: "Mind Map Ready",
-        description: "Click on any node to edit it. Right-click for more options including adding images.",
+        description: "Right-click on nodes to access the menu and add images. Use the zoom buttons to adjust the view.",
         duration: 5000,
       });
       
@@ -823,10 +1002,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Cleanup function
       return () => {
         styleObserver.disconnect();
-        observer.disconnect();
       };
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfImages]);
+  }, [isMapGenerated, onMindMapReady, toast]);
 
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {
@@ -902,9 +1080,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const addImageToNode = (imageData: string) => {
     if (!mindMapRef.current || !selectedNodeId) return;
     
-    const node = mindMapRef.current.nodeData.children.find((n: any) => n.id === selectedNodeId) ||
-                 mindMapRef.current.nodeData.children.flatMap((n: any) => n.children || []).find((n: any) => n.id === selectedNodeId) ||
-                 (mindMapRef.current.nodeData.id === selectedNodeId ? mindMapRef.current.nodeData : null);
+    const node = mindMapRef.current.findNodeById(selectedNodeId);
     
     if (node) {
       // Add image data to node
@@ -922,6 +1098,18 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     // Close image picker
     setShowImagePicker(false);
     setSelectedNodeId(null);
+  };
+
+  const handleZoomIn = () => {
+    if (mindMapRef.current && (mindMapRef.current as any).zoomIn) {
+      (mindMapRef.current as any).zoomIn();
+    }
+  };
+  
+  const handleZoomOut = () => {
+    if (mindMapRef.current && (mindMapRef.current as any).zoomOut) {
+      (mindMapRef.current as any).zoomOut();
+    }
   };
 
   if (!isMapGenerated) {
@@ -948,7 +1136,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-lg p-4 w-[80%] max-w-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Select an image</h3>
+              <h3 className="text-lg font-medium">Select an image for the mind map node</h3>
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -976,6 +1164,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
                     />
                     <div className="text-xs text-center mt-2">
                       Page {img.pageNumber} • {img.width}×{img.height}
+                      {img.caption && (
+                        <div className="mt-1 text-xs text-gray-600 truncate" title={img.caption}>
+                          {img.caption.length > 50 ? img.caption.substring(0, 50) + "..." : img.caption}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1000,6 +1193,26 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             transition: 'background-color 0.5s ease'
           }}
         />
+        
+        {/* Zoom Controls */}
+        <div className="absolute bottom-4 left-4 flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={handleZoomIn}
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={handleZoomOut}
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+        </div>
         
         {pdfImages.length > 0 && (
           <div className="absolute bottom-4 right-4">
