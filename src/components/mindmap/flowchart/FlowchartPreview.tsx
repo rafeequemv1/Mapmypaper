@@ -45,7 +45,7 @@ const FlowchartPreview = ({
             nodeSpacing: 50,
             rankSpacing: 70,
             useMaxWidth: false,
-            orientation: "LR" // Always use LR for left-to-right layout
+            direction: "LR" // Always use LR for left-to-right layout
           }
         });
         

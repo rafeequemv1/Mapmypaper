@@ -17,8 +17,8 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         diagramPadding: 8,
         nodeSpacing: 50,
         rankSpacing: 70,
-        // Set orientation directly in flowchart config
-        orientation: direction 
+        // Set direction for the flowchart
+        direction: direction 
       },
       sequence: {
         diagramMarginX: 50,
@@ -40,11 +40,11 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       logLevel: 3 // Enables warning logs for debugging
     });
     
-    // Explicitly set the direction/orientation in the flowchart config
-    // by re-initializing with updated config that focuses just on the orientation
+    // Explicitly set the direction in the flowchart config
+    // by re-initializing with updated config that focuses just on the direction
     mermaid.initialize({
       flowchart: {
-        orientation: direction,
+        direction: direction,
         curve: 'basis',
         useMaxWidth: false,
         htmlLabels: true,
