@@ -90,7 +90,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${fullScreenPreview ? 'max-w-[98vw] w-[98vw] h-[98vh]' : 'max-w-7xl w-[95vw] h-[90vh]'} flex flex-col`}>
+      <DialogContent className={`${fullScreenPreview ? 'max-w-[92vw] w-[92vw] h-[92vh]' : 'max-w-7xl w-[95vw] h-[90vh]'} flex flex-col`}>
         <DialogHeader>
           <DialogTitle>Diagram Viewer</DialogTitle>
           <DialogDescription>
@@ -123,6 +123,15 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           </div>
           
           <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRegenerateActiveDiagram}
+              disabled={activeIsGenerating}
+              className="text-black"
+            >
+              {activeIsGenerating ? "Generating..." : "Regenerate Diagram"}
+            </Button>
             <Button
               variant={fullScreenPreview ? "default" : "ghost"}
               size="sm"

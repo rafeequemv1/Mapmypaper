@@ -20,7 +20,7 @@ const FlowchartPreview = ({
   theme = 'default',
   previewRef,
   hideEditor = false,
-  fitGraph = false
+  fitGraph = true // Default to true to ensure flowchart fits in modal
 }: FlowchartPreviewProps) => {
   const [renderedSvg, setRenderedSvg] = useState<string>('');
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -72,7 +72,9 @@ const FlowchartPreview = ({
             useMaxWidth: false, // Set to false to allow full width
             rankSpacing: 50,
             nodeSpacing: 50,
-            defaultRenderer: 'dagre-wrapper'
+            defaultRenderer: 'dagre-wrapper',
+            // Add rounded corners to all nodes by default
+            cornerRadius: 15
           },
           mindmap: {
             padding: 50,

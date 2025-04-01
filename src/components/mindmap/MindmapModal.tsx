@@ -54,7 +54,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
+      <DialogContent className="max-w-[92vw] w-[92vw] h-[92vh] flex flex-col">
         <DialogHeader className="space-y-1">
           <DialogTitle>Mindmap</DialogTitle>
           <DialogDescription className="text-xs">

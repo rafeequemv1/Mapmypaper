@@ -4,24 +4,10 @@ import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
+// This is a fallback template, but we'll prioritize generating from PDF content
 export const defaultFlowchart = `flowchart LR
-    A[Photosynthesis is the process by which green plants and some other organisms use sunlight to synthesize foods] -->|Requires| B[Photosynthesis requires chlorophyll which acts as a catalyst in the conversion of solar energy]
-    B --> C[The process generates oxygen as a byproduct which is essential for aerobic organisms]
-    
-    C --> D[Chlorophyll is the primary pigment that gives plants their green color]
-    C --> E[The complete photosynthetic process can be divided into two major phases]
-    
-    D --> F[Chlorophyll molecules are organized in clusters called photosystems found in chloroplast membranes]
-    D --> G[These molecules are vital for capturing light energy from the sun]
-    
-    E --> H[Light-dependent reactions occur in the thylakoid membranes of the chloroplast]
-    E --> I[The Calvin cycle takes place in the stroma of chloroplasts]
-    
-    H --> J[During light-dependent reactions, solar energy is converted into chemical energy in the form of ATP and NADPH]
-    H --> K[This phase also produces oxygen through the photolysis of water molecules]
-    
-    I --> L[The Calvin cycle is sometimes called the light-independent reactions since it does not directly require light]
-    I --> M[In this phase, ATP and NADPH are used to convert carbon dioxide into glucose and other organic compounds]`;
+    A[The uploaded document has not been processed yet] -->|Please wait| B[Our system is preparing to extract content from your PDF]
+    B --> C[You will see a detailed flowchart based on your document content]`;
 
 // Helper function to clean and validate Mermaid syntax
 export const cleanMermaidSyntax = (input: string): string => {
@@ -97,7 +83,7 @@ export const cleanMermaidSyntax = (input: string): string => {
   return processedLines.join('\n');
 };
 
-// Add styling function to enhance node appearance
+// Add styling function to enhance node appearance with rounded corners
 const enhanceFlowchartWithStyling = (flowchartCode: string): string => {
   // Add styling section at the end of the flowchart
   let enhancedCode = flowchartCode;
@@ -105,17 +91,14 @@ const enhanceFlowchartWithStyling = (flowchartCode: string): string => {
   // Add styling for different types of nodes if they don't already exist
   if (!enhancedCode.includes("classDef")) {
     enhancedCode += `\n
-    %% Node styling
-    classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px
-    classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px
-    classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px
+    %% Node styling with rounded corners
+    classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px,rx:15px,ry:15px
+    classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px,rx:15px,ry:15px
+    classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px,rx:15px,ry:15px
     classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px
     
-    %% Apply styling to nodes
-    class A main
-    class B,C process
-    class D,E concept
-    class F,G,H,I,J,K,L,M highlight`;
+    %% Apply styling to nodes - we'll apply styling more dynamically now
+    class A,B,C main`;
   }
   
   return enhancedCode;

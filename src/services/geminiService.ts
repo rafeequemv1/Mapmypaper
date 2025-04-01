@@ -338,9 +338,9 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const pdfText = sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
-      return `flowchart TD
-        A[Error] --> B[No PDF Content]
-        B --> C[Please upload a PDF first]`;
+      return `flowchart LR
+        A[No PDF content was found] --> B[Please upload a PDF document first]
+        B --> C[The flowchart will be generated based on your document content]`;
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -349,67 +349,34 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const prompt = `
     Create a detailed, complex Mermaid flowchart based on this document text.
     
-    CRITICAL MERMAID SYNTAX RULES:
-    1. Start with 'flowchart TD' (top-down layout)
-    2. Nodes MUST have this format: A[Text] or A(Text) or A{Text}
-    3. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
-    4. Connections MUST use EXACTLY TWO dashes: A --> B
-    5. Create DETAILED connections with labels: A -->|Label text| B 
-    6. Use subgraphs to group related concepts
-    7. Create at least 10-15 nodes with connections
-    8. IMPORTANT: Never use hyphens (-) in node text. Replace hyphens with spaces or underscores.
-    9. Use different node shapes for different types of concepts:
-       - Main concepts: A[Main Concept]
-       - Processes: B(Process)
-       - Decision points: C{Decision}
-    10. Include styling at the end:
-        classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px
-        classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px
-        classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px
-        classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px
-        
-        And assign classes to nodes:
-        class A main
-        class B,C concept
-        class D,E process
-        class F,G highlight
+    CRITICAL REQUIREMENTS:
+    1. Start with 'flowchart LR' (left to right layout)
+    2. Use COMPLETE SENTENCES instead of keywords in node text
+    3. Make sure nodes have detailed, meaningful text (at least 5-7 words each)
+    4. Create at least 12-15 nodes with connections to make it comprehensive
+    5. Use detailed connections with labels that explain relationships
+    6. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
+    7. Use different node shapes for conceptual hierarchy:
+       - Main concepts: A[Complete sentence about main concept]
+       - Support facts: B(Complete sentence about supporting fact)
+       - Examples/Evidence: C{Complete sentence with example}
     
-    EXAMPLE DETAILED FLOWCHART:
-    flowchart TD
-        A[Photosynthesis Overview] -->|Process| B[Process by which green plants use sunlight]
-        B --> C[Involves chlorophyll and generates oxygen]
-        
-        C --> D[Chlorophyll]
-        C --> E[Process]
-        
-        D --> F[Green pigment found in chloroplasts]
-        D --> G[Vital for light absorption]
-        
-        E --> H[Light-dependent Reactions]
-        E --> I[Calvin Cycle]
-        
-        H --> J[Take place in thylakoid membranes]
-        H --> K[Convert solar energy to chemical energy]
-        
-        I --> L[Light-independent reactions]
-        I --> M[Uses ATP and NADPH for glucose]
-        
-        %% Node styling
-        classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px
-        classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px
-        classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px
-        classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px
-        
-        %% Apply styling to nodes
-        class A main
-        class B,C process
-        class D,E concept
-        class F,G,H,I,J,K,L,M highlight
+    MERMAID SYNTAX RULES:
+    1. Nodes MUST have this format: A[Full sentence] or A(Full sentence) or A{Full sentence}
+    2. Connections MUST use EXACTLY TWO dashes: A --> B
+    3. Create DETAILED connections with labels: A -->|Causes| B or A -->|Leads to| C
+    4. Never use hyphens (-) in node text. Replace hyphens with spaces.
+    
+    EXAMPLE OF GOOD NODE CONTENT:
+    A[The document describes a novel approach to machine learning]
+    B(The researchers conducted experiments across multiple datasets)
+    C{The experimental results showed improved accuracy by 15 percent}
     
     Here's the document text:
-    ${pdfText.slice(0, 8000)}
+    ${pdfText.slice(0, 10000)}
     
-    Generate ONLY valid Mermaid flowchart code, nothing else.
+    Generate ONLY valid Mermaid flowchart code with complete sentences for all nodes, nothing else.
+    Make sure the diagram contains the main points and findings from the document.
     `;
     
     const result = await model.generateContent(prompt);
@@ -425,12 +392,12 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     return cleanMermaidSyntax(mermaidCode);
   } catch (error) {
     console.error("Gemini API flowchart generation error:", error);
-    return `flowchart TD
-      A[Error] -->|Failed| B[Failed to generate flowchart]
-      B -->|Please| C[Please try again]
+    return `flowchart LR
+      A[An error occurred while generating the flowchart] -->|Please try again| B[The system encountered an issue processing your PDF]
+      B -->|Suggestion| C[Try uploading a different PDF document or reload the page]
       
       %% Node styling
-      classDef error fill:#ffcccc,stroke:#b30000,stroke-width:2px
+      classDef error fill:#ffcccc,stroke:#b30000,stroke-width:2px,rx:15px,ry:15px
       
       %% Apply styling
       class A,B,C error`;
@@ -440,16 +407,19 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
 // Helper function to clean and fix common Mermaid syntax issues
 const cleanMermaidSyntax = (code: string): string => {
   if (!code || !code.trim()) {
-    return `flowchart TD
-      A[Error] --> B[Empty flowchart]
-      B --> C[Please try again]`;
+    return `flowchart LR
+      A[Error occurred while processing your document] --> B[Empty flowchart was generated]
+      B --> C[Please try uploading your PDF again]`;
   }
 
   try {
     // Ensure the code starts with flowchart directive
     let cleaned = code.trim();
     if (!cleaned.startsWith("flowchart")) {
-      cleaned = "flowchart TD\n" + cleaned;
+      cleaned = "flowchart LR\n" + cleaned;
+    } else {
+      // Replace TD with LR direction for better fit
+      cleaned = cleaned.replace(/flowchart\s+TD/i, "flowchart LR");
     }
 
     // Process line by line to ensure each line is valid
@@ -526,15 +496,33 @@ const cleanMermaidSyntax = (code: string): string => {
     
     if (!hasConnections) {
       console.warn("No connections found in flowchart, adding default connection");
-      validLines.push("A[Start] --> B[End]");
+      validLines.push("A[The document contains important information] --> B[Review the full document for details]");
+    }
+    
+    // Add styling for rounded corners if not already present
+    if (!validLines.some(line => line.includes('classDef'))) {
+      validLines.push(`
+%% Node styling with rounded corners
+classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px,rx:15px,ry:15px
+classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px,rx:15px,ry:15px
+classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px,rx:15px,ry:15px
+classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px`);
+      
+      // Apply styling to first few nodes automatically
+      validLines.push(`
+%% Apply styling to nodes
+class A,B,C main
+class D,E,F process
+class G,H,I concept
+class J,K,L highlight`);
     }
     
     return validLines.join('\n');
   } catch (error) {
     console.error("Error cleaning Mermaid syntax:", error);
-    return `flowchart TD
-      A[Error] --> B[Syntax Cleaning Failed]
-      B --> C[Please try again]`;
+    return `flowchart LR
+      A[Error occurred while cleaning diagram syntax] --> B[The system encountered an unexpected issue]
+      B --> C[Please try uploading a different document]`;
   }
 };
 
@@ -680,49 +668,52 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     
     if (!pdfText || pdfText.trim() === '') {
       return `mindmap
-        root((Error))
-          No PDF Content
-            Please upload a PDF first`;
+        root((No PDF Content))
+          No document was found
+            Please upload a PDF file first`;
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Create a valid Mermaid mindmap based on this document text.
+    Create a detailed Mermaid mindmap based on this document text.
     
-    CRITICAL MERMAID SYNTAX RULES:
+    CRITICAL REQUIREMENTS:
     1. Start with 'mindmap'
-    2. Use proper indentation for hierarchy
-    3. Root node can use syntax like: root((Main Topic))
-    4. First level nodes just use text on their own line with proper indentation
-    5. You can use these node styles:
-       - Regular text node (just text)
-       - Text in square brackets [Text]
-       - Text in parentheses (Text)
-       - Text in double parentheses ((Text))
-       - Text in circle >Text]
-    6. Max 3 levels of hierarchy
-    7. Max 15 nodes total
-    8. AVOID special characters that might break syntax
+    2. Use proper indentation for hierarchy (2 spaces per level)
+    3. Use a descriptive root node title that captures the document's main topic
+    4. Use complete sentences or detailed phrases for all nodes (not just keywords)
+    5. Include at least 3 levels of hierarchy with 15-20 nodes total
+    6. Organize information logically with main concepts as first level, supporting details as second level
+    7. Each branch should follow a coherent thought process from general to specific
     
-    EXAMPLE CORRECT SYNTAX:
+    MERMAID SYNTAX RULES:
+    1. Root node must use: root((Complete title of document or main topic))
+    2. First level nodes are just text with proper indentation
+    3. Use node styling variations for visual hierarchy:
+       - Text in square brackets [Important concept]
+       - Text in parentheses (Supporting fact)
+       - Text in double parentheses ((Key finding))
+    4. Keep nodes concise but informative (5-12 words)
+    
+    EXAMPLE OF GOOD MINDMAP FORMAT:
     mindmap
-      root((Research Paper))
-        Introduction
-          Background
-          Problem Statement
-        Methodology
-          Data Collection
-          Analysis
-        Results
-          Findings
-        Conclusion
+      root((Machine Learning Applications in Healthcare))
+        Diagnostic Support Systems
+          [AI models achieve 95% accuracy in radiology]
+          (Deep learning identifies patterns human radiologists miss)
+        Treatment Optimization
+          [Personalized medicine based on patient data]
+          (Drug efficacy prediction using neural networks)
+        Administrative Efficiency
+          [Automated scheduling reduces wait times]
     
     Here's the document text:
-    ${pdfText.slice(0, 8000)}
+    ${pdfText.slice(0, 10000)}
     
     Generate ONLY valid Mermaid mindmap code, nothing else.
+    Make sure to include the main points, findings, and structure from the document.
     `;
     
     const result = await model.generateContent(prompt);
@@ -739,9 +730,12 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
   } catch (error) {
     console.error("Gemini API mindmap generation error:", error);
     return `mindmap
-      root((Error))
+      root((Error Processing Document))
         Failed to generate mindmap
-          Please try again`;
+          Please try again with a different document
+        Possible reasons
+          [Document format may not be compatible]
+          [Text extraction might have failed]`;
   }
 };
 
@@ -751,7 +745,7 @@ const cleanMindmapSyntax = (code: string): string => {
     return `mindmap
       root((Error))
         Empty mindmap
-          Please try again`;
+          Please try again with a different document`;
   }
 
   try {
@@ -796,6 +790,6 @@ const cleanMindmapSyntax = (code: string): string => {
     return `mindmap
       root((Error))
         Syntax Cleaning Failed
-          Please try again`;
+          Please try again with a different document`;
   }
 };
