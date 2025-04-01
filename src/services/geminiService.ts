@@ -1,7 +1,8 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Use the provided API key
-const API_KEY = "AIzaSyBeJ0uXu58YfxYK32VB1wf1ODrFvrL9gi8";
+// Access your API key as an environment variable (for security reasons)
+const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Helper function to clean and validate Mermaid syntax
@@ -81,16 +82,11 @@ export const cleanMermaidSyntax = (input: string): string => {
 // Function to generate a mind map from text using Gemini API
 export const generateMindMapFromText = async (text: string): Promise<any> => {
   try {
-    console.log("Generating mind map from text with length:", text.length);
-    
     // First, store the text in session storage for later reference
     sessionStorage.setItem('pdfText', text);
 
     // Initialize the Generative Model for text generation
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
-    console.log("Using API key:", API_KEY);
-    console.log("Model initialized");
     
     // Create a template for research paper structure as mind map
     const researchPaperTemplate = {
@@ -177,12 +173,9 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
     ONLY return the JSON structure, nothing else.
     `;
 
-    console.log("Sending prompt to Gemini API");
-    
     // Generate content with the prompt
     try {
       const result = await model.generateContent(prompt);
-      console.log("Received response from Gemini API");
       const response = await result.response.text();
       
       // Extract JSON from the response
@@ -195,20 +188,15 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
         jsonStr = response.split("```")[1].split("```")[0].trim();
       }
       
-      console.log("Extracted JSON string:", jsonStr.substring(0, 100) + "...");
-      
       // Parse the JSON response
       let mindMapData;
       try {
         mindMapData = JSON.parse(jsonStr);
-        console.log("Successfully parsed JSON");
         
         // Ensure the structure is valid
         if (!mindMapData.id || !mindMapData.topic || !Array.isArray(mindMapData.children)) {
           console.warn("Invalid mind map structure returned by API, using template");
           mindMapData = researchPaperTemplate;
-        } else {
-          console.log("Mind map structure is valid");
         }
       } catch (parseError) {
         console.error("Error parsing JSON from Gemini response:", parseError);
@@ -217,7 +205,6 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
       
       // Save the mind map data to session storage for use in MindMap component
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
-      console.log("Saved mind map data to session storage");
       
       return mindMapData;
     } catch (apiError) {
@@ -572,6 +559,31 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
        - Square: [Text]
        - Rounded: (Text)
        - Default: Text
+    5. You can use icons: ::icon(fa fa-book)
+    6. You can define classes for styling: :::className
+    
+    EXAMPLE CORRECT SYNTAX:
+    mindmap
+      root((Paper Topic))
+        Introduction
+          Background:::highlight
+            Key Point 1
+            Key Point 2
+          Research Question
+            Question 1
+            Question 2::icon(fa fa-question)
+        Methodology
+          Data Collection
+          Analysis
+        Results
+          Finding 1:::important
+          Finding 2
+        Conclusion
+          Summary
+          Future Work
+
+    classDef highlight fill:#f9f,stroke:#333
+    classDef important fill:#bbf,stroke:#33f
     
     Document Content: 
     ${pdfText.slice(0, 15000)}
@@ -601,8 +613,6 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
 // New function to extract text from PDFs
 export const extractAndStorePdfText = async (pdfFile: File): Promise<string> => {
   try {
-    console.log("Starting PDF text extraction for:", pdfFile.name);
-    
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -610,40 +620,29 @@ export const extractAndStorePdfText = async (pdfFile: File): Promise<string> => 
         try {
           // Load PDF.js
           const pdfjsLib = await import("pdfjs-dist");
-          console.log("PDF.js loaded successfully");
-          
           pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
           
           // Get document
           const typedArray = new Uint8Array(this.result as ArrayBuffer);
-          console.log("PDF loaded as typed array, length:", typedArray.length);
-          
           const pdfDocument = await pdfjsLib.getDocument(typedArray).promise;
-          console.log("PDF document loaded, pages:", pdfDocument.numPages);
           
           // Extract text from all pages
           let fullText = "";
           
           for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-            if (pageNum > 20) {
-              console.log("Limiting to first 20 pages to avoid performance issues");
-              break; // Limit to first 20 pages to avoid performance issues
-            }
-            console.log("Processing page", pageNum);
-            
             const page = await pdfDocument.getPage(pageNum);
             const textContent = await page.getTextContent();
             const pageText = textContent.items.map((item: any) => item.str).join(" ");
             fullText += pageText + "\n";
           }
           
-          console.log(`Extracted ${fullText.length} characters from PDF`);
-          
           // Store in session storage
           sessionStorage.setItem("pdfText", fullText);
-          sessionStorage.setItem("pdfName", pdfFile.name);
-          console.log("PDF text stored in session storage");
           
+          // Also store the pdf name
+          sessionStorage.setItem("pdfName", pdfFile.name);
+          
+          console.log(`Extracted ${fullText.length} characters from ${pdfFile.name}`);
           resolve(fullText);
         } catch (error) {
           console.error("Error extracting text from PDF:", error);
