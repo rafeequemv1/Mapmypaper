@@ -84,6 +84,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
             theme={theme}
             previewRef={previewRef}
             hideEditor={true}
+            fitGraph={true}
           />
         </div>
         

@@ -3,6 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
+import PdfAreaSelector from "./pdf/PdfAreaSelector";
 import { ZoomIn, ZoomOut, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -14,6 +15,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
+  onImageSelected?: (imageDataUrl: string) => void;
   onPdfLoaded?: () => void;
 }
 
@@ -22,7 +24,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded }, ref) => {
+  ({ onTextSelected, onImageSelected, onPdfLoaded }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -32,6 +34,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [searchResults, setSearchResults] = useState<string[]>([]);
     const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(-1);
     const [showSearch, setShowSearch] = useState<boolean>(false);
+    const [isSelectingArea, setIsSelectingArea] = useState<boolean>(false);
     const pdfContainerRef = useRef<HTMLDivElement>(null);
     const pagesRef = useRef<(HTMLDivElement | null)[]>([]);
     const { toast } = useToast();
@@ -66,6 +69,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Handle text selection
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+      // Don't process text selection if we're in area selection mode
+      if (isSelectingArea) return;
+      
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "") {
         const text = selection.toString().trim();
@@ -75,6 +81,25 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           onTextSelected(text);
         }
       }
+    };
+
+    // Toggle area selection mode
+    const toggleAreaSelection = () => {
+      setIsSelectingArea(prev => !prev);
+      if (!isSelectingArea) {
+        toast({
+          title: "Area selection mode",
+          description: "Click and drag to select an area of the PDF",
+        });
+      }
+    };
+
+    // Handle image selection from area selector
+    const handleExplainSelection = (imageDataUrl: string) => {
+      if (onImageSelected) {
+        onImageSelected(imageDataUrl);
+      }
+      setIsSelectingArea(false);
     };
 
     // Enhanced search functionality with improved highlighting
@@ -343,6 +368,21 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             </Button>
           </div>
           
+          {/* Area Selection Toggle Button */}
+          <Button
+            variant={isSelectingArea ? "default" : "outline"}
+            size="sm"
+            className="h-7 flex items-center gap-1 text-black"
+            onClick={toggleAreaSelection}
+            title="Select an area to capture"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+            </svg>
+            <span>Select Area</span>
+          </Button>
+          
           {/* Search Input */}
           <div className="flex-1 mx-2">
             <div className="flex items-center">
@@ -395,7 +435,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
         {/* PDF Content with full width */}
         {pdfData ? (
-          <ScrollArea className="flex-1" ref={pdfContainerRef}>
+          <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
             <div 
               className="flex flex-col items-center py-4" 
               onMouseUp={handleDocumentMouseUp}
@@ -437,6 +477,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 ))}
               </Document>
             </div>
+            
+            {/* Area Selection Overlay */}
+            {isSelectingArea && (
+              <PdfAreaSelector onExplainSelection={handleExplainSelection} />
+            )}
           </ScrollArea>
         ) : (
           <div className="flex h-full items-center justify-center">

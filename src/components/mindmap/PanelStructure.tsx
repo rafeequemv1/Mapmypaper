@@ -28,6 +28,7 @@ const PanelStructure = ({
   onExplainText
 }: PanelStructureProps) => {
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const pdfViewerRef = useRef<{ scrollToPage: (pageNumber: number) => void } | null>(null);
   const isMobile = useIsMobile();
 
@@ -55,6 +56,16 @@ const PanelStructure = ({
           }
         }, 100);
       }
+    }
+  };
+  
+  // Handle image selection from PDF area selector
+  const handleImageSelected = (imageDataUrl: string) => {
+    setSelectedImage(imageDataUrl);
+    
+    // Ensure chat panel is visible when image is selected
+    if (!showChat) {
+      toggleChat();
     }
   };
 
@@ -87,6 +98,7 @@ const PanelStructure = ({
                     }
                   }
                 }}
+                onImageSelected={handleImageSelected}
                 onPdfLoaded={() => setPdfLoaded(true)}
                 ref={pdfViewerRef}
               />
@@ -123,6 +135,7 @@ const PanelStructure = ({
               <ChatPanel 
                 toggleChat={toggleChat} 
                 explainText={explainText}
+                selectedImage={selectedImage}
                 onScrollToPdfPosition={handleScrollToPdfPosition} 
               />
             </ResizablePanel>
@@ -131,7 +144,11 @@ const PanelStructure = ({
       </ResizablePanelGroup>
       
       {/* Mobile Chat Sheet */}
-      {isMobile && <MobileChatSheet onScrollToPdfPosition={handleScrollToPdfPosition} />}
+      {isMobile && <MobileChatSheet 
+        onScrollToPdfPosition={handleScrollToPdfPosition}
+        selectedImage={selectedImage}
+        explainText={explainText}
+      />}
     </div>
   );
 };

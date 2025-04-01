@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -348,28 +347,64 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Create a simple, valid Mermaid flowchart based on this document text.
+    Create a detailed, complex Mermaid flowchart based on this document text.
     
     CRITICAL MERMAID SYNTAX RULES:
-    1. Start with 'flowchart TD'
-    2. Nodes MUST have this format: A[Text] or A(Text) or A{Text} - no exceptions
+    1. Start with 'flowchart TD' (top-down layout)
+    2. Nodes MUST have this format: A[Text] or A(Text) or A{Text}
     3. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
-    4. Connections MUST use EXACTLY TWO dashes: A --> B (not A->B or A---->B)
-    5. Each line should define ONE connection or ONE node
-    6. Max 12 nodes total
-    7. For labels on arrows: A -->|Label text| B (use single pipes)
-    8. Never use semicolons (;) in node text or connections
-    9. EXTREMELY IMPORTANT: Never use hyphens (-) in node text. Replace ALL hyphens with spaces or underscores.
-    10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
-    11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
+    4. Connections MUST use EXACTLY TWO dashes: A --> B
+    5. Create DETAILED connections with labels: A -->|Label text| B 
+    6. Use subgraphs to group related concepts
+    7. Create at least 10-15 nodes with connections
+    8. IMPORTANT: Never use hyphens (-) in node text. Replace hyphens with spaces or underscores.
+    9. Use different node shapes for different types of concepts:
+       - Main concepts: A[Main Concept]
+       - Processes: B(Process)
+       - Decision points: C{Decision}
+    10. Include styling at the end:
+        classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px
+        classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px
+        classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px
+        classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px
+        
+        And assign classes to nodes:
+        class A main
+        class B,C concept
+        class D,E process
+        class F,G highlight
     
-    EXAMPLE CORRECT SYNTAX:
+    EXAMPLE DETAILED FLOWCHART:
     flowchart TD
-      A[Start] --> B{Decision}
-      B -->|Yes| C[Process One]
-      B -->|No| D[Process Two]
-      C --> E[End]
-      D --> E
+        A[Photosynthesis Overview] -->|Process| B[Process by which green plants use sunlight]
+        B --> C[Involves chlorophyll and generates oxygen]
+        
+        C --> D[Chlorophyll]
+        C --> E[Process]
+        
+        D --> F[Green pigment found in chloroplasts]
+        D --> G[Vital for light absorption]
+        
+        E --> H[Light-dependent Reactions]
+        E --> I[Calvin Cycle]
+        
+        H --> J[Take place in thylakoid membranes]
+        H --> K[Convert solar energy to chemical energy]
+        
+        I --> L[Light-independent reactions]
+        I --> M[Uses ATP and NADPH for glucose]
+        
+        %% Node styling
+        classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px
+        classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px
+        classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px
+        classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px
+        
+        %% Apply styling to nodes
+        class A main
+        class B,C process
+        class D,E concept
+        class F,G,H,I,J,K,L,M highlight
     
     Here's the document text:
     ${pdfText.slice(0, 8000)}
@@ -391,8 +426,14 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
   } catch (error) {
     console.error("Gemini API flowchart generation error:", error);
     return `flowchart TD
-      A[Error] --> B[Failed to generate flowchart]
-      B --> C[Please try again]`;
+      A[Error] -->|Failed| B[Failed to generate flowchart]
+      B -->|Please| C[Please try again]
+      
+      %% Node styling
+      classDef error fill:#ffcccc,stroke:#b30000,stroke-width:2px
+      
+      %% Apply styling
+      class A,B,C error`;
   }
 };
 
