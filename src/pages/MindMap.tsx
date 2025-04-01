@@ -32,12 +32,11 @@ const MindMap = () => {
     if (mindElixirInstance) {
       try {
         console.log("Attempting to expand root node");
-        // Check if nodeData and its root property exist before accessing
-        if (mindElixirInstance.nodeData && 'root' in mindElixirInstance.nodeData) {
-          const rootNode = mindElixirInstance.nodeData.root;
-          if (rootNode) {
-            mindElixirInstance.expandNode(rootNode);
-          }
+        
+        // Fix: Properly type-check and access the root node to match the Topic type
+        if (mindElixirInstance.nodeData && mindElixirInstance.nodeData.root) {
+          // Use the expandAll method instead which is safer
+          mindElixirInstance.expandAll();
         }
       } catch (error) {
         console.info("Error expanding root node:", error);
