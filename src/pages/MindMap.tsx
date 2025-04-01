@@ -4,6 +4,7 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import SequenceDiagramModal from "@/components/mindmap/SequenceDiagramModal"; 
+import MindmapModal from "@/components/mindmap/MindmapModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,6 +15,7 @@ const MindMap = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
   const [showSequenceDiagram, setShowSequenceDiagram] = useState(false);
+  const [showMindmap, setShowMindmap] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>("");
   const { toast } = useToast();
@@ -248,6 +250,12 @@ const MindMap = () => {
       <SequenceDiagramModal
         open={showSequenceDiagram}
         onOpenChange={setShowSequenceDiagram}
+      />
+      
+      {/* Mindmap Modal */}
+      <MindmapModal
+        open={showMindmap}
+        onOpenChange={setShowMindmap}
       />
     </div>
   );

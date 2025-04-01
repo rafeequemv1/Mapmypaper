@@ -18,7 +18,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -33,15 +32,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
-import FlowchartModal from "@/components/mindmap/FlowchartModal";
-import SequenceDiagramModal from "@/components/mindmap/SequenceDiagramModal";
-import SummaryModal from "./SummaryModal";
-import MindmapModal from "./MindmapModal";
 
-const Header = () => {
+interface HeaderProps {
+  togglePdf: () => void;
+  toggleChat: () => void;
+  setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const Header = ({ togglePdf, toggleChat, setShowSummary }: HeaderProps) => {
   const [showFlowchartModal, setShowFlowchartModal] = useState(false);
   const [showSequenceDiagramModal, setShowSequenceDiagramModal] = useState(false);
-  const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showMindmapModal, setShowMindmapModal] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -139,15 +139,15 @@ const Header = () => {
       </div>
       <div className="flex items-center gap-2 md:gap-4">
         {/* Middle section with PDF, Chat, Summary buttons with text */}
-        <Button variant="outline" size="sm" onClick={() => {}} className="flex items-center gap-1">
+        <Button variant="outline" size="sm" onClick={togglePdf} className="flex items-center gap-1">
           <FileText className="h-4 w-4" />
           <span className="hidden md:inline">PDF</span>
         </Button>
-        <Button variant="outline" size="sm" onClick={() => {}} className="flex items-center gap-1">
+        <Button variant="outline" size="sm" onClick={toggleChat} className="flex items-center gap-1">
           <MessageSquare className="h-4 w-4" />
           <span className="hidden md:inline">Chat</span>
         </Button>
-        <Button variant="outline" size="sm" onClick={() => setShowSummaryModal(true)} className="flex items-center gap-1">
+        <Button variant="outline" size="sm" onClick={() => setShowSummary(true)} className="flex items-center gap-1">
           <FileText className="h-4 w-4" />
           <span className="hidden md:inline">Summary</span>
         </Button>
@@ -245,22 +245,6 @@ const Header = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <FlowchartModal
-        open={showFlowchartModal}
-        onOpenChange={setShowFlowchartModal}
-      />
-      <SequenceDiagramModal
-        open={showSequenceDiagramModal}
-        onOpenChange={setShowSequenceDiagramModal}
-      />
-      <SummaryModal
-        open={showSummaryModal}
-        onOpenChange={setShowSummaryModal}
-      />
-      <MindmapModal
-        open={showMindmapModal}
-        onOpenChange={setShowMindmapModal}
-      />
     </header>
   );
 };
