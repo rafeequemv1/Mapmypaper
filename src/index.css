@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -93,11 +94,11 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border font-roboto;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-roboto;
   }
   
   /* Enhanced typography for AI responses */
@@ -199,4 +200,33 @@
   .ai-message-content {
     @apply prose max-w-none;
   }
+}
+
+/* Fix for Context Menu z-index and visibility */
+.mind-elixir-node-menu,
+.mind-elixir-contextmenu {
+  z-index: 9999 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: absolute !important;
+  display: block !important;
+}
+
+/* Override any hiding styles */
+.mind-elixir-node-menu[style*="display: none"],
+.mind-elixir-contextmenu[style*="display: none"] {
+  display: block !important;
+}
+
+/* Enhanced tooltip styles for better visibility and clickability */
+.radix-tooltip-content {
+  z-index: 9999;
+  background-color: white !important;
+  color: black !important;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
 }

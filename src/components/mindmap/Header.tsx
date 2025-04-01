@@ -108,13 +108,13 @@ const Header = ({
   return (
     <header className="bg-white border-b py-2 px-4">
       <div className="flex items-center justify-between">
-        {/* Left side - Logo with Beta tag */}
+        {/* Left side - Logo with Beta tag, smaller font */}
         <div className="flex items-center gap-2">
           <div className="bg-black text-white p-1.5 rounded-md">
             <Upload className="h-4 w-4" />
           </div>
           <div className="flex items-center">
-            <h1 className="text-lg font-bold">mapmypaper</h1>
+            <h1 className="text-sm font-bold">mapmypaper</h1>
             <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
           </div>
         </div>

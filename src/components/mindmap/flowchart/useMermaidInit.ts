@@ -20,7 +20,7 @@ export const useMermaidInit = (direction: "TB" | "LR" = "LR") => {
         // Direction property for Mermaid v11+
         // Using raw object assignment to bypass TypeScript checking
         // since the type definitions might be outdated
-        ...{ orientation: direction }
+        ...{ orientation: "LR" } // Always set to LR direction
       },
       sequence: {
         diagramMarginX: 50,
@@ -39,7 +39,7 @@ export const useMermaidInit = (direction: "TB" | "LR" = "LR") => {
       },
       logLevel: 3 // Enables warning logs for debugging
     });
-  }, [direction]);
+  }, []); // Remove direction dependency since we're always using "LR"
 };
 
 export default useMermaidInit;
