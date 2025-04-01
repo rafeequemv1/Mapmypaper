@@ -8,7 +8,7 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
     mermaid.initialize({
       startOnLoad: false,
       theme: "default",
-      securityLevel: "loose",
+      securityLevel: 'loose',
       flowchart: {
         useMaxWidth: false,
         htmlLabels: true,
@@ -17,8 +17,8 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         defaultRenderer: 'dagre-wrapper',
         nodeSpacing: 50,
         rankSpacing: 70,
-        // Fix: Change 'rankDir' to 'direction' which is the correct property name
-        direction: direction
+        // Fix: In Mermaid 9.0.0+ we should set orientation in the flowchart config
+        orientation: direction
       },
       sequence: {
         diagramMarginX: 50,
