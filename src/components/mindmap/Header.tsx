@@ -11,6 +11,7 @@ import {
   Upload,
   MessageSquare,
   PlusCircle,
+  FileIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -120,72 +121,72 @@ const Header = ({
   }, [toast]);
   
   return (
-    <header className="bg-white border-b p-4">
+    <header className="bg-white border-b py-2 px-4">
       <div className="flex items-center justify-between">
         {/* Left side - Logo with Beta tag */}
-        <div className="flex items-center gap-3">
-          <div className="bg-black text-white p-2 rounded-md">
-            <Upload className="h-5 w-5" />
+        <div className="flex items-center gap-2">
+          <div className="bg-black text-white p-1.5 rounded-md">
+            <Upload className="h-4 w-4" />
           </div>
           <div className="flex items-center">
-            <h1 className="text-xl font-bold">mapmypaper</h1>
-            <div className="ml-2 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">BETA</div>
+            <h1 className="text-lg font-bold">mapmypaper</h1>
+            <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
           </div>
         </div>
         
         {/* Center - Main Button Group */}
-        <div className="flex items-center gap-2 md:gap-4 absolute left-1/2 transform -translate-x-1/2">
-          <Button variant="ghost" onClick={togglePdf} className="flex items-center gap-1">
-            <FileText className="h-4 w-4" />
-            <span className="hidden md:inline">PDF</span>
+        <div className="flex items-center gap-2 md:gap-3 absolute left-1/2 transform -translate-x-1/2">
+          <Button variant="ghost" onClick={togglePdf} className="flex items-center gap-1 text-black h-8 px-3">
+            <FileText className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">PDF</span>
           </Button>
           
-          <Button variant="ghost" onClick={toggleChat} className="flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" />
-            <span className="hidden md:inline">Chat</span>
+          <Button variant="ghost" onClick={toggleChat} className="flex items-center gap-1 text-black h-8 px-3">
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Chat</span>
           </Button>
           
-          <Button variant="ghost" onClick={() => setShowSummary(true)} className="flex items-center gap-1">
-            <FileText className="h-4 w-4" />
-            <span className="hidden md:inline">Summary</span>
+          <Button variant="ghost" onClick={() => setShowSummary(true)} className="flex items-center gap-1 text-black h-8 px-3">
+            <FileIcon className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Summary</span>
           </Button>
           
-          <Button variant="ghost" onClick={() => setShowMindmap && setShowMindmap(true)} className="flex items-center gap-1">
-            <PlusCircle className="h-4 w-4" />
-            <span className="hidden md:inline">Create</span>
+          <Button variant="ghost" onClick={() => setShowMindmap && setShowMindmap(true)} className="flex items-center gap-1 text-black h-8 px-3">
+            <PlusCircle className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Create</span>
           </Button>
         </div>
         
         {/* Right side - Action buttons */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-            <Upload className="h-4 w-4" />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
+            <Upload className="h-3.5 w-3.5 text-black" />
           </Button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <GitBranchPlus className="h-4 w-4" />
+              <Button variant="ghost" size="sm" className="h-7 px-2">
+                <GitBranchPlus className="h-3.5 w-3.5 text-black" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setShowFlowchart && setShowFlowchart(true)}>
-                <GitCommitHorizontal className="h-4 w-4 mr-2" />
+                <GitCommitHorizontal className="h-3.5 w-3.5 mr-2" />
                 Flowchart
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowSequenceDiagram && setShowSequenceDiagram(true)}>
-                <ListOrdered className="h-4 w-4 mr-2" />
+                <ListOrdered className="h-3.5 w-3.5 mr-2" />
                 Sequence Diagram
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowMindmap && setShowMindmap(true)}>
-                <Network className="h-4 w-4 mr-2" />
+                <Network className="h-3.5 w-3.5 mr-2" />
                 Mindmap
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <Button variant="ghost" size="icon" onClick={() => setShowExportDialog(true)}>
-            <Download className="h-4 w-4" />
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>
+            <Download className="h-3.5 w-3.5 text-black" />
           </Button>
         </div>
       </div>
@@ -212,13 +213,13 @@ const Header = ({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={handleExportPNG}>
+            <Button variant="ghost" onClick={handleExportPNG} className="text-black">
               Export as PNG
             </Button>
-            <Button variant="ghost" onClick={handleExportSVG}>
+            <Button variant="ghost" onClick={handleExportSVG} className="text-black">
               Export as SVG
             </Button>
-            <Button variant="ghost" onClick={handleExportJSON}>
+            <Button variant="ghost" onClick={handleExportJSON} className="text-black">
               Export as JSON
             </Button>
           </DialogFooter>

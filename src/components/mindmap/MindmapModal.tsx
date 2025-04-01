@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Activity } from "lucide-react";
 import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
@@ -56,20 +55,21 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
+        <DialogHeader className="space-y-1">
           <DialogTitle>Mindmap</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Visualize the paper structure as a mindmap.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex justify-end items-center gap-4 mb-4">
+        <div className="flex justify-end items-center gap-4 mb-2">
           <Button 
             variant="ghost"
             size="sm"
             onClick={handleRegenerate}
             disabled={isGenerating}
+            className="text-black"
           >
             {isGenerating ? "Generating..." : "Regenerate Mindmap"}
           </Button>
@@ -83,12 +83,13 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
             isGenerating={isGenerating}
             theme={theme}
             previewRef={previewRef}
+            hideEditor={true}
           />
         </div>
         
         <DialogFooter className="flex justify-between sm:justify-between">
           <FlowchartExport previewRef={previewRef} onToggleTheme={toggleTheme} />
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Done</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-black">Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

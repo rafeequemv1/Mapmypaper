@@ -75,11 +75,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const text = selection.toString().trim();
         setSelectedText(text);
         
-        if (text.length > 3) { // Reduced minimum length for better usability
+        if (text.length > 2) { // Even shorter minimum length for better usability
           // Show tooltip very close to the cursor
           setTooltipPosition({
             x: e.clientX,
-            y: e.clientY - 5 // Position tooltip just above the cursor
+            y: e.clientY - 10 // Position tooltip just above the cursor
           });
           setShowTooltip(true);
         }
@@ -238,6 +238,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         return;
       }
       
+      console.log(`Scrolling to page: ${pageNumber}`);
+      
       const pageIndex = pageNumber - 1; // Convert to 0-based index
       const targetPage = pagesRef.current[pageIndex];
       
@@ -296,6 +298,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       const handleScrollToPdfPage = (event: any) => {
         const { pageNumber } = event.detail;
         if (pageNumber && typeof pageNumber === 'number') {
+          console.log("Custom event received to scroll to page:", pageNumber);
           scrollToPage(pageNumber);
         }
       };
@@ -334,7 +337,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
 
-    // Calculate optimal width for PDF pages - fit 100% of container width
+    // Calculate optimal width for PDF pages
     const getOptimalPageWidth = () => {
       if (!pdfContainerRef.current) return undefined;
       
@@ -344,40 +347,40 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     };
 
     return (
-      <div className="h-full flex flex-col bg-gray-50">
+      <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
-        <div className="bg-white border-b p-2 flex flex-wrap items-center gap-2 z-10">
+        <div className="bg-white border-b p-1 flex flex-wrap items-center gap-2 z-10">
           {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-1">
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon" 
-              className="h-8 w-8 text-black hover:bg-gray-100 border-0" 
+              className="h-7 w-7 text-black" 
               onClick={zoomOut}
               title="Zoom Out"
             >
-              <ZoomOut className="h-4 w-4" />
+              <ZoomOut className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-xs w-16 text-center font-medium">
+            <span className="text-xs w-12 text-center font-medium">
               {Math.round(scale * 100)}%
             </span>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon" 
-              className="h-8 w-8 text-black hover:bg-gray-100 border-0" 
+              className="h-7 w-7 text-black" 
               onClick={zoomIn}
               title="Zoom In"
             >
-              <ZoomIn className="h-4 w-4" />
+              <ZoomIn className="h-3.5 w-3.5" />
             </Button>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon" 
-              className="h-8 w-8 text-black hover:bg-gray-100 border-0" 
+              className="h-7 w-7 text-black" 
               onClick={resetZoom}
               title="Reset Zoom"
             >
-              <RotateCw className="h-4 w-4" />
+              <RotateCw className="h-3.5 w-3.5" />
             </Button>
           </div>
           
@@ -388,13 +391,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 placeholder="Search in document..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 text-sm mr-2"
+                className="h-7 text-sm mr-2"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
-                className="h-8 flex items-center gap-1 text-black border-0"
+                className="h-7 flex items-center gap-1 text-black"
                 onClick={handleSearch}
               >
                 <Search className="h-3.5 w-3.5" />
@@ -411,17 +414,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </span>
               <div className="flex gap-1">
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="sm" 
-                  className="h-8 px-2 text-black border-0"
+                  className="h-7 px-2 text-black"
                   onClick={() => navigateSearch('prev')}
                 >
                   ←
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="sm" 
-                  className="h-8 px-2 text-black border-0"
+                  className="h-7 px-2 text-black"
                   onClick={() => navigateSearch('next')}
                 >
                   →
@@ -447,10 +450,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                       renderTooltipContent()
                     ) : (
                       <div 
-                        className="fixed bg-black text-white px-2 py-1 text-sm rounded shadow-lg z-10 cursor-pointer"
+                        className="fixed bg-black text-white px-2 py-1 text-xs rounded shadow-lg z-50 cursor-pointer"
                         style={{ 
                           left: `${tooltipPosition.x}px`, 
-                          top: `${tooltipPosition.y - 30}px`,
+                          top: `${tooltipPosition.y - 25}px`,
                           transform: 'translateX(-50%)',
                           pointerEvents: 'all'
                         }}

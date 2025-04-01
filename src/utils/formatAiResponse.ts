@@ -46,7 +46,7 @@ export const formatAIResponse = (content: string): string => {
       const pageMatch = citation.match(/page\s*(\d+)/i);
       if (pageMatch) {
         const pageNum = pageMatch[1];
-        return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm">${pageNum}</sup></span>`;
+        return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to page ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm">${pageNum}</sup></span>`;
       }
       // If no page number found, just show the first few characters
       const shortCite = citation.length > 3 ? citation.substring(0, 3) : citation;
@@ -92,6 +92,11 @@ export const formatAIResponse = (content: string): string => {
     .replace(/\|(.+)\|/g, '<div class="overflow-x-auto text-xs"><table class="min-w-full border-collapse my-1.5"><tr>$1</tr></table></div>')
     .replace(/\|---\|/g, '');
 
+  // Make the formatting cleaner and even more minimal
+  formattedContent = formattedContent
+    .replace(/<p>/g, '<p class="mb-1.5 text-sm leading-snug">')
+    .replace(/<li>/g, '<li class="mb-0.5 text-sm">');
+
   // Wrap the result in a paragraph if it doesn't start with an HTML tag
   if (!formattedContent.startsWith('<')) {
     formattedContent = '<p class="mb-1.5 text-sm leading-snug">' + formattedContent;
@@ -133,6 +138,25 @@ export const activateCitations = (container: HTMLElement, onCitationClick: (cita
         e.preventDefault();
         e.stopPropagation();
         console.log("Citation clicked: ", citationData);
+        
+        // Dispatch a custom event to scroll to the page
+        if (citationData.toLowerCase().startsWith('page')) {
+          const pageNumber = parseInt(citationData.replace(/[^\d]/g, ''), 10);
+          if (!isNaN(pageNumber)) {
+            // Create and dispatch custom event with page number
+            const event = new CustomEvent('scrollToPdfPage', { 
+              detail: { pageNumber }
+            });
+            window.dispatchEvent(event);
+            
+            // Also try direct access to PDF viewer if available
+            const pdfViewerElement = document.querySelector('[data-pdf-viewer]');
+            if (pdfViewerElement && typeof (pdfViewerElement as any).scrollToPage === 'function') {
+              (pdfViewerElement as any).scrollToPage(pageNumber);
+            }
+          }
+        }
+        
         onCitationClick(citationData);
       });
       
