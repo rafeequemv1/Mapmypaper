@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import PdfViewer from "@/components/PdfViewer";

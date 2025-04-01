@@ -8,13 +8,18 @@ import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import MindmapModal from "@/components/mindmap/MindmapModal";
 import { useAuth } from "@/hooks/useAuth";
 
+interface Topic {
+  text: string;
+  // Add any other properties that the Topic type should have
+}
+
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(true);
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
   const [showMindmap, setShowMindmap] = useState(false);
-  const [explainText, setExplainText] = useState<string>("");
+  const [explainText, setExplainText] = useState<Topic>({ text: "" });
   const mindElixirInstance = useRef<MindElixirInstance | null>(null);
   const { user, refreshSession } = useAuth();
   
@@ -42,7 +47,7 @@ const MindMap = () => {
     const trimmedText = text.trim();
     
     if (trimmedText) {
-      setExplainText(trimmedText);
+      setExplainText({ text: trimmedText });
       
       // Ensure chat panel is visible when text is selected
       if (!showChat) {
@@ -70,7 +75,7 @@ const MindMap = () => {
           toggleChat={toggleChat}
           togglePdf={togglePdf}
           onMindMapReady={handleMindMapReady}
-          explainText={explainText}
+          explainText={explainText.text}
           onExplainText={onExplainText}
         />
       </div>
