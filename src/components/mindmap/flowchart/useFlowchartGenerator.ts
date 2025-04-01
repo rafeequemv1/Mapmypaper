@@ -90,11 +90,11 @@ export const useFlowchartGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const generateFlowchart = async () => {
+  const generateFlowchart = async (detailLevel: 'low' | 'medium' | 'high' = 'medium') => {
     try {
       setIsGenerating(true);
       setError(null);
-      const flowchartCode = await generateFlowchartFromPdf();
+      const flowchartCode = await generateFlowchartFromPdf(detailLevel);
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
@@ -105,7 +105,7 @@ export const useFlowchartGenerator = () => {
         setCode(cleanedCode);
         toast({
           title: "Flowchart Generated",
-          description: "A flowchart has been created based on your PDF content.",
+          description: `A ${detailLevel} detail flowchart has been created based on your PDF content.`,
         });
       } catch (parseError) {
         console.error("Mermaid parse error:", parseError);

@@ -1,6 +1,6 @@
 
-import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { MessageSquare, X, Copy, Check, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,10 +12,10 @@ interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
   onScrollToPdfPosition?: (position: string) => void;
-  onExplainText?: (text: string) => void;  // Added the missing prop
+  onExplainText?: (text: string) => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition, onExplainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -37,61 +37,81 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
     }
   }, [messages]);
 
+  // Enhanced text explanation processing with visual feedback
+  const processExplainText = useCallback(async (text: string) => {
+    if (!text || processingExplainText) return;
+    
+    setProcessingExplainText(true);
+    
+    // Visual feedback that text is being processed
+    const highlightedText = text.length > 100 ? text.substring(0, 100) + "..." : text;
+    
+    // Add user message with the selected text and visual styling
+    setMessages(prev => [
+      ...prev, 
+      { 
+        role: 'user', 
+        content: `<div class="selected-text-highlight">
+          <div class="flex items-center gap-2 mb-2">
+            <BookOpen className="h-4 w-4" />
+            <span class="font-semibold">Selected text for explanation:</span>
+          </div>
+          "${highlightedText}"
+        </div>`,
+        isHtml: true 
+      }
+    ]);
+    
+    // Show typing indicator
+    setIsTyping(true);
+    
+    try {
+      // Enhanced prompt to encourage comprehensive explanation with page citations
+      const response = await chatWithGeminiAboutPdf(
+        `Please provide a detailed explanation of this text, covering the why, how, and what aspects. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${text}". Structure your response to address key concepts, methodology, and implications.`
+      );
+      
+      // Hide typing indicator and add AI response with formatting
+      setIsTyping(false);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          role: 'assistant', 
+          content: formatAIResponse(response),
+          isHtml: true 
+        }
+      ]);
+    } catch (error) {
+      // Handle errors with more user-friendly message
+      setIsTyping(false);
+      console.error("Chat error:", error);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          role: 'assistant', 
+          content: "Sorry, I encountered an error explaining that text. It might be too complex or contain formatting that's difficult to process. Please try selecting a different portion of text or rephrase your question.",
+          isHtml: false
+        }
+      ]);
+      
+      toast({
+        title: "Explanation Error",
+        description: "Failed to get an explanation from the AI. Please try again with a different selection.",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingExplainText(false);
+    }
+  }, [toast]);
+  
   // Process text to explain when it changes
   useEffect(() => {
-    const processExplainText = async () => {
-      if (explainText && !processingExplainText) {
-        setProcessingExplainText(true);
-        
-        // Add user message with the selected text
-        setMessages(prev => [...prev, { role: 'user', content: `Please explain this text in detail with page citations: "${explainText}"` }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          // Enhanced prompt to encourage complete sentences and page citations
-          const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
-          );
-          
-          // Hide typing indicator and add AI response with formatting
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: formatAIResponse(response),
-              isHtml: true 
-            }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Chat error:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error explaining that. Please try again." 
-            }
-          ]);
-          
-          toast({
-            title: "Explanation Error",
-            description: "Failed to get an explanation from the AI.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingExplainText(false);
-        }
-      }
-    };
-    
-    processExplainText();
-  }, [explainText, toast]);
+    if (explainText && !processingExplainText) {
+      processExplainText(explainText);
+    }
+  }, [explainText, processExplainText]);
 
-  // Activate citations in messages when they are rendered
+  // Activate citations in messages when they are rendered with improved styling
   useEffect(() => {
     // Use a longer timeout to ensure the DOM is fully rendered
     const activationTimeout = setTimeout(() => {
@@ -101,15 +121,69 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
         activateCitations(container as HTMLElement, (citation) => {
           console.log("Desktop Citation clicked:", citation);
           if (onScrollToPdfPosition) {
-            // Directly invoke the scroll function with sufficient delay to ensure proper handling
+            // Directly invoke the scroll function with visual feedback
+            const citationEl = container.querySelector('.citation-link');
+            if (citationEl) {
+              citationEl.classList.add('citation-active');
+              setTimeout(() => {
+                citationEl.classList.remove('citation-active');
+              }, 1000);
+            }
+            
+            // Show toast notification
+            toast({
+              title: "Navigating to citation",
+              description: `Scrolling to ${citation}`,
+              duration: 1500,
+            });
+            
             onScrollToPdfPosition(citation);
           }
         });
       });
-    }, 200); // Increased timeout for more reliable activation
+      
+      // Add styling for citations and selected text
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .citation-link {
+          color: #2563EB;
+          background-color: rgba(37, 99, 235, 0.1);
+          padding: 2px 6px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .citation-link:hover {
+          background-color: rgba(37, 99, 235, 0.2);
+          transform: translateY(-1px);
+        }
+        
+        .citation-active {
+          background-color: rgba(37, 99, 235, 0.3);
+          transform: scale(1.05);
+        }
+        
+        .selected-text-highlight {
+          background-color: rgba(37, 99, 235, 0.05);
+          border-left: 3px solid #2563EB;
+          padding: 8px 12px;
+          border-radius: 4px;
+          margin-bottom: 4px;
+          font-style: italic;
+        }
+      `;
+      
+      if (!document.head.querySelector('#citation-styles')) {
+        style.id = 'citation-styles';
+        document.head.appendChild(style);
+      }
+    }, 300); // Increased timeout for more reliable activation
     
     return () => clearTimeout(activationTimeout);
-  }, [messages, onScrollToPdfPosition]);
+  }, [messages, onScrollToPdfPosition, toast]);
 
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
@@ -124,9 +198,9 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
       setIsTyping(true);
       
       try {
-        // Enhanced prompt to encourage complete sentences and page citations with emojis
+        // Enhanced prompt to encourage complete sentences, page citations, and emojis
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging. Consider the why, how, and what aspects in your explanation when appropriate.`
         );
         
         // Hide typing indicator and add AI response with enhanced formatting
@@ -147,7 +221,8 @@ const ChatPanel = ({ toggleChat, explainText, onScrollToPdfPosition }: ChatPanel
           ...prev, 
           { 
             role: 'assistant', 
-            content: "Sorry, I encountered an error. Please try again." 
+            content: "Sorry, I encountered an error. Please try again with a different question.",
+            isHtml: false
           }
         ]);
         
