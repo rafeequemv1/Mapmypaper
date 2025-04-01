@@ -1,9 +1,8 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, Screenshot } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, ScreenshotIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
@@ -522,7 +521,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   description: "Press Ctrl (or Cmd) and drag to select an area to capture.",
                 })}
               >
-                <Screenshot className="h-3.5 w-3.5" />
+                <ScreenshotIcon className="h-3.5 w-3.5" />
                 <span>Capture</span>
               </Button>
             </TooltipTrigger>

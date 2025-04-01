@@ -6,7 +6,7 @@ import { useChat } from "@/components/chat/useChat";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Use React.lazy instead of Next.js dynamic import
-const MindElixir = lazy(() => import('@mind-elixir/next'));
+const MindElixir = lazy(() => import('mind-elixir'));
 const PdfViewer = lazy(() => import('@/components/PdfViewer'));
 
 interface PanelStructureProps {
@@ -84,7 +84,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
         console.log('moveNode', node, newParent, originParent);
         return true;
       },
-      textEdit: (originText: string, newText: string, node: any) => { // Fixed non-English character
+      textEdit: (originText: string, newText: string, node: any) => {
         console.log('textEdit', originText, newText, node);
         return true;
       },
