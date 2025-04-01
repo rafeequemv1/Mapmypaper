@@ -1,13 +1,13 @@
-
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
-// This is a fallback template, but we'll prioritize generating from PDF content
-export const defaultFlowchart = `flowchart LR
-    A[The uploaded document has not been processed yet] -->|Please wait| B[Our system is preparing to extract content from your PDF]
-    B --> C[You will see a detailed flowchart based on your document content]`;
+export const defaultFlowchart = `flowchart TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Debug]
+    D --> B`;
 
 // Helper function to clean and validate Mermaid syntax
 export const cleanMermaidSyntax = (input: string): string => {
@@ -20,12 +20,9 @@ export const cleanMermaidSyntax = (input: string): string => {
     // Replace any hyphens in node IDs with underscores
     .replace(/(\w+)-(\w+)/g, "$1_$2");
   
-  // Ensure it starts with flowchart LR directive (Left to Right layout)
+  // Ensure it starts with flowchart directive
   if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart LR\n" + cleaned;
-  } else {
-    // Replace TD with LR directive
-    cleaned = cleaned.replace(/flowchart\s+TD/i, "flowchart LR");
+    cleaned = "flowchart TD\n" + cleaned;
   }
   
   // Process line by line to ensure each line is valid
@@ -83,29 +80,8 @@ export const cleanMermaidSyntax = (input: string): string => {
   return processedLines.join('\n');
 };
 
-// Add styling function to enhance node appearance with rounded corners
-const enhanceFlowchartWithStyling = (flowchartCode: string): string => {
-  // Add styling section at the end of the flowchart
-  let enhancedCode = flowchartCode;
-  
-  // Add styling for different types of nodes if they don't already exist
-  if (!enhancedCode.includes("classDef")) {
-    enhancedCode += `\n
-    %% Node styling with rounded corners
-    classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px,rx:15px,ry:15px
-    classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px,rx:15px,ry:15px
-    classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px,rx:15px,ry:15px
-    classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px
-    
-    %% Apply styling to nodes - we'll apply styling more dynamically now
-    class A,B,C main`;
-  }
-  
-  return enhancedCode;
-};
-
 export const useFlowchartGenerator = () => {
-  const [code, setCode] = useState(enhanceFlowchartWithStyling(defaultFlowchart));
+  const [code, setCode] = useState(defaultFlowchart);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -119,21 +95,18 @@ export const useFlowchartGenerator = () => {
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
       
-      // Add styling to make the flowchart more visually appealing
-      const enhancedCode = enhanceFlowchartWithStyling(cleanedCode);
-      
       // Check if the flowchart code is valid
       try {
-        await mermaid.parse(enhancedCode);
-        setCode(enhancedCode);
+        await mermaid.parse(cleanedCode);
+        setCode(cleanedCode);
         toast({
           title: "Flowchart Generated",
-          description: "A detailed flowchart has been created based on your PDF content.",
+          description: "A flowchart has been created based on your PDF content.",
         });
       } catch (parseError) {
         console.error("Mermaid parse error:", parseError);
         setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-        setCode(enhanceFlowchartWithStyling(defaultFlowchart));
+        setCode(defaultFlowchart);
         toast({
           title: "Syntax Error",
           description: "The generated flowchart had syntax errors. Using a default template instead.",
@@ -142,7 +115,7 @@ export const useFlowchartGenerator = () => {
       }
     } catch (err) {
       console.error("Failed to generate flowchart:", err);
-      setCode(enhanceFlowchartWithStyling(defaultFlowchart));
+      setCode(defaultFlowchart);
       setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
       toast({
         title: "Generation Failed",

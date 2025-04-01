@@ -15,7 +15,7 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 import useSequenceDiagramGenerator from "./flowchart/useSequenceDiagramGenerator";
-import { GitBranch, Network, Maximize, Minimize, Code } from "lucide-react";
+import { Activity, Network, GitBranch } from "lucide-react";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -27,11 +27,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const { code, error, isGenerating, generateFlowchart, handleCodeChange } = useFlowchartGenerator();
   const sequenceDiagramGenerator = useSequenceDiagramGenerator();
   
-  // State for diagram type, theme, and display mode
+  // State for diagram type and theme
   const [diagramType, setDiagramType] = useState<'flowchart' | 'sequence'>('flowchart');
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
-  const [hideEditor, setHideEditor] = useState(true); // Default to hiding the editor
-  const [fullScreenPreview, setFullScreenPreview] = useState(true); // Default to full screen
+  const [hideEditor, setHideEditor] = useState(false);
   
   // Initialize mermaid library
   useMermaidInit();
@@ -82,28 +81,23 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const toggleEditor = () => {
     setHideEditor(!hideEditor);
   };
-  
-  // Toggle fullscreen preview
-  const toggleFullScreen = () => {
-    setFullScreenPreview(!fullScreenPreview);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${fullScreenPreview ? 'max-w-[92vw] w-[92vw] h-[92vh]' : 'max-w-7xl w-[95vw] h-[90vh]'} flex flex-col`}>
+      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Diagram Viewer</DialogTitle>
+          <DialogTitle>Diagram Editor</DialogTitle>
           <DialogDescription>
             {diagramType === 'flowchart' ? 
-              "Interactive flowchart visualizing concepts and relationships from your document." : 
-              "Sequence diagram showing interactions between components from your document."}
+              "Create and edit flowcharts visualizing processes and relationships." : 
+              "Create and edit sequence diagrams showing interactions between components."}
           </DialogDescription>
         </DialogHeader>
         
         <div className="flex justify-between items-center gap-4 mb-4">
           <div className="flex gap-2">
             <Button
-              variant={diagramType === 'flowchart' ? "default" : "ghost"}
+              variant={diagramType === 'flowchart' ? "default" : "outline"}
               size="sm"
               onClick={() => setDiagramType('flowchart')}
               className="flex items-center gap-1"
@@ -112,7 +106,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               Flowchart
             </Button>
             <Button
-              variant={diagramType === 'sequence' ? "default" : "ghost"}
+              variant={diagramType === 'sequence' ? "default" : "outline"}
               size="sm"
               onClick={() => setDiagramType('sequence')}
               className="flex items-center gap-1"
@@ -122,38 +116,15 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             </Button>
           </div>
           
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRegenerateActiveDiagram}
-              disabled={activeIsGenerating}
-              className="text-black"
-            >
-              {activeIsGenerating ? "Generating..." : "Regenerate Diagram"}
-            </Button>
-            <Button
-              variant={fullScreenPreview ? "default" : "ghost"}
-              size="sm"
-              onClick={toggleFullScreen}
-              className="flex items-center gap-1"
-            >
-              {fullScreenPreview ? (
-                <><Minimize className="h-4 w-4" /> Compact View</>
-              ) : (
-                <><Maximize className="h-4 w-4" /> Full Screen</>
-              )}
-            </Button>
-            <Button
-              variant={!hideEditor ? "default" : "ghost"}
-              size="sm"
-              onClick={toggleEditor}
-              className="flex items-center gap-1"
-            >
-              <Code className="h-4 w-4" />
-              {hideEditor ? "Show Code" : "Hide Code"}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleEditor}
+            className="flex items-center gap-1"
+          >
+            <Activity className="h-4 w-4" />
+            {hideEditor ? "Show Editor" : "Hide Editor"}
+          </Button>
         </div>
         
         <div className={`grid ${hideEditor ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'} gap-4 flex-1 overflow-hidden`}>
@@ -178,8 +149,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               isGenerating={activeIsGenerating}
               theme={theme}
               previewRef={previewRef}
-              hideEditor={hideEditor}
-              fitGraph={true}
             />
           </div>
         </div>

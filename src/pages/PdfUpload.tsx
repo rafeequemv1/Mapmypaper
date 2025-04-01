@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, FileText, BookText } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import AuthButton from "@/components/auth/AuthButton";
-import { extractAndStorePdfText } from "@/services/geminiService";
 
 interface PdfUploadProps {
   user: User | null;
@@ -98,28 +98,12 @@ const PdfUpload = ({ user, onAuthChange }: PdfUploadProps) => {
     try {
       // Read the file as base64
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = (e) => {
         const base64String = e.target?.result as string;
         
         // Save in session storage
         sessionStorage.setItem("pdfData", base64String);
         sessionStorage.setItem("pdfName", file.name);
-        
-        // Extract and save PDF text
-        try {
-          await extractAndStorePdfText(base64String);
-          toast({
-            title: "PDF Text Extracted",
-            description: "Successfully extracted text from the PDF",
-          });
-        } catch (error) {
-          console.error("Error extracting PDF text:", error);
-          toast({
-            title: "Warning",
-            description: "PDF uploaded but text extraction may be incomplete",
-            variant: "destructive",
-          });
-        }
         
         // Complete the progress
         clearInterval(interval);

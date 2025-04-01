@@ -7,41 +7,6 @@ const apiKey = "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk";
 // Get the current API key
 export const getGeminiApiKey = () => apiKey;
 
-// Extract PDF text function - call this when PDF is first loaded
-export const extractAndStorePdfText = async (pdfData: string): Promise<string> => {
-  // For now, we store the PDF data itself and will process it on-demand
-  // This is a placeholder for actual text extraction which might happen in various ways
-  sessionStorage.setItem('pdfData', pdfData);
-  
-  try {
-    // We'll use a simple approach to extract text by using a data URL
-    // This is not ideal but works as a basic solution
-    // In a full implementation, we'd use PDF.js or another library
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const prompt = `
-      The following is a base64 encoded PDF document. 
-      This is just the first part of the encoded data (first 50 characters) to identify the document:
-      ${pdfData.substring(0, 50)}...
-      
-      Please acknowledge receipt of this PDF data. In a real implementation, we'd extract text using PDF.js.
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    
-    // For testing purposes, store a placeholder text in sessionStorage
-    const placeholderText = "This is extracted text from the PDF document. In a production application, we would use PDF.js or another library to properly extract text from the uploaded PDF.";
-    sessionStorage.setItem('pdfText', placeholderText);
-    
-    return placeholderText;
-  } catch (error) {
-    console.error("Error in PDF text extraction:", error);
-    return "Error extracting PDF text";
-  }
-};
-
 // Process text with Gemini to generate mindmap data
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
@@ -211,24 +176,10 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
 export const chatWithGeminiAboutPdf = async (message: string): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage
-    let pdfText = sessionStorage.getItem('pdfText');
-    
-    // If no explicit pdfText, try to extract from the PDF data
-    if (!pdfText || pdfText.trim() === '') {
-      const pdfData = sessionStorage.getItem('pdfData');
-      if (pdfData) {
-        try {
-          // Try to do a simple extraction and store the result
-          pdfText = await extractAndStorePdfText(pdfData);
-          sessionStorage.setItem('pdfText', pdfText);
-        } catch (e) {
-          console.error("Failed to extract PDF text:", e);
-        }
-      }
-    }
+    const pdfText = sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
-      return "I don't have access to the PDF content. Please make sure you've uploaded a PDF first and that text extraction is working properly.";
+      return "I don't have access to the PDF content. Please make sure you've uploaded a PDF first.";
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -388,45 +339,42 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const pdfText = sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
-      return `flowchart LR
-        A[No PDF content was found] --> B[Please upload a PDF document first]
-        B --> C[The flowchart will be generated based on your document content]`;
+      return `flowchart TD
+        A[Error] --> B[No PDF Content]
+        B --> C[Please upload a PDF first]`;
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Create a detailed, complex Mermaid flowchart based on this document text.
+    Create a simple, valid Mermaid flowchart based on this document text.
     
-    CRITICAL REQUIREMENTS:
-    1. Start with 'flowchart LR' (left to right layout)
-    2. Use COMPLETE SENTENCES instead of keywords in node text
-    3. Make sure nodes have detailed, meaningful text (at least 5-7 words each)
-    4. Create at least 12-15 nodes with connections to make it comprehensive
-    5. Use detailed connections with labels that explain relationships
-    6. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
-    7. Use different node shapes for conceptual hierarchy:
-       - Main concepts: A[Complete sentence about main concept]
-       - Support facts: B(Complete sentence about supporting fact)
-       - Examples/Evidence: C{Complete sentence with example}
+    CRITICAL MERMAID SYNTAX RULES:
+    1. Start with 'flowchart TD'
+    2. Nodes MUST have this format: A[Text] or A(Text) or A{Text} - no exceptions
+    3. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
+    4. Connections MUST use EXACTLY TWO dashes: A --> B (not A->B or A---->B)
+    5. Each line should define ONE connection or ONE node
+    6. Max 12 nodes total
+    7. For labels on arrows: A -->|Label text| B (use single pipes)
+    8. Never use semicolons (;) in node text or connections
+    9. EXTREMELY IMPORTANT: Never use hyphens (-) in node text. Replace ALL hyphens with spaces or underscores.
+    10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
+    11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
     
-    MERMAID SYNTAX RULES:
-    1. Nodes MUST have this format: A[Full sentence] or A(Full sentence) or A{Full sentence}
-    2. Connections MUST use EXACTLY TWO dashes: A --> B
-    3. Create DETAILED connections with labels: A -->|Causes| B or A -->|Leads to| C
-    4. Never use hyphens (-) in node text. Replace hyphens with spaces.
-    
-    EXAMPLE OF GOOD NODE CONTENT:
-    A[The document describes a novel approach to machine learning]
-    B(The researchers conducted experiments across multiple datasets)
-    C{The experimental results showed improved accuracy by 15 percent}
+    EXAMPLE CORRECT SYNTAX:
+    flowchart TD
+      A[Start] --> B{Decision}
+      B -->|Yes| C[Process One]
+      B -->|No| D[Process Two]
+      C --> E[End]
+      D --> E
     
     Here's the document text:
-    ${pdfText.slice(0, 10000)}
+    ${pdfText.slice(0, 8000)}
     
-    Generate ONLY valid Mermaid flowchart code with complete sentences for all nodes, nothing else.
-    Make sure the diagram contains the main points and findings from the document.
+    Generate ONLY valid Mermaid flowchart code, nothing else.
     `;
     
     const result = await model.generateContent(prompt);
@@ -442,34 +390,25 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     return cleanMermaidSyntax(mermaidCode);
   } catch (error) {
     console.error("Gemini API flowchart generation error:", error);
-    return `flowchart LR
-      A[An error occurred while generating the flowchart] -->|Please try again| B[The system encountered an issue processing your PDF]
-      B -->|Suggestion| C[Try uploading a different PDF document or reload the page]
-      
-      %% Node styling
-      classDef error fill:#ffcccc,stroke:#b30000,stroke-width:2px,rx:15px,ry:15px
-      
-      %% Apply styling
-      class A,B,C error`;
+    return `flowchart TD
+      A[Error] --> B[Failed to generate flowchart]
+      B --> C[Please try again]`;
   }
 };
 
 // Helper function to clean and fix common Mermaid syntax issues
 const cleanMermaidSyntax = (code: string): string => {
   if (!code || !code.trim()) {
-    return `flowchart LR
-      A[Error occurred while processing your document] --> B[Empty flowchart was generated]
-      B --> C[Please try uploading your PDF again]`;
+    return `flowchart TD
+      A[Error] --> B[Empty flowchart]
+      B --> C[Please try again]`;
   }
 
   try {
     // Ensure the code starts with flowchart directive
     let cleaned = code.trim();
     if (!cleaned.startsWith("flowchart")) {
-      cleaned = "flowchart LR\n" + cleaned;
-    } else {
-      // Replace TD with LR direction for better fit
-      cleaned = cleaned.replace(/flowchart\s+TD/i, "flowchart LR");
+      cleaned = "flowchart TD\n" + cleaned;
     }
 
     // Process line by line to ensure each line is valid
@@ -546,33 +485,15 @@ const cleanMermaidSyntax = (code: string): string => {
     
     if (!hasConnections) {
       console.warn("No connections found in flowchart, adding default connection");
-      validLines.push("A[The document contains important information] --> B[Review the full document for details]");
-    }
-    
-    // Add styling for rounded corners if not already present
-    if (!validLines.some(line => line.includes('classDef'))) {
-      validLines.push(`
-%% Node styling with rounded corners
-classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px,rx:15px,ry:15px
-classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px,rx:15px,ry:15px
-classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px,rx:15px,ry:15px
-classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px`);
-      
-      // Apply styling to first few nodes automatically
-      validLines.push(`
-%% Apply styling to nodes
-class A,B,C main
-class D,E,F process
-class G,H,I concept
-class J,K,L highlight`);
+      validLines.push("A[Start] --> B[End]");
     }
     
     return validLines.join('\n');
   } catch (error) {
     console.error("Error cleaning Mermaid syntax:", error);
-    return `flowchart LR
-      A[Error occurred while cleaning diagram syntax] --> B[The system encountered an unexpected issue]
-      B --> C[Please try uploading a different document]`;
+    return `flowchart TD
+      A[Error] --> B[Syntax Cleaning Failed]
+      B --> C[Please try again]`;
   }
 };
 
@@ -714,69 +635,53 @@ const cleanSequenceDiagramSyntax = (code: string): string => {
 export const generateMindmapFromPdf = async (): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage
-    let pdfText = sessionStorage.getItem('pdfText');
+    const pdfText = sessionStorage.getItem('pdfText');
     
-    // If no explicit pdfText, try to extract from the PDF data
     if (!pdfText || pdfText.trim() === '') {
-      const pdfData = sessionStorage.getItem('pdfData');
-      if (pdfData) {
-        try {
-          // Try to do a simple extraction and store the result
-          pdfText = await extractAndStorePdfText(pdfData);
-          sessionStorage.setItem('pdfText', pdfText);
-        } catch (e) {
-          console.error("Failed to extract PDF text:", e);
-          pdfText = "PDF content extraction failed. Please try uploading the document again.";
-        }
-      } else {
-        return `mindmap
-          root((No PDF Content))
-            No document was found
-              Please upload a PDF file first`;
-      }
+      return `mindmap
+        root((Error))
+          No PDF Content
+            Please upload a PDF first`;
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Create a detailed Mermaid mindmap based on this document text.
+    Create a valid Mermaid mindmap based on this document text.
     
-    CRITICAL REQUIREMENTS:
+    CRITICAL MERMAID SYNTAX RULES:
     1. Start with 'mindmap'
-    2. Use proper indentation for hierarchy (2 spaces per level)
-    3. Use a descriptive root node title that captures the document's main topic
-    4. Use complete sentences or detailed phrases for all nodes (not just keywords)
-    5. Include at least 3 levels of hierarchy with 15-20 nodes total
-    6. Organize information logically with main concepts as first level, supporting details as second level
-    7. Each branch should follow a coherent thought process from general to specific
+    2. Use proper indentation for hierarchy
+    3. Root node can use syntax like: root((Main Topic))
+    4. First level nodes just use text on their own line with proper indentation
+    5. You can use these node styles:
+       - Regular text node (just text)
+       - Text in square brackets [Text]
+       - Text in parentheses (Text)
+       - Text in double parentheses ((Text))
+       - Text in circle >Text]
+    6. Max 3 levels of hierarchy
+    7. Max 15 nodes total
+    8. AVOID special characters that might break syntax
     
-    MERMAID SYNTAX RULES:
-    1. Root node must use: root((Complete title of document or main topic))
-    2. First level nodes are just text with proper indentation
-    3. Use node styling variations for visual hierarchy:
-       - Text in square brackets [Important concept]
-       - Text in parentheses (Supporting fact)
-       - Text in double parentheses ((Key finding))
-    4. Keep nodes concise but informative (5-12 words)
-    
-    EXAMPLE OF GOOD MINDMAP FORMAT:
+    EXAMPLE CORRECT SYNTAX:
     mindmap
-      root((Machine Learning Applications in Healthcare))
-        Diagnostic Support Systems
-          [AI models achieve 95% accuracy in radiology]
-          (Deep learning identifies patterns human radiologists miss)
-        Treatment Optimization
-          [Personalized medicine based on patient data]
-          (Drug efficacy prediction using neural networks)
-        Administrative Efficiency
-          [Automated scheduling reduces wait times]
+      root((Research Paper))
+        Introduction
+          Background
+          Problem Statement
+        Methodology
+          Data Collection
+          Analysis
+        Results
+          Findings
+        Conclusion
     
     Here's the document text:
-    ${pdfText.slice(0, 10000)}
+    ${pdfText.slice(0, 8000)}
     
     Generate ONLY valid Mermaid mindmap code, nothing else.
-    Make sure to include the main points, findings, and structure from the document.
     `;
     
     const result = await model.generateContent(prompt);
@@ -793,12 +698,9 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
   } catch (error) {
     console.error("Gemini API mindmap generation error:", error);
     return `mindmap
-      root((Error Processing Document))
+      root((Error))
         Failed to generate mindmap
-          Please try again with a different document
-        Possible reasons
-          [Document format may not be compatible]
-          [Text extraction might have failed]`;
+          Please try again`;
   }
 };
 
@@ -808,7 +710,7 @@ const cleanMindmapSyntax = (code: string): string => {
     return `mindmap
       root((Error))
         Empty mindmap
-          Please try again with a different document`;
+          Please try again`;
   }
 
   try {
@@ -853,6 +755,6 @@ const cleanMindmapSyntax = (code: string): string => {
     return `mindmap
       root((Error))
         Syntax Cleaning Failed
-          Please try again with a different document`;
+          Please try again`;
   }
 };

@@ -1,107 +1,218 @@
 
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  GitCommitHorizontal,
+  FileText,
+  Download,
+  Upload,
+  MessageSquare,
+  FileIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, MessageSquare, ChevronLeft, BookText, BarChart, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
-import AuthButton from "../auth/AuthButton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
 import { User } from "@supabase/supabase-js";
+import AuthButton from "../auth/AuthButton";
 
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
-  setShowSummary: (show: boolean) => void;
-  setShowFlowchart: (show: boolean) => void;
-  setShowMindmap: (show: boolean) => void;
-  user: User | null;
-  onAuthChange: () => Promise<void>;
+  setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
+  user?: User | null;
+  onAuthChange?: () => void;
 }
 
 const Header = ({ 
   togglePdf, 
   toggleChat, 
-  setShowSummary, 
+  setShowSummary,
   setShowFlowchart,
-  setShowMindmap,
   user,
-  onAuthChange 
+  onAuthChange = () => {}
 }: HeaderProps) => {
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [fileName, setFileName] = useState("mindmap");
+  const [mindElixirInstance, setMindElixirInstance] = useState<any | null>(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
+  // Handle mind map instance being ready
+  const handleMindMapReady = (instance: any) => {
+    setMindElixirInstance(instance);
+  };
+  
+  // Handle export as PNG
+  const handleExportPNG = () => {
+    if (mindElixirInstance) {
+      downloadMindMapAsPNG(mindElixirInstance, fileName);
+      setShowExportDialog(false);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.png`
+      });
+    }
+  };
+  
+  // Handle export as SVG
+  const handleExportSVG = () => {
+    if (mindElixirInstance) {
+      downloadMindMapAsSVG(mindElixirInstance, fileName);
+      setShowExportDialog(false);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.svg`
+      });
+    }
+  };
+  
+  // Handle export as JSON
+  const handleExportJSON = () => {
+    if (mindElixirInstance) {
+      const data = mindElixirInstance.getData();
+      const dataStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([
+        dataStr
+      ], {
+        type: "application/json"
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `${fileName}.json`;
+      link.href = url;
+      link.click();
+      setShowExportDialog(false);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.json`
+      });
+    }
+  };
+  
+  // Check if we have PDF data
+  React.useEffect(() => {
+    const pdfData = sessionStorage.getItem("pdfData") || sessionStorage.getItem("uploadedPdfData");
+    if (!pdfData) {
+      toast({
+        title: "No PDF loaded",
+        description: "Please upload a PDF to use all features",
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
+  
   return (
-    <header className="border-b py-3">
-      <div className="container mx-auto px-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="bg-black text-white p-1 rounded-md">
-              <ChevronLeft className="h-4 w-4" />
-            </div>
-            <span className="font-medium text-sm hidden sm:inline-block">Back</span>
-          </Link>
-          
-          <div className="hidden md:flex items-center gap-2">
-            <h1 className="text-xl font-medium">mapmypaper</h1>
-            <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">
-              BETA
-            </div>
+    <header className="bg-white border-b py-2 px-4">
+      <div className="flex items-center justify-between">
+        {/* Left side - Logo with Beta tag */}
+        <div className="flex items-center gap-2">
+          <div className="bg-black text-white p-1.5 rounded-md">
+            <Upload className="h-4 w-4" />
+          </div>
+          <div className="flex items-center">
+            <h1 className="text-lg font-bold">mapmypaper</h1>
+            <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
           </div>
         </div>
         
-        <div className="flex items-center gap-1.5 sm:gap-3">
-          {/* PDF Toggle Button */}
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={togglePdf}
-          >
+        {/* Center - Main Button Group */}
+        <div className="flex items-center gap-2 md:gap-3 absolute left-1/2 transform -translate-x-1/2">
+          <Button variant="ghost" onClick={togglePdf} className="flex items-center gap-1 text-black h-8 px-3">
             <FileText className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline-block">PDF</span>
+            <span className="hidden md:inline text-sm">PDF</span>
           </Button>
           
-          {/* Chat Toggle Button */}
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={toggleChat}
-          >
+          <Button variant="ghost" onClick={toggleChat} className="flex items-center gap-1 text-black h-8 px-3">
             <MessageSquare className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline-block">Chat</span>
+            <span className="hidden md:inline text-sm">Chat</span>
           </Button>
           
-          {/* Mindmap Button */}
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={() => setShowMindmap(true)}
-          >
-            <BookText className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline-block">Mindmap</span>
+          <Button variant="ghost" onClick={() => setShowSummary(true)} className="flex items-center gap-1 text-black h-8 px-3">
+            <FileIcon className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Summary</span>
           </Button>
           
-          {/* Flowchart Button */}
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={() => setShowFlowchart(true)}
-          >
-            <BarChart className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline-block">Flowchart</span>
+          {setShowFlowchart && (
+            <Button variant="ghost" onClick={() => setShowFlowchart(true)} className="flex items-center gap-1 text-black h-8 px-3">
+              <GitCommitHorizontal className="h-3.5 w-3.5" />
+              <span className="hidden md:inline text-sm">Flowchart</span>
+            </Button>
+          )}
+        </div>
+        
+        {/* Right side - Action buttons */}
+        <div className="flex items-center gap-2">
+          {user !== undefined && (
+            <AuthButton 
+              user={user} 
+              onAuthChange={onAuthChange} 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 mr-2" 
+            />
+          )}
+          
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
+            <Upload className="h-3.5 w-3.5 text-black" />
           </Button>
           
-          {/* Summary Button */}
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={() => setShowSummary(true)}
-          >
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline-block">Summary</span>
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>
+            <Download className="h-3.5 w-3.5 text-black" />
           </Button>
-          
-          <AuthButton user={user} onAuthChange={onAuthChange} variant="outline" size="sm" />
         </div>
       </div>
+      
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Mind Map</DialogTitle>
+            <DialogDescription>
+              Choose a format to export your mind map
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="filename" className="text-right">
+                File name
+              </Label>
+              <Input
+                id="filename"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleExportPNG} className="text-black">
+              Export as PNG
+            </Button>
+            <Button variant="ghost" onClick={handleExportSVG} className="text-black">
+              Export as SVG
+            </Button>
+            <Button variant="ghost" onClick={handleExportJSON} className="text-black">
+              Export as JSON
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };

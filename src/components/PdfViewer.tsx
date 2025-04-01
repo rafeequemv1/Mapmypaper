@@ -3,20 +3,17 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import PdfAreaSelector from "./pdf/PdfAreaSelector";
 import { ZoomIn, ZoomOut, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
-  onImageSelected?: (imageDataUrl: string) => void;
   onPdfLoaded?: () => void;
 }
 
@@ -25,7 +22,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onImageSelected, onPdfLoaded }, ref) => {
+  ({ onTextSelected, onPdfLoaded }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -35,9 +32,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [searchResults, setSearchResults] = useState<string[]>([]);
     const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(-1);
     const [showSearch, setShowSearch] = useState<boolean>(false);
-    const [isSelectingArea, setIsSelectingArea] = useState<boolean>(false);
-    const [showTextTooltip, setShowTextTooltip] = useState<boolean>(false);
-    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const pdfContainerRef = useRef<HTMLDivElement>(null);
     const pagesRef = useRef<(HTMLDivElement | null)[]>([]);
     const { toast } = useToast();
@@ -72,65 +66,15 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Handle text selection
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-      // Don't process text selection if we're in area selection mode
-      if (isSelectingArea) return;
-      
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "") {
         const text = selection.toString().trim();
         setSelectedText(text);
         
-        // Show tooltip near the mouse pointer
-        if (text.length > 2) {
-          setTooltipPosition({
-            x: e.clientX,
-            y: e.clientY
-          });
-          setShowTextTooltip(true);
-        }
-      } else {
-        setShowTextTooltip(false);
-      }
-    };
-
-    // Handle mouse movement to hide tooltip when moving away
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (showTextTooltip) {
-        const dx = Math.abs(e.clientX - tooltipPosition.x);
-        const dy = Math.abs(e.clientY - tooltipPosition.y);
-        
-        // Hide tooltip if the mouse moves too far from the selection point
-        if (dx > 100 || dy > 100) {
-          setShowTextTooltip(false);
+        if (text.length > 2 && onTextSelected) {
+          onTextSelected(text);
         }
       }
-    };
-
-    // Handle explain text click
-    const handleExplainTextClick = () => {
-      if (selectedText && onTextSelected) {
-        onTextSelected(selectedText);
-      }
-      setShowTextTooltip(false);
-    };
-
-    // Toggle area selection mode
-    const toggleAreaSelection = () => {
-      setIsSelectingArea(prev => !prev);
-      if (!isSelectingArea) {
-        toast({
-          title: "Area selection mode",
-          description: "Click and drag to select an area of the PDF",
-        });
-      }
-    };
-
-    // Handle image selection from area selector
-    const handleExplainSelection = (imageDataUrl: string) => {
-      if (onImageSelected) {
-        onImageSelected(imageDataUrl);
-      }
-      setIsSelectingArea(false);
     };
 
     // Enhanced search functionality with improved highlighting
@@ -377,9 +321,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-1">
             <Button 
-              className="h-7 w-7 text-black" 
-              variant="ghost"
+              variant="ghost" 
               size="icon" 
+              className="h-7 w-7 text-black" 
               onClick={zoomOut}
               title="Zoom Out"
             >
@@ -389,30 +333,15 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               {Math.round(scale * 100)}%
             </span>
             <Button 
-              className="h-7 w-7 text-black" 
-              variant="ghost"
+              variant="ghost" 
               size="icon" 
+              className="h-7 w-7 text-black" 
               onClick={zoomIn}
               title="Zoom In"
             >
               <ZoomIn className="h-3.5 w-3.5" />
             </Button>
           </div>
-          
-          {/* Area Selection Toggle Button */}
-          <Button
-            variant={isSelectingArea ? "default" : "ghost"}
-            size="sm"
-            className="h-7 flex items-center gap-1 text-black"
-            onClick={toggleAreaSelection}
-            title="Select an area to capture"
-          >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
-            </svg>
-            <span>Select Area</span>
-          </Button>
           
           {/* Search Input */}
           <div className="flex-1 mx-2">
@@ -465,87 +394,55 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         </div>
 
         {/* PDF Content with full width */}
-        <TooltipProvider>
-          {pdfData ? (
-            <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
-              <div 
-                className="flex flex-col items-center py-4" 
-                onMouseUp={handleDocumentMouseUp}
-                onMouseMove={handleMouseMove}
-                style={{ position: 'relative' }}
+        {pdfData ? (
+          <ScrollArea className="flex-1" ref={pdfContainerRef}>
+            <div 
+              className="flex flex-col items-center py-4" 
+              onMouseUp={handleDocumentMouseUp}
+              style={{ position: 'relative' }}
+            >
+              <Document
+                file={pdfData}
+                onLoadSuccess={onDocumentLoadSuccess}
+                className="w-full"
+                loading={<div className="text-center py-4">Loading PDF...</div>}
+                error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
               >
-                <Document
-                  file={pdfData}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  className="w-full"
-                  loading={<div className="text-center py-4">Loading PDF...</div>}
-                  error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
-                >
-                  {Array.from(new Array(numPages), (_, index) => (
-                    <div
-                      key={`page_${index + 1}`}
-                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                      ref={setPageRef(index)}
-                      style={{ width: 'fit-content', maxWidth: '100%' }}
-                      data-page-number={index + 1}
-                    >
-                      <Page
-                        pageNumber={index + 1}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={false}
-                        onRenderSuccess={onPageRenderSuccess}
-                        scale={scale}
-                        width={getOptimalPageWidth()}
-                        className="mx-auto"
-                        loading={
-                          <div className="flex items-center justify-center h-[600px] w-full">
-                            <div className="animate-pulse bg-gray-200 h-full w-full"></div>
-                          </div>
-                        }
-                      />
-                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
-                        Page {index + 1} of {numPages}
-                      </div>
-                    </div>
-                  ))}
-                </Document>
-
-                {/* Text selection tooltip */}
-                {showTextTooltip && selectedText && (
-                  <div 
-                    className="absolute z-50 bg-white rounded-md shadow-md border border-gray-200"
-                    style={{
-                      top: tooltipPosition.y + 20,
-                      left: tooltipPosition.x,
-                      transform: 'translateX(-50%)',
-                    }}
+                {Array.from(new Array(numPages), (_, index) => (
+                  <div
+                    key={`page_${index + 1}`}
+                    className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
+                    ref={setPageRef(index)}
+                    style={{ width: 'fit-content', maxWidth: '100%' }}
+                    data-page-number={index + 1}
                   >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-primary flex items-center gap-1 px-3 py-1.5"
-                      onClick={handleExplainTextClick}
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Explain</span>
-                    </Button>
+                    <Page
+                      pageNumber={index + 1}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={false}
+                      onRenderSuccess={onPageRenderSuccess}
+                      scale={scale}
+                      width={getOptimalPageWidth()}
+                      className="mx-auto"
+                      loading={
+                        <div className="flex items-center justify-center h-[600px] w-full">
+                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
+                        </div>
+                      }
+                    />
+                    <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
+                      Page {index + 1} of {numPages}
+                    </div>
                   </div>
-                )}
-              </div>
-              
-              {/* Area Selection Overlay */}
-              {isSelectingArea && (
-                <PdfAreaSelector onExplainSelection={handleExplainSelection} />
-              )}
-            </ScrollArea>
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-gray-500">Loading PDF...</p>
+                ))}
+              </Document>
             </div>
-          )}
-        </TooltipProvider>
+          </ScrollArea>
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-gray-500">Loading PDF...</p>
+          </div>
+        )}
       </div>
     );
   }
