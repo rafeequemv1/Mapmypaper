@@ -9,6 +9,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -35,6 +36,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(-1);
     const [showSearch, setShowSearch] = useState<boolean>(false);
     const [isSelectingArea, setIsSelectingArea] = useState<boolean>(false);
+    const [showTextTooltip, setShowTextTooltip] = useState<boolean>(false);
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const pdfContainerRef = useRef<HTMLDivElement>(null);
     const pagesRef = useRef<(HTMLDivElement | null)[]>([]);
     const { toast } = useToast();
@@ -77,10 +80,38 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const text = selection.toString().trim();
         setSelectedText(text);
         
-        if (text.length > 2 && onTextSelected) {
-          onTextSelected(text);
+        // Show tooltip near the mouse pointer
+        if (text.length > 2) {
+          setTooltipPosition({
+            x: e.clientX,
+            y: e.clientY
+          });
+          setShowTextTooltip(true);
+        }
+      } else {
+        setShowTextTooltip(false);
+      }
+    };
+
+    // Handle mouse movement to hide tooltip when moving away
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (showTextTooltip) {
+        const dx = Math.abs(e.clientX - tooltipPosition.x);
+        const dy = Math.abs(e.clientY - tooltipPosition.y);
+        
+        // Hide tooltip if the mouse moves too far from the selection point
+        if (dx > 100 || dy > 100) {
+          setShowTextTooltip(false);
         }
       }
+    };
+
+    // Handle explain text click
+    const handleExplainTextClick = () => {
+      if (selectedText && onTextSelected) {
+        onTextSelected(selectedText);
+      }
+      setShowTextTooltip(false);
     };
 
     // Toggle area selection mode
@@ -346,9 +377,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-1">
             <Button 
-              variant="ghost" 
-              size="icon" 
               className="h-7 w-7 text-black" 
+              variant="ghost"
+              size="icon" 
               onClick={zoomOut}
               title="Zoom Out"
             >
@@ -358,9 +389,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               {Math.round(scale * 100)}%
             </span>
             <Button 
-              variant="ghost" 
-              size="icon" 
               className="h-7 w-7 text-black" 
+              variant="ghost"
+              size="icon" 
               onClick={zoomIn}
               title="Zoom In"
             >
@@ -370,7 +401,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           {/* Area Selection Toggle Button */}
           <Button
-            variant={isSelectingArea ? "default" : "outline"}
+            variant={isSelectingArea ? "default" : "ghost"}
             size="sm"
             className="h-7 flex items-center gap-1 text-black"
             onClick={toggleAreaSelection}
@@ -434,60 +465,87 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         </div>
 
         {/* PDF Content with full width */}
-        {pdfData ? (
-          <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
-            <div 
-              className="flex flex-col items-center py-4" 
-              onMouseUp={handleDocumentMouseUp}
-              style={{ position: 'relative' }}
-            >
-              <Document
-                file={pdfData}
-                onLoadSuccess={onDocumentLoadSuccess}
-                className="w-full"
-                loading={<div className="text-center py-4">Loading PDF...</div>}
-                error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
+        <TooltipProvider>
+          {pdfData ? (
+            <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
+              <div 
+                className="flex flex-col items-center py-4" 
+                onMouseUp={handleDocumentMouseUp}
+                onMouseMove={handleMouseMove}
+                style={{ position: 'relative' }}
               >
-                {Array.from(new Array(numPages), (_, index) => (
-                  <div
-                    key={`page_${index + 1}`}
-                    className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                    ref={setPageRef(index)}
-                    style={{ width: 'fit-content', maxWidth: '100%' }}
-                    data-page-number={index + 1}
-                  >
-                    <Page
-                      pageNumber={index + 1}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={false}
-                      onRenderSuccess={onPageRenderSuccess}
-                      scale={scale}
-                      width={getOptimalPageWidth()}
-                      className="mx-auto"
-                      loading={
-                        <div className="flex items-center justify-center h-[600px] w-full">
-                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
-                        </div>
-                      }
-                    />
-                    <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
-                      Page {index + 1} of {numPages}
+                <Document
+                  file={pdfData}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  className="w-full"
+                  loading={<div className="text-center py-4">Loading PDF...</div>}
+                  error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
+                >
+                  {Array.from(new Array(numPages), (_, index) => (
+                    <div
+                      key={`page_${index + 1}`}
+                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
+                      ref={setPageRef(index)}
+                      style={{ width: 'fit-content', maxWidth: '100%' }}
+                      data-page-number={index + 1}
+                    >
+                      <Page
+                        pageNumber={index + 1}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={false}
+                        onRenderSuccess={onPageRenderSuccess}
+                        scale={scale}
+                        width={getOptimalPageWidth()}
+                        className="mx-auto"
+                        loading={
+                          <div className="flex items-center justify-center h-[600px] w-full">
+                            <div className="animate-pulse bg-gray-200 h-full w-full"></div>
+                          </div>
+                        }
+                      />
+                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
+                        Page {index + 1} of {numPages}
+                      </div>
                     </div>
+                  ))}
+                </Document>
+
+                {/* Text selection tooltip */}
+                {showTextTooltip && selectedText && (
+                  <div 
+                    className="absolute z-50 bg-white rounded-md shadow-md border border-gray-200"
+                    style={{
+                      top: tooltipPosition.y + 20,
+                      left: tooltipPosition.x,
+                      transform: 'translateX(-50%)',
+                    }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-primary flex items-center gap-1 px-3 py-1.5"
+                      onClick={handleExplainTextClick}
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Explain</span>
+                    </Button>
                   </div>
-                ))}
-              </Document>
+                )}
+              </div>
+              
+              {/* Area Selection Overlay */}
+              {isSelectingArea && (
+                <PdfAreaSelector onExplainSelection={handleExplainSelection} />
+              )}
+            </ScrollArea>
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-gray-500">Loading PDF...</p>
             </div>
-            
-            {/* Area Selection Overlay */}
-            {isSelectingArea && (
-              <PdfAreaSelector onExplainSelection={handleExplainSelection} />
-            )}
-          </ScrollArea>
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-gray-500">Loading PDF...</p>
-          </div>
-        )}
+          )}
+        </TooltipProvider>
       </div>
     );
   }

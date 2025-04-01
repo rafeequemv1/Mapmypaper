@@ -26,18 +26,21 @@ const FlowchartPreview = ({
   const [renderError, setRenderError] = useState<string | null>(null);
   const [scale, setScale] = useState<number>(1);
   
-  // Format the code with theme
+  // Format the code with theme and LR direction
   const getFormattedCode = (): string => {
     if (!code) return '';
     
+    // Transform TD to LR if needed
+    let formattedCode = code.replace(/flowchart\s+TD/i, 'flowchart LR');
+    
     // Add theme directive if not present
-    if (!code.includes('%%{init:')) {
+    if (!formattedCode.includes('%%{init:')) {
       const fitProp = fitGraph ? ', "fit": true' : '';
-      return `%%{init: {'theme':'${theme}'${fitProp}} }%%\n${code}`;
+      return `%%{init: {'theme':'${theme}'${fitProp}} }%%\n${formattedCode}`;
     }
     
     // Replace existing theme
-    return code.replace(
+    return formattedCode.replace(
       /%%{init:\s*{[^}]*}%%/g, 
       `%%{init: {'theme':'${theme}'${fitGraph ? ", 'fit': true" : ""}} }%%`
     );
@@ -66,11 +69,14 @@ const FlowchartPreview = ({
             diagramPadding: 8,
             htmlLabels: true,
             curve: 'basis',
-            useMaxWidth: !fitGraph, // Set to false for large diagrams
+            useMaxWidth: false, // Set to false to allow full width
+            rankSpacing: 50,
+            nodeSpacing: 50,
+            defaultRenderer: 'dagre-wrapper'
           },
           mindmap: {
-            padding: fitGraph ? 50 : 100,
-            useMaxWidth: fitGraph
+            padding: 50,
+            useMaxWidth: false
           }
         });
         

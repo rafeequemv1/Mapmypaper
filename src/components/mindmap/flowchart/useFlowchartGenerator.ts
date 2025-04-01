@@ -4,7 +4,7 @@ import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
-export const defaultFlowchart = `flowchart TD
+export const defaultFlowchart = `flowchart LR
     A[Photosynthesis Overview] -->|Process| B[Process by which green plants and some other organisms use sunlight to synthesize foods]
     B --> C[Involves chlorophyll and generates oxygen as a byproduct]
     
@@ -34,9 +34,12 @@ export const cleanMermaidSyntax = (input: string): string => {
     // Replace any hyphens in node IDs with underscores
     .replace(/(\w+)-(\w+)/g, "$1_$2");
   
-  // Ensure it starts with flowchart directive
+  // Ensure it starts with flowchart LR directive (Left to Right layout)
   if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart TD\n" + cleaned;
+    cleaned = "flowchart LR\n" + cleaned;
+  } else {
+    // Replace TD with LR directive
+    cleaned = cleaned.replace(/flowchart\s+TD/i, "flowchart LR");
   }
   
   // Process line by line to ensure each line is valid
