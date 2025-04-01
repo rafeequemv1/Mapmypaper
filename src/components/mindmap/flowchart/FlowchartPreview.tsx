@@ -33,7 +33,7 @@ const FlowchartPreview = ({
         // Clear previous content
         ref.current.innerHTML = "";
         
-        // Set theme 
+        // Set theme and configure mermaid
         mermaid.initialize({
           theme: theme,
           securityLevel: 'loose',
@@ -44,20 +44,10 @@ const FlowchartPreview = ({
             diagramPadding: 8,
             nodeSpacing: 50,
             rankSpacing: 70,
-            useMaxWidth: false
+            useMaxWidth: false,
+            orientation: "LR" // Always use LR for left-to-right layout
           }
         });
-        
-        // Configure for left-to-right layout
-        mermaid.flowchartConfig = {
-          ...mermaid.flowchartConfig,
-          htmlLabels: true,
-          curve: 'basis',
-          useMaxWidth: false
-        };
-        
-        // Set the direction explicitly
-        mermaid.flowchartConfig.rankDir = "LR";
         
         // Add custom styling for enhanced colors
         const customStyles = `

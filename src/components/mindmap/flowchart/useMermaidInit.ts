@@ -5,6 +5,7 @@ import mermaid from "mermaid";
 export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
   // Initialize mermaid with safe configuration
   useEffect(() => {
+    // Initialize with base configuration
     mermaid.initialize({
       startOnLoad: false,
       theme: "default",
@@ -14,9 +15,10 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         htmlLabels: true,
         curve: 'basis',
         diagramPadding: 8,
-        defaultRenderer: 'dagre-wrapper',
         nodeSpacing: 50,
         rankSpacing: 70,
+        // Set orientation directly in flowchart config
+        orientation: direction 
       },
       sequence: {
         diagramMarginX: 50,
@@ -33,33 +35,22 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         padding: 16,
         useMaxWidth: false
       },
-      treemap: {  // Add treemap (specialized mindmap) configuration
-        padding: 16,
-        useMaxWidth: false,
-        nodeSpacing: 50
-      },
+      // Add our custom mindmap config (mermaid will ignore extra properties)
+      // TypeScript doesn't know about this yet
       logLevel: 3 // Enables warning logs for debugging
     });
     
-    // Set direction separately since 'orientation' is not a valid property
-    mermaid.flowchartConfig = { 
-      ...mermaid.flowchartConfig,
-      htmlLabels: true,
-      curve: 'basis',
-      useMaxWidth: false,
-      defaultRenderer: 'dagre-wrapper'
-    };
-    
-    // Set the graph direction using the API
-    mermaid.updateConfig({
+    // Explicitly set the direction/orientation in the flowchart config
+    // by re-initializing with updated config that focuses just on the orientation
+    mermaid.initialize({
       flowchart: {
-        defaultRenderer: 'dagre-wrapper',
+        orientation: direction,
+        curve: 'basis',
+        useMaxWidth: false,
         htmlLabels: true,
       }
     });
     
-    // Set the direction using the proper method
-    mermaid.flowchartConfig.rankDir = direction;
   }, [direction]);
 };
 
