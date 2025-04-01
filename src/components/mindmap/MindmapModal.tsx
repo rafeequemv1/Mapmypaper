@@ -27,8 +27,8 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [initialGeneration, setInitialGeneration] = useState(false);
   
-  // Initialize mermaid library
-  useMermaidInit();
+  // Direction set to LR for better visibility of detailed sub-branches
+  useMermaidInit("LR");
 
   // Generate mindmap only once when modal is first opened
   useEffect(() => {
@@ -52,9 +52,9 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
         <DialogHeader className="space-y-1">
-          <DialogTitle>Mindmap</DialogTitle>
+          <DialogTitle>Detailed Mindmap</DialogTitle>
           <DialogDescription className="text-xs">
-            Visualize the paper structure as a mindmap.
+            Visualize the paper structure as a detailed mindmap with expanded sub-branches.
           </DialogDescription>
         </DialogHeader>
         

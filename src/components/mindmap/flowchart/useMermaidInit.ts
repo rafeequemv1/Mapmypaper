@@ -17,7 +17,9 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         defaultRenderer: 'dagre-wrapper',
         nodeSpacing: 50,
         rankSpacing: 70,
-        rankDir: direction
+        // Using direction instead of rankDir to fix TypeScript error
+        // This properly sets the direction of the flowchart
+        direction
       },
       sequence: {
         diagramMarginX: 50,
