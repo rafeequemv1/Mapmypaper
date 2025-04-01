@@ -1,8 +1,7 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Access your API key using Vite's import.meta.env instead of process.env
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
+// Get API key from environment variable
+const genAI = new GoogleGenerativeAI("AIzaSyAZ9kJmXbL4qTSQHHXpH4Y_9sXRxFH5gdk");
 
 // Function to chat with Gemini about the PDF content
 export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
@@ -136,7 +135,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     }
 
     // Initialize the Generative Model for text generation
-    const model = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "").getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     
     // Define detail level-specific instructions
     let detailInstructions = '';
@@ -200,11 +199,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     
     Document Content: 
     ${pdfText.slice(0, 15000)}
-    `)
-    .catch(error => {
-      console.error("Error in generateFlowchartFromPdf:", error);
-      throw error;
-    });
+    `);
     
     // Extract the Mermaid code from the result
     let mermaidCode = result.response.text();
