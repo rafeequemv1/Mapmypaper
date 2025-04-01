@@ -4,24 +4,11 @@ import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
-export const defaultFlowchart = `flowchart TD
-    A[Photosynthesis Overview] -->|Process| B[Process by which green plants and some other organisms use sunlight to synthesize foods]
-    B --> C[Involves chlorophyll and generates oxygen as a byproduct]
-    
-    C --> D[Chlorophyll]
-    C --> E[Process]
-    
-    D --> F[Green pigment found in chloroplasts]
-    D --> G[Vital for the absorption of light energy]
-    
-    E --> H[Light-dependent Reactions]
-    E --> I[Calvin Cycle]
-    
-    H --> J[Take place in the thylakoid membranes]
-    H --> K[Convert solar energy into chemical energy in the form of ATP and NADPH]
-    
-    I --> L[Also known as light-independent reactions]
-    I --> M[Uses ATP and NADPH to convert carbon dioxide into glucose]`;
+export const defaultFlowchart = `flowchart LR
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Debug]
+    D --> B`;
 
 // Helper function to clean and validate Mermaid syntax
 export const cleanMermaidSyntax = (input: string): string => {
@@ -34,9 +21,12 @@ export const cleanMermaidSyntax = (input: string): string => {
     // Replace any hyphens in node IDs with underscores
     .replace(/(\w+)-(\w+)/g, "$1_$2");
   
-  // Ensure it starts with flowchart directive
+  // Ensure it starts with flowchart directive and uses LR direction
   if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart TD\n" + cleaned;
+    cleaned = "flowchart LR\n" + cleaned;
+  } else if (cleaned.startsWith("flowchart TD")) {
+    // Replace TD with LR if found at the beginning
+    cleaned = cleaned.replace("flowchart TD", "flowchart LR");
   }
   
   // Process line by line to ensure each line is valid
@@ -94,60 +84,33 @@ export const cleanMermaidSyntax = (input: string): string => {
   return processedLines.join('\n');
 };
 
-// Add styling function to enhance node appearance
-const enhanceFlowchartWithStyling = (flowchartCode: string): string => {
-  // Add styling section at the end of the flowchart
-  let enhancedCode = flowchartCode;
-  
-  // Add styling for different types of nodes if they don't already exist
-  if (!enhancedCode.includes("classDef")) {
-    enhancedCode += `\n
-    %% Node styling
-    classDef concept fill:#e6f3ff,stroke:#4a86e8,stroke-width:2px
-    classDef process fill:#e6ffe6,stroke:#6aa84f,stroke-width:2px
-    classDef highlight fill:#fff2cc,stroke:#f1c232,stroke-width:2px
-    classDef main fill:#d9d2e9,stroke:#8e7cc3,stroke-width:2px,rx:15px,ry:15px
-    
-    %% Apply styling to nodes
-    class A main
-    class B,C process
-    class D,E concept
-    class F,G,H,I,J,K,L,M highlight`;
-  }
-  
-  return enhancedCode;
-};
-
 export const useFlowchartGenerator = () => {
-  const [code, setCode] = useState(enhanceFlowchartWithStyling(defaultFlowchart));
+  const [code, setCode] = useState(defaultFlowchart);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const generateFlowchart = async () => {
+  const generateFlowchart = async (detailLevel: 'low' | 'medium' | 'high' = 'medium') => {
     try {
       setIsGenerating(true);
       setError(null);
-      const flowchartCode = await generateFlowchartFromPdf();
+      const flowchartCode = await generateFlowchartFromPdf(detailLevel);
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
       
-      // Add styling to make the flowchart more visually appealing
-      const enhancedCode = enhanceFlowchartWithStyling(cleanedCode);
-      
       // Check if the flowchart code is valid
       try {
-        await mermaid.parse(enhancedCode);
-        setCode(enhancedCode);
+        await mermaid.parse(cleanedCode);
+        setCode(cleanedCode);
         toast({
           title: "Flowchart Generated",
-          description: "A detailed flowchart has been created based on your PDF content.",
+          description: `A ${detailLevel} detail flowchart has been created based on your PDF content.`,
         });
       } catch (parseError) {
         console.error("Mermaid parse error:", parseError);
         setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-        setCode(enhanceFlowchartWithStyling(defaultFlowchart));
+        setCode(defaultFlowchart);
         toast({
           title: "Syntax Error",
           description: "The generated flowchart had syntax errors. Using a default template instead.",
@@ -156,7 +119,7 @@ export const useFlowchartGenerator = () => {
       }
     } catch (err) {
       console.error("Failed to generate flowchart:", err);
-      setCode(enhanceFlowchartWithStyling(defaultFlowchart));
+      setCode(defaultFlowchart);
       setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
       toast({
         title: "Generation Failed",

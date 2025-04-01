@@ -10,134 +10,17 @@ import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
-  selectedImage?: string | null;
-  explainText?: string;
 }
 
-const MobileChatSheet = ({ onScrollToPdfPosition, selectedImage, explainText }: MobileChatSheetProps) => {
+const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; isImage?: boolean; imageUrl?: string; }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
     { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
-  const [processingExplainText, setProcessingExplainText] = useState(false);
-  const [processingImage, setProcessingImage] = useState(false);
-  
-  // Process text selection
-  useEffect(() => {
-    const processExplainText = async () => {
-      if (explainText && !processingExplainText && isSheetOpen) {
-        setProcessingExplainText(true);
-        
-        // Add user message with the selected text
-        setMessages(prev => [...prev, { role: 'user', content: `Please explain this text in detail with page citations: "${explainText}"` }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          // Enhanced prompt to encourage complete sentences and page citations
-          const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
-          );
-          
-          // Hide typing indicator and add AI response with formatting
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: formatAIResponse(response),
-              isHtml: true 
-            }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Chat error:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error explaining that. Please try again." 
-            }
-          ]);
-          
-          toast({
-            title: "Explanation Error",
-            description: "Failed to get an explanation from the AI.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingExplainText(false);
-        }
-      }
-    };
-    
-    processExplainText();
-  }, [explainText, isSheetOpen, processingExplainText, toast]);
-
-  // Process selected image
-  useEffect(() => {
-    const processSelectedImage = async () => {
-      if (selectedImage && !processingImage && isSheetOpen) {
-        setProcessingImage(true);
-        
-        // Add user message with the image
-        setMessages(prev => [...prev, { 
-          role: 'user', 
-          content: 'Please analyze and explain this part of the document:',
-          isImage: true,
-          imageUrl: selectedImage
-        }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          // Enhanced prompt to encourage detailed analysis of the image
-          const response = await chatWithGeminiAboutPdf(
-            `This is a screenshot from a research paper. Please analyze the content, explain what it shows in detail, and provide relevant context. Include specific page citations in [citation:pageX] format if you can determine the page. Add emojis relevant to the content to make your response engaging.`
-          );
-          
-          // Hide typing indicator and add AI response with formatting
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: formatAIResponse(response),
-              isHtml: true 
-            }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Image analysis error:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error analyzing that image. Please try again." 
-            }
-          ]);
-          
-          toast({
-            title: "Image Analysis Error",
-            description: "Failed to analyze the selected area.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingImage(false);
-        }
-      }
-    };
-    
-    processSelectedImage();
-  }, [selectedImage, isSheetOpen, processingImage, toast]);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -147,14 +30,17 @@ const MobileChatSheet = ({ onScrollToPdfPosition, selectedImage, explainText }: 
         
         messageContainers.forEach(container => {
           activateCitations(container as HTMLElement, (citation) => {
-            console.log("Citation clicked:", citation);
+            console.log("Mobile Citation clicked:", citation);
             if (onScrollToPdfPosition) {
               onScrollToPdfPosition(citation);
-              setIsSheetOpen(false); // Close sheet after citation click on mobile
+              // Small delay to ensure event is processed before closing sheet
+              setTimeout(() => {
+                setIsSheetOpen(false); // Close sheet after citation click on mobile
+              }, 50);
             }
           });
         });
-      }, 100); // Small delay to ensure DOM is ready
+      }, 200); // Increased timeout to ensure DOM is fully ready
     }
   }, [messages, isSheetOpen, onScrollToPdfPosition]);
   
@@ -271,17 +157,6 @@ const MobileChatSheet = ({ onScrollToPdfPosition, selectedImage, explainText }: 
                       : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
                   }`}
                 >
-                  {message.isImage && message.imageUrl && (
-                    <div className="mb-2">
-                      <img 
-                        src={message.imageUrl} 
-                        alt="Selected area from PDF" 
-                        className="max-w-full rounded border border-gray-200" 
-                        style={{ maxHeight: '300px' }}
-                      />
-                    </div>
-                  )}
-                  
                   {message.isHtml ? (
                     <div 
                       className="ai-message-content" 

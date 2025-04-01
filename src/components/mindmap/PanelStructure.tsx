@@ -1,20 +1,24 @@
 
-import { useState, useRef, useEffect } from "react";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "@/hooks/useSearchParams";
+import { useToast } from "@/hooks/use-toast";
+import { useChat } from "@/components/chat/useChat";
+import { 
+  ResizablePanelGroup, 
+  ResizablePanel, 
+  ResizableHandle 
+} from "@/components/ui/resizable";
+import { Skeleton } from "@/components/ui/skeleton";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
-import ChatPanel from "./ChatPanel";
-import MobileChatSheet from "./MobileChatSheet";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { MindElixirInstance } from "mind-elixir";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady: (mindElixirInstance: MindElixirInstance) => void;
-  explainText?: string;
+  onMindMapReady: any;
+  explainText: string;
   onExplainText: (text: string) => void;
 }
 
@@ -25,131 +29,106 @@ const PanelStructure = ({
   togglePdf,
   onMindMapReady,
   explainText,
-  onExplainText
+  onExplainText,
 }: PanelStructureProps) => {
-  const [pdfLoaded, setPdfLoaded] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const pdfViewerRef = useRef<{ scrollToPage: (pageNumber: number) => void } | null>(null);
-  const isMobile = useIsMobile();
-
-  // Function to handle citation clicks and scroll PDF to that position
-  const handleScrollToPdfPosition = (position: string) => {
-    if (!pdfViewerRef.current) return;
-    
-    console.log("Scrolling to position:", position);
-    
-    // Parse the position string (could be page number, section name, etc.)
-    if (position.toLowerCase().startsWith('page')) {
-      const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);
-      if (!isNaN(pageNumber) && pageNumber > 0) {
-        console.log("Scrolling to page:", pageNumber);
-        
-        // Ensure PDF panel is visible first - ALWAYS open PDF if closed
-        if (!showPdf) {
-          togglePdf(); // Always open the PDF panel when citation is clicked
-        }
-        
-        // Use setTimeout to ensure the panel is visible before scrolling
-        setTimeout(() => {
-          if (pdfViewerRef.current) {
-            pdfViewerRef.current.scrollToPage(pageNumber);
-          }
-        }, 100);
-      }
-    }
-  };
+  const searchParams = useSearchParams();
+  const pdfViewerRef = useRef(null);
+  const isMapGenerated = true;
   
-  // Handle image selection from PDF area selector
-  const handleImageSelected = (imageDataUrl: string) => {
-    setSelectedImage(imageDataUrl);
-    
-    // Ensure chat panel is visible when image is selected
-    if (!showChat) {
-      toggleChat();
+  const [loadingMindmap, setLoadingMindmap] = useState(true);
+  const { toast } = useToast();
+  const { messages, input, handleInputChange, sendMessage, isLoading: isChatLoading } = useChat(explainText);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  
+  const handlePdfLoaded = useCallback(() => {
+    setPdfLoaded(true);
+  }, []);
+  
+  useEffect(() => {
+    if (explainText && !isChatLoading) {
+      sendMessage(explainText);
+    }
+  }, [explainText, sendMessage, isChatLoading]);
+
+  // Handle image capture from PDF
+  const handleImageCaptured = (imageData: string) => {
+    if (onExplainText) {
+      onExplainText(`[IMAGE CAPTURE]: Please explain this part of the PDF: ${imageData}`);
     }
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <ResizablePanelGroup 
-        direction="horizontal"
-        className="flex-1"
-      >
-        {/* Left Panel - PDF Viewer (Conditionally Rendered) with fixed 40% width */}
-        {showPdf && (
-          <>
-            <ResizablePanel 
-              defaultSize={40} 
-              minSize={40}
-              maxSize={40}
-              id="pdf-panel"
-              order={1}
-              className="w-full relative"
-            >
-              <PdfViewer 
-                onTextSelected={(text) => {
-                  // When text is selected, immediately send it to chat
-                  if (text) {
-                    onExplainText(text);
-                    
-                    // Open chat panel if not already open
-                    if (!showChat) {
-                      toggleChat();
-                    }
-                  }
-                }}
-                onImageSelected={handleImageSelected}
-                onPdfLoaded={() => setPdfLoaded(true)}
-                ref={pdfViewerRef}
-              />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-          </>
-        )}
+    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+      {/* PDF Panel */}
+      {showPdf && (
+        <>
+          <ResizablePanel defaultSize={30} minSize={15} maxSize={50} className="h-full">
+            <PdfViewer 
+              ref={pdfViewerRef}
+              onTextSelected={onExplainText}
+              onPdfLoaded={handlePdfLoaded}
+              onImageCaptured={handleImageCaptured}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+        </>
+      )}
 
-        {/* Middle Panel - Mind Map */}
-        <ResizablePanel 
-          defaultSize={showPdf && showChat ? 30 : showPdf || showChat ? 70 : 100}
-          minSize={30}
-          id="mindmap-panel"
-          order={2}
-        >
-          <MindMapViewer 
-            isMapGenerated={true} 
-            onMindMapReady={onMindMapReady} 
-          />
-        </ResizablePanel>
+      {/* Mind Map Panel - Takes up remaining space */}
+      <ResizablePanel defaultSize={showChat ? 50 : 70} className="h-full">
+        <MindMapViewer
+          isMapGenerated={isMapGenerated}
+          onMindMapReady={onMindMapReady}
+          onExplainText={onExplainText}
+        />
+      </ResizablePanel>
 
-        {/* Right Panel - Chat (Conditionally Rendered) with fixed 30% width */}
-        {showChat && !isMobile && (
-          <>
-            <ResizableHandle withHandle />
-            <ResizablePanel 
-              defaultSize={30} 
-              minSize={30}
-              maxSize={30}
-              id="chat-panel"
-              order={3}
-              className="relative"
-            >
-              <ChatPanel 
-                toggleChat={toggleChat} 
-                explainText={explainText}
-                selectedImage={selectedImage}
-                onScrollToPdfPosition={handleScrollToPdfPosition} 
-              />
-            </ResizablePanel>
-          </>
-        )}
-      </ResizablePanelGroup>
-      
-      {/* Mobile Chat Sheet */}
-      {isMobile && <MobileChatSheet 
-        onScrollToPdfPosition={handleScrollToPdfPosition}
-        selectedImage={selectedImage}
-        explainText={explainText}
-      />}
-    </div>
+      {/* Chat Panel */}
+      {showChat && (
+        <>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="h-full bg-gray-50 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold">Chat</h2>
+            </div>
+            
+            <div className="flex-1 p-4 overflow-y-auto">
+              {messages.map((message, index) => (
+                <div 
+                  key={index}
+                  className={`mb-2 p-3 rounded-md ${message.isUser ? 'bg-blue-100 text-blue-800 self-end' : 'bg-gray-100 text-gray-800 self-start'}`}
+                >
+                  {message.text}
+                </div>
+              ))}
+              {isChatLoading && (
+                <div className="mb-2 p-3 rounded-md bg-gray-100 text-gray-800 self-start">
+                  Loading...
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex rounded-md shadow-sm">
+                <input
+                  type="text"
+                  className="flex-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300"
+                  placeholder="Enter text"
+                  value={input}
+                  onChange={handleInputChange}
+                />
+                <button
+                  className="bg-indigo-600 hover:bg-indigo-700 border-indigo-600 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-medium rounded-r-md text-white py-2 px-4 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                  onClick={() => sendMessage()}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </ResizablePanel>
+        </>
+      )}
+    </ResizablePanelGroup>
   );
 };
 

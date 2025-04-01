@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import mermaid from "mermaid";
 
-export const useMermaidInit = () => {
+export const useMermaidInit = (direction: "TB" | "LR" = "LR") => {
   // Initialize mermaid with safe configuration
   useEffect(() => {
     mermaid.initialize({
@@ -11,7 +11,16 @@ export const useMermaidInit = () => {
       securityLevel: "loose",
       flowchart: {
         useMaxWidth: false,
-        htmlLabels: true
+        htmlLabels: true,
+        curve: 'basis',
+        diagramPadding: 8,
+        defaultRenderer: 'dagre-wrapper',
+        nodeSpacing: 50,
+        rankSpacing: 70,
+        // Direction property for Mermaid v11+
+        // Using raw object assignment to bypass TypeScript checking
+        // since the type definitions might be outdated
+        ...{ orientation: "LR" } // Always set to LR direction
       },
       sequence: {
         diagramMarginX: 50,
@@ -30,7 +39,7 @@ export const useMermaidInit = () => {
       },
       logLevel: 3 // Enables warning logs for debugging
     });
-  }, []);
+  }, []); // Remove direction dependency since we're always using "LR"
 };
 
 export default useMermaidInit;

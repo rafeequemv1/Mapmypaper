@@ -1,97 +1,76 @@
 
-import { useEffect, useRef, useState } from "react";
-import {
+import { useState } from "react";
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import FlowchartPreview from "./flowchart/FlowchartPreview";
-import FlowchartExport from "./flowchart/FlowchartExport";
-import useMermaidInit from "./flowchart/useMermaidInit";
-import useMindmapGenerator from "./flowchart/useMindmapGenerator";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+
+// Define the DetailLevel type
+export type DetailLevel = 'simple' | 'detailed' | 'advanced';
 
 interface MindmapModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onGenerate: (detailLevel: DetailLevel) => void;
 }
 
-const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
-  const previewRef = useRef<HTMLDivElement>(null);
-  const { code, error, isGenerating, generateMindmap } = useMindmapGenerator();
-  
-  // State for theme and editor visibility
-  const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
-  const [initialGeneration, setInitialGeneration] = useState(false);
-  
-  // Initialize mermaid library
-  useMermaidInit();
+const MindmapModal = ({ isOpen, onClose, onGenerate }: MindmapModalProps) => {
+  const [detailLevel, setDetailLevel] = useState<DetailLevel>('detailed');
 
-  // Generate mindmap only once when modal is first opened
-  useEffect(() => {
-    if (open && !initialGeneration) {
-      // Generate mindmap with the root node set as "title"
-      // This will ensure the first node is always the title
-      generateMindmap();
-      setInitialGeneration(true);
-    }
-  }, [open, generateMindmap, initialGeneration]);
-
-  // Toggle color theme
-  const toggleTheme = () => {
-    const themes: Array<'default' | 'forest' | 'dark' | 'neutral'> = ['default', 'forest', 'dark', 'neutral'];
-    const currentIndex = themes.indexOf(theme);
-    const nextIndex = (currentIndex + 1) % themes.length;
-    setTheme(themes[nextIndex]);
-  };
-
-  // Manual regeneration handler
-  const handleRegenerate = () => {
-    generateMindmap();
+  const handleGenerate = () => {
+    onGenerate(detailLevel);
+    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
-        <DialogHeader className="space-y-1">
-          <DialogTitle>Mindmap</DialogTitle>
-          <DialogDescription className="text-xs">
-            Visualize the paper structure as a mindmap.
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Generate Mindmap</DialogTitle>
+          <DialogDescription>
+            Create a visual mindmap representation from your PDF document
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="flex justify-end items-center gap-4 mb-2">
-          <Button 
-            variant="ghost"
-            size="sm"
-            onClick={handleRegenerate}
-            disabled={isGenerating}
-            className="text-black"
-          >
-            {isGenerating ? "Generating..." : "Regenerate Mindmap"}
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="detail-level" className="text-right">
+              Detail Level
+            </Label>
+            <Select 
+              value={detailLevel} 
+              onValueChange={(value: DetailLevel) => setDetailLevel(value)}
+            >
+              <SelectTrigger id="detail-level" className="col-span-3">
+                <SelectValue placeholder="Select detail level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="simple">Simple</SelectItem>
+                <SelectItem value="detailed">Detailed</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleGenerate}>
+            Generate
           </Button>
         </div>
-        
-        {/* Preview - Takes up all space */}
-        <div className="flex-1 overflow-hidden">
-          <FlowchartPreview
-            code={code}
-            error={error}
-            isGenerating={isGenerating}
-            theme={theme}
-            previewRef={previewRef}
-            hideEditor={true}
-            fitGraph={true}
-          />
-        </div>
-        
-        <DialogFooter className="flex justify-between sm:justify-between">
-          <FlowchartExport previewRef={previewRef} onToggleTheme={toggleTheme} />
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-black">Done</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

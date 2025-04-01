@@ -1,168 +1,159 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, RefObject } from "react";
 import mermaid from "mermaid";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface FlowchartPreviewProps {
   code: string;
   error: string | null;
   isGenerating: boolean;
-  theme?: 'default' | 'forest' | 'dark' | 'neutral';
-  previewRef?: React.RefObject<HTMLDivElement>;
+  theme: 'default' | 'forest' | 'dark' | 'neutral';
+  previewRef?: RefObject<HTMLDivElement>;
   hideEditor?: boolean;
-  fitGraph?: boolean;
+  zoomLevel?: number;
 }
 
-const FlowchartPreview = ({
-  code,
-  error,
-  isGenerating,
-  theme = 'default',
-  previewRef,
-  hideEditor = false,
-  fitGraph = false
+const FlowchartPreview = ({ 
+  code, 
+  error, 
+  isGenerating, 
+  theme, 
+  previewRef, 
+  hideEditor,
+  zoomLevel = 1
 }: FlowchartPreviewProps) => {
-  const [renderedSvg, setRenderedSvg] = useState<string>('');
-  const [renderError, setRenderError] = useState<string | null>(null);
-  const [scale, setScale] = useState<number>(1);
+  const localRef = useRef<HTMLDivElement>(null);
+  const ref = previewRef || localRef;
   
-  // Format the code with theme
-  const getFormattedCode = (): string => {
-    if (!code) return '';
-    
-    // Add theme directive if not present
-    if (!code.includes('%%{init:')) {
-      const fitProp = fitGraph ? ', "fit": true' : '';
-      return `%%{init: {'theme':'${theme}'${fitProp}} }%%\n${code}`;
-    }
-    
-    // Replace existing theme
-    return code.replace(
-      /%%{init:\s*{[^}]*}%%/g, 
-      `%%{init: {'theme':'${theme}'${fitGraph ? ", 'fit': true" : ""}} }%%`
-    );
-  };
-  
+  // Render mermaid diagram when code or theme changes
   useEffect(() => {
     const renderDiagram = async () => {
-      if (!code || isGenerating) {
-        setRenderedSvg('');
-        return;
-      }
+      if (!ref.current || !code || isGenerating || error) return;
       
       try {
-        // First clear any previous errors
-        setRenderError(null);
+        // Clear previous content
+        ref.current.innerHTML = "";
         
-        // Initialize Mermaid with the selected theme and appropriate settings
+        // Set theme and configure for left-to-right layout with rounded nodes
         mermaid.initialize({
-          startOnLoad: false,
           theme: theme,
           securityLevel: 'loose',
-          fontSize: 16,
-          logLevel: 5, // debug
-          fontFamily: 'Roboto, sans-serif',
+          startOnLoad: false, // Prevent automatic rendering
           flowchart: {
-            diagramPadding: 8,
             htmlLabels: true,
             curve: 'basis',
-            useMaxWidth: !fitGraph, // Set to false for large diagrams
-          },
-          mindmap: {
-            padding: fitGraph ? 50 : 100,
-            useMaxWidth: fitGraph
+            diagramPadding: 8,
+            nodeSpacing: 50,
+            rankSpacing: 70,
+            useMaxWidth: false
           }
         });
         
-        const formattedCode = getFormattedCode();
+        // Add custom styling for rounded corners and light colors
+        const customStyles = `
+          .flowchart-node rect, .flowchart-label rect {
+            rx: 15px;
+            ry: 15px;
+            fill-opacity: 0.7 !important;
+          }
+          .flowchart-node .label {
+            font-size: 14px;
+          }
+          .edgeLabel {
+            background-color: white;
+            border-radius: 4px;
+            padding: 2px;
+            font-size: 12px;
+          }
+          .node-circle {
+            fill-opacity: 0.7 !important;
+          }
+        `;
         
-        // Render the diagram
-        const { svg } = await mermaid.render('mermaid-diagram', formattedCode);
-        setRenderedSvg(svg);
+        // Directly render to the element itself rather than creating a new element
+        const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
+        
+        if (ref.current) { // Check again in case component unmounted during async operation
+          ref.current.innerHTML = svg;
+          
+          // Add zoom and pan functionality
+          const svgElement = ref.current.querySelector('svg');
+          if (svgElement) {
+            svgElement.style.maxWidth = '100%';
+            svgElement.style.height = 'auto';
+            
+            // Add custom styles to SVG
+            const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+            styleElement.textContent = customStyles;
+            svgElement.appendChild(styleElement);
+            
+            // Apply zoom level
+            if (zoomLevel !== 1) {
+              const g = svgElement.querySelector('g');
+              if (g) {
+                // Get SVG dimensions
+                const svgWidth = svgElement.viewBox.baseVal.width;
+                const svgHeight = svgElement.viewBox.baseVal.height;
+                
+                // Calculate center point
+                const centerX = svgWidth / 2;
+                const centerY = svgHeight / 2;
+                
+                // Apply transform for zooming centered on the middle
+                g.setAttribute('transform', 
+                  `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
+                );
+              }
+            }
+            
+            // Fit SVG to container
+            const viewBox = svgElement.getAttribute('viewBox')?.split(' ');
+            if (viewBox && viewBox.length === 4) {
+              const width = parseFloat(viewBox[2]);
+              const height = parseFloat(viewBox[3]);
+              const aspectRatio = width / height;
+              
+              // Set dimensions to maintain aspect ratio
+              svgElement.style.width = '100%';
+              svgElement.style.height = `${100 / aspectRatio}%`;
+              svgElement.style.maxHeight = '100%';
+            }
+          }
+        }
       } catch (err) {
         console.error('Error rendering diagram:', err);
-        setRenderError(`Failed to render diagram: ${err instanceof Error ? err.message : String(err)}`);
-        setRenderedSvg('');
+        if (ref.current) {
+          ref.current.innerHTML = `<div class="text-red-500">Error rendering diagram: ${err.message || 'Unknown error'}</div>`;
+        }
       }
     };
     
     renderDiagram();
-  }, [code, isGenerating, theme, fitGraph]);
-
-  // Add zoom controls
-  const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.1, 2)); // Max zoom 200%
-  };
-
-  const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.1, 0.5)); // Min zoom 50%
-  };
-
-  const handleResetZoom = () => {
-    setScale(1);
-  };
-
-  return (
-    <div className="h-full flex flex-col">
-      {/* Zoom controls */}
-      {!isGenerating && renderedSvg && (
-        <div className="flex justify-end mb-2 gap-2">
-          <button 
-            onClick={handleZoomOut}
-            className="p-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-            title="Zoom out"
-          >
-            -
-          </button>
-          <button 
-            onClick={handleResetZoom}
-            className="p-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-            title="Reset zoom"
-          >
-            {Math.round(scale * 100)}%
-          </button>
-          <button 
-            onClick={handleZoomIn}
-            className="p-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-            title="Zoom in"
-          >
-            +
-          </button>
-        </div>
-      )}
-      
-      {/* Preview area */}
-      <div 
-        ref={previewRef}
-        className="flex-1 flex flex-col items-center justify-center bg-white p-4 overflow-auto"
-        style={{ minHeight: hideEditor ? '80vh' : '300px' }}
-      >
-        {isGenerating ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center">
-              <Skeleton className="w-[600px] h-[400px] mb-4 mx-auto rounded-md" />
-              <p className="text-gray-500">Generating flowchart...</p>
-            </div>
-          </div>
-        ) : renderError || error ? (
-          <div className="text-red-500 p-4 bg-red-50 rounded border border-red-200 w-full">
-            <h3 className="font-semibold mb-2">Error</h3>
-            <pre className="whitespace-pre-wrap overflow-auto max-h-[300px] text-sm">
-              {renderError || error}
-            </pre>
-          </div>
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{
-              transform: `scale(${scale})`,
-              transformOrigin: 'center center',
-              transition: 'transform 0.2s ease-out'
-            }}
-            dangerouslySetInnerHTML={{ __html: renderedSvg }}
-          />
-        )}
+  }, [code, theme, isGenerating, error, zoomLevel]);
+  
+  // Display appropriate content based on state
+  if (isGenerating) {
+    return <div className="flex-1 flex items-center justify-center p-8">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="h-8 w-8 rounded-full bg-gray-300 mb-4"></div>
+        <div className="h-4 w-48 bg-gray-300 rounded"></div>
       </div>
+    </div>;
+  }
+  
+  if (error) {
+    return (
+      <div className="flex-1 p-4 overflow-auto">
+        <div className="p-4 bg-red-50 text-red-800 rounded-md border border-red-200">
+          <h3 className="font-bold mb-2">Error</h3>
+          <pre className="whitespace-pre-wrap text-sm">{error}</pre>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex-1 p-6 bg-white rounded-md border overflow-auto flex items-center justify-center">
+      <div ref={ref} className="mermaid-diagram w-full h-full flex items-center justify-center" />
     </div>
   );
 };
