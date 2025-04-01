@@ -13,7 +13,7 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
-import { Activity, ZoomIn, ZoomOut, MousePointer } from "lucide-react";
+import { Activity, ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -27,7 +27,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // State for theme and UI
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [hideEditor, setHideEditor] = useState(true);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom to ensure it fits
   
   // Always initialize mermaid library with horizontal layout
   useMermaidInit("LR"); 
@@ -57,12 +57,23 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   };
   
   const handleZoomReset = () => {
-    setZoomLevel(1);
+    setZoomLevel(0.8); // Reset to 80% to ensure diagram fits
   };
+
+  // Fit diagram to screen when window is resized
+  useEffect(() => {
+    const handleResize = () => {
+      // Reset zoom to ensure diagram fits
+      setZoomLevel(0.8);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Flowchart Editor</DialogTitle>
           <DialogDescription>
@@ -85,8 +96,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               size="sm"
               onClick={handleZoomReset}
               className="flex items-center gap-1"
+              title="Reset zoom to fit diagram"
             >
-              <MousePointer className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4 mr-1" />
               {Math.round(zoomLevel * 100)}%
             </Button>
             <Button
@@ -110,6 +122,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               theme={theme}
               previewRef={previewRef}
               zoomLevel={zoomLevel}
+              hideEditor={true}
             />
           </div>
         </div>

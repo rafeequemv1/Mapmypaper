@@ -14,6 +14,7 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useMindmapGenerator from "./flowchart/useMindmapGenerator";
 import { useToast } from "@/hooks/use-toast";
+import { ZoomIn, ZoomOut, MousePointer } from "lucide-react";
 
 interface MindmapModalProps {
   open: boolean;
@@ -28,6 +29,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   // State for theme and editor visibility
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [initialGeneration, setInitialGeneration] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
   
   // Initialize mermaid library
   useMermaidInit();
@@ -54,6 +56,19 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
     const nextIndex = (currentIndex + 1) % themes.length;
     setTheme(themes[nextIndex]);
   };
+  
+  // Zoom controls
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  };
+  
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+  };
+  
+  const handleZoomReset = () => {
+    setZoomLevel(1);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,6 +80,35 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
           </DialogDescription>
         </DialogHeader>
         
+        {/* Zoom controls */}
+        <div className="flex items-center gap-2 mb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomIn}
+            className="flex items-center gap-1"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomReset}
+            className="flex items-center gap-1"
+          >
+            <MousePointer className="h-4 w-4" />
+            {Math.round(zoomLevel * 100)}%
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomOut}
+            className="flex items-center gap-1"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+        </div>
+        
         {/* Preview - Takes up all space */}
         <div className="flex-1 overflow-hidden">
           <FlowchartPreview
@@ -74,6 +118,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
             theme={theme}
             previewRef={previewRef}
             hideEditor={true}
+            zoomLevel={zoomLevel}
           />
         </div>
         

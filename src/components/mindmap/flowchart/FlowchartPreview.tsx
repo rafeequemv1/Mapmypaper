@@ -44,7 +44,11 @@ const FlowchartPreview = ({
             diagramPadding: 8,
             nodeSpacing: 50,
             rankSpacing: 70,
-            useMaxWidth: false,
+            useMaxWidth: true, // Enable responsive diagrams
+          },
+          // Ensure mindmaps don't have forced layout
+          mindmap: {
+            padding: 10,
           }
         });
         
@@ -138,6 +142,12 @@ const FlowchartPreview = ({
             ry: 10px;
             fill-opacity: 0.8 !important;
           }
+          
+          /* Make sure SVG is responsive */
+          svg {
+            max-width: 100%;
+            height: auto !important;
+          }
         `;
         
         // Directly render to the element itself rather than creating a new element
@@ -149,8 +159,11 @@ const FlowchartPreview = ({
           // Add zoom and pan functionality
           const svgElement = ref.current.querySelector('svg');
           if (svgElement) {
+            // Make SVG responsive
+            svgElement.setAttribute('width', '100%');
+            svgElement.setAttribute('height', 'auto');
             svgElement.style.maxWidth = '100%';
-            svgElement.style.height = 'auto';
+            svgElement.style.maxHeight = '100%';
             
             // Add custom styles to SVG
             const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
@@ -161,39 +174,28 @@ const FlowchartPreview = ({
             if (zoomLevel !== 1) {
               const g = svgElement.querySelector('g');
               if (g) {
-                // Get SVG dimensions
-                const svgWidth = svgElement.viewBox.baseVal.width;
-                const svgHeight = svgElement.viewBox.baseVal.height;
-                
-                // Calculate center point
-                const centerX = svgWidth / 2;
-                const centerY = svgHeight / 2;
-                
-                // Apply transform for zooming centered on the middle
-                g.setAttribute('transform', 
-                  `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
-                );
+                // Get SVG dimensions from viewBox
+                const viewBox = svgElement.getAttribute('viewBox');
+                if (viewBox) {
+                  const [x, y, width, height] = viewBox.split(' ').map(Number);
+                  
+                  // Calculate center point
+                  const centerX = width / 2;
+                  const centerY = height / 2;
+                  
+                  // Apply transform for zooming centered on the middle
+                  g.setAttribute('transform', 
+                    `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
+                  );
+                }
               }
-            }
-            
-            // Fit SVG to container
-            const viewBox = svgElement.getAttribute('viewBox')?.split(' ');
-            if (viewBox && viewBox.length === 4) {
-              const width = parseFloat(viewBox[2]);
-              const height = parseFloat(viewBox[3]);
-              const aspectRatio = width / height;
-              
-              // Set dimensions to maintain aspect ratio
-              svgElement.style.width = '100%';
-              svgElement.style.height = `${100 / aspectRatio}%`;
-              svgElement.style.maxHeight = '100%';
             }
           }
         }
       } catch (err) {
         console.error('Error rendering diagram:', err);
         if (ref.current) {
-          ref.current.innerHTML = `<div class="text-red-500">Error rendering diagram: ${err.message || 'Unknown error'}</div>`;
+          ref.current.innerHTML = `<div class="text-red-500 p-4">Error rendering diagram: ${err.message || 'Unknown error'}</div>`;
         }
       }
     };
@@ -216,14 +218,14 @@ const FlowchartPreview = ({
       <div className="flex-1 p-4 overflow-auto">
         <div className="p-4 bg-red-50 text-red-800 rounded-md border border-red-200">
           <h3 className="font-bold mb-2">Error</h3>
-          <pre className="whitespace-pre-wrap text-sm">{error}</pre>
+          <pre className="whitespace-pre-wrap text-sm overflow-auto">{error}</pre>
         </div>
       </div>
     );
   }
   
   return (
-    <div className="flex-1 p-6 bg-white rounded-md border overflow-auto flex items-center justify-center">
+    <div className="flex-1 p-1 bg-white rounded-md border overflow-auto flex items-center justify-center">
       <div ref={ref} className="mermaid-diagram w-full h-full flex items-center justify-center" />
     </div>
   );

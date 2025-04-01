@@ -32,10 +32,15 @@ export const formatAIResponse = (content: string): string => {
   let formattedContent = addEmojis(content);
   
   // Process citations - format as small circular badges with just the page number
-  // Improved format for numeric page citations [citation:page123] -> small circular badge with just the number 123
+  // Check for valid page numbers based on document length (max 7 pages)
   formattedContent = formattedContent.replace(
     /\[citation:page(\d+)\]/g, 
-    '<span class="citation" data-citation="page$1" role="button" tabindex="0" title="Click to navigate to page $1"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">$1</sup></span>'
+    (match, pageNum) => {
+      const pageNumber = parseInt(pageNum, 10);
+      // Ensure page number is valid (assuming maximum 7 pages based on console logs)
+      const validPageNumber = pageNumber > 0 && pageNumber <= 7 ? pageNumber : 1;
+      return `<span class="citation" data-citation="page${validPageNumber}" role="button" tabindex="0" title="Click to navigate to page ${validPageNumber}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${validPageNumber}</sup></span>`;
+    }
   );
   
   // Standard citation format as fallback - showing citation text in circles
@@ -46,7 +51,10 @@ export const formatAIResponse = (content: string): string => {
       const pageMatch = citation.match(/page\s*(\d+)/i);
       if (pageMatch) {
         const pageNum = pageMatch[1];
-        return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to page ${pageNum}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${pageNum}</sup></span>`;
+        const pageNumber = parseInt(pageNum, 10);
+        // Ensure page number is valid (assuming maximum 7 pages based on console logs)
+        const validPageNumber = pageNumber > 0 && pageNumber <= 7 ? pageNumber : 1;
+        return `<span class="citation" data-citation="page${validPageNumber}" role="button" tabindex="0" title="Click to navigate to page ${validPageNumber}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${validPageNumber}</sup></span>`;
       }
       // If no page number found, just show the first few characters
       const shortCite = citation.length > 3 ? citation.substring(0, 3) : citation;
@@ -142,16 +150,19 @@ export const activateCitations = (container: HTMLElement, onCitationClick: (cita
         // First directly call the callback to ensure it's processed
         onCitationClick(citationData);
         
-        // Dispatch the custom event with a slight delay to ensure main callback completes first
+        // Extract page number and ensure it's within valid range (1-7)
         if (citationData.toLowerCase().startsWith('page')) {
           const pageNumber = parseInt(citationData.replace(/[^\d]/g, ''), 10);
           if (!isNaN(pageNumber)) {
+            const validPageNumber = Math.min(Math.max(pageNumber, 1), 7);
+            
             // Create and dispatch custom event with page number
             setTimeout(() => {
               const event = new CustomEvent('scrollToPdfPage', { 
-                detail: { pageNumber }
+                detail: { pageNumber: validPageNumber }
               });
               window.dispatchEvent(event);
+              console.log(`Dispatched scrollToPdfPage event with page: ${validPageNumber}`);
             }, 50);
           }
         }

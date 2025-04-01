@@ -57,10 +57,10 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
           
           // Add root node - use custom styling
           const rootTopic = rootNode.topic.replace(/[\n\r]/g, ' ')
-            .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
-            .replace(/[\(\)']/g, ''); // Remove problematic characters
+            .replace(/[-_]/g, ' ')
+            .replace(/[\(\)']/g, '');
             
-          treemapCode += `  root(("${rootTopic}"))\n`;
+          treemapCode += `  root((${rootTopic}))\n`;
           
           // Helper function to recursively add nodes with color classes
           const addNodesRecursively = (node: any, parent: string, depth: number) => {
@@ -105,9 +105,9 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
               // Add class for styling directly to the node
               treemapCode += `${indent}class ${nodeId} style${depth}_${index % 5}\n`;
               
-              // Add style definition at the bottom if needed
+              // Add style definition at the bottom
               if (!treemapCode.includes(classDeclaration)) {
-                treemapCode += `%% ${classDeclaration}\n`;
+                treemapCode += `${indent}%% ${classDeclaration}\n`;
               }
               
               // Recursively process children
@@ -117,9 +117,9 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
             });
           };
           
-          // Add style for root
+          // Add style for root - IMPORTANT: Add after defining root node
           treemapCode += `  class root rootStyle\n`;
-          treemapCode += `%% classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold\n`;
+          treemapCode += `  %% classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold\n`;
           
           // Start recursive node addition
           addNodesRecursively(rootNode, "root", 1);
@@ -127,8 +127,7 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
         } else {
           // If no data, create a colorful example mindmap
           treemapCode += `
-  root(("Paper Structure"))
-  class root rootStyle
+  root((Paper Structure))
   
   root --> root_0["Introduction"]
   class root_0 style1_0
@@ -169,6 +168,7 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
   root --> root_4["Conclusion"]
   class root_4 style1_4
   
+  class root rootStyle
   %% classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold
   %% classDef style1_0 fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
   %% classDef style1_1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
