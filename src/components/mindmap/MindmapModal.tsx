@@ -20,13 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
 
 interface MindmapModalProps {
   open: boolean;
@@ -86,32 +79,20 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col font-roboto">
+      <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
         <DialogHeader className="space-y-1">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg">Detailed Mindmap</DialogTitle>
-            
-            {/* Detail level dropdown menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-[180px] justify-between">
-                  {detailLevel === "simple" ? "Simple" : 
-                   detailLevel === "detailed" ? "Detailed" : "Advanced"}
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-[180px] bg-white">
-                <DropdownMenuItem onClick={() => handleDetailLevelChange("simple")}>
-                  Simple
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDetailLevelChange("detailed")}>
-                  Detailed
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDetailLevelChange("advanced")}>
-                  Advanced
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <DialogTitle>Detailed Mindmap</DialogTitle>
+            <Select value={detailLevel} onValueChange={(value: DetailLevel) => handleDetailLevelChange(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Detail Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="simple">Simple</SelectItem>
+                <SelectItem value="detailed">Detailed</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <DialogDescription className="text-xs">
             Visualize the paper structure as a mindmap. Select detail level to adjust complexity.

@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import mermaid from "mermaid";
 
-export const useMermaidInit = () => {
+export const useMermaidInit = (direction: "TB" | "LR" = "LR") => {
   // Initialize mermaid with safe configuration
   useEffect(() => {
     mermaid.initialize({
@@ -39,7 +39,7 @@ export const useMermaidInit = () => {
       },
       logLevel: 3 // Enables warning logs for debugging
     });
-  }, []); // No dependencies since we always use LR direction
+  }, []); // Remove direction dependency since we're always using "LR"
 };
 
 export default useMermaidInit;
