@@ -17,7 +17,8 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         defaultRenderer: 'dagre-wrapper',
         nodeSpacing: 50,
         rankSpacing: 70,
-        rankDir: direction
+        // Fix: Change 'rankDir' to 'direction' which is the correct property name
+        direction: direction
       },
       sequence: {
         diagramMarginX: 50,
