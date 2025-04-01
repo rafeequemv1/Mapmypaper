@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import mermaid from "mermaid";
 
-export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
+export const useMermaidInit = (direction: "TB" | "LR" = "LR") => {
   // Initialize mermaid with safe configuration
   useEffect(() => {
     mermaid.initialize({
@@ -17,8 +17,11 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         defaultRenderer: 'dagre-wrapper',
         nodeSpacing: 50,
         rankSpacing: 70,
-        // According to Mermaid's v11+ typings, orientation is used instead of rankDir
-        orientation: direction
+        // Fix: For Mermaid v11+, use the correct property for direction
+        // The type definition is incorrect, but this is the property that actually works
+        flowchart: {
+          rankDir: direction
+        }
       },
       sequence: {
         diagramMarginX: 50,

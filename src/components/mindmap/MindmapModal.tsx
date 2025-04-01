@@ -13,14 +13,24 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useMindmapGenerator from "./flowchart/useMindmapGenerator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface MindmapModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+export type DetailLevel = "simple" | "detailed" | "advanced";
+
 const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
+  const [detailLevel, setDetailLevel] = useState<DetailLevel>("detailed");
   const { code, error, isGenerating, generateMindmap } = useMindmapGenerator();
   
   // State for theme and editor visibility
@@ -31,15 +41,20 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   // Direction set to LR for better visibility of detailed sub-branches
   useMermaidInit("LR");
 
-  // Generate mindmap only once when modal is first opened
+  // Generate mindmap when detail level changes or when modal is first opened
   useEffect(() => {
-    if (open && !initialGeneration) {
-      // Generate mindmap with the root node set as "title"
-      // This will ensure the first node is always the title
-      generateMindmap();
+    if (open && (!initialGeneration || detailLevel)) {
+      // Generate mindmap with the selected detail level
+      generateMindmap(detailLevel);
       setInitialGeneration(true);
     }
-  }, [open, generateMindmap, initialGeneration]);
+  }, [open, generateMindmap, initialGeneration, detailLevel]);
+
+  // Handle detail level change
+  const handleDetailLevelChange = (value: DetailLevel) => {
+    setDetailLevel(value);
+    generateMindmap(value);
+  };
 
   // Toggle color theme
   const toggleTheme = () => {
@@ -66,9 +81,21 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
         <DialogHeader className="space-y-1">
-          <DialogTitle>Detailed Mindmap</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Detailed Mindmap</DialogTitle>
+            <Select value={detailLevel} onValueChange={(value: DetailLevel) => handleDetailLevelChange(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Detail Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="simple">Simple</SelectItem>
+                <SelectItem value="detailed">Detailed</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <DialogDescription className="text-xs">
-            Visualize the paper structure as a detailed mindmap with expanded sub-branches.
+            Visualize the paper structure as a mindmap. Select detail level to adjust complexity.
           </DialogDescription>
         </DialogHeader>
         
