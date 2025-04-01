@@ -1,7 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable (for security reasons)
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk");
+// Using Vite's import.meta.env instead of process.env
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk";
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Function to generate a mind map from text using Gemini API
 export const generateMindMapFromText = async (text: string): Promise<any> => {
@@ -10,7 +12,7 @@ export const generateMindMapFromText = async (text: string): Promise<any> => {
     sessionStorage.setItem('pdfText', text);
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenModel({ model: 'gemini-pro' });
     
     // Create a template for research paper structure as mind map
     const researchPaperTemplate = {
@@ -152,7 +154,7 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenModel({ model: 'gemini-pro' });
 
     // Enhanced prompt to provide more context and instructions
     const fullPrompt = `You are a research assistant helping a user understand a research paper.
@@ -185,7 +187,7 @@ export const generateFlowchartFromPdf = async (detailLevel: 'low' | 'medium' | '
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenModel({ model: 'gemini-pro' });
     
     // Define detail level-specific instructions
     let detailInstructions = '';
@@ -427,7 +429,7 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenModel({ model: 'gemini-pro' });
     
     // Generate the mindmap from the PDF text with Gemini
     const result = await model.generateContent(`
@@ -512,7 +514,7 @@ export const generateStructuredSummary = async (): Promise<any> => {
     }
 
     // Initialize the Generative Model for text generation
-    const model = genAI.getModel({ model: 'gemini-pro' });
+    const model = genAI.getGenModel({ model: 'gemini-pro' });
     
     // Generate a structured summary from the PDF text
     const result = await model.generateContent(`
