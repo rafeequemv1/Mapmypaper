@@ -1,28 +1,33 @@
+
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
-export const defaultFlowchart = `flowchart TD
+export const defaultFlowchart = `flowchart LR
     A[Start] --> B{Is it working?}
     B -->|Yes| C[Great!]
     B -->|No| D[Debug]
-    D --> B`;
+    D --> B
+    
+    classDef default fill:#E5DEFF,stroke:#8B5CF6,stroke-width:2px
+    classDef decision fill:#D3E4FD,stroke:#0EA5E9,stroke-width:2px
+    classDef success fill:#F2FCE2,stroke:#22C55E,stroke-width:2px
+    classDef warning fill:#FEF7CD,stroke:#F59E0B,stroke-width:2px
+    
+    class A,C,D default
+    class B decision`;
 
 // Helper function to clean and validate Mermaid syntax
 export const cleanMermaidSyntax = (input: string): string => {
   let cleaned = input.trim();
   
-  // Fix common syntax errors
-  cleaned = cleaned
-    // Fix arrows if needed
-    .replace(/-+>/g, "-->")
-    // Replace any hyphens in node IDs with underscores
-    .replace(/(\w+)-(\w+)/g, "$1_$2");
-  
-  // Ensure it starts with flowchart directive
+  // Ensure it starts with flowchart directive and LR direction
   if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart TD\n" + cleaned;
+    cleaned = "flowchart LR\n" + cleaned;
+  } else if (cleaned.startsWith("flowchart TD")) {
+    // Convert TD to LR for left-to-right layout
+    cleaned = cleaned.replace("flowchart TD", "flowchart LR");
   }
   
   // Process line by line to ensure each line is valid
@@ -32,43 +37,36 @@ export const cleanMermaidSyntax = (input: string): string => {
     if (!line.trim() || 
         line.trim().startsWith('flowchart') || 
         line.trim().startsWith('subgraph') || 
-        line.trim() === 'end') {
+        line.trim() === 'end' ||
+        line.trim().startsWith('class')) {
       return line;
     }
     
-    // Handle node definitions with text containing hyphens
-    // Replace hyphens inside node text brackets
-    let processedLine = line;
+    // Fix arrows if needed
+    let processedLine = line.replace(/-+>/g, "-->");
     
-    // Handle square brackets []
-    processedLine = processedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
-      return '[' + p1 + ' ' + p2 + ']';
-    });
+    // Replace any hyphens in node IDs with underscores
+    processedLine = processedLine.replace(/(\b\w+)-(\w+\b)(?!\]|\)|\})/g, "$1_$2");
     
-    // Handle parentheses ()
-    processedLine = processedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
-      return '(' + p1 + ' ' + p2 + ')';
-    });
+    // Handle date ranges by replacing hyphens with underscores
+    processedLine = processedLine.replace(/\[([^\]]*?)(\d{4})-(\d{4})([^\]]*?)\]/g, '[$1$2_$3$4]');
+    processedLine = processedLine.replace(/\(([^\)]*)(\d{4})-(\d{4})([^\)]*)\)/g, '($1$2_$3$4)');
+    processedLine = processedLine.replace(/\{([^\}]*)(\d{4})-(\d{4})([^\}]*)\}/g, '{$1$2_$3$4}');
     
-    // Handle curly braces {}
-    processedLine = processedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
-      return '{' + p1 + ' ' + p2 + '}';
-    });
-    
-    // Replace all remaining dashes in node text with spaces or underscores
-    // This needs to run multiple times to catch all hyphens in text
+    // Replace problematic hyphens in node text with spaces
+    // Handle multiple iterations to catch all hyphens
     for (let i = 0; i < 3; i++) {
-      // Handle square brackets []
+      // Square brackets []
       processedLine = processedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
         return '[' + p1 + ' ' + p2 + ']';
       });
       
-      // Handle parentheses ()
+      // Parentheses ()
       processedLine = processedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
         return '(' + p1 + ' ' + p2 + ')';
       });
       
-      // Handle curly braces {}
+      // Curly braces {}
       processedLine = processedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
         return '{' + p1 + ' ' + p2 + '}';
       });
@@ -77,7 +75,22 @@ export const cleanMermaidSyntax = (input: string): string => {
     return processedLine;
   });
   
-  return processedLines.join('\n');
+  // Add color classes if they don't exist
+  let result = processedLines.join('\n');
+  
+  if (!result.includes('classDef')) {
+    result += `
+    
+    classDef default fill:#E5DEFF,stroke:#8B5CF6,stroke-width:2px
+    classDef decision fill:#D3E4FD,stroke:#0EA5E9,stroke-width:2px
+    classDef success fill:#F2FCE2,stroke:#22C55E,stroke-width:2px
+    classDef warning fill:#FEF7CD,stroke:#F59E0B,stroke-width:2px
+    classDef danger fill:#FFDEE2,stroke:#EF4444,stroke-width:2px
+    classDef info fill:#D3E4FD,stroke:#3B82F6,stroke-width:2px
+    classDef neutral fill:#FDE1D3,stroke:#F97316,stroke-width:2px`;
+  }
+  
+  return result;
 };
 
 export const useFlowchartGenerator = () => {

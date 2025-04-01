@@ -233,6 +233,7 @@ const MindMap = () => {
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
+        toggleTreemap={toggleTreemap} // Pass the toggle function for treemap
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -246,19 +247,6 @@ const MindMap = () => {
           explainText={explainText}
           onExplainText={handleExplainText}
         />
-      </div>
-      
-      {/* Treemap Button */}
-      <div className="absolute bottom-4 right-4 z-10">
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="bg-white shadow-md border-primary text-primary hover:bg-primary hover:text-white"
-          onClick={toggleTreemap}
-        >
-          <Network className="mr-1" size={16} />
-          Tree View
-        </Button>
       </div>
       
       {/* Modals */}

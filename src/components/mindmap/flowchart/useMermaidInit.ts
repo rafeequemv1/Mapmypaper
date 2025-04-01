@@ -17,8 +17,6 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
         defaultRenderer: 'dagre-wrapper',
         nodeSpacing: 50,
         rankSpacing: 70,
-        // Fix: In Mermaid 9.0.0+ we should set orientation in the flowchart config
-        orientation: direction
       },
       sequence: {
         diagramMarginX: 50,
@@ -42,6 +40,26 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       },
       logLevel: 3 // Enables warning logs for debugging
     });
+    
+    // Set direction separately since 'orientation' is not a valid property
+    mermaid.flowchartConfig = { 
+      ...mermaid.flowchartConfig,
+      htmlLabels: true,
+      curve: 'basis',
+      useMaxWidth: false,
+      defaultRenderer: 'dagre-wrapper'
+    };
+    
+    // Set the graph direction using the API
+    mermaid.updateConfig({
+      flowchart: {
+        defaultRenderer: 'dagre-wrapper',
+        htmlLabels: true,
+      }
+    });
+    
+    // Set the direction using the proper method
+    mermaid.flowchartConfig.rankDir = direction;
   }, [direction]);
 };
 

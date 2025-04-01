@@ -14,7 +14,6 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 import { Activity, ZoomIn, ZoomOut, MousePointer } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -30,8 +29,8 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [hideEditor, setHideEditor] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
   
-  // Initialize mermaid library with horizontal layout
-  useMermaidInit("LR"); // LR for Left to Right direction
+  // Always initialize mermaid library with horizontal layout
+  useMermaidInit("LR"); 
   
   // Generate flowchart when modal is opened
   useEffect(() => {
