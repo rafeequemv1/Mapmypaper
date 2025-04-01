@@ -111,24 +111,31 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-    Analyze the following academic paper/document text and extract information to fill in this research paper mind map structure.
-    Do not change the structure, only fill in the content based on the document.
+    Analyze the following academic paper/document text and extract specific information to create a detailed mind map.
     
-    For each node, provide a clear, complete sentence or short phrase based on the paper's content.
-    If information for a certain node isn't available in the document, keep the default label.
+    For each node, extract a SPECIFIC insight or finding from the paper, NOT just generic placeholders.
     
     For the root node, use the paper's actual title.
-    Pay special attention to the Summary section which should provide a concise overview of the entire paper.
+    For each section (Introduction, Methodology, Results, etc.), include specific content from the paper.
+    For child nodes, extract actual data points, findings, arguments, or methodologies mentioned in the paper.
     
-    Format the response as a JSON object with the following structure EXACTLY AS PROVIDED below:
+    IMPORTANT:
+    1. DO NOT use generic placeholders like "Key Findings" - instead, write actual findings like "40% reduction in error rate"
+    2. Extract SPECIFIC phrases from the text - use the actual content from the paper
+    3. Include actual numbers, percentages, and specific terminology used in the paper
+    4. For Results, include actual experimental outcomes mentioned in the paper
+    5. For Methodology, include specific techniques, equipment or approaches used
+    6. If certain information isn't available, make a reasonable inference based on the text
+    
+    Format the response as a JSON object with the following structure:
     ${JSON.stringify(researchPaperTemplate, null, 2)}
 
     IMPORTANT REQUIREMENTS:
     1. Do NOT modify the structure of the template - keep ALL nodes.
-    2. Replace only the topic text with relevant content from the paper.
+    2. Replace the generic topic text with SPECIFIC content from the paper.
     3. Keep all node IDs and directions as they are in the template.
-    4. For each topic, provide concise but complete information (preferably under 10 words).
-    5. For the Summary section, provide a meaningful overview with complete sentences for each child node.
+    4. Keep each topic concise (under 10-15 words) but SPECIFIC to the paper content.
+    5. For the Summary section, include actual key findings from the paper.
     6. Only include the JSON in your response, nothing else.
     
     Here's the document text to analyze:
@@ -148,6 +155,9 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       
       // Store the raw template for backup
       sessionStorage.setItem('mindMapTemplate', JSON.stringify(researchPaperTemplate));
+      
+      // Debug the response
+      console.log("Parsed mindmap data:", JSON.stringify(parsedResponse.nodeData, null, 2));
       
       return parsedResponse;
     } catch (parseError) {
@@ -648,40 +658,42 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Create a valid Mermaid mindmap based on this document text.
+    Create a valid Mermaid mindmap based on this document text. 
+    
+    IMPORTANT: Use ACTUAL SPECIFIC content from the document, not generic labels.
     
     CRITICAL MERMAID SYNTAX RULES:
     1. Start with 'mindmap'
     2. Use proper indentation for hierarchy
-    3. Root node can use syntax like: root((Main Topic))
-    4. First level nodes just use text on their own line with proper indentation
+    3. Root node must use this exact syntax: root((Paper Title))
+    4. First level nodes use text on their own line with proper indentation
     5. You can use these node styles:
        - Regular text node (just text)
        - Text in square brackets [Text]
        - Text in parentheses (Text)
        - Text in double parentheses ((Text))
-       - Text in circle >Text]
     6. Max 3 levels of hierarchy
     7. Max 15 nodes total
     8. AVOID special characters that might break syntax
+    9. NEVER use class declarations like "class node className"
     
     EXAMPLE CORRECT SYNTAX:
     mindmap
-      root((Research Paper))
+      root((Research on Machine Learning))
         Introduction
-          Background
-          Problem Statement
+          Background on neural networks
+          Problem of overfitting data
         Methodology
-          Data Collection
-          Analysis
+          LSTM architecture used
+          Training on 50,000 examples
         Results
-          Findings
-        Conclusion
+          93% accuracy achieved
+          Compared to 85% baseline
     
     Here's the document text:
     ${pdfText.slice(0, 8000)}
     
-    Generate ONLY valid Mermaid mindmap code, nothing else.
+    Generate ONLY valid Mermaid mindmap code with SPECIFIC content from the document, nothing else.
     `;
     
     const result = await model.generateContent(prompt);
@@ -746,6 +758,11 @@ const cleanMindmapSyntax = (code: string): string => {
       // Remove special characters that might break the syntax
       fixedLine = fixedLine.replace(/[<>]/g, m => m === '<' ? '(' : ')');
       
+      // CRITICAL: Remove class declarations that could cause errors
+      if (fixedLine.includes("class ")) {
+        fixedLine = fixedLine.split("class ")[0].trim();
+      }
+      
       validLines.push(fixedLine);
     });
     
@@ -758,3 +775,4 @@ const cleanMindmapSyntax = (code: string): string => {
           Please try again`;
   }
 };
+
