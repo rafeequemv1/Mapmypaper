@@ -30,11 +30,10 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
   // Initialize mermaid library
   useMermaidInit();
 
-  // Generate mindmap only once when modal is first opened
+  // Generate mindmap when modal is first opened
   useEffect(() => {
     if (open && !initialGeneration) {
-      // Generate mindmap with the root node set as "title"
-      // This will ensure the first node is always the title
+      // Generate mindmap with PDF content
       generateMindmap();
       setInitialGeneration(true);
     }
@@ -59,7 +58,7 @@ const MindmapModal = ({ open, onOpenChange }: MindmapModalProps) => {
         <DialogHeader className="space-y-1">
           <DialogTitle>Mindmap</DialogTitle>
           <DialogDescription className="text-xs">
-            Visualize the paper structure as a mindmap.
+            Interactive mindmap visualizing the structure and key concepts from your document.
           </DialogDescription>
         </DialogHeader>
         

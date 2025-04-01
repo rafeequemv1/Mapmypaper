@@ -15,7 +15,7 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 import useSequenceDiagramGenerator from "./flowchart/useSequenceDiagramGenerator";
-import { Activity, Network, GitBranch, Maximize, Minimize, Code } from "lucide-react";
+import { GitBranch, Network, Maximize, Minimize, Code } from "lucide-react";
 
 interface FlowchartModalProps {
   open: boolean;

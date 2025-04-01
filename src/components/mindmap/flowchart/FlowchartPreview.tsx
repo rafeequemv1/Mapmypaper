@@ -147,7 +147,7 @@ const FlowchartPreview = ({
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
               <Skeleton className="w-[600px] h-[400px] mb-4 mx-auto rounded-md" />
-              <p className="text-gray-500">Generating flowchart...</p>
+              <p className="text-gray-500">Generating diagram...</p>
             </div>
           </div>
         ) : renderError || error ? (

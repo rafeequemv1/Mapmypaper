@@ -25,9 +25,8 @@ const MindMap = () => {
     if (instance && instance.nodeData) {
       try {
         // Get the root node and expand it
-        const rootNode = instance.nodeData.id;
-        if (rootNode) {
-          instance.expandNode(rootNode);
+        if (instance.nodeData.id) {
+          instance.expandNode(instance.nodeData.id);
         }
       } catch (err) {
         console.log("Error expanding root node:", err);
