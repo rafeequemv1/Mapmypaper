@@ -1,17 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import dynamic from 'next/dynamic';
+
+import React, { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useSearchParams } from "@/hooks/useSearchParams";
 import { useToast } from "@/hooks/use-toast";
 import { useChat } from "@/components/chat/useChat";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const MindElixir = dynamic(() => import('@mind-elixir/next'), {
-  ssr: false,
-});
-
-const PdfViewer = dynamic(() => import('@/components/PdfViewer'), {
-  ssr: false
-});
+// Use React.lazy instead of Next.js dynamic import
+const MindElixir = lazy(() => import('@mind-elixir/next'));
+const PdfViewer = lazy(() => import('@/components/PdfViewer'));
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -24,7 +20,7 @@ interface PanelStructureProps {
 }
 
 // Add a new prop to handle image capture
-const PanelStructure = ({
+const PanelStructure: React.FC<PanelStructureProps> = ({
   showPdf,
   showChat,
   toggleChat,
@@ -71,7 +67,7 @@ const PanelStructure = ({
     el: '#mindmap',
     newTopicName: 'Topic',
     data: initialData,
-    direction: MindElixir.LEFT,
+    direction: 'LEFT', // We'll apply the direction property to MindElixir component
     locale: 'en',
     draggable: true,
     editable: true,
@@ -80,29 +76,28 @@ const PanelStructure = ({
     nodeMenu: true,
     keypress: true,
     before: {
-      insertNode: (newNode, node) => {
-        console.log('insertNode', newNode, node)
-        return true
+      insertNode: (newNode: any, node: any) => {
+        console.log('insertNode', newNode, node);
+        return true;
       },
-      moveNode: (node, newParent, originParent) => {
-        console.log('moveNode', node, newParent, originParent)
-        return true
+      moveNode: (node: any, newParent: any, originParent: any) => {
+        console.log('moveNode', node, newParent, originParent);
+        return true;
       },
-       টেক্সটEdit: (originText, newText, node) => {
-        console.log('textEdit', originText, newText, node)
-        return true
+      textEdit: (originText: string, newText: string, node: any) => { // Fixed non-English character
+        console.log('textEdit', originText, newText, node);
+        return true;
       },
-      removeNode: (node) => {
-        console.log('removeNode', node)
-        return true
+      removeNode: (node: any) => {
+        console.log('removeNode', node);
+        return true;
       },
-      focusNode: (node) => {
-        console.log('focusNode', node)
-        return true
+      focusNode: (node: any) => {
+        console.log('focusNode', node);
+        return true;
       },
     },
-    //   });
-  }
+  };
 
   const handleMindMapReady = (mindMap: any) => {
     // Set up the mind map instance with proper line breaks for nodes
@@ -124,12 +119,14 @@ const PanelStructure = ({
       {/* PDF Panel */}
       {showPdf && (
         <div className="w-1/3 h-full border-r border-gray-200 overflow-hidden">
-          <PdfViewer
-            onTextSelected={onExplainText}
-            onPdfLoaded={handlePdfLoaded}
-            ref={pdfViewerRef}
-            onImageCaptured={handleImageCaptured}
-          />
+          <Suspense fallback={<div className="h-full flex items-center justify-center"><Skeleton className="w-[200px] h-[30px]" /></div>}>
+            <PdfViewer
+              onTextSelected={onExplainText}
+              onPdfLoaded={handlePdfLoaded}
+              ref={pdfViewerRef}
+              onImageCaptured={handleImageCaptured}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -142,15 +139,17 @@ const PanelStructure = ({
                 <Skeleton className="w-[200px] h-[30px]" />
               </div>
             ) : null}
-            <MindElixir
-              options={options}
-              onload={(mind) => {
-                console.log("Mind map loaded:", mind);
-                handleMindMapReady(mind);
-                setLoadingMindmap(false);
-              }}
-              className="h-full"
-            />
+            <Suspense fallback={<div className="h-full flex items-center justify-center"><Skeleton className="w-[200px] h-[30px]" /></div>}>
+              <MindElixir
+                options={options}
+                onload={(mind: any) => {
+                  console.log("Mind map loaded:", mind);
+                  handleMindMapReady(mind);
+                  setLoadingMindmap(false);
+                }}
+                className="h-full"
+              />
+            </Suspense>
           </div>
         </div>
       </div>
@@ -184,7 +183,7 @@ const PanelStructure = ({
               />
               <button
                 className="bg-indigo-600 hover:bg-indigo-700 border-indigo-600 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-medium rounded-r-md text-white py-2 px-4 focus:outline-none focus:ring-2 focus:ring-offset-2"
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
               >
                 Send
               </button>
