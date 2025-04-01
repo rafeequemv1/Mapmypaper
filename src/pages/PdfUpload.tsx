@@ -1,144 +1,70 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { useUpload } from "@/hooks/use-upload";
 import { generateMindMapFromText } from "@/services/geminiService";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { useIsMobile } from "@/hooks/use-is-mobile";
-import { UploadCloud } from "lucide-react";
 
 const PdfUpload = () => {
-  const navigate = useNavigate();
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfText, setPdfText] = useState<string>("");
-  const [mindMapData, setMindMapData] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [manualText, setManualText] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [mindMapData, setMindMapData] = useState<any>(null);
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { upload, fileUrl, isLoading, progress } = useUpload();
-  const isMobile = useIsMobile();
-
-  // Load PDF text from session storage on component mount
-  useEffect(() => {
-    const storedPdfText = sessionStorage.getItem("pdfText");
-    if (storedPdfText) {
-      setPdfText(storedPdfText);
-    }
-  }, []);
+  const { upload, fileUrl, isLoading: isUploadLoading, progress } = useUpload();
 
   // Handle file selection
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files && event.target.files[0];
-    if (file && file.type === "application/pdf") {
-      setPdfFile(file);
-    } else {
-      setPdfFile(null);
-      toast({
-        title: "Invalid file format",
-        description: "Please upload a PDF file.",
-        variant: "destructive",
-      });
-    }
-  };
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setPdfFile(file || null);
+  }, []);
 
-  // Handle PDF upload
-  const handleUpload = async () => {
+  // Handle manual text input
+  const handleTextChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setManualText(event.target.value);
+  }, []);
+
+  // Handle file upload
+  const handleFileUpload = useCallback(async () => {
     if (!pdfFile) {
       toast({
         title: "No file selected",
         description: "Please select a PDF file to upload.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
+    setIsProcessing(true);
     try {
-      // Upload the PDF file
-      const url = await upload(pdfFile);
-      if (url) {
-        console.log("PDF uploaded successfully:", url);
+      const fileUrl = await upload(pdfFile);
+      if (fileUrl) {
+        // Store the file URL and other data in session storage
+        sessionStorage.setItem("uploadedPdfData", fileUrl);
+        sessionStorage.removeItem("pdfData"); // Ensure only one PDF source is active
+        sessionStorage.removeItem("pdfText"); // Clear any existing text
+        sessionStorage.removeItem("mindMapData"); // Clear existing mind map data
+        
         toast({
-          title: "Upload successful",
-          description: "Your PDF file has been uploaded.",
+          title: "File uploaded",
+          description: "The PDF file has been uploaded successfully.",
         });
       } else {
-        throw new Error("Failed to upload the PDF file.");
+        toast({
+          title: "Upload failed",
+          description: "There was an error uploading the PDF file.",
+          variant: "destructive"
+        });
       }
-
-      // Extract text from PDF
-      setIsProcessing(true);
-      const extractedText = await extractTextFromPdf(pdfFile);
-      setPdfText(extractedText);
-      sessionStorage.setItem("pdfText", extractedText);
-
-      // Store the uploaded PDF data in session storage
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          sessionStorage.setItem("uploadedPdfData", reader.result as string);
-        }
-      };
-      reader.readAsDataURL(pdfFile);
-    } catch (error) {
-      console.error("Error during upload and processing:", error);
-      toast({
-        title: "Upload failed",
-        description:
-          error instanceof Error ? error.message : "Failed to upload the PDF file.",
-        variant: "destructive",
-      });
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  // Extract text from PDF
-  const extractTextFromPdf = async (pdf: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async function () {
-        try {
-          const typedArray = new Uint8Array(this.result as ArrayBuffer);
-          const pdfjsLib = await import("pdfjs-dist");
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
-          const pdfDocument = await pdfjsLib.getDocument(typedArray).promise;
-          let fullText = "";
-
-          for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-            const page = await pdfDocument.getPage(pageNum);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items
-              .map((item) => (item as any).str)
-              .join(" ");
-            fullText += pageText + "\n";
-          }
-
-          resolve(fullText);
-        } catch (error) {
-          console.error("Error extracting text from PDF:", error);
-          reject(error);
-        }
-      };
-      reader.onerror = (error) => {
-        console.error("Error reading PDF:", error);
-        reject(error);
-      };
-      reader.readAsArrayBuffer(pdf);
-    });
-  };
+  }, [pdfFile, upload, toast]);
 
   // Handle manual text submission
   const handleSubmitText = useCallback(async () => {
@@ -146,11 +72,11 @@ const PdfUpload = () => {
       toast({
         title: "No text entered",
         description: "Please enter text to generate the mind map.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
+    
     setIsProcessing(true);
     try {
       // Generate mind map data from manual text
@@ -158,26 +84,19 @@ const PdfUpload = () => {
       const mindMapData = await generateMindMapFromText(manualText);
       console.log("Mind map data generated:", mindMapData ? "Successfully" : "Failed");
       setMindMapData(mindMapData);
-
+      
       // Store the manual text and mind map data in session storage
       sessionStorage.setItem("pdfText", manualText);
-      sessionStorage.setItem("mindMapData", JSON.stringify({ nodeData: {
-        id: 'root',
-        topic: 'Mind Map',
-        children: []
-      } }));
-
+      sessionStorage.setItem("mindMapData", JSON.stringify(mindMapData));
+      
       // Navigate to the mind map page
       navigate("/mindmap");
     } catch (error) {
       console.error("Error generating mind map:", error);
       toast({
         title: "Failed to generate mind map",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to generate the mind map.",
-        variant: "destructive",
+        description: error instanceof Error ? error.message : "Failed to generate the mind map.",
+        variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
@@ -185,59 +104,45 @@ const PdfUpload = () => {
   }, [manualText, navigate, toast]);
 
   return (
-    <div className="container mx-auto py-10 flex flex-col gap-6">
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Generate Mind Map</CardTitle>
-          <CardDescription>
-            Upload a PDF file or enter text manually to generate a mind map.
-          </CardDescription>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">PDF to Mind Map Generator</h1>
+
+      {/* Upload PDF Section */}
+      <Card className="mb-4">
+        <CardHeader>
+          <Label htmlFor="pdf-upload">Upload PDF</Label>
         </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="pdf">Upload PDF File</Label>
+        <CardContent>
+          <div className="flex items-center space-x-4">
             <Input
-              id="pdf"
               type="file"
-              accept="application/pdf"
+              id="pdf-upload"
+              accept=".pdf"
               onChange={handleFileChange}
               disabled={isProcessing}
             />
-            <Button onClick={handleUpload} disabled={isProcessing || isLoading}>
-              {isLoading ? (
-                <>
-                  Uploading...
-                  <Progress className="w-full mt-2" value={progress} />
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="h-4 w-4 mr-2" />
-                  Upload PDF
-                </>
-              )}
+            <Button onClick={handleFileUpload} disabled={isProcessing || isUploadLoading}>
+              {isUploadLoading ? `Uploading... ${progress}%` : "Upload"}
             </Button>
-            {fileUrl && (
-              <a
-                href={fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
-              >
-                View Uploaded File
-              </a>
-            )}
           </div>
-          <Separator />
-          <div className="grid gap-2">
-            <Label htmlFor="manual-text">Enter Text Manually</Label>
-            <Textarea
-              id="manual-text"
-              placeholder="Enter text here..."
-              value={manualText}
-              onChange={(e) => setManualText(e.target.value)}
-              disabled={isProcessing}
-            />
-          </div>
+        </CardContent>
+      </Card>
+
+      {/* Manual Text Input Section */}
+      <Card>
+        <CardHeader>
+          <Label htmlFor="manual-text">Enter Text Manually</Label>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            id="manual-text"
+            placeholder="Enter text here..."
+            className="mb-4"
+            rows={5}
+            value={manualText}
+            onChange={handleTextChange}
+            disabled={isProcessing}
+          />
           <Button onClick={handleSubmitText} disabled={isProcessing}>
             {isProcessing ? "Generating..." : "Generate Mind Map"}
           </Button>

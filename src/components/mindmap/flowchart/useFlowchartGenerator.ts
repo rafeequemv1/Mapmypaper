@@ -1,55 +1,54 @@
-import { useState, useEffect } from 'react';
-import { MindElixirData } from 'mind-elixir/dist/mindelixir.d';
 
-const generateMermaidDiagram = (mindMapData: MindElixirData): string => {
-  let mermaidString = 'graph LR\n';
+import { useState } from 'react';
+import { generateFlowchartFromPdf } from '@/services/geminiService';
+import { MindElixirData } from 'mind-elixir';
 
-  const addNode = (node: any, parentId: string | null) => {
-    const nodeId = node.id.replace(/-/g, '');
-    mermaidString += `  ${nodeId}["${node.topic}"]\n`;
+// Default flowchart template
+export const defaultFlowchart = `flowchart TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E`;
 
-    if (parentId) {
-      mermaidString += `  ${parentId} --> ${nodeId}\n`;
-    }
-
-    if (node.children && Array.isArray(node.children)) {
-      node.children.forEach((child: any) => addNode(child, nodeId));
-    }
-  };
-
-  if (mindMapData?.nodeData) {
-    addNode(mindMapData.nodeData, null);
-  }
-
-  return mermaidString;
-};
-
-const useFlowchartGenerator = (mindMapData: MindElixirData | null) => {
-  const [mermaidCode, setMermaidCode] = useState<string>('');
+// Hook for flowchart generation
+export function useFlowchartGenerator() {
+  const [mermaidCode, setMermaidCode] = useState<string>(defaultFlowchart);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string>('');
 
-  useEffect(() => {
-    if (!mindMapData) {
-      setMermaidCode('');
-      return;
-    }
-
+  // Generate flowchart from PDF text
+  const generateFlowchart = async (pdfText: string) => {
     setLoading(true);
-    setError(null);
-
+    setError('');
+    
     try {
-      const diagram = generateMermaidDiagram(mindMapData);
-      setMermaidCode(diagram);
-    } catch (e: any) {
-      setError(e.message || 'Failed to generate flowchart');
+      if (!pdfText || pdfText.trim() === '') {
+        throw new Error('No PDF text provided');
+      }
+      
+      const flowchartCode = await generateFlowchartFromPdf(pdfText);
+      setMermaidCode(flowchartCode);
+      return flowchartCode;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate flowchart';
+      setError(errorMessage);
+      return null;
     } finally {
       setLoading(false);
     }
-  }, [mindMapData]);
+  };
 
-  return { mermaidCode, loading, error };
-};
+  // Handle manual code changes
+  const handleCodeChange = (newCode: string) => {
+    setMermaidCode(newCode);
+  };
 
-export default useFlowchartGenerator;
-
+  return {
+    mermaidCode,
+    loading,
+    error,
+    generateFlowchart,
+    handleCodeChange
+  };
+}

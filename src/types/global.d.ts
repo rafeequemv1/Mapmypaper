@@ -24,6 +24,8 @@ declare module 'mind-elixir' {
     toJSON: () => MindElixirData;
     exportImg: (cb: (blob: Blob) => void) => void;
     exportPdf: (callback: (pdf: any) => void) => void;
+    exportSvg: () => Blob;
+    exportPng: () => Promise<Blob>;
     getAllDataWithImage: () => any;
     getAllData: () => MindElixirData;
     refresh: () => void;

@@ -1,53 +1,65 @@
 
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "./use-toast";
 
 export function useUpload() {
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   const upload = async (file: File): Promise<string | null> => {
-    try {
-      setIsLoading(true);
-      setProgress(0);
-      
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 95) {
-            clearInterval(progressInterval);
-            return 95;
-          }
-          return prev + 5;
-        });
-      }, 100);
-
-      // Simulate file upload - in a real app, this would be an API call
-      // to a storage service like Supabase Storage
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      // Generate a local URL for the file (in a real app, this would be the URL from the storage)
-      const url = URL.createObjectURL(file);
-      setFileUrl(url);
-      
-      // Complete the progress
-      clearInterval(progressInterval);
-      setProgress(100);
-      
-      return url;
-    } catch (error) {
+    if (!file) {
       toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "An error occurred during file upload",
+        title: "No file selected",
+        description: "Please select a file to upload.",
         variant: "destructive",
       });
       return null;
-    } finally {
+    }
+
+    setIsLoading(true);
+    setProgress(0);
+    
+    try {
+      // Create a FileReader to read the file as a Data URL (base64)
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentLoaded = Math.round((event.loaded / event.total) * 100);
+            setProgress(percentLoaded);
+          }
+        };
+        
+        reader.onload = () => {
+          // Success - we have the data URL
+          const dataUrl = reader.result as string;
+          setFileUrl(dataUrl);
+          setIsLoading(false);
+          setProgress(100);
+          resolve(dataUrl);
+        };
+        
+        reader.onerror = () => {
+          setIsLoading(false);
+          reject(new Error("Failed to read file"));
+        };
+        
+        // Start reading the file
+        reader.readAsDataURL(file);
+      });
+    } catch (error) {
       setIsLoading(false);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred during upload",
+        variant: "destructive",
+      });
+      return null;
     }
   };
 
-  return { upload, isLoading, progress, fileUrl };
+  return { upload, fileUrl, isLoading, progress };
 }
