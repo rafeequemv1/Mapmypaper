@@ -32,61 +32,43 @@ const PanelStructure = ({
   const pdfViewerRef = useRef(null);
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+    <div className="h-full w-full flex">
       {/* PDF Panel - Fixed to 40% width */}
       {showPdf && (
-        <>
-          <ResizablePanel 
-            defaultSize={40} // Fixed at 40% as requested
-            className="h-full" 
-            collapsible={false}
-          >
-            <PdfViewer 
-              ref={pdfViewerRef}
-              onTextSelected={onExplainText}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-        </>
+        <div className="h-full w-[40%] flex-shrink-0">
+          <PdfViewer 
+            ref={pdfViewerRef}
+            onTextSelected={onExplainText}
+          />
+        </div>
       )}
 
       {/* Mind Map Panel - Takes up remaining space */}
-      <ResizablePanel 
-        defaultSize={showPdf && showChat ? 30 : (showPdf || showChat ? 60 : 100)} 
-        className="h-full" 
-        collapsible={false}
-      >
+      <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
         <MindMapViewer
           isMapGenerated={isMapGenerated}
           onMindMapReady={onMindMapReady}
           onExplainText={onExplainText}
         />
-      </ResizablePanel>
+      </div>
 
       {/* Chat Panel - Fixed to 30% width */}
       {showChat && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel 
-            defaultSize={30} // Fixed at 30% as requested
-            className="h-full" 
-            collapsible={false}
-          >
-            <ChatPanel
-              toggleChat={toggleChat}
-              explainText={explainText}
-              onExplainText={onExplainText}
-              onScrollToPdfPosition={(position) => {
-                if (pdfViewerRef.current) {
-                  // @ts-ignore - we know this method exists
-                  pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
-                }
-              }}
-            />
-          </ResizablePanel>
-        </>
+        <div className="h-full w-[30%] flex-shrink-0">
+          <ChatPanel
+            toggleChat={toggleChat}
+            explainText={explainText}
+            onExplainText={onExplainText}
+            onScrollToPdfPosition={(position) => {
+              if (pdfViewerRef.current) {
+                // @ts-ignore - we know this method exists
+                pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
+              }
+            }}
+          />
+        </div>
       )}
-    </ResizablePanelGroup>
+    </div>
   );
 };
 
