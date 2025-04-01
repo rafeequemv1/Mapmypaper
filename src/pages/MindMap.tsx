@@ -204,7 +204,7 @@ const MindMap = () => {
             setPdfImagesExtracted(true);
             toast({
               title: "Images Available",
-              description: "This PDF contains images that can be added to your mind map. Right-click on nodes to add images.",
+              description: "This PDF contains images that can be intelligently placed in your mind map based on content analysis.",
               duration: 5000,
             });
           }

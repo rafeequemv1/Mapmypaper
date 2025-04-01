@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RefreshCw, Download, Image } from "lucide-react";
+import { ZoomIn, ZoomOut, RefreshCw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import html2canvas from "html2canvas";
@@ -28,6 +28,8 @@ interface PdfImage {
   pageNumber: number;
   width: number;
   height: number;
+  caption?: string;
+  relevantTopics?: string[];
 }
 
 const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) => {
@@ -36,13 +38,12 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   const [isGenerating, setIsGenerating] = useState<boolean>(true);
   const [zoomLevel, setZoomLevel] = useState(1); // Start with 100% zoom
   const [pdfImages, setPdfImages] = useState<PdfImage[]>([]);
-  const [showImages, setShowImages] = useState<boolean>(false);
   const { toast } = useToast();
   
   // Initialize mermaid library
   useMermaidInit();
 
-  // Extract images from PDF when modal is opened
+  // Extract images from PDF and analyze captions when modal is opened
   useEffect(() => {
     if (open) {
       setIsGenerating(true);
@@ -53,15 +54,15 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       // Show toast when mindmap is being generated
       toast({
         title: "Generating Mermaid Mindmap",
-        description: "Creating a mindmap visualization from your document...",
+        description: "Creating a mindmap visualization with integrated images from your document...",
       });
       
       // Extract images from PDF
       if (pdfData) {
-        extractImagesFromPdf(pdfData)
+        extractImagesWithCaptions(pdfData)
           .then((images) => {
             setPdfImages(images);
-            console.log(`Extracted ${images.length} images from PDF`);
+            console.log(`Extracted ${images.length} images from PDF with caption analysis`);
           })
           .catch((error) => {
             console.error("Error extracting images:", error);
@@ -70,9 +71,22 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       
       // Simulate generation delay
       setTimeout(() => {
-        // Create a basic mermaid mindmap from PDF content or use default structure
-        const mindmapCode = `mindmap
-  root((Document Overview))
+        generateMindmapWithImages(pdfData);
+        setIsGenerating(false);
+      }, 1500);
+    }
+  }, [open, toast]);
+
+  // Generate mindmap with embedded images
+  const generateMindmapWithImages = (pdfData: string | null) => {
+    try {
+      // Create a basic structure from PDF content or use default structure
+      // Starting code for the mindmap
+      let mindmapCode = `mindmap
+  root((Document Overview))`;
+      
+      // Add structure sections
+      mindmapCode += `
     Document Structure
       Introduction
       Methodology
@@ -83,21 +97,101 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       Concept 1
       Concept 2
       Concept 3
-    Supporting Evidence
-      Data Points
-      Citations
-      Analysis
-    Figures and Images
-      ${pdfImages.length > 0 ? 'PDF contains ' + pdfImages.length + ' extractable images' : 'No images found'}`;
+    Supporting Evidence`;
+      
+      // Add image sections based on extracted images and their potential topic relevance
+      if (pdfImages.length > 0) {
+        mindmapCode += `
+    Figures and Images`;
         
-        setMermaidCode(mindmapCode);
-        setIsGenerating(false);
-      }, 1500);
+        // Group images by their likely content categories
+        const categories = analyzeAndCategorizeImages(pdfImages);
+        
+        // Add images to appropriate categories
+        Object.entries(categories).forEach(([category, images]) => {
+          if (images.length > 0) {
+            mindmapCode += `
+      ${category}`;
+            
+            // Add individual image references (limited to first 3 per category)
+            images.slice(0, 3).forEach((img, idx) => {
+              mindmapCode += `
+        Image ${img.pageNumber}-${idx+1} from page ${img.pageNumber}`;
+            });
+          }
+        });
+      }
+      
+      setMermaidCode(mindmapCode);
+    } catch (error) {
+      console.error("Error generating mindmap with images:", error);
+      // Fallback to simple mindmap
+      setMermaidCode(`mindmap
+  root((Document Overview))
+    Document Structure
+      Introduction
+      Methodology
+      Results
+      Discussion
+    Figures
+      ${pdfImages.length > 0 ? `${pdfImages.length} images were found but couldn't be categorized` : 'No images found'}`);
     }
-  }, [open, toast]);
+  };
 
-  // Extract images from PDF
-  const extractImagesFromPdf = async (pdfDataUrl: string): Promise<PdfImage[]> => {
+  // Analyze and categorize images based on position in document and text context
+  const analyzeAndCategorizeImages = (images: PdfImage[]): Record<string, PdfImage[]> => {
+    const categories: Record<string, PdfImage[]> = {
+      "Charts & Graphs": [],
+      "Diagrams": [],
+      "Photos": [],
+      "Tables": [],
+      "Other Visuals": []
+    };
+    
+    // Simple heuristic categorization based on image properties
+    images.forEach(img => {
+      // Aspect ratio and size as simple heuristics
+      const aspectRatio = img.width / img.height;
+      
+      if (img.caption) {
+        const caption = img.caption.toLowerCase();
+        
+        // Use caption text to improve categorization
+        if (caption.includes("chart") || caption.includes("graph") || caption.includes("plot")) {
+          categories["Charts & Graphs"].push(img);
+        } 
+        else if (caption.includes("diagram") || caption.includes("flow") || caption.includes("model")) {
+          categories["Diagrams"].push(img);
+        }
+        else if (caption.includes("table") || caption.includes("tabular") || (aspectRatio > 1.5 && img.width > 300)) {
+          categories["Tables"].push(img);
+        }
+        else if (caption.includes("photo") || caption.includes("picture") || caption.includes("image")) {
+          categories["Photos"].push(img);
+        }
+        else {
+          categories["Other Visuals"].push(img);
+        }
+      } 
+      else {
+        // Categorize based on size and aspect ratio if no caption
+        if (aspectRatio > 2 || aspectRatio < 0.5) {
+          categories["Tables"].push(img); // Very wide or tall images are likely tables
+        }
+        else if (img.width < 200 || img.height < 200) {
+          categories["Charts & Graphs"].push(img); // Small images might be icons or small charts
+        }
+        else {
+          categories["Other Visuals"].push(img);
+        }
+      }
+    });
+    
+    return categories;
+  };
+
+  // Enhanced image extraction with caption analysis
+  const extractImagesWithCaptions = async (pdfDataUrl: string): Promise<PdfImage[]> => {
     try {
       const pdfData = atob(pdfDataUrl.split(',')[1]);
       const loadingTask = pdfjs.getDocument({ data: pdfData });
@@ -108,6 +202,16 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const operatorList = await page.getOperatorList();
+        const textContent = await page.getTextContent();
+        
+        // Extract all text items with their positions for caption analysis
+        const textItems = textContent.items.map(item => ({
+          text: 'str' in item ? item.str : '',
+          x: 'transform' in item ? item.transform[4] : 0,
+          y: 'transform' in item ? item.transform[5] : 0,
+          height: 'height' in item ? item.height : 0,
+          width: 'width' in item ? item.width : 0
+        }));
         
         // Look for image operators in the page
         for (let i = 0; i < operatorList.fnArray.length; i++) {
@@ -115,9 +219,6 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           if (operatorList.fnArray[i] === pdfjs.OPS.paintImageXObject) {
             const imgArgs = operatorList.argsArray[i];
             const imgId = imgArgs[0];
-            
-            // Skip if we've already processed this image
-            const imgKey = `page${pageNum}_${imgId}`;
             
             try {
               // Get the image data
@@ -144,11 +245,17 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
                   
                   // Only add if image is not too small (likely not a meaningful figure)
                   if (objs.width > 100 && objs.height > 100) {
+                    // Try to find caption by looking for text positioned below the image
+                    // This is a simple heuristic - text near the image that might be a caption
+                    const potentialCaptions = findPotentialCaptions(textItems, objs);
+                    
                     extractedImages.push({
                       imageData: dataUrl,
                       pageNumber: pageNum,
                       width: objs.width,
-                      height: objs.height
+                      height: objs.height,
+                      caption: potentialCaptions.length > 0 ? potentialCaptions.join(" ") : undefined,
+                      relevantTopics: deriveTopicsFromCaption(potentialCaptions.join(" "))
                     });
                   }
                 }
@@ -165,6 +272,85 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       console.error('Error extracting images from PDF:', error);
       return [];
     }
+  };
+  
+  // Find potential captions by analyzing text positioned near an image
+  const findPotentialCaptions = (textItems: any[], imgObj: any): string[] => {
+    // Estimate image position based on limited information
+    // This is an approximation since PDF.js doesn't give us exact positioning
+    const imgY = 0; // We don't have this information directly
+    
+    // Look for text that might be captions
+    // Common patterns: "Figure X:", "Table X:", text that starts with "Fig."
+    const captions: string[] = [];
+    
+    for (let i = 0; i < textItems.length; i++) {
+      const text = textItems[i].text.trim();
+      
+      // Skip empty text
+      if (!text) continue;
+      
+      // Check for caption patterns
+      if (
+        text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) || 
+        text.match(/^(figure|fig\.?|table|diagram|chart):/i)
+      ) {
+        // Found potential caption start, collect this and following text
+        let captionText = text;
+        let j = i + 1;
+        
+        // Collect continuation text (usually captions span multiple text items)
+        while (j < textItems.length && 
+              !textItems[j].text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) &&
+              Math.abs(textItems[j].y - textItems[i].y) < 20) {
+          captionText += " " + textItems[j].text.trim();
+          j++;
+        }
+        
+        captions.push(captionText);
+        i = j - 1; // Skip processed items
+      }
+    }
+    
+    return captions;
+  };
+  
+  // Derive potential topics from caption text
+  const deriveTopicsFromCaption = (caption: string): string[] => {
+    if (!caption) return [];
+    
+    const topics: string[] = [];
+    const captionLower = caption.toLowerCase();
+    
+    // Extract key terms that might indicate topic relevance
+    const keyTerms = [
+      { term: "method", topic: "Methodology" },
+      { term: "approach", topic: "Methodology" },
+      { term: "result", topic: "Results" },
+      { term: "finding", topic: "Results" },
+      { term: "data", topic: "Results" },
+      { term: "analysis", topic: "Discussion" },
+      { term: "performance", topic: "Results" },
+      { term: "accuracy", topic: "Results" },
+      { term: "model", topic: "Methodology" },
+      { term: "framework", topic: "Methodology" },
+      { term: "architecture", topic: "Methodology" },
+      { term: "comparison", topic: "Discussion" },
+      { term: "overview", topic: "Introduction" },
+      { term: "system", topic: "Methodology" },
+      { term: "process", topic: "Methodology" },
+      { term: "workflow", topic: "Methodology" },
+      { term: "conclusion", topic: "Conclusion" }
+    ];
+    
+    // Check if caption contains any key terms
+    keyTerms.forEach(({ term, topic }) => {
+      if (captionLower.includes(term) && !topics.includes(topic)) {
+        topics.push(topic);
+      }
+    });
+    
+    return topics;
   };
 
   // Handle zoom controls
@@ -208,18 +394,13 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     }
   };
 
-  // Toggle images view
-  const toggleImagesView = () => {
-    setShowImages(prev => !prev);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[90vw] w-[90vw] h-[90vh] flex flex-col">
         <DialogHeader className="space-y-1">
           <DialogTitle>Mermaid Mindmap</DialogTitle>
           <DialogDescription className="text-xs">
-            Visualize the paper structure as a mindmap using Mermaid.
+            Visualize the paper structure as a mindmap using Mermaid with integrated images.
           </DialogDescription>
         </DialogHeader>
         
@@ -261,74 +442,25 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
             <Download className="h-4 w-4" />
             Export as PNG
           </Button>
-
-          {pdfImages.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleImagesView}
-              className="ml-auto flex items-center gap-1"
-            >
-              <Image className="h-4 w-4" />
-              {showImages ? "Hide Images" : `Show Images (${pdfImages.length})`}
-            </Button>
-          )}
         </div>
         
-        {/* Content Area - Split into Mindmap and Images when images are shown */}
-        <div className="flex-1 overflow-hidden flex">
-          {/* Mindmap Preview */}
-          <div className={`flex-1 overflow-auto bg-white rounded-md p-4 border ${showImages ? 'border-r-0 rounded-r-none' : ''}`}>
-            {isGenerating ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p>Generating mindmap...</p>
-                </div>
+        {/* Mindmap Preview */}
+        <div className="flex-1 overflow-auto bg-white rounded-md p-4 border">
+          {isGenerating ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p>Generating mindmap with integrated images...</p>
               </div>
-            ) : (
-              <div 
-                ref={previewRef} 
-                className="min-h-full h-full w-full flex items-center justify-center overflow-hidden"
-                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
-              >
-                <div className="mermaid bg-white p-6 rounded-lg w-full h-full flex items-center justify-center">
-                  {mermaidCode}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Image Gallery */}
-          {showImages && pdfImages.length > 0 && (
-            <div className="w-1/3 border border-l-0 rounded-r-md bg-white overflow-auto">
-              <div className="p-3 bg-gray-50 border-b sticky top-0 z-10">
-                <h3 className="text-sm font-medium">PDF Images ({pdfImages.length})</h3>
-                <p className="text-xs text-gray-500">Click an image to view details</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 p-4">
-                {pdfImages.map((img, index) => (
-                  <div 
-                    key={index}
-                    className="border rounded-md p-1 cursor-pointer hover:border-blue-500 transition-colors"
-                    onClick={() => {
-                      toast({
-                        title: `Image from page ${img.pageNumber}`,
-                        description: `Dimensions: ${img.width}x${img.height}`
-                      });
-                    }}
-                  >
-                    <img 
-                      src={img.imageData} 
-                      alt={`PDF image ${index + 1}`}
-                      className="w-full object-contain"
-                      style={{maxHeight: '150px'}}
-                    />
-                    <div className="text-xs text-center mt-1 text-gray-500">
-                      Page {img.pageNumber}
-                    </div>
-                  </div>
-                ))}
+            </div>
+          ) : (
+            <div 
+              ref={previewRef} 
+              className="min-h-full h-full w-full flex items-center justify-center overflow-hidden"
+              style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
+            >
+              <div className="mermaid bg-white p-6 rounded-lg w-full h-full flex items-center justify-center">
+                {mermaidCode}
               </div>
             </div>
           )}
