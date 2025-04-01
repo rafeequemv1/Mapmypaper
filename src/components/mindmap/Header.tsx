@@ -7,6 +7,7 @@ import {
   Download,
   Upload,
   MessageSquare,
+  Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,9 @@ interface HeaderProps {
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMermaidMindmap: React.Dispatch<React.SetStateAction<boolean>>;
+  isPdfActive: boolean;
+  isChatActive: boolean;
 }
 
 const Header = ({ 
@@ -34,6 +38,9 @@ const Header = ({
   toggleChat, 
   setShowSummary,
   setShowFlowchart,
+  setShowMermaidMindmap,
+  isPdfActive,
+  isChatActive,
 }: HeaderProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [fileName, setFileName] = useState("mindmap");
@@ -121,24 +128,49 @@ const Header = ({
         
         {/* Center - Main Button Group */}
         <div className="flex items-center gap-2 md:gap-3 absolute left-1/2 transform -translate-x-1/2">
-          <Button variant="ghost" onClick={togglePdf} className="flex items-center gap-1 text-black h-8 px-3">
+          <Button 
+            variant={isPdfActive ? "default" : "ghost"} 
+            onClick={togglePdf} 
+            className={`flex items-center gap-1 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
+          >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">PDF</span>
           </Button>
           
-          <Button variant="ghost" onClick={toggleChat} className="flex items-center gap-1 text-black h-8 px-3">
+          <Button 
+            variant={isChatActive ? "default" : "ghost"} 
+            onClick={toggleChat} 
+            className={`flex items-center gap-1 ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
+          >
             <MessageSquare className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Chat</span>
           </Button>
           
-          <Button variant="ghost" onClick={() => setShowSummary(true)} className="flex items-center gap-1 text-black h-8 px-3">
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowSummary(true)} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
           
-          <Button variant="ghost" onClick={() => setShowFlowchart && setShowFlowchart(true)} className="flex items-center gap-1 text-black h-8 px-3">
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowFlowchart && setShowFlowchart(true)} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
             <GitCommitHorizontal className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Flowchart</span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowMermaidMindmap(true)} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <Network className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Mindmap</span>
           </Button>
         </div>
         
