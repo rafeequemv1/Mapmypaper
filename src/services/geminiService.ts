@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -332,14 +331,14 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
   }
 };
 
-// New function to generate flowchart from PDF content
+// New function to generate flowchart from PDF content with LR direction
 export const generateFlowchartFromPdf = async (): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage
     const pdfText = sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
-      return `flowchart TD
+      return `flowchart LR
         A[Error] --> B[No PDF Content]
         B --> C[Please upload a PDF first]`;
     }
@@ -351,7 +350,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     Create a simple, valid Mermaid flowchart based on this document text.
     
     CRITICAL MERMAID SYNTAX RULES:
-    1. Start with 'flowchart TD'
+    1. Start with 'flowchart LR' (MUST use Left-to-Right direction)
     2. Nodes MUST have this format: A[Text] or A(Text) or A{Text} - no exceptions
     3. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
     4. Connections MUST use EXACTLY TWO dashes: A --> B (not A->B or A---->B)
@@ -364,7 +363,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
     
     EXAMPLE CORRECT SYNTAX:
-    flowchart TD
+    flowchart LR
       A[Start] --> B{Decision}
       B -->|Yes| C[Process One]
       B -->|No| D[Process Two]
@@ -390,7 +389,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     return cleanMermaidSyntax(mermaidCode);
   } catch (error) {
     console.error("Gemini API flowchart generation error:", error);
-    return `flowchart TD
+    return `flowchart LR
       A[Error] --> B[Failed to generate flowchart]
       B --> C[Please try again]`;
   }
@@ -399,16 +398,19 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
 // Helper function to clean and fix common Mermaid syntax issues
 const cleanMermaidSyntax = (code: string): string => {
   if (!code || !code.trim()) {
-    return `flowchart TD
+    return `flowchart LR
       A[Error] --> B[Empty flowchart]
       B --> C[Please try again]`;
   }
 
   try {
-    // Ensure the code starts with flowchart directive
+    // Ensure the code starts with flowchart directive and uses LR direction
     let cleaned = code.trim();
     if (!cleaned.startsWith("flowchart")) {
-      cleaned = "flowchart TD\n" + cleaned;
+      cleaned = "flowchart LR\n" + cleaned;
+    } else if (cleaned.startsWith("flowchart TD")) {
+      // Replace TD with LR if found at the beginning
+      cleaned = cleaned.replace("flowchart TD", "flowchart LR");
     }
 
     // Process line by line to ensure each line is valid
@@ -491,7 +493,7 @@ const cleanMermaidSyntax = (code: string): string => {
     return validLines.join('\n');
   } catch (error) {
     console.error("Error cleaning Mermaid syntax:", error);
-    return `flowchart TD
+    return `flowchart LR
       A[Error] --> B[Syntax Cleaning Failed]
       B --> C[Please try again]`;
   }

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
@@ -30,8 +29,8 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [hideEditor, setHideEditor] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
   
-  // Initialize mermaid library with horizontal layout
-  useMermaidInit("LR"); // LR for Left to Right direction
+  // Initialize mermaid library with horizontal layout (LR)
+  useMermaidInit("LR"); // Explicitly set LR for Left to Right direction
   
   // Generate flowchart when modal is opened
   useEffect(() => {

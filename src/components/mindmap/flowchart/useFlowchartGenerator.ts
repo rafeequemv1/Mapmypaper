@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 
-export const defaultFlowchart = `flowchart TD
+export const defaultFlowchart = `flowchart LR
     A[Start] --> B{Is it working?}
     B -->|Yes| C[Great!]
     B -->|No| D[Debug]
@@ -20,9 +21,12 @@ export const cleanMermaidSyntax = (input: string): string => {
     // Replace any hyphens in node IDs with underscores
     .replace(/(\w+)-(\w+)/g, "$1_$2");
   
-  // Ensure it starts with flowchart directive
+  // Ensure it starts with flowchart directive and uses LR direction
   if (!cleaned.startsWith("flowchart")) {
-    cleaned = "flowchart TD\n" + cleaned;
+    cleaned = "flowchart LR\n" + cleaned;
+  } else if (cleaned.startsWith("flowchart TD")) {
+    // Replace TD with LR if found at the beginning
+    cleaned = cleaned.replace("flowchart TD", "flowchart LR");
   }
   
   // Process line by line to ensure each line is valid
