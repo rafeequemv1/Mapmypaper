@@ -1,6 +1,8 @@
+
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
-import ChatPanel from "@/components/ChatPanel";
+import ChatPanel from "@/components/mindmap/ChatPanel";
+import { useRef } from "react";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -22,13 +24,17 @@ const PanelStructure = ({
   onExplainText,
 }: PanelStructureProps) => {
   const isMapGenerated = true;
+  const pdfViewerRef = useRef(null);
 
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* PDF Panel */}
       {showPdf && (
         <div className="pdf-panel h-full transition-width duration-300 ease-in-out overflow-hidden">
-          <PdfViewer togglePdf={togglePdf} />
+          <PdfViewer 
+            ref={pdfViewerRef}
+            onTextSelected={onExplainText}
+          />
         </div>
       )}
 
