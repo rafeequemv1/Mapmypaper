@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -8,6 +7,7 @@ import MermaidMindmapModal from "@/components/mindmap/MermaidMindmapModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 import TreemapModal from "@/components/mindmap/TreemapModal";
+import { downloadMindMapAsSVG } from "@/lib/export-utils";
 
 // Define correct props interface for Header to match what we're passing
 interface HeaderProps {
@@ -18,7 +18,7 @@ interface HeaderProps {
   setShowMermaidMindmap: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
-  onExportMindMap?: () => Promise<void>; // Make this prop optional to match the component
+  onExportMindMap?: () => Promise<void>; 
 }
 
 const MindMap = () => {
@@ -243,24 +243,8 @@ const MindMap = () => {
     }
 
     try {
-      // Only export SVG
-      const blob = mindMap.exportSvg();
-
-      if (!blob) {
-        throw new Error("Failed to generate export data");
-      }
-
-      // Create a download link
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `mindmap.svg`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Export as SVG directly
+      downloadMindMapAsSVG(mindMap, "mindmap");
 
       toast({
         title: "Export Successful",
