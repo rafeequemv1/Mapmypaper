@@ -5,7 +5,7 @@ import nodeMenuNeo from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileText, Image, ZoomIn, ZoomOut } from "lucide-react";
+import { FileText, ZoomIn, ZoomOut, LayoutGrid, AlignCenter, MoveDiagonal } from "lucide-react";
 import { downloadMindMapAsSVG } from "@/lib/export-utils";
 
 // Extend the MindElixirInstance type to include missing methods
@@ -27,7 +27,7 @@ interface MindMapViewerProps {
 }
 
 // Enhanced helper function to format node text with line breaks and add emojis
-const formatNodeText = (text: string, wordsPerLine: number = 5, isRoot: boolean = false): string => {
+const formatNodeText = (text: string, wordsPerLine: number = 4, isRoot: boolean = false): string => {
   if (!text) return '';
   
   // Use fewer words per line for root node
@@ -55,7 +55,7 @@ const formatNodeText = (text: string, wordsPerLine: number = 5, isRoot: boolean 
     processedText = ensureCompleteSentence(processedText);
   }
   
-  // Apply line breaks for better readability - strictly limit to 5 words per line
+  // Apply line breaks for better readability - strictly limit to 4-5 words per line
   const words = processedText.split(' ');
   if (words.length <= effectiveWordsPerLine) return processedText;
   
@@ -118,11 +118,6 @@ const addEmoji = (topic: string): string => {
   // References subsections
   if (topicLower.includes('key paper') || topicLower.includes('cited')) return '📄 ' + topic;
   if (topicLower.includes('dataset') || topicLower.includes('tool')) return '🛠️ ' + topic;
-  
-  // Supplementary subsections
-  if (topicLower.includes('additional') || topicLower.includes('experiment')) return '🧮 ' + topic;
-  if (topicLower.includes('appendix') || topicLower.includes('appendices')) return '📑 ' + topic;
-  if (topicLower.includes('code') || topicLower.includes('data availability')) return '💾 ' + topic;
   
   // Generic topics
   if (topicLower.includes('start') || topicLower.includes('begin')) return '🚀 ' + topic;
@@ -189,369 +184,17 @@ const stringToColor = (str: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Interface for PDF images
-interface PdfImage {
-  imageData: string;
-  pageNumber: number;
-  width: number;
-  height: number;
-  caption?: string;
-  relevantTopics?: string[];
-}
-
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<ExtendedMindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
-  const [summary, setSummary] = useState<string>('');
-  const [pdfImages, setPdfImages] = useState<PdfImage[]>([]);
-  const [showImagePicker, setShowImagePicker] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const { toast } = useToast();
 
-  // Extract images from PDF on component mount
-  useEffect(() => {
-    const extractImagesFromPdf = async () => {
-      try {
-        // Import pdfjs dynamically to avoid SSR issues
-        const pdfjs = await import('pdfjs-dist');
-        
-        // Set worker path explicitly with CDNJS URL that matches the exact version
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-        
-        const pdfDataUrl = sessionStorage.getItem("pdfData");
-        
-        if (!pdfDataUrl) {
-          return;
-        }
-        
-        const pdfData = atob(pdfDataUrl.split(',')[1]);
-        const loadingTask = pdfjs.getDocument({ data: pdfData });
-        const pdf = await loadingTask.promise;
-        const extractedImages: PdfImage[] = [];
-        
-        // Process each page
-        for (let pageNum = 1; pageNum <= Math.min(pdf.numPages, 20); pageNum++) {
-          const page = await pdf.getPage(pageNum);
-          const operatorList = await page.getOperatorList();
-          const textContent = await page.getTextContent();
-          
-          // Extract all text items with their positions for caption analysis
-          const textItems = textContent.items.map(item => ({
-            text: 'str' in item ? item.str : '',
-            x: 'transform' in item ? item.transform[4] : 0,
-            y: 'transform' in item ? item.transform[5] : 0,
-            height: 'height' in item ? item.height : 0,
-            width: 'width' in item ? item.width : 0
-          }));
-          
-          // Look for image operators in the page
-          for (let i = 0; i < operatorList.fnArray.length; i++) {
-            // Check for image operators
-            if (operatorList.fnArray[i] === pdfjs.OPS.paintImageXObject) {
-              const imgArgs = operatorList.argsArray[i];
-              const imgId = imgArgs[0];
-              
-              try {
-                // Get the image data
-                const objs = await page.objs.get(imgId);
-                
-                if (objs && objs.data && objs.width && objs.height) {
-                  // Create canvas to convert image data to data URL
-                  const canvas = document.createElement('canvas');
-                  canvas.width = objs.width;
-                  canvas.height = objs.height;
-                  const ctx = canvas.getContext('2d');
-                  
-                  if (ctx) {
-                    // Create ImageData object
-                    const imgData = new ImageData(
-                      new Uint8ClampedArray(objs.data),
-                      objs.width,
-                      objs.height
-                    );
-                    ctx.putImageData(imgData, 0, 0);
-                    
-                    // Get image as data URL
-                    const dataUrl = canvas.toDataURL('image/png');
-                    
-                    // Only add if image is not too small (likely not a meaningful figure)
-                    if (objs.width > 100 && objs.height > 100) {
-                      // Try to find caption by looking for text positioned below the image
-                      const potentialCaptions = findPotentialCaptions(textItems, { 
-                        width: objs.width,
-                        height: objs.height
-                      });
-                      
-                      extractedImages.push({
-                        imageData: dataUrl,
-                        pageNumber: pageNum,
-                        width: objs.width,
-                        height: objs.height,
-                        caption: potentialCaptions.length > 0 ? potentialCaptions.join(" ") : undefined,
-                        relevantTopics: deriveTopicsFromCaption(potentialCaptions.join(" "))
-                      });
-                    }
-                  }
-                }
-              } catch (error) {
-                console.error(`Error processing image ${imgId} on page ${pageNum}:`, error);
-              }
-            }
-          }
-        }
-        
-        setPdfImages(extractedImages);
-        console.log(`Extracted ${extractedImages.length} images from PDF with captions`);
-        
-        if (extractedImages.length > 0) {
-          // Auto-add images to relevant nodes in the mind map
-          setTimeout(() => {
-            autoPlaceImagesInMindMap(extractedImages);
-          }, 1000);
-        }
-      } catch (error) {
-        console.error('Error extracting images from PDF:', error);
-        toast({
-          title: "Error extracting images",
-          description: "There was an error extracting images from the PDF. Some features may not work correctly.",
-          variant: "destructive"
-        });
-      }
-    };
-    
-    if (isMapGenerated) {
-      extractImagesFromPdf();
-    }
-  }, [isMapGenerated]);
-
-  // Find potential captions by analyzing text positioned near an image
-  const findPotentialCaptions = (textItems: any[], imgObj: any): string[] => {
-    // Look for text that might be captions
-    // Common patterns: "Figure X:", "Table X:", text that starts with "Fig."
-    const captions: string[] = [];
-    
-    for (let i = 0; i < textItems.length; i++) {
-      const text = textItems[i].text.trim();
-      
-      // Skip empty text
-      if (!text) continue;
-      
-      // Check for caption patterns
-      if (
-        text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) || 
-        text.match(/^(figure|fig\.?|table|diagram|chart):/i)
-      ) {
-        // Found potential caption start, collect this and following text
-        let captionText = text;
-        let j = i + 1;
-        
-        // Collect continuation text (usually captions span multiple text items)
-        while (j < textItems.length && 
-              !textItems[j].text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) &&
-              Math.abs(textItems[j].y - textItems[i].y) < 20) {
-          captionText += " " + textItems[j].text.trim();
-          j++;
-        }
-        
-        captions.push(captionText);
-        i = j - 1; // Skip processed items
-      }
-    }
-    
-    return captions;
-  };
-  
-  // Derive potential topics from caption text
-  const deriveTopicsFromCaption = (caption: string): string[] => {
-    if (!caption) return [];
-    
-    const topics: string[] = [];
-    const captionLower = caption.toLowerCase();
-    
-    // Extract key terms that might indicate topic relevance
-    const keyTerms = [
-      { term: "method", topic: "Methodology" },
-      { term: "approach", topic: "Methodology" },
-      { term: "result", topic: "Results" },
-      { term: "finding", topic: "Results" },
-      { term: "data", topic: "Results" },
-      { term: "analysis", topic: "Discussion" },
-      { term: "performance", topic: "Results" },
-      { term: "accuracy", topic: "Results" },
-      { term: "model", topic: "Methodology" },
-      { term: "framework", topic: "Methodology" },
-      { term: "architecture", topic: "Methodology" },
-      { term: "comparison", topic: "Discussion" },
-      { term: "overview", topic: "Introduction" },
-      { term: "system", topic: "Methodology" },
-      { term: "process", topic: "Methodology" },
-      { term: "workflow", topic: "Methodology" },
-      { term: "conclusion", topic: "Conclusion" }
-    ];
-    
-    // Check if caption contains any key terms
-    keyTerms.forEach(({ term, topic }) => {
-      if (captionLower.includes(term) && !topics.includes(topic)) {
-        topics.push(topic);
-      }
-    });
-    
-    return topics;
-  };
-
-  // Auto-place images in mind map based on caption analysis
-  const autoPlaceImagesInMindMap = (images: PdfImage[]) => {
-    if (!mindMapRef.current || images.length === 0) return;
-    
-    const mind = mindMapRef.current;
-    const data = mind.nodeData;
-    
-    // Find nodes that match topics
-    const findNodesForTopics = (topicList: string[] = []): string[] => {
-      if (!topicList || topicList.length === 0) return [];
-      
-      const matchingNodeIds: string[] = [];
-      
-      // Helper function to recursively search nodes
-      const searchNodes = (node: any) => {
-        if (!node) return;
-        
-        // Check if node topic matches any of the topics
-        const nodeTopic = node.topic ? node.topic.toLowerCase() : '';
-        
-        for (const topic of topicList) {
-          if (nodeTopic.includes(topic.toLowerCase())) {
-            matchingNodeIds.push(node.id);
-            break;
-          }
-        }
-        
-        // Check children
-        if (node.children && node.children.length > 0) {
-          node.children.forEach(searchNodes);
-        }
-      };
-      
-      // Start search from root
-      searchNodes(data);
-      
-      return matchingNodeIds;
-    };
-    
-    // Categorize images by content section
-    const sectionImages: Record<string, PdfImage[]> = {
-      "Introduction": [],
-      "Methodology": [],
-      "Results": [],
-      "Discussion": [],
-      "Conclusion": [],
-      "Other": []
-    };
-    
-    // Assign images to sections based on their topics or page position
-    images.forEach(img => {
-      let assigned = false;
-      
-      if (img.relevantTopics && img.relevantTopics.length > 0) {
-        // Assign to the first matching section
-        for (const topic of img.relevantTopics) {
-          if (topic in sectionImages) {
-            sectionImages[topic].push(img);
-            assigned = true;
-            break;
-          }
-        }
-      }
-      
-      // If not assigned to a specific section, use page number as a heuristic
-      if (!assigned) {
-        const pageRatio = img.pageNumber / 20; // Assumes max 20 pages
-        
-        if (pageRatio < 0.2) {
-          sectionImages["Introduction"].push(img);
-        } else if (pageRatio < 0.4) {
-          sectionImages["Methodology"].push(img);
-        } else if (pageRatio < 0.6) {
-          sectionImages["Results"].push(img);
-        } else if (pageRatio < 0.8) {
-          sectionImages["Discussion"].push(img);
-        } else {
-          sectionImages["Conclusion"].push(img);
-        }
-      }
-    });
-    
-    // Place images in matching nodes
-    Object.entries(sectionImages).forEach(([section, sectionImgs]) => {
-      if (sectionImgs.length === 0) return;
-      
-      // Find nodes for this section
-      const nodeIds = findNodesForTopics([section]);
-      
-      if (nodeIds.length > 0) {
-        // Distribute images among matching nodes, focusing on leaf nodes
-        const maxImagesPerNode = Math.ceil(sectionImgs.length / nodeIds.length);
-        
-        let imageIndex = 0;
-        for (const nodeId of nodeIds) {
-          if (imageIndex >= sectionImgs.length) break;
-          
-          // Find the node by ID
-          const node = mind.findNodeById(nodeId);
-          if (!node) continue;
-          
-          // Add image to the node
-          node.image = sectionImgs[imageIndex].imageData;
-          imageIndex++;
-          
-          // If this node has children, add images to them too
-          if (node.children && node.children.length > 0 && imageIndex < sectionImgs.length) {
-            for (let i = 0; i < Math.min(node.children.length, maxImagesPerNode - 1); i++) {
-              if (imageIndex >= sectionImgs.length) break;
-              
-              const childNode = node.children[i];
-              childNode.image = sectionImgs[imageIndex].imageData;
-              imageIndex++;
-            }
-          }
-        }
-        
-        // If we still have images, add them to "Other" nodes
-        if (imageIndex < sectionImgs.length) {
-          const otherNodeIds = findNodesForTopics(["Figure", "Image", "Diagram", "Chart", "Table", "Visual"]);
-          
-          for (const nodeId of otherNodeIds) {
-            if (imageIndex >= sectionImgs.length) break;
-            
-            const node = mind.findNodeById(nodeId);
-            if (!node || node.image) continue; // Skip if already has an image
-            
-            node.image = sectionImgs[imageIndex].imageData;
-            imageIndex++;
-          }
-        }
-      }
-    });
-    
-    // Refresh the mind map to show images
-    mind.refresh();
-    
-    if (images.length > 0) {
-      toast({
-        title: "Images added to mind map",
-        description: `${Math.min(images.length, 5)} images from the PDF have been added to relevant sections.`,
-        duration: 5000,
-      });
-    }
-  };
-
+  // Initialize the mind map
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
-      // Initialize the mind map only once when it's generated
-      
       // Define a enhanced colorful theme based on the Catppuccin Theme
       const colorfulTheme = {
         name: 'Catppuccin',
@@ -650,26 +293,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           // Add transition for smooth color changes
           tpc.style.transition = 'all 0.3s ease';
           
-          // Check if node has image data
-          if (node.image) {
-            // Create image element
-            const imgContainer = document.createElement('div');
-            imgContainer.style.marginTop = '10px';
-            imgContainer.style.width = '100%';
-            imgContainer.style.display = 'flex';
-            imgContainer.style.justifyContent = 'center';
-            
-            const img = document.createElement('img');
-            img.src = node.image;
-            img.style.maxWidth = '100%';
-            img.style.maxHeight = '150px';
-            img.style.borderRadius = '4px';
-            img.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-            
-            imgContainer.appendChild(img);
-            tpc.appendChild(imgContainer);
-          }
-          
           // Add tags based on node content
           const addTags = (topic: string, element: HTMLElement) => {
             const topicLower = topic.toLowerCase();
@@ -724,7 +347,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       };
 
       // Create mind map instance
-      const mind = new MindElixir(options);
+      const mind = new MindElixir(options) as ExtendedMindElixirInstance;
       
       // Add custom styles to node-menu and style-panel elements when they appear
       const addCustomStylesToMenus = () => {
@@ -773,8 +396,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Initialize the mind map with data
       mind.init(data);
       
-      // Register with Neo Node Menu
-      mind.nodeMenu = nodeMenuNeo;
+      // Register Node Menu Neo
+      if (nodeMenuNeo) {
+        // @ts-ignore - We know nodeMenu exists in the extended Mind Elixir implementation
+        mind.nodeMenu = nodeMenuNeo;
+      }
       
       // Set up event handlers
       mind.bus.addListener('operation', (operation: any) => {
@@ -805,8 +431,85 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Apply custom styles to menus after initialization
       setTimeout(addCustomStylesToMenus, 500);
       
+      // Apply line breaks to nodes for better readability
+      const applyLineBreaksToNodes = () => {
+        if (!mind.container) return;
+        
+        // Observer to watch for DOM changes and apply formatting
+        const observer = new MutationObserver(() => {
+          // Process the root node
+          const rootNodeElement = mind.container?.querySelector('.mind-elixir-root');
+          if (rootNodeElement && rootNodeElement.textContent) {
+            applyLineBreaksToNode(rootNodeElement, 3); // 3 words per line for root
+          }
+          
+          // Process all topic nodes
+          const topicElements = mind.container?.querySelectorAll('.mind-elixir-topic');
+          if (topicElements) {
+            topicElements.forEach(topicElement => {
+              if (topicElement.classList.contains('mind-elixir-root')) return; // Skip root
+              applyLineBreaksToNode(topicElement as HTMLElement, 4); // 4 words per line as requested
+            });
+          }
+        });
+        
+        // Apply line breaks to a specific node
+        const applyLineBreaksToNode = (element: Element, wordsPerLine: number) => {
+          if (!(element instanceof HTMLElement) || !element.textContent) return;
+          
+          const text = element.textContent;
+          
+          // For root node, make it shorter - extract only the title part
+          if (element.classList.contains('mind-elixir-root')) {
+            const titleText = text.split(/[.,;:]|(\n)/)[0].trim();
+            const words = titleText.split(' ');
+            
+            let formattedText = '';
+            for (let i = 0; i < words.length; i += wordsPerLine) {
+              const chunk = words.slice(i, i + wordsPerLine).join(' ');
+              formattedText += chunk + (i + wordsPerLine < words.length ? '<br>' : '');
+            }
+            
+            element.innerHTML = formattedText;
+            return;
+          }
+          
+          // Regular nodes
+          const words = text.split(' ');
+          
+          if (words.length <= wordsPerLine) return; // No need for line breaks
+          
+          let formattedText = '';
+          for (let i = 0; i < words.length; i += wordsPerLine) {
+            const chunk = words.slice(i, i + wordsPerLine).join(' ');
+            formattedText += chunk + (i + wordsPerLine < words.length ? '<br>' : '');
+          }
+          
+          element.innerHTML = formattedText;
+        };
+        
+        if (mind.container) {
+          observer.observe(mind.container, { 
+            childList: true, 
+            subtree: true,
+            characterData: true 
+          });
+        }
+        
+        // Initial formatting attempt
+        setTimeout(() => {
+          const rootNodeElement = mind.container?.querySelector('.mind-elixir-root');
+          if (rootNodeElement && rootNodeElement.textContent) {
+            applyLineBreaksToNode(rootNodeElement, 3);
+          }
+        }, 100);
+      };
+      
+      // Call line breaks function
+      applyLineBreaksToNodes();
+      
       // Store the mind map instance in ref
-      mindMapRef.current = mind as ExtendedMindElixirInstance;
+      mindMapRef.current = mind;
       setIsReady(true);
       
       // Notify parent that mind map is ready
@@ -831,6 +534,40 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       const newZoom = Math.max(zoomLevel - 0.1, 0.5);
       setZoomLevel(newZoom);
       mindMapRef.current.scale(newZoom);
+    }
+  };
+
+  // Handle center layout
+  const handleCenterLayout = () => {
+    if (mindMapRef.current && mindMapRef.current.container) {
+      try {
+        // @ts-ignore - Using internal method from mind-elixir
+        mindMapRef.current.toCenter();
+        toast({
+          title: "Map centered",
+          description: "Mind map has been centered on the screen.",
+          duration: 1500,
+        });
+      } catch (error) {
+        console.error("Error centering map:", error);
+      }
+    }
+  };
+
+  // Handle auto layout
+  const handleAutoLayout = () => {
+    if (mindMapRef.current) {
+      try {
+        // @ts-ignore - Using layout method from mind-elixir
+        mindMapRef.current.layout();
+        toast({
+          title: "Layout optimized",
+          description: "Mind map has been automatically arranged.",
+          duration: 1500,
+        });
+      } catch (error) {
+        console.error("Error in auto layout:", error);
+      }
     }
   };
 
@@ -866,6 +603,39 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         ref={containerRef}
         className="flex-1 overflow-hidden relative"
       />
+      
+      {/* Left sidebar toolbar - matching the image buttons */}
+      <div className="absolute top-1/2 left-4 transform -translate-y-1/2 flex flex-col p-2 bg-white rounded-lg shadow-md space-y-3 z-10">
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={handleCenterLayout}
+          title="Center Map"
+          className="h-10 w-10 p-2"
+        >
+          <AlignCenter size={20} />
+        </Button>
+        
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={handleAutoLayout}
+          title="Auto Layout"
+          className="h-10 w-10 p-2"
+        >
+          <LayoutGrid size={20} />
+        </Button>
+        
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={() => mindMapRef.current?.refresh()}
+          title="Refresh Map"
+          className="h-10 w-10 p-2"
+        >
+          <MoveDiagonal size={20} />
+        </Button>
+      </div>
       
       {/* Controls overlay */}
       <div className="absolute bottom-4 right-4 flex space-x-2 z-10">

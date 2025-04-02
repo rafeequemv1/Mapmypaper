@@ -1,70 +1,74 @@
+
 import { useState } from "react";
 import { generateMindmapFromPdf } from "@/services/geminiService";
 
-// Default mindmap diagram with enhanced colors and branch-based structure
+// Default mindmap diagram with enhanced colors and branch-based structure with emojis
 export const defaultMindmap = `mindmap
-  root((Paper Topic))
+  root((📑 Paper Topic))
   class root rootStyle
   
-  root --> summary["Summary"]
+  root --> summary["🔍 Summary"]
   class summary summaryClass
   
-  summary --> keyPoints["Key Points"]
+  summary --> keyPoints["✨ Key Points"]
   class keyPoints summaryDetailClass
   
-  summary --> mainContrib["Main Contributions"]
+  summary --> mainContrib["⭐ Main Contributions"]
   class mainContrib summaryDetailClass
   
-  summary --> significance["Significance"]
+  summary --> significance["💎 Significance"]
   class significance summaryDetailClass
   
-  root --> concept1["Key Concept 1"]
-  class concept1 branch1Class
+  root --> methodology["⚙️ Methodology"]
+  class methodology branch1Class
   
-  concept1 --> sub11["Sub-concept 1.1"]
-  class sub11 subbranch1Class
+  methodology --> approach["🧪 Approach"]
+  class approach subbranch1Class
   
-  sub11 --> det111["Detail 1.1.1"]
-  class det111 detail1Class
+  approach --> design["🔧 Design"]
+  class design detail1Class
   
-  sub11 --> det112["Detail 1.1.2"]
-  class det112 detail1Class
+  approach --> implementation["⚡ Implementation"]
+  class implementation detail1Class
   
-  concept1 --> sub12["Sub-concept 1.2"]
-  class sub12 subbranch1Class
+  methodology --> datasets["📊 Datasets"]
+  class datasets subbranch1Class
   
-  sub12 --> det121["Detail 1.2.1"]
-  class det121 detail1Class
+  datasets --> preparation["🔄 Data Preparation"]
+  class preparation detail1Class
   
-  root --> concept2["Key Concept 2"]
-  class concept2 branch2Class
+  root --> results["📈 Results"]
+  class results branch2Class
   
-  concept2 --> sub21["Sub-concept 2.1"]
-  class sub21 subbranch2Class
+  results --> findings["🎯 Key Findings"]
+  class findings subbranch2Class
   
-  sub21 --> det211["Detail 2.1.1"]
-  class det211 detail2Class
+  findings --> performance["⚡ Performance"]
+  class performance detail2Class
   
-  sub21 --> det212["Detail 2.1.2"]
-  class det212 detail2Class
+  findings --> comparison["🔍 Comparison"]
+  class comparison detail2Class
   
-  concept2 --> sub22["Sub-concept 2.2"]
-  class sub22 subbranch2Class
+  results --> analysis["📏 Analysis"]
+  class analysis subbranch2Class
   
-  root --> concept3["Key Concept 3"]
-  class concept3 branch3Class
+  root --> discussion["💭 Discussion"]
+  class discussion branch3Class
   
-  concept3 --> sub31["Sub-concept 3.1"]
-  class sub31 subbranch3Class
+  discussion --> implications["💡 Implications"]
+  class implications subbranch3Class
   
-  sub31 --> det311["Detail 3.1.1"]
-  class det311 detail3Class
+  implications --> theory["📚 Theory"]
+  class theory detail3Class
   
-  sub31 --> det312["Detail 3.1.2"]
-  class det312 detail3Class
+  implications --> practice["⚒️ Practice"]
+  class practice detail3Class
   
-  det312 --> subdet3121["Sub-detail 3.1.2.1"]
-  class subdet3121 subdetail3Class
+  discussion --> limitations["🛑 Limitations"]
+  class limitations subbranch3Class
+  
+  limitations --> future["🔮 Future Work"]
+  class future detail3Class
 
 %% Color styling for different branches
 %% classDef rootStyle fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-size:18px
@@ -111,7 +115,9 @@ const useMindmapGenerator = () => {
         // Fix potential multiple root issues and add color styling
         const fixedResponse = fixMindmapSyntax(response);
         const enhancedResponse = addColorStylingToMindmap(fixedResponse);
-        setCode(enhancedResponse);
+        // Ensure we have enough emojis in the response
+        const withEmojis = addEmojisToMindmap(enhancedResponse);
+        setCode(withEmojis);
       } else {
         throw new Error("Failed to generate a valid mindmap diagram.");
       }
@@ -125,6 +131,119 @@ const useMindmapGenerator = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  /**
+   * Add emojis to mindmap nodes that don't have them
+   */
+  const addEmojisToMindmap = (mindmapCode: string): string => {
+    const lines = mindmapCode.split('\n');
+    const processedLines: string[] = [];
+    
+    // Map of keywords to emojis
+    const emojiMap: Record<string, string> = {
+      'summary': '🔍',
+      'introduction': '🚪',
+      'background': '📘',
+      'method': '⚙️',
+      'methodology': '⚙️',
+      'approach': '🧪',
+      'experiment': '🧪',
+      'data': '📊',
+      'dataset': '📊',
+      'result': '📈',
+      'finding': '✨',
+      'performance': '⚡',
+      'discussion': '💭',
+      'implication': '💡',
+      'limitation': '🛑',
+      'future': '🔮',
+      'conclusion': '🏁',
+      'reference': '📚',
+      'key point': '✨',
+      'contribution': '⭐',
+      'significance': '💎',
+      'design': '🔧',
+      'implementation': '⚡',
+      'preparation': '🔄',
+      'comparison': '🔍',
+      'analysis': '📏',
+      'theory': '📚',
+      'practice': '⚒️',
+      'objective': '🎯',
+      'hypothesis': '🎯',
+      'evaluation': '🔬',
+      'research': '🔍',
+      'question': '❓',
+      'algorithm': '⚙️',
+      'parameter': '🔢',
+      'model': '🧠',
+      'framework': '📐',
+      'tool': '🛠️',
+      'technique': '⚒️',
+      'system': '🔄',
+      'component': '🧩',
+      'process': '⚙️',
+      'step': '👣',
+      'topic': '📑',
+      'paper': '📄',
+      'study': '🔬',
+      'test': '🧪',
+      'analysis': '🔬',
+      'observation': '👁️',
+      'idea': '💡',
+      'challenge': '⚠️',
+      'problem': '⚠️',
+      'solution': '🔧',
+      'goal': '🎯',
+      'measure': '📏',
+      'metric': '📊'
+    };
+
+    // Process each line
+    lines.forEach(line => {
+      // Skip empty lines or lines without node definitions
+      if (!line.trim() || !line.includes('[') || line.startsWith('%%') || line.startsWith('class')) {
+        processedLines.push(line);
+        return;
+      }
+      
+      // Check if already has emoji
+      if (/\["[^"]*\p{Emoji}[^"]*"\]/u.test(line)) {
+        processedLines.push(line);
+        return;
+      }
+      
+      // Extract node text
+      const nodeTextMatch = line.match(/\["([^"]*)"\]/);
+      if (!nodeTextMatch) {
+        processedLines.push(line);
+        return;
+      }
+      
+      const nodeText = nodeTextMatch[1];
+      const lowerText = nodeText.toLowerCase();
+      
+      // Find matching emoji
+      let emoji = '';
+      for (const [keyword, emojiChar] of Object.entries(emojiMap)) {
+        if (lowerText.includes(keyword)) {
+          emoji = emojiChar + ' ';
+          break;
+        }
+      }
+      
+      // If no specific emoji found, use a default based on position in mindmap
+      if (!emoji) {
+        emoji = '📌 '; // Default emoji
+      }
+      
+      // Replace node text with emoji + text
+      const newLine = line.replace(/\["([^"]*)"\]/, `["${emoji}${nodeText}"]`);
+      processedLines.push(newLine);
+    });
+
+    return processedLines.join('\n');
   };
 
   /**
@@ -218,7 +337,7 @@ const useMindmapGenerator = () => {
     
     // If no root was found, add one at the beginning
     if (!foundRoot) {
-      processedLines.splice(1, 0, "  root((Paper Topic))");
+      processedLines.splice(1, 0, "  root((📑 Paper Topic))");
       processedLines.splice(2, 0, "  class root rootStyle");
     }
     

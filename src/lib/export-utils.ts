@@ -8,7 +8,7 @@ import { MindElixirInstance } from "mind-elixir";
  */
 export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: string = 'mindmap'): void => {
   try {
-    // Use custom styling to ensure proper rendering
+    // Use custom styling to ensure proper rendering with emojis
     const customStyles = `
       .mind-elixir-node {
         font-family: 'Segoe UI', system-ui, sans-serif;
@@ -19,6 +19,7 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
         box-shadow: 0 3px 10px rgba(0,0,0,0.05);
         font-weight: normal;
         font-size: 16px;
+        line-height: 1.5;
       }
       .mind-elixir-root {
         font-weight: bold;
@@ -46,35 +47,6 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
     }
   } catch (error) {
     console.error("Error exporting as SVG:", error);
-    throw error;
-  }
-};
-
-/**
- * Downloads the mind map as PNG image (kept for compatibility)
- * @param instance Mind Elixir instance
- * @param fileName Name of the file without extension
- */
-export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
-  try {
-    // Cast instance to access the exportPng method that takes parameters
-    const extendedInstance = instance as unknown as {
-      exportPng: (noForeignObject?: boolean, injectCss?: string) => Promise<Blob>;
-    };
-    
-    const blob = await extendedInstance.exportPng(false, '');
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
-  } catch (error) {
-    console.error("Error exporting as PNG:", error);
     throw error;
   }
 };
