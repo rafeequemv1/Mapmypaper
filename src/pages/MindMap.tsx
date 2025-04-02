@@ -9,6 +9,18 @@ import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 import TreemapModal from "@/components/mindmap/TreemapModal";
 
+// Define correct props interface for Header to match what we're passing
+interface HeaderProps {
+  togglePdf: () => void;
+  toggleChat: () => void;
+  setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMermaidMindmap: React.Dispatch<React.SetStateAction<boolean>>;
+  isPdfActive: boolean;
+  isChatActive: boolean;
+  onExportMindMap?: () => Promise<void>; // Make this prop optional to match the component
+}
+
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
   const [pdfAvailable, setPdfAvailable] = useState(false);
