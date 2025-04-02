@@ -167,6 +167,7 @@ const useMindmapGenerator = () => {
       'implementation': '⚡',
       'preparation': '🔄',
       'comparison': '🔍',
+      // Removing the duplicate 'analysis' entry that was causing the error
       'analysis': '📏',
       'theory': '📚',
       'practice': '⚒️',
@@ -189,7 +190,6 @@ const useMindmapGenerator = () => {
       'paper': '📄',
       'study': '🔬',
       'test': '🧪',
-      'analysis': '🔬',
       'observation': '👁️',
       'idea': '💡',
       'challenge': '⚠️',
