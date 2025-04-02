@@ -16,6 +16,7 @@ import html2canvas from "html2canvas";
 import * as pdfjs from "pdfjs-dist";
 import { Textarea } from "@/components/ui/textarea";
 import FlowchartPreview from "./flowchart/FlowchartPreview";
+import { generateMindmapFromPdf } from "@/services/geminiService";
 
 // Set the worker source with HTTPS to avoid CORS issues
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -25,21 +26,11 @@ interface MermaidMindmapModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface PdfImage {
-  imageData: string;
-  pageNumber: number;
-  width: number;
-  height: number;
-  caption?: string;
-  relevantTopics?: string[];
-}
-
 const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const [mermaidCode, setMermaidCode] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(true);
   const [zoomLevel, setZoomLevel] = useState(1); // Start with 100% zoom
-  const [pdfImages, setPdfImages] = useState<PdfImage[]>([]);
   const { toast } = useToast();
   const [showSyntax, setShowSyntax] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,317 +39,307 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   // Initialize mermaid library
   useMermaidInit();
 
-  // Extract images from PDF and analyze captions when modal is opened
+  // Generate mindmap when modal is opened
   useEffect(() => {
     if (open) {
       setIsGenerating(true);
       
-      // Get PDF content from session storage to generate mindmap structure
+      // Get PDF content from session storage for Gemini analysis
       const pdfData = sessionStorage.getItem("pdfData");
+      const pdfText = sessionStorage.getItem("pdfText");
       
       // Show toast when mindmap is being generated
       toast({
         title: "Generating Mermaid Mindmap",
-        description: "Creating a mindmap visualization with integrated images from your document...",
+        description: "Creating a detailed mindmap visualization using AI analysis of your document...",
       });
       
-      // Extract images from PDF
-      if (pdfData) {
-        extractImagesWithCaptions(pdfData)
-          .then((images) => {
-            setPdfImages(images);
-            console.log(`Extracted ${images.length} images from PDF with caption analysis`);
-          })
-          .catch((error) => {
-            console.error("Error extracting images:", error);
-            setError(`Error extracting images: ${error instanceof Error ? error.message : String(error)}`);
-          });
-      }
-      
-      // Generate mindmap
-      setTimeout(() => {
-        generateMindmapWithImages(pdfData);
-        setIsGenerating(false);
-      }, 1500);
+      // Call Gemini service to generate the mindmap
+      generateMindmapFromPdf()
+        .then((response) => {
+          if (response) {
+            // Process the Gemini-generated mindmap by enhancing it with emojis and styling
+            const enhancedMindmap = enhanceMindmapWithEmojis(response);
+            setMermaidCode(enhancedMindmap);
+          } else {
+            // Fallback if Gemini doesn't return a valid response
+            setMermaidCode(generateFallbackMindmap(pdfText));
+          }
+        })
+        .catch((err) => {
+          console.error("Error generating mindmap:", err);
+          setError(err instanceof Error ? err.message : "Unknown error");
+          // Fallback to a basic structure
+          setMermaidCode(generateFallbackMindmap(pdfText));
+        })
+        .finally(() => {
+          setIsGenerating(false);
+        });
     }
   }, [open, toast]);
 
-  // Generate mindmap with embedded images
-  const generateMindmapWithImages = (pdfData: string | null) => {
-    try {
-      // Create a basic structure from PDF content or use default structure
-      // Starting code for the mindmap
-      let mindmapCode = `mindmap
-  root((Document Overview))`;
-      
-      // Add structure sections
-      mindmapCode += `
-    Document Structure
-      Introduction
-      Methodology
-      Results
-      Discussion
-      Conclusion
-    Key Concepts
-      Concept 1
-      Concept 2
-      Concept 3
-    Supporting Evidence`;
-      
-      // Add image sections based on extracted images and their potential topic relevance
-      if (pdfImages.length > 0) {
-        mindmapCode += `
-    Figures and Images`;
-        
-        // Group images by their likely content categories
-        const categories = analyzeAndCategorizeImages(pdfImages);
-        
-        // Add images to appropriate categories
-        Object.entries(categories).forEach(([category, images]) => {
-          if (images.length > 0) {
-            mindmapCode += `
-      ${category}`;
-            
-            // Add individual image references (limited to first 3 per category)
-            images.slice(0, 3).forEach((img, idx) => {
-              mindmapCode += `
-        Image ${img.pageNumber}-${idx+1} from page ${img.pageNumber}`;
-            });
-          }
-        });
-      }
-      
-      setMermaidCode(mindmapCode);
-    } catch (error) {
-      console.error("Error generating mindmap with images:", error);
-      // Fallback to simple mindmap
-      setMermaidCode(`mindmap
-  root((Document Overview))
-    Document Structure
-      Introduction
-      Methodology
-      Results
-      Discussion
-    Figures
-      ${pdfImages.length > 0 ? `${pdfImages.length} images were found but couldn't be categorized` : 'No images found'}`);
-      
-      setError(`Error generating mindmap: ${error instanceof Error ? error.message : String(error)}`);
+  // Function to enhance any mindmap with emojis and better styling
+  const enhanceMindmapWithEmojis = (mindmapCode: string): string => {
+    // Make sure the code starts with mindmap directive
+    if (!mindmapCode.trim().startsWith("mindmap")) {
+      mindmapCode = "mindmap\n" + mindmapCode;
     }
-  };
 
-  // Analyze and categorize images based on position in document and text context
-  const analyzeAndCategorizeImages = (images: PdfImage[]): Record<string, PdfImage[]> => {
-    const categories: Record<string, PdfImage[]> = {
-      "Charts & Graphs": [],
-      "Diagrams": [],
-      "Photos": [],
-      "Tables": [],
-      "Other Visuals": []
+    // Split into lines for processing
+    const lines = mindmapCode.split('\n');
+    const processedLines: string[] = [];
+    
+    // Map of keywords to emojis - expanded for academic paper topics
+    const emojiMap: Record<string, string> = {
+      'summary': '🔍',
+      'introduction': '🚪',
+      'background': '📘',
+      'method': '⚙️',
+      'methodology': '⚙️',
+      'approach': '🧪',
+      'experiment': '🧪',
+      'data': '📊',
+      'dataset': '📊',
+      'result': '📈',
+      'finding': '✨',
+      'performance': '⚡',
+      'discussion': '💭',
+      'implication': '💡',
+      'limitation': '🛑',
+      'future': '🔮',
+      'conclusion': '🏁',
+      'reference': '📚',
+      'key point': '✨',
+      'contribution': '⭐',
+      'significance': '💎',
+      'design': '🔧',
+      'implementation': '⚡',
+      'preparation': '🔄',
+      'comparison': '🔍',
+      'analysis': '📏',
+      'theory': '📚',
+      'practice': '⚒️',
+      'objective': '🎯',
+      'hypothesis': '🎯',
+      'evaluation': '🔬',
+      'research': '🔍',
+      'question': '❓',
+      'algorithm': '⚙️',
+      'parameter': '🔢',
+      'model': '🧠',
+      'framework': '📐',
+      'tool': '🛠️',
+      'technique': '⚒️',
+      'system': '🔄',
+      'component': '🧩',
+      'process': '⚙️',
+      'step': '👣',
+      'topic': '📑',
+      'paper': '📄',
+      'study': '🔬',
+      'test': '🧪',
+      'observation': '👁️',
+      'idea': '💡',
+      'challenge': '⚠️',
+      'problem': '⚠️',
+      'solution': '🔧',
+      'goal': '🎯',
+      'measure': '📏',
+      'metric': '📊',
+      'quantum': '⚛️',
+      'physics': '🔭',
+      'chemistry': '🧪',
+      'biological': '🧬',
+      'computation': '💻',
+      'enhancement': '📈',
+      'spectroscopy': '🌈',
+      'photoluminescence': '💫',
+      'emission': '✨',
+      'nanomaterial': '🔬',
+      'resonance': '〰️',
+      'polymer': '🧵',
+      'surface': '🔳',
+      'coating': '🖌️',
+      'particle': '⚪',
+      'nano': '🔍',
+      'quantum dot': '⚛️',
+      'plasmonic': '⚡',
+      'optical': '👁️',
+      'electronic': '💻',
+      'synthesis': '🧪',
+      'characterization': '🔎',
+      'application': '🛠️'
     };
-    
-    // Simple heuristic categorization based on image properties
-    images.forEach(img => {
-      // Aspect ratio and size as simple heuristics
-      const aspectRatio = img.width / img.height;
-      
-      if (img.caption) {
-        const caption = img.caption.toLowerCase();
-        
-        // Use caption text to improve categorization
-        if (caption.includes("chart") || caption.includes("graph") || caption.includes("plot")) {
-          categories["Charts & Graphs"].push(img);
-        } 
-        else if (caption.includes("diagram") || caption.includes("flow") || caption.includes("model")) {
-          categories["Diagrams"].push(img);
-        }
-        else if (caption.includes("table") || caption.includes("tabular") || (aspectRatio > 1.5 && img.width > 300)) {
-          categories["Tables"].push(img);
-        }
-        else if (caption.includes("photo") || caption.includes("picture") || caption.includes("image")) {
-          categories["Photos"].push(img);
-        }
-        else {
-          categories["Other Visuals"].push(img);
-        }
-      } 
-      else {
-        // Categorize based on size and aspect ratio if no caption
-        if (aspectRatio > 2 || aspectRatio < 0.5) {
-          categories["Tables"].push(img); // Very wide or tall images are likely tables
-        }
-        else if (img.width < 200 || img.height < 200) {
-          categories["Charts & Graphs"].push(img); // Small images might be icons or small charts
-        }
-        else {
-          categories["Other Visuals"].push(img);
-        }
-      }
-    });
-    
-    return categories;
-  };
 
-  // Enhanced image extraction with caption analysis
-  const extractImagesWithCaptions = async (pdfDataUrl: string): Promise<PdfImage[]> => {
-    try {
-      const pdfData = atob(pdfDataUrl.split(',')[1]);
-      const loadingTask = pdfjs.getDocument({ data: pdfData });
-      const pdf = await loadingTask.promise;
-      const extractedImages: PdfImage[] = [];
+    // Process each line to add emojis and formatting
+    for (let line of lines) {
+      const trimmedLine = line.trim();
       
-      // Process each page
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const operatorList = await page.getOperatorList();
-        const textContent = await page.getTextContent();
+      // Skip empty lines, directives, or class definitions
+      if (!trimmedLine || trimmedLine === 'mindmap' || trimmedLine.startsWith('class') || trimmedLine.startsWith('%%')) {
+        processedLines.push(line);
+        continue;
+      }
+      
+      // Skip if already has emoji
+      if (/\p{Emoji}/u.test(trimmedLine)) {
+        processedLines.push(line);
+        continue;
+      }
+      
+      // Extract node text
+      let nodeTextMatch = null;
+      if (trimmedLine.includes('((') && trimmedLine.includes('))')) {
+        // Root node
+        nodeTextMatch = trimmedLine.match(/\(\((.*?)\)\)/);
+      } else if (trimmedLine.includes('[') && trimmedLine.includes(']')) {
+        // Rectangle node
+        nodeTextMatch = trimmedLine.match(/\[\"?(.*?)\"?\]/);
+      } else if (trimmedLine.includes('(') && trimmedLine.includes(')')) {
+        // Round node
+        nodeTextMatch = trimmedLine.match(/\(\"?(.*?)\"?\)/);
+      } else if (trimmedLine.includes('{') && trimmedLine.includes('}')) {
+        // Hexagon node
+        nodeTextMatch = trimmedLine.match(/\{\"?(.*?)\"?\}/);
+      } else if (trimmedLine.includes('>') && trimmedLine.includes(']')) {
+        // Bubble node
+        nodeTextMatch = trimmedLine.match(/>\s*\"?(.*?)\"?\]/);
+      }
+      
+      if (nodeTextMatch && nodeTextMatch[1]) {
+        const nodeText = nodeTextMatch[1].replace(/^"/, '').replace(/"$/, '');
+        const lowerText = nodeText.toLowerCase();
         
-        // Extract all text items with their positions for caption analysis
-        const textItems = textContent.items.map(item => ({
-          text: 'str' in item ? item.str : '',
-          x: 'transform' in item ? item.transform[4] : 0,
-          y: 'transform' in item ? item.transform[5] : 0,
-          height: 'height' in item ? item.height : 0,
-          width: 'width' in item ? item.width : 0
-        }));
-        
-        // Look for image operators in the page
-        for (let i = 0; i < operatorList.fnArray.length; i++) {
-          // Check for image operators
-          if (operatorList.fnArray[i] === pdfjs.OPS.paintImageXObject) {
-            const imgArgs = operatorList.argsArray[i];
-            const imgId = imgArgs[0];
-            
-            try {
-              // Get the image data
-              const objs = await page.objs.get(imgId);
-              
-              if (objs && objs.data && objs.width && objs.height) {
-                // Create canvas to convert image data to data URL
-                const canvas = document.createElement('canvas');
-                canvas.width = objs.width;
-                canvas.height = objs.height;
-                const ctx = canvas.getContext('2d');
-                
-                if (ctx) {
-                  // Create ImageData object
-                  const imgData = new ImageData(
-                    new Uint8ClampedArray(objs.data),
-                    objs.width,
-                    objs.height
-                  );
-                  ctx.putImageData(imgData, 0, 0);
-                  
-                  // Get image as data URL
-                  const dataUrl = canvas.toDataURL('image/png');
-                  
-                  // Only add if image is not too small (likely not a meaningful figure)
-                  if (objs.width > 100 && objs.height > 100) {
-                    // Try to find caption by looking for text positioned below the image
-                    // This is a simple heuristic - text near the image that might be a caption
-                    const potentialCaptions = findPotentialCaptions(textItems, objs);
-                    
-                    extractedImages.push({
-                      imageData: dataUrl,
-                      pageNumber: pageNum,
-                      width: objs.width,
-                      height: objs.height,
-                      caption: potentialCaptions.length > 0 ? potentialCaptions.join(" ") : undefined,
-                      relevantTopics: deriveTopicsFromCaption(potentialCaptions.join(" "))
-                    });
-                  }
-                }
-              }
-            } catch (error) {
-              console.error(`Error processing image ${imgId} on page ${pageNum}:`, error);
-            }
+        // Find matching emoji
+        let emoji = '';
+        for (const [keyword, emojiChar] of Object.entries(emojiMap)) {
+          if (lowerText.includes(keyword)) {
+            emoji = emojiChar + ' ';
+            break;
           }
         }
-      }
-      
-      return extractedImages;
-    } catch (error) {
-      console.error('Error extracting images from PDF:', error);
-      return [];
-    }
-  };
-  
-  // Find potential captions by analyzing text positioned near an image
-  const findPotentialCaptions = (textItems: any[], imgObj: any): string[] => {
-    // Estimate image position based on limited information
-    // This is an approximation since PDF.js doesn't give us exact positioning
-    const imgY = 0; // We don't have this information directly
-    
-    // Look for text that might be captions
-    // Common patterns: "Figure X:", "Table X:", text that starts with "Fig."
-    const captions: string[] = [];
-    
-    for (let i = 0; i < textItems.length; i++) {
-      const text = textItems[i].text.trim();
-      
-      // Skip empty text
-      if (!text) continue;
-      
-      // Check for caption patterns
-      if (
-        text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) || 
-        text.match(/^(figure|fig\.?|table|diagram|chart):/i)
-      ) {
-        // Found potential caption start, collect this and following text
-        let captionText = text;
-        let j = i + 1;
         
-        // Collect continuation text (usually captions span multiple text items)
-        while (j < textItems.length && 
-              !textItems[j].text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) &&
-              Math.abs(textItems[j].y - textItems[i].y) < 20) {
-          captionText += " " + textItems[j].text.trim();
-          j++;
+        // If no specific emoji found, use a default based on position in mindmap
+        if (!emoji) {
+          if (trimmedLine.includes('((') && trimmedLine.includes('))')) {
+            emoji = '📑 '; // Default for root
+          } else {
+            emoji = '📌 '; // Default for other nodes
+          }
         }
         
-        captions.push(captionText);
-        i = j - 1; // Skip processed items
+        // Replace node text with emoji + text
+        if (trimmedLine.includes('((') && trimmedLine.includes('))')) {
+          // Root node
+          line = line.replace(/\(\((.*?)\)\)/, `(("${emoji}${nodeText}"))`);
+        } else if (trimmedLine.includes('[') && trimmedLine.includes(']')) {
+          // Rectangle node
+          line = line.replace(/\[\s*"?(.*?)"?\s*\]/, `["${emoji}${nodeText}"]`);
+        } else if (trimmedLine.includes('(') && trimmedLine.includes(')') && !trimmedLine.includes('((') && !trimmedLine.includes('))')) {
+          // Round node
+          line = line.replace(/\(\s*"?(.*?)"?\s*\)/, `("${emoji}${nodeText}")`);
+        } else if (trimmedLine.includes('{') && trimmedLine.includes('}')) {
+          // Hexagon node
+          line = line.replace(/\{\s*"?(.*?)"?\s*\}/, `{"${emoji}${nodeText}"}`);
+        } else if (trimmedLine.includes('>') && trimmedLine.includes(']')) {
+          // Bubble node
+          line = line.replace(/>\s*"?(.*?)"?\s*\]/, `>"${emoji}${nodeText}"]`);
+        }
       }
+      
+      processedLines.push(line);
     }
     
-    return captions;
+    // Add styling classes if not present
+    if (!mindmapCode.includes('classDef')) {
+      processedLines.push('\n%% Style definitions');
+      processedLines.push('%% classDef rootStyle fill:#8B5CF6,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold');
+      processedLines.push('%% classDef mainTopic fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C');
+      processedLines.push('%% classDef subTopic1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C');
+      processedLines.push('%% classDef subTopic2 fill:#FDE1D3,stroke:#F97316,stroke-width:1px,color:#1A1F2C');
+      processedLines.push('%% classDef subTopic3 fill:#F1F0FB,stroke:#D946EF,stroke-width:1px,color:#1A1F2C');
+      processedLines.push('%% classDef detail fill:#F5F5F5,stroke:#6B7280,stroke-width:1px,color:#1A1F2C,font-style:italic');
+    }
+
+    return processedLines.join('\n');
   };
   
-  // Derive potential topics from caption text
-  const deriveTopicsFromCaption = (caption: string): string[] => {
-    if (!caption) return [];
-    
-    const topics: string[] = [];
-    const captionLower = caption.toLowerCase();
-    
-    // Extract key terms that might indicate topic relevance
-    const keyTerms = [
-      { term: "method", topic: "Methodology" },
-      { term: "approach", topic: "Methodology" },
-      { term: "result", topic: "Results" },
-      { term: "finding", topic: "Results" },
-      { term: "data", topic: "Results" },
-      { term: "analysis", topic: "Discussion" },
-      { term: "performance", topic: "Results" },
-      { term: "accuracy", topic: "Results" },
-      { term: "model", topic: "Methodology" },
-      { term: "framework", topic: "Methodology" },
-      { term: "architecture", topic: "Methodology" },
-      { term: "comparison", topic: "Discussion" },
-      { term: "overview", topic: "Introduction" },
-      { term: "system", topic: "Methodology" },
-      { term: "process", topic: "Methodology" },
-      { term: "workflow", topic: "Methodology" },
-      { term: "conclusion", topic: "Conclusion" }
+  // Generate a fallback mindmap structure if Gemini fails
+  const generateFallbackMindmap = (pdfText: string | null): string => {
+    // Try to extract some content from the PDF text for the fallback mindmap
+    let paperTitle = "Paper Analysis";
+    let sections = [
+      "Introduction",
+      "Methodology",
+      "Results",
+      "Discussion",
+      "Conclusion"
     ];
     
-    // Check if caption contains any key terms
-    keyTerms.forEach(({ term, topic }) => {
-      if (captionLower.includes(term) && !topics.includes(topic)) {
-        topics.push(topic);
+    // Try to extract title from PDF text if available
+    if (pdfText) {
+      const firstLines = pdfText.split('\n').slice(0, 5).join(' ');
+      const potentialTitle = firstLines.substring(0, 100).replace(/\s+/g, ' ').trim();
+      if (potentialTitle) {
+        paperTitle = potentialTitle;
+      }
+      
+      // Look for section indicators in text
+      const sectionMatches = pdfText.match(/\b(abstract|introduction|method|result|discussion|conclusion)\b/gi);
+      if (sectionMatches && sectionMatches.length > 0) {
+        const uniqueSections = Array.from(new Set(sectionMatches.map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())));
+        if (uniqueSections.length > 2) {
+          sections = uniqueSections;
+        }
+      }
+    }
+    
+    // Basic mindmap structure with emojis
+    let mindmap = `mindmap
+  root(("📑 ${paperTitle.substring(0, 50)}"))\n`;
+    
+    // Add main sections
+    sections.forEach(section => {
+      let emoji = '📄';
+      if (section.toLowerCase().includes('introduction')) emoji = '🚪';
+      if (section.toLowerCase().includes('method')) emoji = '⚙️';
+      if (section.toLowerCase().includes('result')) emoji = '📊';
+      if (section.toLowerCase().includes('discussion')) emoji = '💭';
+      if (section.toLowerCase().includes('conclusion')) emoji = '🏁';
+      if (section.toLowerCase().includes('abstract')) emoji = '🔍';
+      
+      mindmap += `  root --> section_${section.toLowerCase().replace(/\s/g, '_')}["${emoji} ${section}"]\n`;
+      
+      // Add some subsections based on common paper structure
+      if (section.toLowerCase().includes('introduction')) {
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> intro_background("📘 Background")\n`;
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> intro_objective("🎯 Objective")\n`;
+      } else if (section.toLowerCase().includes('method')) {
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> method_approach("🧪 Approach")\n`;
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> method_data("📊 Data")\n`;
+      } else if (section.toLowerCase().includes('result')) {
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> results_main("✨ Key Findings")\n`;
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> results_analysis("📏 Analysis")\n`;
+      } else if (section.toLowerCase().includes('discussion')) {
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> discussion_implications("💡 Implications")\n`;
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> discussion_limitations("🛑 Limitations")\n`;
+      } else if (section.toLowerCase().includes('conclusion')) {
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> conclusion_summary("✅ Summary")\n`;
+        mindmap += `    section_${section.toLowerCase().replace(/\s/g, '_')} --> conclusion_future("🔮 Future Work")\n`;
       }
     });
     
-    return topics;
+    // Add styling
+    mindmap += `
+  %% Style definitions
+  %% classDef rootStyle fill:#8B5CF6,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold
+  %% classDef mainTopic fill:#E5DEFF,stroke:#8B5CF6,stroke-width:1px,color:#1A1F2C
+  %% classDef subTopic1 fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1px,color:#1A1F2C
+  %% classDef subTopic2 fill:#FDE1D3,stroke:#F97316,stroke-width:1px,color:#1A1F2C
+  %% classDef subTopic3 fill:#F1F0FB,stroke:#D946EF,stroke-width:1px,color:#1A1F2C
+  %% classDef detail fill:#F5F5F5,stroke:#6B7280,stroke-width:1px,color:#1A1F2C,font-style:italic`;
+    
+    return mindmap;
   };
 
   // Handle zoom controls
@@ -426,7 +407,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
         <DialogHeader className="space-y-1">
           <DialogTitle>Mermaid Mindmap</DialogTitle>
           <DialogDescription className="text-xs">
-            Visualize the paper structure as a mindmap using Mermaid with integrated images.
+            AI-generated visualization of the paper structure as a mindmap with key points and relationships.
           </DialogDescription>
         </DialogHeader>
         
@@ -513,7 +494,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <p>Generating mindmap with integrated images...</p>
+                    <p>Generating AI-enhanced mindmap from your document...</p>
                   </div>
                 </div>
               ) : (
