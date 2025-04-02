@@ -108,28 +108,246 @@ const useMindmapGenerator = () => {
         throw new Error("No PDF content found. Please upload a PDF document first.");
       }
 
+      console.log("Generating mindmap from PDF text...");
+
+      // Call the Gemini service to generate the mindmap
       const response = await generateMindmapFromPdf();
       
       if (response) {
+        console.log("Raw mindmap response received:", response.substring(0, 100) + "...");
         // Fix potential multiple root issues and add color styling
         const fixedResponse = fixMindmapSyntax(response);
         const enhancedResponse = addColorStylingToMindmap(fixedResponse);
         // Ensure we have enough emojis in the response
         const withEmojis = addEmojisToMindmap(enhancedResponse);
         setCode(withEmojis);
+        
+        // Save the mindmap data to session storage for other components to use
+        try {
+          sessionStorage.setItem("mindmapData", JSON.stringify({ 
+            mermaidCode: withEmojis,
+            timestamp: new Date().toISOString()
+          }));
+        } catch (err) {
+          console.warn("Failed to save mindmap to session storage:", err);
+        }
       } else {
-        throw new Error("Failed to generate a valid mindmap diagram.");
+        throw new Error("Failed to generate a valid mindmap diagram from PDF.");
       }
     } catch (err) {
       console.error("Error generating mindmap:", err);
       setError(err instanceof Error ? err.message : "Unknown error generating mindmap");
-      // Keep the default mindmap so there's something to display
-      if (code !== defaultMindmap) {
-        setCode(defaultMindmap);
+      
+      // Extract content directly from PDF text as a fallback
+      try {
+        console.log("Attempting direct PDF text analysis as fallback...");
+        const pdfText = sessionStorage.getItem("pdfText");
+        if (pdfText) {
+          const fallbackMindmap = generateFallbackMindmapFromText(pdfText);
+          setCode(fallbackMindmap);
+          sessionStorage.setItem("mindmapData", JSON.stringify({ 
+            mermaidCode: fallbackMindmap,
+            timestamp: new Date().toISOString()
+          }));
+        } else {
+          // Keep the default mindmap so there's something to display
+          if (code !== defaultMindmap) {
+            setCode(defaultMindmap);
+          }
+        }
+      } catch (fallbackErr) {
+        console.error("Fallback mindmap generation also failed:", fallbackErr);
+        if (code !== defaultMindmap) {
+          setCode(defaultMindmap);
+        }
       }
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  /**
+   * Generate a fallback mindmap by directly analyzing the PDF text
+   */
+  const generateFallbackMindmapFromText = (pdfText: string): string => {
+    console.log("Generating fallback mindmap from PDF text...");
+    
+    // Try to extract title and main sections from the text
+    const lines = pdfText.split('\n');
+    let title = "";
+    const sections: Record<string, string[]> = {
+      "Introduction": [],
+      "Methodology": [],
+      "Results": [],
+      "Discussion": [],
+      "Conclusion": []
+    };
+    
+    // Extract potential title from first few lines
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = lines[i].trim();
+      if (line.length > 10 && line.length < 100 && 
+          !/^(abstract|introduction|figure|table)/i.test(line)) {
+        title = line;
+        break;
+      }
+    }
+    
+    // If no title found, use default
+    if (!title) {
+      title = "Research Paper";
+    }
+    
+    // Find section content
+    let currentSection = "";
+    const sectionPatterns = {
+      "Introduction": /introduction|background|overview/i,
+      "Methodology": /method|methodology|experimental|materials|approach/i,
+      "Results": /results|findings|data|analysis/i,
+      "Discussion": /discussion|implications|interpretation/i,
+      "Conclusion": /conclusion|summary|future work/i
+    };
+    
+    // Process text line by line to extract sections
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Check if line is a section header
+      let foundSection = false;
+      for (const [section, pattern] of Object.entries(sectionPatterns)) {
+        if (pattern.test(line) && line.length < 100) {
+          currentSection = section;
+          foundSection = true;
+          break;
+        }
+      }
+      
+      // If not a section header and we're in a section, add line to that section
+      if (!foundSection && currentSection && sections[currentSection]) {
+        sections[currentSection].push(line);
+      }
+    }
+    
+    // Generate mindmap based on extracted content
+    let mindmap = `mindmap\n  root(("📑 ${title}"))\n`;
+    
+    // Add sections to mindmap
+    const emojis: Record<string, string> = {
+      "Introduction": "📚",
+      "Methodology": "⚙️",
+      "Results": "📊",
+      "Discussion": "💭", 
+      "Conclusion": "🏁"
+    };
+    
+    // Helper function to extract key phrases
+    const extractKeyPhrases = (text: string[], max: number = 3): string[] => {
+      const phrases: string[] = [];
+      const fullText = text.join(" ");
+      
+      // Look for sentences that might contain key information
+      const sentences = fullText.match(/[^.!?]+[.!?]+/g) || [];
+      
+      // Keywords to look for in important sentences
+      const keywords = [
+        "important", "significant", "key", "critical", "essential", "demonstrate",
+        "show", "reveal", "find", "conclude", "suggest", "indicate", "highlight",
+        "propose", "develop", "introduce", "create", "design", "implement", "analyze"
+      ];
+      
+      // Score sentences based on keywords and length
+      const scoredSentences = sentences.map(s => {
+        let score = 0;
+        const lowerSentence = s.toLowerCase();
+        
+        // Check for keywords
+        keywords.forEach(kw => {
+          if (lowerSentence.includes(kw)) score += 1;
+        });
+        
+        // Prefer medium-length sentences
+        if (s.length > 30 && s.length < 120) score += 1;
+        
+        return { text: s.trim(), score };
+      });
+      
+      // Sort by score and take the top results
+      scoredSentences.sort((a, b) => b.score - a.score);
+      
+      // Extract top phrases
+      scoredSentences.slice(0, max).forEach(s => {
+        if (s.text.length > 20) {
+          // Clean up the phrase
+          let clean = s.text.replace(/["\(\)]/g, '')
+                            .replace(/^\s*and\s+/i, '')
+                            .replace(/^\s*the\s+/i, '')
+                            .trim();
+                            
+          // Truncate if too long
+          if (clean.length > 80) {
+            clean = clean.substring(0, 77) + "...";
+          }
+          
+          phrases.push(clean);
+        }
+      });
+      
+      // If we still don't have enough phrases, add some generic ones
+      const genericPhrases = [
+        "Key findings and analysis",
+        "Main research contributions",
+        "Experimental approach",
+        "Data collection methods",
+        "Analytical framework",
+        "Theoretical foundation",
+        "Practical implications"
+      ];
+      
+      while (phrases.length < max) {
+        phrases.push(genericPhrases[phrases.length % genericPhrases.length]);
+      }
+      
+      return phrases;
+    };
+    
+    // Add sections with key phrases from content
+    for (const [section, content] of Object.entries(sections)) {
+      if (content.length > 0 || section === "Introduction") {
+        const sectionId = section.toLowerCase().replace(/\s+/g, "_");
+        mindmap += `  root --> ${sectionId}["${emojis[section] || '📄'} ${section}"]\n`;
+        
+        // Add key phrases as sub-nodes
+        const keyPhrases = extractKeyPhrases(content);
+        keyPhrases.forEach((phrase, idx) => {
+          const phraseId = `${sectionId}_p${idx}`;
+          if (idx % 2 === 0) {
+            mindmap += `    ${sectionId} --> ${phraseId}("${phrase}")\n`;
+          } else {
+            mindmap += `    ${sectionId} --> ${phraseId}["${phrase}"]\n`;
+          }
+        });
+      }
+    }
+    
+    // Add styling for better visualization
+    mindmap += `
+  %% Color styling for different branches
+  %% classDef rootStyle fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-size:18px
+  %% classDef summaryClass fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-weight:bold
+  %% classDef summaryDetailClass fill:#333333,color:#ffffff,stroke:#000000,font-style:italic
+  %% classDef branch1Class fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
+  %% classDef branch2Class fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
+  %% classDef branch3Class fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
+  %% classDef subbranch1Class fill:#333333,color:#ffffff,stroke:#000000
+  %% classDef subbranch2Class fill:#333333,color:#ffffff,stroke:#000000
+  %% classDef subbranch3Class fill:#333333,color:#ffffff,stroke:#000000
+  %% classDef detail1Class fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
+  %% classDef detail2Class fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
+  %% classDef detail3Class fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
+  %% classDef subdetail3Class fill:#777777,color:#ffffff,stroke:#000000,stroke-dasharray:3`;
+    
+    return mindmap;
   };
 
   /**
