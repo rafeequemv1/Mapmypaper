@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
@@ -9,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RefreshCw, Download, Code, Eye } from "lucide-react";
+import { ZoomIn, ZoomOut, RefreshCw, Download, Code, Eye, FilePdf } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import html2canvas from "html2canvas";
@@ -405,7 +404,10 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[90vw] w-[90vw] h-[90vh] flex flex-col">
         <DialogHeader className="space-y-1">
-          <DialogTitle>Mermaid Mindmap</DialogTitle>
+          <DialogTitle className="flex items-center">
+            <FilePdf className="h-5 w-5 mr-2 text-red-500" />
+            Mermaid Mindmap from PDF
+          </DialogTitle>
           <DialogDescription className="text-xs">
             AI-generated visualization of the paper structure as a mindmap with key points and relationships.
           </DialogDescription>

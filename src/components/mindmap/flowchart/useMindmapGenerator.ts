@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { generateMindmapFromPdf } from "@/services/geminiService";
 
@@ -167,7 +166,6 @@ const useMindmapGenerator = () => {
       'implementation': '⚡',
       'preparation': '🔄',
       'comparison': '🔍',
-      // Removing the duplicate 'analysis' entry that was causing the error
       'analysis': '📏',
       'theory': '📚',
       'practice': '⚒️',

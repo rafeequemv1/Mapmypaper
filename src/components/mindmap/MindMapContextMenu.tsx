@@ -1,7 +1,7 @@
 
 import React, { useCallback } from 'react';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Image, Plus, Copy, Trash, PlusCircle } from "lucide-react";
+import { Image, Plus, Copy, Trash, PlusCircle, MessageSquare } from "lucide-react";
 
 interface MindMapContextMenuProps {
   children: React.ReactNode;
@@ -11,6 +11,7 @@ interface MindMapContextMenuProps {
   onAddChild?: () => void;
   onAddSibling?: () => void;
   onAddImage?: () => void;
+  onExplain?: () => void;
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -20,7 +21,8 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onDelete,
   onAddChild,
   onAddSibling,
-  onAddImage
+  onAddImage,
+  onExplain
 }) => {
   const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -35,6 +37,12 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-64 bg-white shadow-lg border rounded-lg z-[9999]">
+        {onExplain && (
+          <ContextMenuItem onClick={handleAction(onExplain)} className="cursor-pointer text-indigo-600 flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Explain Node
+          </ContextMenuItem>
+        )}
         {onCopy && (
           <ContextMenuItem onClick={handleAction(onCopy)} className="cursor-pointer flex items-center gap-2">
             <Copy className="h-4 w-4" />

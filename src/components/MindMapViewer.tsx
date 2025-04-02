@@ -5,7 +5,7 @@ import nodeMenuNeo from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Download } from "lucide-react";
+import { ZoomIn, ZoomOut, Download, ArrowRight, ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
 import { downloadMindMapAsSVG } from "@/lib/export-utils";
 
 // Extend the MindElixirInstance type to include missing methods
@@ -190,6 +190,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [isReady, setIsReady] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [currentDirection, setCurrentDirection] = useState<number>(1); // Default: right
   const { toast } = useToast();
 
   // Initialize the mind map
@@ -231,7 +232,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       const options = {
         el: containerRef.current,
-        direction: 1 as const,
+        direction: currentDirection as 1 | 2 | 3 | 4, // 1: right, 2: left, 3: bottom, 4: top
         draggable: true,
         editable: true,
         contextMenu: true, 
@@ -240,7 +241,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           zoom: true,
           create: true,
           edit: true,
-          layout: true,
+          layout: true, // Allow automatic layout adjustments
         },
         theme: colorfulTheme,
         autoFit: true,
@@ -376,6 +377,10 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       try {
         if (storedData) {
           data = JSON.parse(storedData);
+          // If we have stored data, ensure the direction is applied
+          if (data && data.direction) {
+            setCurrentDirection(data.direction);
+          }
         }
       } catch (error) {
         console.error('Error parsing stored mind map data:', error);
@@ -430,7 +435,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
                 ]
               }
             ]
-          }
+          },
+          direction: currentDirection
         };
       }
       
@@ -448,8 +454,13 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         // Save data when mind map changes
         try {
           const data = mind.getData();
-          sessionStorage.setItem('mindElixirData', JSON.stringify(data));
-          sessionStorage.setItem('mindMapData', JSON.stringify(data));
+          // Save the current direction with the data
+          const dataWithDirection = {
+            ...data,
+            direction: currentDirection
+          };
+          sessionStorage.setItem('mindElixirData', JSON.stringify(dataWithDirection));
+          sessionStorage.setItem('mindMapData', JSON.stringify(dataWithDirection));
         } catch (error) {
           console.error('Error saving mind map data:', error);
         }
@@ -462,10 +473,10 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         setSelectedNodeId(node.id);
         
         // If onExplainText is provided, send the node text for explanation
-        if (onExplainText && node.topic && typeof node.topic === 'string' && onRequestOpenChat) {
-          // Skip if it's just a short topic without meaningful content
-          if (node.topic.length > 15 || node.children?.length > 0) {
-            onExplainText(node.topic);
+        if (onExplainText && node.topic && typeof node.topic === 'string') {
+          // Always trigger chat panel automatically when a node is clicked
+          onExplainText(node.topic);
+          if (onRequestOpenChat) {
             onRequestOpenChat(); // Open chat panel automatically
           }
         }
@@ -560,7 +571,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         onMindMapReady(mind);
       }
     }
-  }, [isMapGenerated, onExplainText, onMindMapReady, onRequestOpenChat]);
+  }, [isMapGenerated, onExplainText, onMindMapReady, onRequestOpenChat, currentDirection]);
 
   // Handle zoom in action
   const handleZoomIn = () => {
@@ -602,45 +613,40 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   };
 
+  // Handle direction change
+  const changeDirection = (direction: number) => {
+    if (mindMapRef.current && currentDirection !== direction) {
+      setCurrentDirection(direction);
+      
+      // Store the current data
+      const currentData = mindMapRef.current.getData();
+      
+      // Destroy current instance
+      mindMapRef.current = null;
+      
+      // Update the direction in the data
+      const updatedData = {
+        ...currentData,
+        direction: direction
+      };
+      
+      // Store the updated data
+      sessionStorage.setItem('mindElixirData', JSON.stringify(updatedData));
+      
+      // Force re-initialization with new direction
+      setTimeout(() => {
+        if (containerRef.current) {
+          // Trigger the useEffect to re-initialize with new direction
+          setIsReady(false);
+        }
+      }, 10);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar */}
-      <div className="bg-white border-b p-2 flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleZoomIn}
-          title="Zoom In"
-          className="h-8 w-8 p-0 flex items-center justify-center"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        <div className="text-xs text-gray-500 px-1">
-          {Math.round(zoomLevel * 100)}%
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleZoomOut}
-          title="Zoom Out"
-          className="h-8 w-8 p-0 flex items-center justify-center"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportSVG}
-          title="Download as SVG"
-          className="ml-auto h-8 p-1 flex items-center justify-center"
-        >
-          <Download className="h-4 w-4 mr-1" />
-          <span className="text-xs">Save as SVG</span>
-        </Button>
-      </div>
-      
-      {/* Mind Map Container */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
+        {/* Mind Map Container */}
         <div 
           ref={containerRef} 
           className="w-full h-full"
@@ -653,6 +659,68 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             right: 0
           }}
         ></div>
+        
+        {/* Floating controls inside the mindmap canvas */}
+        <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomIn}
+            title="Zoom In"
+            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomOut}
+            title="Zoom Out"
+            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Layout direction controls */}
+        <div className="absolute top-4 left-4 flex gap-2 z-10">
+          <Button
+            variant={currentDirection === 1 ? "default" : "outline"}
+            size="sm"
+            onClick={() => changeDirection(1)}
+            title="Right Layout"
+            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={currentDirection === 2 ? "default" : "outline"}
+            size="sm"
+            onClick={() => changeDirection(2)}
+            title="Left Layout"
+            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={currentDirection === 3 ? "default" : "outline"}
+            size="sm"
+            onClick={() => changeDirection(3)}
+            title="Down Layout"
+            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={currentDirection === 4 ? "default" : "outline"}
+            size="sm"
+            onClick={() => changeDirection(4)}
+            title="Up Layout"
+            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
