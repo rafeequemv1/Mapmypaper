@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -6,20 +7,6 @@ import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import MermaidMindmapModal from "@/components/mindmap/MermaidMindmapModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
-import TreemapModal from "@/components/mindmap/TreemapModal";
-import { downloadMindMapAsSVG } from "@/lib/export-utils";
-
-// Define correct props interface for Header to match what we're passing
-interface HeaderProps {
-  togglePdf: () => void;
-  toggleChat: () => void;
-  setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowMermaidMindmap: React.Dispatch<React.SetStateAction<boolean>>;
-  isPdfActive: boolean;
-  isChatActive: boolean;
-  onExportMindMap?: () => Promise<void>; 
-}
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -28,10 +15,8 @@ const MindMap = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
   const [showMermaidMindmap, setShowMermaidMindmap] = useState(false);
-  const [showTreemap, setShowTreemap] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
-  const [pdfImagesExtracted, setPdfImagesExtracted] = useState(false);
   const { toast } = useToast();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -188,49 +173,7 @@ const MindMap = () => {
     
     // Apply line breaks after a brief delay to ensure nodes are rendered
     setTimeout(applyLineBreaksToNodes, 200);
-    
-    // Check for PDF images
-    const checkForPdfImages = async () => {
-      try {
-        const pdfDataUrl = sessionStorage.getItem("pdfData");
-        if (pdfDataUrl) {
-          // Load pdfjs dynamically
-          const pdfjs = await import('pdfjs-dist');
-          // Set worker path explicitly with HTTPS URL that matches the exact version
-          pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-          
-          const pdfData = atob(pdfDataUrl.split(',')[1]);
-          const loadingTask = pdfjs.getDocument({ data: pdfData });
-          const pdf = await loadingTask.promise;
-          
-          // Just check first page for images to quickly determine if extraction is worthwhile
-          const page = await pdf.getPage(1);
-          const operatorList = await page.getOperatorList();
-          
-          let hasImages = false;
-          for (let i = 0; i < operatorList.fnArray.length; i++) {
-            if (operatorList.fnArray[i] === pdfjs.OPS.paintImageXObject) {
-              hasImages = true;
-              break;
-            }
-          }
-          
-          if (hasImages) {
-            setPdfImagesExtracted(true);
-            toast({
-              title: "Images Available",
-              description: "This PDF contains images that can be intelligently placed in your mind map based on content analysis.",
-              duration: 5000,
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error checking for PDF images:", error);
-      }
-    };
-    
-    checkForPdfImages();
-  }, [toast]);
+  }, []);
 
   const handleExportMindMap = useCallback(async () => {
     if (!mindMap) {
@@ -243,8 +186,24 @@ const MindMap = () => {
     }
 
     try {
-      // Export as SVG directly
-      downloadMindMapAsSVG(mindMap, "mindmap");
+      // Only export SVG
+      const blob = mindMap.exportSvg();
+
+      if (!blob) {
+        throw new Error("Failed to generate export data");
+      }
+
+      // Create a download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mindmap.svg`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       toast({
         title: "Export Successful",
@@ -271,7 +230,6 @@ const MindMap = () => {
         setShowMermaidMindmap={setShowMermaidMindmap}
         isPdfActive={showPdf && pdfAvailable}
         isChatActive={showChat}
-        onExportMindMap={handleExportMindMap}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -301,11 +259,6 @@ const MindMap = () => {
       <MermaidMindmapModal
         open={showMermaidMindmap}
         onOpenChange={setShowMermaidMindmap}
-      />
-      
-      <TreemapModal 
-        open={showTreemap}
-        onOpenChange={setShowTreemap}
       />
     </div>
   );

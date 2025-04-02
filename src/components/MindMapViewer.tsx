@@ -1,23 +1,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
-import nodeMenuNeo from "@mind-elixir/node-menu-neo";
+import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Download, ArrowRight, ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
-import { downloadMindMapAsSVG } from "@/lib/export-utils";
-
-// Extend the MindElixirInstance type to include missing methods
-interface ExtendedMindElixirInstance extends MindElixirInstance {
-  findNodeById: (id: string) => any;
-  refresh: () => void;
-  scale: (scale: number) => void;
-  exportSvg: (noForeignObject?: boolean, injectCss?: string) => Blob;
-  exportPng: (noForeignObject?: boolean, injectCss?: string) => Promise<Blob>;
-  getData: () => MindElixirData;
-  nodeData: any;
-}
+import { FileText } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -27,7 +15,7 @@ interface MindMapViewerProps {
 }
 
 // Enhanced helper function to format node text with line breaks and add emojis
-const formatNodeText = (text: string, wordsPerLine: number = 4, isRoot: boolean = false): string => {
+const formatNodeText = (text: string, wordsPerLine: number = 5, isRoot: boolean = false): string => {
   if (!text) return '';
   
   // Use fewer words per line for root node
@@ -55,7 +43,7 @@ const formatNodeText = (text: string, wordsPerLine: number = 4, isRoot: boolean 
     processedText = ensureCompleteSentence(processedText);
   }
   
-  // Apply line breaks for better readability - strictly limit to 4 words per line
+  // Apply line breaks for better readability - strictly limit to 5 words per line
   const words = processedText.split(' ');
   if (words.length <= effectiveWordsPerLine) return processedText;
   
@@ -78,11 +66,11 @@ const addEmoji = (topic: string): string => {
   const topicLower = topic.toLowerCase();
   
   // Main sections
-  if (topicLower.includes('introduction')) return '🚪 ' + topic;
+  if (topicLower.includes('introduction')) return '🔍 ' + topic;
   if (topicLower.includes('methodology')) return '⚙️ ' + topic;
   if (topicLower.includes('results')) return '📊 ' + topic;
   if (topicLower.includes('discussion')) return '💭 ' + topic;
-  if (topicLower.includes('conclusion')) return '🏁 ' + topic;
+  if (topicLower.includes('conclusion')) return '🎯 ' + topic;
   if (topicLower.includes('references')) return '📚 ' + topic;
   if (topicLower.includes('supplementary')) return '📎 ' + topic;
   
@@ -118,6 +106,11 @@ const addEmoji = (topic: string): string => {
   // References subsections
   if (topicLower.includes('key paper') || topicLower.includes('cited')) return '📄 ' + topic;
   if (topicLower.includes('dataset') || topicLower.includes('tool')) return '🛠️ ' + topic;
+  
+  // Supplementary subsections
+  if (topicLower.includes('additional') || topicLower.includes('experiment')) return '🧮 ' + topic;
+  if (topicLower.includes('appendix') || topicLower.includes('appendices')) return '📑 ' + topic;
+  if (topicLower.includes('code') || topicLower.includes('data availability')) return '💾 ' + topic;
   
   // Generic topics
   if (topicLower.includes('start') || topicLower.includes('begin')) return '🚀 ' + topic;
@@ -186,16 +179,16 @@ const stringToColor = (str: string): string => {
 
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mindMapRef = useRef<ExtendedMindElixirInstance | null>(null);
+  const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [currentDirection, setCurrentDirection] = useState<number>(1); // Default: right
+  const [showSummary, setShowSummary] = useState(false);
+  const [summary, setSummary] = useState<string>('');
   const { toast } = useToast();
 
-  // Initialize the mind map
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
+      // Initialize the mind map only once when it's generated
+      
       // Define a enhanced colorful theme based on the Catppuccin Theme
       const colorfulTheme = {
         name: 'Catppuccin',
@@ -232,16 +225,16 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       const options = {
         el: containerRef.current,
-        direction: currentDirection as 1 | 2 | 3 | 4, // 1: right, 2: left, 3: bottom, 4: top
+        direction: 1 as const,
         draggable: true,
         editable: true,
         contextMenu: true, 
         nodeMenu: true, // Ensure node menu is enabled
         tools: {
           zoom: true,
-          create: true,
+          create: true, // Enable create button
           edit: true,
-          layout: true, // Allow automatic layout adjustments
+          layout: true, // Enable layout button
         },
         theme: colorfulTheme,
         autoFit: true,
@@ -348,379 +341,448 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       };
 
       // Create mind map instance
-      const mind = new MindElixir(options) as ExtendedMindElixirInstance;
+      const mind = new MindElixir(options);
       
       // Add custom styles to node-menu and style-panel elements when they appear
-      const addCustomStylesToMenus = () => {
-        // Style the node menu (appears when right-clicking a node)
-        const nodeMenu = document.querySelector('.node-menu');
-        if (nodeMenu) {
-          (nodeMenu as HTMLElement).style.borderRadius = '12px';
-          (nodeMenu as HTMLElement).style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
-          (nodeMenu as HTMLElement).style.border = '1px solid #eaeaea';
-          (nodeMenu as HTMLElement).style.fontSize = '14px';
-        }
+      const observeStylePanel = () => {
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach(mutation => {
+            if (mutation.addedNodes.length) {
+              mutation.addedNodes.forEach(node => {
+                if (node instanceof HTMLElement) {
+                  // Style panel/node menu appeared - ensure it's visible
+                  if (node.classList.contains('mind-elixir-style-panel') || 
+                      node.classList.contains('node-style-panel') ||
+                      node.classList.contains('style-wrap') ||
+                      node.classList.contains('mind-elixir-node-menu')) {
+                    
+                    node.style.display = 'block';
+                    node.style.visibility = 'visible';
+                    node.style.opacity = '1';
+                    node.style.zIndex = '9999';
+                    
+                    // Ensure the panel stays in view
+                    setTimeout(() => {
+                      const rect = node.getBoundingClientRect();
+                      if (rect.right > window.innerWidth) {
+                        node.style.left = (window.innerWidth - rect.width - 20) + 'px';
+                      }
+                      if (rect.bottom > window.innerHeight) {
+                        node.style.top = (window.innerHeight - rect.height - 20) + 'px';
+                      }
+                    }, 0);
+                  }
+                }
+              });
+            }
+          });
+        });
         
-        // Style the edit panel (appears when editing a node)
-        const stylePanel = document.querySelector('.style-panel');
-        if (stylePanel) {
-          (stylePanel as HTMLElement).style.borderRadius = '12px';
-          (stylePanel as HTMLElement).style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
-          (stylePanel as HTMLElement).style.border = '1px solid #eaeaea';
-        }
+        // Start observing the body for any style panel additions
+        observer.observe(document.body, { 
+          childList: true, 
+          subtree: true 
+        });
+        
+        return observer;
       };
       
-      // Initialize with default data or load from storage if available
-      const storedData = sessionStorage.getItem('mindElixirData');
-      let data: any = null;
+      // Start observing for style panels
+      const styleObserver = observeStylePanel();
+      
+      // Install the node menu plugin with full styling support
+      const customNodeMenu = nodeMenu;
+      
+      // Add summary option to node menu
+      const originalMenus = customNodeMenu.menus;
+      customNodeMenu.menus = (node: any, mind: MindElixirInstance) => {
+        const menus = originalMenus(node, mind);
+        
+        // Add summary option
+        menus.push({
+          name: '✨ Generate Summary',
+          onclick: () => {
+            // Get the node and its children
+            generateNodeSummary(node);
+          }
+        });
+        
+        return menus;
+      };
+      
+      // Install the node menu
+      mind.install(customNodeMenu);
+      
+      // Get the generated mind map data from sessionStorage or use a default structure
+      let data: MindElixirData;
       
       try {
-        if (storedData) {
-          data = JSON.parse(storedData);
-          // If we have stored data, ensure the direction is applied
-          if (data && data.direction) {
-            setCurrentDirection(data.direction);
+        const savedData = sessionStorage.getItem('mindMapData');
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          
+          // Apply line breaks, emojis, and complete sentences to node topics
+          const formatNodes = (node: any) => {
+            if (node.topic) {
+              // Special handling for root node - only keep title with 3-4 words per line
+              if (node.id === 'root') {
+                node.topic = formatNodeText(node.topic, 3, true);
+              } else {
+                node.topic = formatNodeText(node.topic);
+              }
+            }
+            
+            if (node.children && node.children.length > 0) {
+              node.children.forEach(formatNodes);
+            }
+            
+            return node;
+          };
+          
+          // Format the root node and all children
+          if (parsedData.nodeData) {
+            formatNodes(parsedData.nodeData);
           }
+          
+          data = parsedData;
+        } else {
+          // Default research paper structure with complete sentences and emojis
+          data = {
+            nodeData: {
+              id: 'root',
+              topic: '🧠 Research\nPaper Title',
+              children: [
+                {
+                  id: 'bd1',
+                  topic: '🔍 Introduction provides context and sets the stage for the research.',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd1-1', topic: '📘 Background establishes the essential context for understanding the research problem.' },
+                    { id: 'bd1-2', topic: '⚠️ The problem statement clearly identifies the issue being addressed in this study.' },
+                    { id: 'bd1-3', topic: '🧩 Research gap identifies what is missing in current understanding of the topic.' },
+                    { id: 'bd1-4', topic: '🎯 This study aims to test the hypothesis that will address the identified research gap.' }
+                  ]
+                },
+                {
+                  id: 'bd2',
+                  topic: '⚙️ Methodology describes how the research was conducted with appropriate rigor.',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd2-1', topic: '🧪 The experimental setup was carefully designed to collect reliable and valid data.' },
+                    { id: 'bd2-2', topic: '🔬 Theoretical models provide the foundation for testing our research hypotheses.' },
+                    { id: 'bd2-3', topic: '📋 Procedures were followed systematically to ensure reproducibility of results.' },
+                    { id: 'bd2-4', topic: '🔢 Key variables were identified and measured using validated instruments and techniques.' }
+                  ]
+                },
+                {
+                  id: 'bd3',
+                  topic: '📊 Results present the empirical findings without interpretation.',
+                  direction: 0 as const,
+                  children: [
+                    { id: 'bd3-1', topic: '✨ Key findings demonstrate significant relationships between the studied variables.' },
+                    { id: 'bd3-2', topic: '📈 Visual representations of data help to illustrate important patterns found in the analysis.' },
+                    { id: 'bd3-3', topic: '📏 Statistical analyses confirm the significance of the observed relationships.' },
+                    { id: 'bd3-4', topic: '👁️ Careful observations reveal additional patterns not initially anticipated in the design.' }
+                  ]
+                },
+                {
+                  id: 'bd4',
+                  topic: '💭 Discussion explores the meaning and implications of the results.',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd4-1', topic: '🔎 Interpretation of results explains what the findings mean in relation to the research questions.' },
+                    { id: 'bd4-2', topic: '🔄 Comparison with previous work shows how this research contributes to the field.' },
+                    { id: 'bd4-3', topic: '💡 Implications suggest how these findings might impact theory and practice.' },
+                    { id: 'bd4-4', topic: '🛑 Limitations acknowledge the constraints that affect the interpretation of the results.' }
+                  ]
+                },
+                {
+                  id: 'bd5',
+                  topic: '🎯 Conclusion summarizes the key contributions and future directions.',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd5-1', topic: '✅ The summary of contributions highlights the main advancements made by this research.' },
+                    { id: 'bd5-2', topic: '🔮 Future work recommendations identify promising directions for extending this research.' },
+                    { id: 'bd5-3', topic: '🏁 Final remarks emphasize the broader significance of this work to the field.' }
+                  ]
+                },
+                {
+                  id: 'bd6',
+                  topic: '📚 References provide a comprehensive list of sources that informed this work.',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd6-1', topic: '📄 Key papers cited in this work establish the theoretical foundation for the research.' },
+                    { id: 'bd6-2', topic: '🛠️ Datasets and tools used in the analysis are properly documented for reproducibility.' }
+                  ]
+                },
+                {
+                  id: 'bd7',
+                  topic: '📎 Supplementary materials provide additional details supporting the main text.',
+                  direction: 1 as const,
+                  children: [
+                    { id: 'bd7-1', topic: '🧮 Additional experiments that didn\'t fit in the main text are included here.' },
+                    { id: 'bd7-2', topic: '📑 Appendices contain detailed methodological information for interested readers.' },
+                    { id: 'bd7-3', topic: '💾 Code and data are made available to ensure transparency and reproducibility.' }
+                  ]
+                }
+              ]
+            }
+          };
         }
       } catch (error) {
-        console.error('Error parsing stored mind map data:', error);
-      }
-      
-      if (!data) {
-        // Default structure with emoji if no data is available
+        console.error("Error parsing mind map data:", error);
         data = {
           nodeData: {
             id: 'root',
-            topic: '📑 Paper Analysis',
-            root: true,
+            topic: '⚠️ Error\nLoading\nMind Map',
             children: [
-              {
-                id: 'sub1',
-                topic: '🚪 Introduction',
-                children: [
-                  { id: 'sub1-1', topic: '📘 Background' },
-                  { id: 'sub1-2', topic: '🎯 Objectives' }
-                ]
-              },
-              {
-                id: 'sub2',
-                topic: '⚙️ Methodology',
-                children: [
-                  { id: 'sub2-1', topic: '🧪 Approach' },
-                  { id: 'sub2-2', topic: '📊 Data Collection' }
-                ]
-              },
-              {
-                id: 'sub3',
-                topic: '📊 Results',
-                children: [
-                  { id: 'sub3-1', topic: '✨ Key Findings' },
-                  { id: 'sub3-2', topic: '📏 Analysis' }
-                ]
-              },
-              {
-                id: 'sub4',
-                topic: '💭 Discussion',
-                children: [
-                  { id: 'sub4-1', topic: '💡 Implications' },
-                  { id: 'sub4-2', topic: '🛑 Limitations' }
-                ]
-              },
-              {
-                id: 'sub5',
-                topic: '🏁 Conclusion',
-                children: [
-                  { id: 'sub5-1', topic: '✅ Summary' },
-                  { id: 'sub5-2', topic: '🔮 Future Work' }
-                ]
-              }
+              { id: 'error1', topic: 'There was an error loading the mind map data. Please try refreshing the page.', direction: 0 as const }
             ]
-          },
-          direction: currentDirection
+          }
         };
       }
-      
+
       // Initialize the mind map with data
       mind.init(data);
       
-      // Register Node Menu Neo
-      if (nodeMenuNeo) {
-        // @ts-ignore - We know nodeMenu exists in the extended Mind Elixir implementation
-        mind.nodeMenu = nodeMenuNeo;
+      // Enable debug mode for better troubleshooting
+      (window as any).mind = mind;
+      
+      // Enhanced clickability for nodes with style panel support
+      if (containerRef.current) {
+        const topicElements = containerRef.current.querySelectorAll('.mind-elixir-topic');
+        topicElements.forEach((element) => {
+          element.addEventListener('click', (e) => {
+            // Node is clicked - no need to call any additional methods
+            if (mind.currentNode && mind.currentNode.nodeObj) {
+              console.log('Node clicked:', mind.currentNode.nodeObj.topic);
+              
+              // Force style panel visibility after a short delay
+              setTimeout(() => {
+                const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
+                if (stylePanel && stylePanel instanceof HTMLElement) {
+                  stylePanel.style.display = 'block';
+                  stylePanel.style.visibility = 'visible';
+                  stylePanel.style.opacity = '1';
+                }
+              }, 100);
+            }
+          });
+        });
       }
       
-      // Set up event handlers
-      mind.bus.addListener('operation', (operation: any) => {
-        // Save data when mind map changes
-        try {
-          const data = mind.getData();
-          // Save the current direction with the data
-          const dataWithDirection = {
-            ...data,
-            direction: currentDirection
-          };
-          sessionStorage.setItem('mindElixirData', JSON.stringify(dataWithDirection));
-          sessionStorage.setItem('mindMapData', JSON.stringify(dataWithDirection));
-        } catch (error) {
-          console.error('Error saving mind map data:', error);
-        }
+      // Add event listeners for node selection to ensure style panel visibility
+      mind.bus.addListener('selectNode', (nodeObj: any) => {
+        console.log('Node selected:', nodeObj);
+        
+        // Ensure style panels appear
+        setTimeout(() => {
+          const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
+          if (stylePanel && stylePanel instanceof HTMLElement) {
+            stylePanel.style.display = 'block';
+            stylePanel.style.visibility = 'visible';
+            stylePanel.style.opacity = '1';
+          }
+        }, 100);
       });
       
-      // Process nodes on click to extract text for explanation
-      mind.bus.addListener('selectNode', (node: any) => {
-        if (!node) return;
-        
-        setSelectedNodeId(node.id);
-        
-        // If onExplainText is provided, send the node text for explanation
-        if (onExplainText && node.topic && typeof node.topic === 'string') {
-          // Always trigger chat panel automatically when a node is clicked
-          onExplainText(node.topic);
-          if (onRequestOpenChat) {
-            onRequestOpenChat(); // Open chat panel automatically
-          }
-        }
-      });
-      
-      // Apply custom styles to menus after initialization
-      setTimeout(addCustomStylesToMenus, 500);
-      
-      // Apply line breaks to nodes for better readability
-      const applyLineBreaksToNodes = () => {
-        if (!mind.container) return;
-        
-        // Observer to watch for DOM changes and apply formatting
-        const observer = new MutationObserver(() => {
-          // Process the root node
-          const rootNodeElement = mind.container?.querySelector('.mind-elixir-root');
-          if (rootNodeElement && rootNodeElement.textContent) {
-            applyLineBreaksToNode(rootNodeElement, 4); // 4 words per line for root
-          }
-          
-          // Process all topic nodes
-          const topicElements = mind.container?.querySelectorAll('.mind-elixir-topic');
-          if (topicElements) {
-            topicElements.forEach(topicElement => {
-              if (topicElement.classList.contains('mind-elixir-root')) return; // Skip root
-              applyLineBreaksToNode(topicElement as HTMLElement, 4); // 4 words per line as requested
+      // Add observer for node additions to ensure they're properly initialized
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach((node) => {
+              if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
+                node.addEventListener('click', () => {
+                  // Node is clicked - let Mind Elixir handle it
+                  if (mind.currentNode && mind.currentNode.nodeObj) {
+                    console.log('New node clicked:', mind.currentNode.nodeObj.topic);
+                  }
+                });
+              }
             });
           }
         });
-        
-        // Apply line breaks to a specific node
-        const applyLineBreaksToNode = (element: Element, wordsPerLine: number) => {
-          if (!(element instanceof HTMLElement) || !element.textContent) return;
-          
-          const text = element.textContent;
-          
-          // For root node, make it shorter - extract only the title part
-          if (element.classList.contains('mind-elixir-root')) {
-            const titleText = text.split(/[.,;:]|(\n)/)[0].trim();
-            const words = titleText.split(' ');
-            
-            let formattedText = '';
-            for (let i = 0; i < words.length; i += wordsPerLine) {
-              const chunk = words.slice(i, i + wordsPerLine).join(' ');
-              formattedText += chunk + (i + wordsPerLine < words.length ? '<br>' : '');
-            }
-            
-            element.innerHTML = formattedText;
-            return;
+      });
+      
+      if (containerRef.current) {
+        observer.observe(containerRef.current, { childList: true, subtree: true });
+      }
+      
+      // Enhance connection lines with arrows and colors from theme
+      const enhanceConnectionLines = () => {
+        // Add arrowhead definition to SVG
+        const svg = containerRef.current?.querySelector('svg');
+        if (svg) {
+          // Create a defs element if it doesn't exist
+          let defs = svg.querySelector('defs');
+          if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            svg.appendChild(defs);
           }
           
-          // Regular nodes
-          const words = text.split(' ');
+          // Create arrowhead marker
+          const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+          marker.setAttribute('id', 'arrowhead');
+          marker.setAttribute('viewBox', '0 0 10 10');
+          marker.setAttribute('refX', '6');
+          marker.setAttribute('refY', '5');
+          marker.setAttribute('markerWidth', '6');
+          marker.setAttribute('markerHeight', '6');
+          marker.setAttribute('orient', 'auto-start-reverse');
           
-          if (words.length <= wordsPerLine) return; // No need for line breaks
+          // Create arrowhead path
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+          path.setAttribute('fill', colorfulTheme.cssVar['--line-color']);
           
-          let formattedText = '';
-          for (let i = 0; i < words.length; i += wordsPerLine) {
-            const chunk = words.slice(i, i + wordsPerLine).join(' ');
-            formattedText += chunk + (i + wordsPerLine < words.length ? '<br>' : '');
-          }
-          
-          element.innerHTML = formattedText;
-        };
-        
-        if (mind.container) {
-          observer.observe(mind.container, { 
-            childList: true, 
-            subtree: true,
-            characterData: true 
-          });
+          // Add path to marker and marker to defs
+          marker.appendChild(path);
+          defs.appendChild(marker);
         }
         
-        // Initial formatting attempt
-        setTimeout(() => {
-          const rootNodeElement = mind.container?.querySelector('.mind-elixir-root');
-          if (rootNodeElement && rootNodeElement.textContent) {
-            applyLineBreaksToNode(rootNodeElement, 4);
-          }
-        }, 100);
+        // Style all connection lines
+        const linkElements = containerRef.current?.querySelectorAll('.fne-link');
+        if (linkElements) {
+          linkElements.forEach((link: Element) => {
+            const linkElement = link as SVGElement;
+            linkElement.setAttribute('stroke-width', colorfulTheme.cssVar['--line-width'].replace('px', ''));
+            linkElement.setAttribute('stroke', colorfulTheme.cssVar['--line-color']);
+            linkElement.setAttribute('marker-end', 'url(#arrowhead)');
+          });
+        }
       };
       
-      // Call line breaks function
-      applyLineBreaksToNodes();
+      // Apply enhanced connections after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        enhanceConnectionLines();
+      }, 100);
       
-      // Store the mind map instance in ref
       mindMapRef.current = mind;
-      setIsReady(true);
       
-      // Notify parent that mind map is ready
+      // Notify parent component that mind map is ready
       if (onMindMapReady) {
         onMindMapReady(mind);
       }
-    }
-  }, [isMapGenerated, onExplainText, onMindMapReady, onRequestOpenChat, currentDirection]);
-
-  // Handle zoom in action
-  const handleZoomIn = () => {
-    if (mindMapRef.current) {
-      const newZoom = Math.min(zoomLevel + 0.1, 2);
-      setZoomLevel(newZoom);
-      mindMapRef.current.scale(newZoom);
-    }
-  };
-
-  // Handle zoom out action
-  const handleZoomOut = () => {
-    if (mindMapRef.current) {
-      const newZoom = Math.max(zoomLevel - 0.1, 0.5);
-      setZoomLevel(newZoom);
-      mindMapRef.current.scale(newZoom);
-    }
-  };
-
-  // Handle SVG export
-  const handleExportSVG = () => {
-    if (mindMapRef.current) {
-      try {
-        downloadMindMapAsSVG(mindMapRef.current, "mindmap");
-        
-        toast({
-          title: "Export Successful",
-          description: "Mind map exported as SVG.",
-          duration: 3000,
-        });
-      } catch (error) {
-        console.error("Export error:", error);
-        toast({
-          title: "Export Failed",
-          description: "There was a problem exporting the mind map.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  // Handle direction change
-  const changeDirection = (direction: number) => {
-    if (mindMapRef.current && currentDirection !== direction) {
-      setCurrentDirection(direction);
       
-      // Store the current data
-      const currentData = mindMapRef.current.getData();
+      // Show a toast notification to inform users about right-click functionality
+      toast({
+        title: "Mind Map Ready",
+        description: "Click on any node to edit it. Right-click for more options.",
+        duration: 5000,
+      });
       
-      // Destroy current instance
-      mindMapRef.current = null;
+      // Set a timeout to ensure the mind map is rendered before scaling
+      setTimeout(() => {
+        setIsReady(true);
+      }, 300);
       
-      // Update the direction in the data
-      const updatedData = {
-        ...currentData,
-        direction: direction
+      // Cleanup function
+      return () => {
+        styleObserver.disconnect();
+        observer.disconnect();
+      };
+    }
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
+
+  // Function to generate summaries for nodes and their children
+  const generateNodeSummary = (nodeData: any) => {
+    if (!nodeData) return;
+    
+    // Generate a simple summary from the node hierarchy
+    let summaryText = `## Summary of "${nodeData.topic}"\n\n`;
+    
+    // Helper function to extract node topics and build a hierarchical summary
+    const extractTopics = (node: any, level: number = 0) => {
+      if (!node) return '';
+      
+      // Replace emojis and extra whitespace
+      const cleanTopic = (topic: string) => {
+        return topic.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]\s?/g, '').trim();
       };
       
-      // Store the updated data
-      sessionStorage.setItem('mindElixirData', JSON.stringify(updatedData));
+      let result = '';
+      const indent = '  '.repeat(level);
       
-      // Force re-initialization with new direction
-      setTimeout(() => {
-        if (containerRef.current) {
-          // Trigger the useEffect to re-initialize with new direction
-          setIsReady(false);
-        }
-      }, 10);
+      if (node.topic) {
+        result += `${indent}- ${cleanTopic(node.topic)}\n`;
+      }
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => {
+          result += extractTopics(child, level + 1);
+        });
+      }
+      
+      return result;
+    };
+    
+    // Generate the hierarchical summary
+    summaryText += extractTopics(nodeData);
+    
+    // Add a conclusion
+    summaryText += `\n## Key Points\n\n`;
+    summaryText += `This branch of the mind map contains ${countNodes(nodeData)} nodes in total.\n`;
+    
+    // Display the summary
+    setSummary(summaryText);
+    setShowSummary(true);
+    
+    toast({
+      title: "Summary Generated",
+      description: `Summary for "${nodeData.topic}" is ready to view.`,
+      duration: 3000,
+    });
+  };
+  
+  // Helper function to count nodes in a branch
+  const countNodes = (node: any): number => {
+    if (!node) return 0;
+    
+    let count = 1; // Count the current node
+    
+    if (node.children && node.children.length > 0) {
+      node.children.forEach((child: any) => {
+        count += countNodes(child);
+      });
     }
+    
+    return count;
+  };
+  
+  // Close the summary panel
+  const closeSummary = () => {
+    setShowSummary(false);
   };
 
+  if (!isMapGenerated) {
+    return null;
+  }
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="relative flex-1 overflow-hidden">
-        {/* Mind Map Container */}
+    <div className="w-full h-full flex-1 flex flex-col">
+      {showSummary && (
+        <div className="absolute top-0 right-0 bottom-0 w-80 bg-white z-10 shadow-lg flex flex-col">
+          <div className="bg-primary p-3 text-white flex justify-between items-center">
+            <h3 className="font-medium">Mind Map Summary</h3>
+            <Button variant="ghost" size="sm" onClick={closeSummary} className="text-white">
+              Close
+            </Button>
+          </div>
+          <div className="p-4 overflow-auto flex-1">
+            <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
+          </div>
+        </div>
+      )}
+      
+      <div className="w-full h-full overflow-hidden relative">
         <div 
           ref={containerRef} 
-          className="w-full h-full"
+          className="w-full h-full" 
           style={{ 
-            background: 'var(--main-bgcolor, #F9F7FF)',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            right: 0
+            background: `linear-gradient(90deg, #F9F7FF 0%, #E5DEFF 100%)`,
+            transition: 'background-color 0.5s ease'
           }}
-        ></div>
-        
-        {/* Floating controls inside the mindmap canvas */}
-        <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleZoomIn}
-            title="Zoom In"
-            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleZoomOut}
-            title="Zoom Out"
-            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        {/* Layout direction controls */}
-        <div className="absolute top-4 left-4 flex gap-2 z-10">
-          <Button
-            variant={currentDirection === 1 ? "default" : "outline"}
-            size="sm"
-            onClick={() => changeDirection(1)}
-            title="Right Layout"
-            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={currentDirection === 2 ? "default" : "outline"}
-            size="sm"
-            onClick={() => changeDirection(2)}
-            title="Left Layout"
-            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={currentDirection === 3 ? "default" : "outline"}
-            size="sm"
-            onClick={() => changeDirection(3)}
-            title="Down Layout"
-            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={currentDirection === 4 ? "default" : "outline"}
-            size="sm"
-            onClick={() => changeDirection(4)}
-            title="Up Layout"
-            className="bg-white w-8 h-8 p-0 flex items-center justify-center rounded-full opacity-80 hover:opacity-100"
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-        </div>
+        />
       </div>
     </div>
   );
