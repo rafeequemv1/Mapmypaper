@@ -31,6 +31,7 @@ interface HeaderProps {
   setShowMermaidMindmap: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
+  onExportMindMap?: () => void; // Add this optional prop to match usage in MindMap.tsx
 }
 
 const Header = ({ 

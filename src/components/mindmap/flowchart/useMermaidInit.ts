@@ -138,7 +138,8 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
           if (el.innerHTML === el.textContent) {
             // This is likely an unrendered diagram
             console.log("Retrying mermaid render for:", el.textContent?.substring(0, 50));
-            mermaid.init(undefined, el);
+            // Cast Element to HTMLElement to fix the type error
+            mermaid.init(undefined, el as HTMLElement);
           }
         });
       } catch (err) {
