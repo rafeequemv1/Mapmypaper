@@ -26,8 +26,13 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
       }
     `;
     
+    // Cast instance to access the exportSvg method that takes parameters
+    const extendedInstance = instance as unknown as {
+      exportSvg: (noForeignObject?: boolean, injectCss?: string) => Blob;
+    };
+    
     // Export with foreignObject enabled for proper text wrapping and custom CSS
-    const blob = instance.exportSvg(false, customStyles);
+    const blob = extendedInstance.exportSvg(false, customStyles);
     
     if (blob) {
       const url = URL.createObjectURL(blob);
@@ -52,7 +57,12 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
  */
 export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
   try {
-    const blob = await instance.exportPng();
+    // Cast instance to access the exportPng method that takes parameters
+    const extendedInstance = instance as unknown as {
+      exportPng: (noForeignObject?: boolean, injectCss?: string) => Promise<Blob>;
+    };
+    
+    const blob = await extendedInstance.exportPng(false, '');
     if (blob) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');

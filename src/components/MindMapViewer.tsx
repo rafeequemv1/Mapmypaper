@@ -5,14 +5,15 @@ import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { FileText, Image, ZoomIn, ZoomOut } from "lucide-react";
+import { downloadMindMapAsSVG } from "@/lib/export-utils";
 
 // Extend the MindElixirInstance type to include missing methods
 interface ExtendedMindElixirInstance extends MindElixirInstance {
   findNodeById: (id: string) => any;
   refresh: () => void;
   scale: (scale: number) => void;
-  exportSvg: () => Blob;
-  exportPng: () => Promise<Blob>;
+  exportSvg: (noForeignObject?: boolean, injectCss?: string) => Blob;
+  exportPng: (noForeignObject?: boolean, injectCss?: string) => Promise<Blob>;
   getData: () => MindElixirData;
   nodeData: any;
 }
@@ -720,8 +721,3 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           });
         }
       };
-
-      // Create mind map instance
-      const mind = new MindElixir(options);
-      
-      // Add custom styles to node-menu and style-panel elements when they
