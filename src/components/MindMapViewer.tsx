@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenuNeo from "@mind-elixir/node-menu-neo";
@@ -721,3 +722,182 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           });
         }
       };
+
+      // Create mind map instance
+      const mind = new MindElixir(options);
+      
+      // Add custom styles to node-menu and style-panel elements when they appear
+      const addCustomStylesToMenus = () => {
+        // Style the node menu (appears when right-clicking a node)
+        const nodeMenu = document.querySelector('.node-menu');
+        if (nodeMenu) {
+          (nodeMenu as HTMLElement).style.borderRadius = '12px';
+          (nodeMenu as HTMLElement).style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+          (nodeMenu as HTMLElement).style.border = '1px solid #eaeaea';
+          (nodeMenu as HTMLElement).style.fontSize = '14px';
+        }
+        
+        // Style the edit panel (appears when editing a node)
+        const stylePanel = document.querySelector('.style-panel');
+        if (stylePanel) {
+          (stylePanel as HTMLElement).style.borderRadius = '12px';
+          (stylePanel as HTMLElement).style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+          (stylePanel as HTMLElement).style.border = '1px solid #eaeaea';
+        }
+      };
+      
+      // Initialize with default data or load from storage if available
+      const storedData = sessionStorage.getItem('mindElixirData');
+      let data: any = null;
+      
+      try {
+        if (storedData) {
+          data = JSON.parse(storedData);
+        }
+      } catch (error) {
+        console.error('Error parsing stored mind map data:', error);
+      }
+      
+      if (!data) {
+        // Default minimal structure if no data is available
+        data = {
+          nodeData: {
+            id: 'root',
+            topic: '📑 Paper Summary',
+            root: true,
+            children: []
+          }
+        };
+      }
+      
+      // Initialize the mind map with data
+      mind.init(data);
+      
+      // Register with Neo Node Menu
+      mind.nodeMenu = nodeMenuNeo;
+      
+      // Set up event handlers
+      mind.bus.addListener('operation', (operation: any) => {
+        // Save data when mind map changes
+        try {
+          const data = mind.getData();
+          sessionStorage.setItem('mindElixirData', JSON.stringify(data));
+        } catch (error) {
+          console.error('Error saving mind map data:', error);
+        }
+      });
+      
+      // Process nodes on click to extract text for explanation
+      mind.bus.addListener('selectNode', (node: any) => {
+        if (!node) return;
+        
+        setSelectedNodeId(node.id);
+        
+        // If onExplainText is provided, send the node text for explanation
+        if (onExplainText && node.topic && typeof node.topic === 'string') {
+          // Skip if it's just a short topic without meaningful content
+          if (node.topic.length > 15 || node.children?.length > 0) {
+            onExplainText(node.topic);
+          }
+        }
+      });
+      
+      // Apply custom styles to menus after initialization
+      setTimeout(addCustomStylesToMenus, 500);
+      
+      // Store the mind map instance in ref
+      mindMapRef.current = mind as ExtendedMindElixirInstance;
+      setIsReady(true);
+      
+      // Notify parent that mind map is ready
+      if (onMindMapReady) {
+        onMindMapReady(mind);
+      }
+    }
+  }, [isMapGenerated, onExplainText, onMindMapReady]);
+
+  // Handle zoom in action
+  const handleZoomIn = () => {
+    if (mindMapRef.current) {
+      const newZoom = Math.min(zoomLevel + 0.1, 2);
+      setZoomLevel(newZoom);
+      mindMapRef.current.scale(newZoom);
+    }
+  };
+
+  // Handle zoom out action
+  const handleZoomOut = () => {
+    if (mindMapRef.current) {
+      const newZoom = Math.max(zoomLevel - 0.1, 0.5);
+      setZoomLevel(newZoom);
+      mindMapRef.current.scale(newZoom);
+    }
+  };
+
+  // Export the mindmap as SVG
+  const handleExportSVG = () => {
+    if (!mindMapRef.current) return;
+    
+    try {
+      // Use the utility function to download as SVG
+      downloadMindMapAsSVG(mindMapRef.current, "mindmap");
+      
+      toast({
+        title: "Export successful",
+        description: "Your mind map has been exported as SVG.",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error exporting mind map:", error);
+      toast({
+        title: "Export failed",
+        description: "There was an error exporting your mind map.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+  };
+
+  // Render the component
+  return (
+    <div className="flex flex-col h-full">
+      {/* Mind map container */}
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-hidden relative"
+      />
+      
+      {/* Controls overlay */}
+      <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
+        <Button 
+          size="sm" 
+          variant="secondary"
+          onClick={handleZoomIn}
+          title="Zoom In"
+        >
+          <ZoomIn size={18} />
+        </Button>
+        
+        <Button 
+          size="sm" 
+          variant="secondary"
+          onClick={handleZoomOut}
+          title="Zoom Out"
+        >
+          <ZoomOut size={18} />
+        </Button>
+        
+        <Button 
+          size="sm" 
+          variant="secondary"
+          onClick={handleExportSVG}
+          title="Export as SVG"
+        >
+          <FileText size={18} />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default MindMapViewer;
