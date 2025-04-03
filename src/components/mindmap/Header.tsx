@@ -20,13 +20,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MindElixirInstance } from "mind-elixir";
-import { MindmapModal } from "./MindmapModal";
 
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMindmap?: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
@@ -37,12 +37,12 @@ const Header = ({
   toggleChat, 
   setShowSummary,
   setShowFlowchart,
+  setShowMindmap,
   isPdfActive,
   isChatActive,
   mindMap
 }: HeaderProps) => {
   const [fileName, setFileName] = useState("mindmap");
-  const [showMindmap, setShowMindmap] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -171,7 +171,7 @@ const Header = ({
 
           <Button 
             variant="ghost" 
-            onClick={() => setShowMindmap(true)} 
+            onClick={() => setShowMindmap && setShowMindmap(true)} 
             className="flex items-center gap-1 text-black h-8 px-3"
           >
             <Network className="h-3.5 w-3.5" />
@@ -208,9 +208,6 @@ const Header = ({
           </DropdownMenu>
         </div>
       </div>
-
-      {/* Mermaid Mindmap Modal */}
-      <MindmapModal isOpen={showMindmap} onClose={() => setShowMindmap(false)} />
     </header>
   );
 };

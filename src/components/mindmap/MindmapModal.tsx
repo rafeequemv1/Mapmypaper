@@ -22,12 +22,8 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const [isRendering, setIsRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
-  
-  // Generate a stable ID for this component instance that won't change across re-renders
-  const containerId = useRef(`mindmap-diagram-${Math.random().toString(36).substring(2, 11)}`);
-  
-  // Track mounted state to avoid state updates after unmounting
   const isMounted = useRef(true);
+  const containerId = useRef(`mindmap-diagram-${Math.random().toString(36).substring(2, 11)}`);
   
   // Demo mindmap code
   const mindmapCode = `mindmap
@@ -47,86 +43,59 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       Pen and paper
       Mermaid`;
 
-  // Initialize mermaid only once when the component mounts
+  // Initialize mermaid only on component mount
   useEffect(() => {
-    // Initialize mermaid config at component mount
-    try {
-      console.log("Initializing mermaid...");
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "loose",
-        theme: theme,
-        mindmap: {
-          padding: 16,
-          useMaxWidth: false
-        },
-      });
-    } catch (err) {
-      console.error("Error initializing mermaid:", err);
-    }
+    console.log("MindmapModal mounted");
     
+    // Clean up function to handle unmounting
     return () => {
+      console.log("MindmapModal unmounted");
       isMounted.current = false;
+      
+      // Clear any existing content
+      if (mermaidRef.current) {
+        mermaidRef.current.innerHTML = '';
+      }
     };
   }, []);
   
-  // Handle theme changes
+  // Handle the modal opening and closing
   useEffect(() => {
-    if (isOpen && mermaidRef.current) {
+    if (isOpen) {
+      console.log("Modal opened, initializing mermaid");
+      setError(null);
+      
       try {
+        // Initialize mermaid with the current theme
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "loose",
           theme: theme,
           mindmap: {
             padding: 16,
-            useMaxWidth: false
+            useMaxWidth: true
           },
         });
         
-        // Render with the new theme
-        renderMindmapWithDelay();
+        // Render after a short delay to ensure DOM is ready
+        setTimeout(() => {
+          if (isMounted.current && mermaidRef.current) {
+            renderMindmap();
+          }
+        }, 200);
       } catch (err) {
-        console.error("Error updating mermaid theme:", err);
+        console.error("Error initializing mermaid:", err);
+        setError(String(err));
       }
     }
-  }, [theme, isOpen]);
+  }, [isOpen, theme]);
   
-  // Main effect for rendering when modal opens
-  useEffect(() => {
-    // Only attempt rendering when modal is open
-    if (isOpen && mermaidRef.current) {
-      renderMindmapWithDelay();
-    }
-    
-    // Clear error state when modal is closed
-    if (!isOpen) {
-      setError(null);
-      
-      // Clear any existing content in the container to prevent stale DOM nodes
-      if (mermaidRef.current) {
-        mermaidRef.current.innerHTML = '';
-      }
-    }
-  }, [isOpen]);
-  
-  const renderMindmapWithDelay = () => {
-    if (!isOpen || !mermaidRef.current) return;
-    
-    // Set a small delay before rendering to ensure DOM is ready
-    setTimeout(() => {
-      if (isMounted.current && mermaidRef.current && isOpen) {
-        renderMindmap();
-      }
-    }, 100);
-  };
-  
-  // Function to render the mindmap diagram - separated for better control
+  // Function to render the mindmap diagram
   const renderMindmap = async () => {
-    if (!isOpen || !mermaidRef.current || !isMounted.current) return;
+    if (!mermaidRef.current || !isMounted.current || !isOpen) return;
     
     setIsRendering(true);
-    setError(null);
+    console.log("Rendering mindmap...");
     
     try {
       // Clear previous content safely
@@ -134,56 +103,55 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
         mermaidRef.current.innerHTML = '';
       }
       
-      // Generate SVG
-      console.log("Rendering mindmap...");
       const id = containerId.current;
       const { svg } = await mermaid.render(id, mindmapCode);
       
-      // Check if component is still mounted and modal is still open before updating DOM
-      if (!isMounted.current || !isOpen || !mermaidRef.current) return;
+      // Safety check before updating DOM
+      if (!isMounted.current || !mermaidRef.current || !isOpen) {
+        console.log("Component unmounted or modal closed during render, aborting");
+        return;
+      }
       
       // Insert the SVG content
       mermaidRef.current.innerHTML = svg;
       
       // Post-process SVG for better appearance
-      if (mermaidRef.current) {
-        const svgElement = mermaidRef.current.querySelector('svg');
-        if (svgElement) {
-          // Make SVG responsive
-          svgElement.setAttribute('width', '100%');
-          svgElement.setAttribute('height', '100%');
-          svgElement.style.maxWidth = '100%';
-          
-          // Add custom styles for mindmap nodes
-          const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-          styleElement.textContent = `
-            .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse, .mindmap-node > polygon {
-              rx: 10px;
-              ry: 10px;
-              fill-opacity: 0.8 !important;
-            }
-            .mindmap-node .label {
-              font-size: 14px;
-              font-weight: 500;
-            }
-            .mindmap-root > rect, .mindmap-root > circle, .mindmap-root > ellipse {
-              fill: #E5DEFF !important;
-              stroke: #8B5CF6 !important;
-            }
-            .edge {
-              stroke-width: 2px !important;
-            }
-          `;
-          svgElement.appendChild(styleElement);
-        }
+      const svgElement = mermaidRef.current.querySelector('svg');
+      if (svgElement) {
+        // Make SVG responsive and ensure it fits within the container
+        svgElement.setAttribute('width', '100%');
+        svgElement.setAttribute('height', '100%');
+        svgElement.style.maxWidth = '100%';
+        svgElement.style.maxHeight = '60vh'; // Limit height to fit in modal
+        
+        // Add custom styles for mindmap nodes
+        const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+        styleElement.textContent = `
+          .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse, .mindmap-node > polygon {
+            rx: 10px;
+            ry: 10px;
+            fill-opacity: 0.8 !important;
+          }
+          .mindmap-node .label {
+            font-size: 14px;
+            font-weight: 500;
+          }
+          .mindmap-root > rect, .mindmap-root > circle, .mindmap-root > ellipse {
+            fill: #E5DEFF !important;
+            stroke: #8B5CF6 !important;
+          }
+          .edge {
+            stroke-width: 2px !important;
+          }
+        `;
+        svgElement.appendChild(styleElement);
       }
       console.log("Mindmap rendered successfully");
     } catch (error) {
       console.error("Error rendering mindmap:", error);
       
-      if (isOpen && mermaidRef.current && isMounted.current) {
+      if (isMounted.current && mermaidRef.current) {
         setError(String(error));
-        
         mermaidRef.current.innerHTML = `
           <div class="p-6 text-red-500 bg-red-50 rounded-md border border-red-200">
             <p class="font-semibold mb-2">Error rendering mindmap:</p>
@@ -208,36 +176,36 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Mermaid Mindmap Demo</DialogTitle>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-2">
+          <DialogTitle>Mermaid Mindmap</DialogTitle>
           <DialogDescription>
             An interactive visualization of mindmap concepts
           </DialogDescription>
         </DialogHeader>
-        <div className="p-4 overflow-auto">
+        <div className="flex-grow overflow-auto p-4">
           <div 
             ref={mermaidRef} 
-            className="mermaid-container w-full min-h-[400px] flex items-center justify-center bg-white rounded-md border"
+            className="mermaid-container w-full min-h-[300px] max-h-[50vh] flex items-center justify-center bg-white rounded-md border overflow-auto"
           >
             {isRendering && (
-              <div className="text-gray-500 flex flex-col items-center">
-                <div className="animate-spin h-6 w-6 border-2 border-gray-500 border-t-transparent rounded-full mb-2"></div>
+              <div className="text-gray-500 flex flex-col items-center p-8">
+                <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full mb-2"></div>
                 <div>Loading mindmap...</div>
               </div>
             )}
             {!isRendering && !error && !mermaidRef.current?.innerHTML && (
-              <div className="text-gray-400">Mindmap will appear here</div>
+              <div className="text-gray-400 p-8">Mindmap will appear here</div>
             )}
           </div>
           <div className="mt-4 p-4 bg-gray-50 rounded-md">
             <h3 className="text-sm font-medium mb-2">Diagram Source Code:</h3>
-            <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">
+            <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto max-h-[15vh] overflow-y-auto">
               {mindmapCode}
             </pre>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="pt-2">
           <div className="flex items-center gap-2 w-full justify-between">
             <Button 
               variant="outline" 
