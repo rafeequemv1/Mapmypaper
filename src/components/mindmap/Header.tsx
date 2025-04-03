@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
   GitCommitHorizontal,
@@ -10,19 +10,8 @@ import {
   Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
-import { useAuth } from "@/hooks/useAuth";
+import { downloadMindMapAsSVG } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -32,6 +21,7 @@ interface HeaderProps {
   setShowMermaidMindmap: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
+  onExportMindMap?: () => Promise<void>;
 }
 
 const Header = ({ 
@@ -42,76 +32,31 @@ const Header = ({
   setShowMermaidMindmap,
   isPdfActive,
   isChatActive,
+  onExportMindMap,
 }: HeaderProps) => {
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [fileName, setFileName] = useState("mindmap");
-  const [mindElixirInstance, setMindElixirInstance] = useState<any | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
   
-  // Handle mind map instance being ready
-  const handleMindMapReady = (instance: any) => {
-    setMindElixirInstance(instance);
-  };
-  
-  // Handle export as PNG
-  const handleExportPNG = () => {
-    if (mindElixirInstance) {
-      downloadMindMapAsPNG(mindElixirInstance, fileName);
-      toast({
-        title: "Export successful",
-        description: `Mind map exported as ${fileName}.png`
-      });
+  // Handle export click
+  const handleExport = async () => {
+    if (onExportMindMap) {
+      try {
+        await onExportMindMap();
+        toast({
+          title: "Export successful",
+          description: "Mind map exported as SVG"
+        });
+      } catch (error) {
+        toast({
+          title: "Export failed",
+          description: "There was an error exporting the mind map",
+          variant: "destructive"
+        });
+      }
     } else {
       toast({
-        title: "Export failed",
-        description: "Mind map instance is not ready",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  // Handle export as SVG
-  const handleExportSVG = () => {
-    if (mindElixirInstance) {
-      downloadMindMapAsSVG(mindElixirInstance, fileName);
-      toast({
-        title: "Export successful",
-        description: `Mind map exported as ${fileName}.svg`
-      });
-    } else {
-      toast({
-        title: "Export failed",
-        description: "Mind map instance is not ready",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  // Handle export as JSON
-  const handleExportJSON = () => {
-    if (mindElixirInstance) {
-      const data = mindElixirInstance.getData();
-      const dataStr = JSON.stringify(data, null, 2);
-      const blob = new Blob([
-        dataStr
-      ], {
-        type: "application/json"
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.download = `${fileName}.json`;
-      link.href = url;
-      link.click();
-      toast({
-        title: "Export successful",
-        description: `Mind map exported as ${fileName}.json`
-      });
-    } else {
-      toast({
-        title: "Export failed",
-        description: "Mind map instance is not ready",
+        title: "Mind map not ready",
+        description: "Please wait for the mind map to load",
         variant: "destructive"
       });
     }
@@ -128,22 +73,6 @@ const Header = ({
       });
     }
   }, [toast]);
-  
-  // Get and store the mindmap instance from parent
-  React.useEffect(() => {
-    const handleMindMapReadyEvent = (event: any) => {
-      if (event.detail && event.detail.mindMap) {
-        setMindElixirInstance(event.detail.mindMap);
-      }
-    };
-    
-    // Register global event listener for mind map ready
-    window.addEventListener('mindMapReady', handleMindMapReadyEvent);
-    
-    return () => {
-      window.removeEventListener('mindMapReady', handleMindMapReadyEvent);
-    };
-  }, []);
   
   return (
     <header className="bg-white border-b py-2 px-4">
@@ -207,62 +136,22 @@ const Header = ({
           </Button>
         </div>
         
-        {/* Right side - Export buttons and user actions */}
-        <div className="flex items-center gap-2">
-          {/* Download buttons */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex items-center gap-1 h-7 px-2" 
-            onClick={handleExportPNG}
-            title="Export as PNG"
-          >
-            <Download className="h-3.5 w-3.5 text-black" />
-            <span className="hidden md:inline text-xs">PNG</span>
+        {/* Right side - Action buttons */}
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
+            <Upload className="h-3.5 w-3.5 text-black" />
           </Button>
           
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center gap-1 h-7 px-2" 
-            onClick={handleExportSVG}
+            className="h-7 px-2 flex items-center gap-1"
+            onClick={handleExport}
             title="Export as SVG"
           >
             <Download className="h-3.5 w-3.5 text-black" />
             <span className="hidden md:inline text-xs">SVG</span>
           </Button>
-          
-          {/* Upload new PDF */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-7 px-3 ml-2" 
-            onClick={() => navigate("/")}
-          >
-            <Upload className="h-3.5 w-3.5 text-black" />
-            <span className="ml-1 hidden sm:inline text-xs">Upload</span>
-          </Button>
-          
-          {/* User authentication */}
-          {user ? (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-7 px-3 ml-1" 
-              onClick={signOut}
-            >
-              Sign Out
-            </Button>
-          ) : (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-7 px-3 ml-1" 
-              onClick={() => navigate("/auth")}
-            >
-              Sign In
-            </Button>
-          )}
         </div>
       </div>
     </header>

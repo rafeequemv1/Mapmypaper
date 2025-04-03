@@ -1,6 +1,7 @@
 
 import React, { useCallback } from 'react';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { Image, Plus, Copy, Trash, PlusCircle, MessageSquare } from "lucide-react";
 
 interface MindMapContextMenuProps {
   children: React.ReactNode;
@@ -9,7 +10,8 @@ interface MindMapContextMenuProps {
   onDelete?: () => void;
   onAddChild?: () => void;
   onAddSibling?: () => void;
-  onExplainNode?: () => void; // Added explain node option
+  onAddImage?: () => void;
+  onExplain?: () => void;
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -19,7 +21,8 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onDelete,
   onAddChild,
   onAddSibling,
-  onExplainNode // Add explain node handler
+  onAddImage,
+  onExplain
 }) => {
   const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,13 +37,15 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-64 bg-white shadow-lg border rounded-lg z-[9999]">
-        {onExplainNode && (
-          <ContextMenuItem onClick={handleAction(onExplainNode)} className="cursor-pointer text-purple-600 font-medium">
+        {onExplain && (
+          <ContextMenuItem onClick={handleAction(onExplain)} className="cursor-pointer text-indigo-600 flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
             Explain Node
           </ContextMenuItem>
         )}
         {onCopy && (
-          <ContextMenuItem onClick={handleAction(onCopy)} className="cursor-pointer">
+          <ContextMenuItem onClick={handleAction(onCopy)} className="cursor-pointer flex items-center gap-2">
+            <Copy className="h-4 w-4" />
             Copy
           </ContextMenuItem>
         )}
@@ -49,19 +54,28 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
             Paste
           </ContextMenuItem>
         )}
-        {onDelete && (
-          <ContextMenuItem onClick={handleAction(onDelete)} className="cursor-pointer text-red-500 font-medium">
-            Delete
-          </ContextMenuItem>
-        )}
         {onAddChild && (
-          <ContextMenuItem onClick={handleAction(onAddChild)} className="cursor-pointer text-blue-600">
+          <ContextMenuItem onClick={handleAction(onAddChild)} className="cursor-pointer text-blue-600 flex items-center gap-2">
+            <Plus className="h-4 w-4" />
             Add Child Node
           </ContextMenuItem>
         )}
         {onAddSibling && (
-          <ContextMenuItem onClick={handleAction(onAddSibling)} className="cursor-pointer text-emerald-600">
+          <ContextMenuItem onClick={handleAction(onAddSibling)} className="cursor-pointer text-emerald-600 flex items-center gap-2">
+            <PlusCircle className="h-4 w-4" />
             Add Sibling Node
+          </ContextMenuItem>
+        )}
+        {onAddImage && (
+          <ContextMenuItem onClick={handleAction(onAddImage)} className="cursor-pointer text-purple-600 flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Add Image
+          </ContextMenuItem>
+        )}
+        {onDelete && (
+          <ContextMenuItem onClick={handleAction(onDelete)} className="cursor-pointer text-red-500 font-medium flex items-center gap-2">
+            <Trash className="h-4 w-4" />
+            Delete
           </ContextMenuItem>
         )}
       </ContextMenuContent>

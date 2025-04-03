@@ -44,7 +44,6 @@ const PanelStructure = ({
           isMapGenerated={isMapGenerated}
           onMindMapReady={onMindMapReady}
           onExplainText={onExplainText}
-          onRequestOpenChat={toggleChat}
         />
       </div>
 
