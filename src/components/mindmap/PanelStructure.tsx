@@ -37,6 +37,7 @@ const PanelStructure = ({
   };
 
   const handleAreaSelected = (imageDataUrl: string) => {
+    console.log("Area selected in PanelStructure, image length:", imageDataUrl.length);
     setSelectedImageArea(imageDataUrl);
     
     // Ensure chat panel is open when an area is selected
@@ -85,6 +86,7 @@ const PanelStructure = ({
       {/* Mobile Chat Sheet */}
       <MobileChatSheet 
         onScrollToPdfPosition={handleScrollToPdfPosition}
+        explainImage={selectedImageArea}
       />
     </div>
   );

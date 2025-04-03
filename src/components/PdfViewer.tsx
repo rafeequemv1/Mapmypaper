@@ -97,23 +97,35 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         description: "Please wait while we process the selection.",
       });
       
+      console.log("Starting area capture process");
+      
       // Use html2canvas to capture the selection
       import('html2canvas').then(({ default: html2canvas }) => {
+        console.log("html2canvas loaded, starting capture");
         html2canvas(viewportElement as HTMLElement, {
           scale: window.devicePixelRatio,
           logging: false,
           useCORS: true,
           allowTaint: true,
         }).then(canvas => {
+          console.log("Canvas capture complete");
           const ctx = canvas.getContext('2d');
-          if (!ctx) return;
+          if (!ctx) {
+            console.error("Failed to get canvas context");
+            return;
+          }
           
           // Create a new canvas for just the selection
           const selectedCanvas = document.createElement('canvas');
           selectedCanvas.width = selectionRect.width;
           selectedCanvas.height = selectionRect.height;
           const selectedCtx = selectedCanvas.getContext('2d');
-          if (!selectedCtx) return;
+          if (!selectedCtx) {
+            console.error("Failed to get selected canvas context");
+            return;
+          }
+          
+          console.log("Drawing selected area", selectionRect);
           
           // Draw only the selected area to the new canvas
           selectedCtx.drawImage(
@@ -130,9 +142,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           // Convert to data URL
           const dataUrl = selectedCanvas.toDataURL('image/png');
+          console.log("Data URL generated, length:", dataUrl.length);
           
           // Send to parent component
           if (onAreaSelected) {
+            console.log("Calling onAreaSelected callback");
             onAreaSelected(dataUrl);
           }
           
@@ -635,7 +649,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 ))}
               </Document>
               
-              {/* Selection overlay */}
+              {/* Selection overlay - Fixed syntax issues */}
               {selectionRect && (
                 <div 
                   className="absolute pointer-events-none"
