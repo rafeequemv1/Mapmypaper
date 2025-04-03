@@ -594,6 +594,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
+              onMouseUp={handleDocumentMouseUp}
             >
               <Document
                 file={pdfData}
@@ -632,7 +633,21 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </Document>
               
               {/* Selection overlay */}
-              {selectionRect && (\n                <div \n                  className="absolute pointer-events-none"\n                  style={{\n                    left: `${selectionRect.x}px`,\n                    top: `${selectionRect.y}px`,\n                    width: `${selectionRect.width}px`,\n                    height: `${selectionRect.height}px`,\n                    border: '2px dashed blue',\n                    backgroundColor: 'rgba(0, 0, 255, 0.1)',\n                    zIndex: 10,\n                  }}\n                  ref={selectionOverlayRef}\n                />\n              )}
+              {selectionRect && (
+                <div 
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${selectionRect.x}px`,
+                    top: `${selectionRect.y}px`,
+                    width: `${selectionRect.width}px`,
+                    height: `${selectionRect.height}px`,
+                    border: '2px dashed blue',
+                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                    zIndex: 10,
+                  }}
+                  ref={selectionOverlayRef}
+                />
+              )}
               
               {/* Capture buttons - positioned outside the overlay with pointer-events enabled */}
               {selectionRect && selectionRect.width > 5 && selectionRect.height > 5 && !isDrawing && (
