@@ -1,5 +1,5 @@
 
-import { MessageSquare, Copy, Check, ArrowRight } from "lucide-react";
+import { MessageSquare, Copy, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -14,20 +14,8 @@ interface MobileChatSheetProps {
 
 const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
   const { toast } = useToast();
-  const exampleQuestions = [
-    "Summarize the key findings",
-    "What methodology was used?",
-    "Explain the limitations",
-    "Practical implications?",
-    "How does this compare to previous work?",
-  ];
-  
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
-    { 
-      role: 'assistant', 
-      content: "Hi there! 👋 I'm your research assistant for this paper. I've analyzed the document and I'm ready to help you understand it better. What would you like to know about this research?",
-      isHtml: true
-    }
+    { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -69,21 +57,9 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
       setIsTyping(true);
       
       try {
-        // Enhanced conversational prompt
+        // Enhanced prompt to encourage complete sentences, page citations, and emojis
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage}
-          
-          Please respond in a conversational, helpful manner like an experienced researcher mentoring a student.
-          Use your knowledge of the paper to give a thorough but accessible explanation.
-          
-          Structure your response with clear headings and bullet points when appropriate.
-          Include specific citations to the paper using [citation:pageX] format when referencing content.
-          Use analogies or examples to clarify complex concepts when appropriate.
-          Include relevant emojis to make your response engaging but don't overdo it.
-          End your response with a natural follow-up question related to what we're discussing.
-          
-          Since this is on mobile, keep your response relatively concise but still informative.
-          Remember you're having a conversation, not delivering a lecture. Be warm and supportive.`
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
         );
         
         // Hide typing indicator and add AI response with formatting
@@ -97,15 +73,14 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
           }
         ]);
       } catch (error) {
-        // Handle errors with a more conversational response
+        // Handle errors
         setIsTyping(false);
         console.error("Chat error:", error);
         setMessages(prev => [
           ...prev, 
           { 
             role: 'assistant', 
-            content: "I'm having a bit of trouble with that question. Could you try asking in a different way? Or perhaps you'd like to know something else about the paper?", 
-            isHtml: true
+            content: "Sorry, I encountered an error. Please try again." 
           }
         ]);
         
@@ -123,12 +98,6 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
       e.preventDefault();
       handleSendMessage();
     }
-  };
-  
-  const handleExampleQuestionClick = (question: string) => {
-    setInputValue(question);
-    // Optional: Auto-send the question
-    // setTimeout(() => handleSendMessage(), 100);
   };
 
   const copyToClipboard = (text: string, messageId: number) => {
@@ -227,30 +196,11 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
           </div>
         </ScrollArea>
         
-        {/* Example questions */}
-        {messages.length <= 2 && (
-          <div className="px-3 py-2 border-t bg-gray-50">
-            <p className="text-xs text-gray-500 mb-2">Try asking:</p>
-            <div className="flex flex-wrap gap-2">
-              {exampleQuestions.slice(0, 3).map((question, index) => (
-                <button
-                  key={index}
-                  className="text-xs bg-white border border-gray-200 rounded-full px-3 py-1 hover:bg-gray-100 transition-colors flex items-center gap-1"
-                  onClick={() => handleExampleQuestionClick(question)}
-                >
-                  {question}
-                  <ArrowRight className="h-3 w-3" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        
         <div className="p-3 border-t mt-auto">
           <div className="flex gap-2">
             <textarea
               className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none"
-              placeholder="Ask about the document..."
+              placeholder="Type your message..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
