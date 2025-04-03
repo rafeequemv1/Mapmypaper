@@ -31,6 +31,7 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       },
       mindmap: {
         padding: 16,
+        useMaxWidth: false, // This is compatible with mindmap
       },
       // Add custom flowchart styles
       themeVariables: {
@@ -86,8 +87,31 @@ export const useMermaidInit = (direction: "TB" | "LR" = "TB") => {
       .node.class-5 rect { fill: #FFDEE2 !important; stroke: #EF4444 !important; }
       .node.class-6 rect { fill: #FEF7CD !important; stroke: #F59E0B !important; }
       .node.class-7 rect { fill: #F1F0FB !important; stroke: #D946EF !important; }
+      
+      /* Enhanced mindmap node styles */
+      .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse, .mindmap-node > polygon {
+        rx: 10px;
+        ry: 10px;
+        fill-opacity: 0.8 !important;
+      }
+      .mindmap-node .label {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .mindmap-root > rect, .mindmap-root > circle, .mindmap-root > ellipse {
+        fill: #E5DEFF !important;
+        stroke: #8B5CF6 !important;
+      }
+      .edge {
+        stroke-width: 2px !important;
+      }
     `;
     document.head.appendChild(style);
+    
+    // Clean up function to remove style when component unmounts
+    return () => {
+      document.head.removeChild(style);
+    };
   }, [direction]);
 };
 
