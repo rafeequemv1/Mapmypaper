@@ -23,6 +23,20 @@ interface PdfViewerHandle {
   scrollToPage: (pageNumber: number) => void;
 }
 
+// Define selection point interface for better type safety
+interface SelectionPoint {
+  x: number;
+  y: number;
+}
+
+// Define selection rectangle interface for better type safety
+interface SelectionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
   ({ onTextSelected, onAreaSelected, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
@@ -38,8 +52,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
     const [isAreaSelectionMode, setIsAreaSelectionMode] = useState<boolean>(false);
-    const [selectionStart, setSelectionStart] =<{x: number, y: number} | null>(null);
-    const [selectionRect, setSelectionRect] = useState<{x: number, y: number, width: number, height: number} | null>(null);
+    const [selectionStart, setSelectionStart] = useState<SelectionPoint | null>(null);
+    const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
     const selectionOverlayRef = useRef<HTMLDivElement | null>(null);
     const [isDrawing, setIsDrawing] = useState<boolean>(false);
 
