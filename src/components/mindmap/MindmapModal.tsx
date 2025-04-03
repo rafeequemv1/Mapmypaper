@@ -22,10 +22,12 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const [isRendering, setIsRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
-  const [mermaidInitialized, setMermaidInitialized] = useState(false);
   
-  // Stable container ID to avoid issues with re-renders
+  // Generate a stable ID for this component instance that won't change across re-renders
   const containerId = useRef(`mindmap-diagram-${Math.random().toString(36).substring(2, 11)}`);
+  
+  // Track mounted state to avoid state updates after unmounting
+  const isMounted = useRef(true);
   
   // Demo mindmap code
   const mindmapCode = `mindmap
@@ -45,11 +47,33 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       Pen and paper
       Mermaid`;
 
-  // Initialize mermaid once when modal opens
+  // Initialize mermaid only once when the component mounts
   useEffect(() => {
-    if (isOpen && !mermaidInitialized) {
+    // Initialize mermaid config at component mount
+    try {
+      console.log("Initializing mermaid...");
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "loose",
+        theme: theme,
+        mindmap: {
+          padding: 16,
+          useMaxWidth: false
+        },
+      });
+    } catch (err) {
+      console.error("Error initializing mermaid:", err);
+    }
+    
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+  
+  // Handle theme changes
+  useEffect(() => {
+    if (isOpen && mermaidRef.current) {
       try {
-        console.log("Initializing mermaid...");
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "loose",
@@ -59,77 +83,55 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
             useMaxWidth: false
           },
         });
-        setMermaidInitialized(true);
+        
+        // Render with the new theme
+        renderMindmapWithDelay();
       } catch (err) {
-        console.error("Error initializing mermaid:", err);
+        console.error("Error updating mermaid theme:", err);
       }
     }
-    
-    // Return cleanup function
-    return () => {
-      if (!isOpen) {
-        // Reset the error state when modal is closed
-        setError(null);
-      }
-    };
-  }, [isOpen, mermaidInitialized, theme]);
+  }, [theme, isOpen]);
   
-  // Render the mindmap when theme changes or modal opens
+  // Main effect for rendering when modal opens
   useEffect(() => {
-    let isMounted = true;
-    
-    const renderMindmapWithDelay = async () => {
-      if (!isOpen || !mermaidRef.current) return;
-      
-      // Add a small delay before rendering to ensure DOM is ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Check if component is still mounted and modal is still open
-      if (!isMounted || !isOpen || !mermaidRef.current) return;
-      
-      renderMindmap();
-    };
-    
-    if (isOpen && mermaidInitialized) {
+    // Only attempt rendering when modal is open
+    if (isOpen && mermaidRef.current) {
       renderMindmapWithDelay();
     }
     
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen, theme, mermaidInitialized]);
-
+    // Clear error state when modal is closed
+    if (!isOpen) {
+      setError(null);
+      
+      // Clear any existing content in the container to prevent stale DOM nodes
+      if (mermaidRef.current) {
+        mermaidRef.current.innerHTML = '';
+      }
+    }
+  }, [isOpen]);
+  
+  const renderMindmapWithDelay = () => {
+    if (!isOpen || !mermaidRef.current) return;
+    
+    // Set a small delay before rendering to ensure DOM is ready
+    setTimeout(() => {
+      if (isMounted.current && mermaidRef.current && isOpen) {
+        renderMindmap();
+      }
+    }, 100);
+  };
+  
   // Function to render the mindmap diagram - separated for better control
   const renderMindmap = async () => {
-    if (!isOpen || !mermaidRef.current) return;
+    if (!isOpen || !mermaidRef.current || !isMounted.current) return;
     
     setIsRendering(true);
     setError(null);
     
     try {
-      // Clear previous content
+      // Clear previous content safely
       if (mermaidRef.current) {
         mermaidRef.current.innerHTML = '';
-      }
-      
-      // Update mermaid configuration with current theme
-      try {
-        mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "loose",
-          theme: theme,
-          mindmap: {
-            padding: 16,
-            useMaxWidth: false
-          },
-          themeVariables: {
-            primaryColor: '#8B5CF6',
-            primaryTextColor: '#333',
-            primaryBorderColor: '#6E59A5',
-          }
-        });
-      } catch (err) {
-        console.error("Error reinitializing mermaid with theme:", err);
       }
       
       // Generate SVG
@@ -138,7 +140,7 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       const { svg } = await mermaid.render(id, mindmapCode);
       
       // Check if component is still mounted and modal is still open before updating DOM
-      if (!isOpen || !mermaidRef.current) return;
+      if (!isMounted.current || !isOpen || !mermaidRef.current) return;
       
       // Insert the SVG content
       mermaidRef.current.innerHTML = svg;
@@ -179,7 +181,7 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
     } catch (error) {
       console.error("Error rendering mindmap:", error);
       
-      if (isOpen && mermaidRef.current) {
+      if (isOpen && mermaidRef.current && isMounted.current) {
         setError(String(error));
         
         mermaidRef.current.innerHTML = `
@@ -190,7 +192,7 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
         `;
       }
     } finally {
-      if (isOpen) {
+      if (isMounted.current) {
         setIsRendering(false);
       }
     }
