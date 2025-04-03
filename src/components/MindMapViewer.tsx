@@ -36,7 +36,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         el: containerRef.current,
         newTopicName: "New Node",
         direction: MindElixir.LEFT,
-        locale: "en", // Using string instead of enum
+        locale: MindElixir.LOCALE.EN, // Using the enum instead of string
         draggable: true,
         editable: true,
         contextMenu: true,
@@ -72,35 +72,37 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       const mind = new MindElixir(options) as any;
       mindMapRef.current = mind;
 
-      // Load data from session storage
-      const storedData = sessionStorage.getItem("mindMapData");
-      if (storedData && mind.init) {
-        try {
-          const mindMapData = JSON.parse(storedData).nodeData;
-          // Use data.init instead of mind.load which doesn't exist
-          mind.init(mindMapData);
-        } catch (error) {
-          console.error("Error parsing stored mind map data:", error);
-        }
-      } else {
-        // Initialize with empty data structure if no stored data
-        const defaultData = {
-          nodeData: {
-            id: "root",
-            topic: "New Mind Map",
-            children: []
+      try {
+        // Load data from session storage
+        const storedData = sessionStorage.getItem("mindMapData");
+        
+        if (storedData && mind.init) {
+          try {
+            // Parse the stored data safely
+            const parsedData = JSON.parse(storedData);
+            if (parsedData && parsedData.nodeData) {
+              mind.init(parsedData.nodeData);
+              console.log("Loaded mind map from session storage");
+            } else {
+              // Handle case where nodeData is missing but JSON is valid
+              initializeWithDefaultData(mind);
+            }
+          } catch (error) {
+            console.error("Error parsing stored mind map data:", error);
+            initializeWithDefaultData(mind);
           }
-        };
-        if (mind.init) mind.init(defaultData.nodeData);
+        } else {
+          // Initialize with empty data structure if no stored data
+          initializeWithDefaultData(mind);
+        }
+      } catch (error) {
+        console.error("Error loading mind map data:", error);
+        // Ensure we have a default mind map even if loading fails
+        initializeWithDefaultData(mind);
       }
 
       // Use nodeMenu plugin
       if (mind.install) mind.install(nodeMenu);
-      
-      // Mount the mind map
-      if (mind.init) {
-        mind.init();
-      }
       
       // Set up event listeners
       mind.bus.addListener("node-click", (node: any, event: any) => {
@@ -130,6 +132,18 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       };
     }
   }, [isMapGenerated, onExplainText, onMindMapReady, onRequestOpenChat, toast]);
+
+  // Helper function to initialize with default data
+  const initializeWithDefaultData = (mind: any) => {
+    console.log("Initializing with default mind map data");
+    const defaultData = {
+      id: "root",
+      topic: "New Mind Map",
+      children: []
+    };
+    
+    if (mind.init) mind.init(defaultData);
+  };
 
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (node: any) => {
