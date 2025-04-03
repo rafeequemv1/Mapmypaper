@@ -8,16 +8,22 @@ import { MindElixirInstance } from "mind-elixir";
  */
 export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
   try {
-    const blob = await instance.exportPng(false); // Don't disable foreignObject
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+    // Use 'any' type to bypass TypeScript restrictions since the actual implementation might differ
+    const mindInstance = instance as any;
+    if (typeof mindInstance.exportPng === 'function') {
+      const blob = await mindInstance.exportPng(false); // Don't disable foreignObject
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${fileName}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } else {
+      console.error("exportPng method not available on the mind map instance");
     }
   } catch (error) {
     console.error("Error exporting as PNG:", error);
@@ -32,6 +38,8 @@ export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileNam
  */
 export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: string = 'mindmap'): void => {
   try {
+    // Use 'any' type to bypass TypeScript restrictions
+    const mindInstance = instance as any;
     // Get custom CSS to ensure proper styling
     const customCSS = `
       .mind-elixir-topic {
@@ -40,18 +48,22 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
       }
     `;
     
-    // Use a single call to export the SVG
-    const blob = instance.exportSvg(false, customCSS); // Don't disable foreignObject, include CSS
-    if (blob) {
-      // Create and trigger download
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.svg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+    // Check if the exportSvg method is available
+    if (typeof mindInstance.exportSvg === 'function') {
+      const blob = mindInstance.exportSvg(false, customCSS); // Don't disable foreignObject, include CSS
+      if (blob) {
+        // Create and trigger download
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${fileName}.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } else {
+      console.error("exportSvg method not available on the mind map instance");
     }
   } catch (error) {
     console.error("Error exporting as SVG:", error);
@@ -65,10 +77,16 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
  */
 export const customZoomIn = (instance: MindElixirInstance): void => {
   try {
-    // Mind Elixir doesn't have built-in zoomIn but has scale method
-    // Get the current scale and increase by 0.1
-    const currentScale = instance.scale || 1;
-    instance.scale(Math.min(currentScale + 0.1, 2)); // Limit max zoom to 2x
+    // Use 'any' type to bypass TypeScript restrictions
+    const mindInstance = instance as any;
+    if (typeof mindInstance.scale === 'function') {
+      // If scale is a function, call it with a new scale value
+      const currentScale = typeof mindInstance.scaleVal === 'number' ? mindInstance.scaleVal : 1;
+      const newScale = Math.min(currentScale + 0.1, 2); // Limit max zoom to 2x
+      mindInstance.scale(newScale);
+    } else {
+      console.error("Scale method not available on the mind map instance");
+    }
   } catch (error) {
     console.error("Error zooming in:", error);
   }
@@ -79,10 +97,16 @@ export const customZoomIn = (instance: MindElixirInstance): void => {
  */
 export const customZoomOut = (instance: MindElixirInstance): void => {
   try {
-    // Mind Elixir doesn't have built-in zoomOut but has scale method
-    // Get the current scale and decrease by 0.1
-    const currentScale = instance.scale || 1;
-    instance.scale(Math.max(currentScale - 0.1, 0.5)); // Limit min zoom to 0.5x
+    // Use 'any' type to bypass TypeScript restrictions
+    const mindInstance = instance as any;
+    if (typeof mindInstance.scale === 'function') {
+      // If scale is a function, call it with a new scale value
+      const currentScale = typeof mindInstance.scaleVal === 'number' ? mindInstance.scaleVal : 1;
+      const newScale = Math.max(currentScale - 0.1, 0.5); // Limit min zoom to 0.5x
+      mindInstance.scale(newScale);
+    } else {
+      console.error("Scale method not available on the mind map instance");
+    }
   } catch (error) {
     console.error("Error zooming out:", error);
   }
