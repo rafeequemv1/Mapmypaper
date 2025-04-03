@@ -4,7 +4,7 @@ import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -27,16 +27,6 @@ const PanelStructure = ({
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
-  const [selectedAreaImage, setSelectedAreaImage] = useState<string | undefined>(undefined);
-
-  const handleAreaSelected = (imageData: string) => {
-    setSelectedAreaImage(imageData);
-    
-    // Open chat panel if closed when area is selected
-    if (!showChat) {
-      toggleChat();
-    }
-  };
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
@@ -54,7 +44,6 @@ const PanelStructure = ({
             <PdfViewer 
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
-              onAreaSelected={handleAreaSelected}
             />
           </TooltipProvider>
         </div>
@@ -75,7 +64,6 @@ const PanelStructure = ({
           <ChatPanel
             toggleChat={toggleChat}
             explainText={explainText}
-            explainImage={selectedAreaImage}
             onExplainText={onExplainText}
             onScrollToPdfPosition={handleScrollToPdfPosition}
           />
@@ -85,7 +73,6 @@ const PanelStructure = ({
       {/* Mobile Chat Sheet */}
       <MobileChatSheet 
         onScrollToPdfPosition={handleScrollToPdfPosition}
-        explainImage={selectedAreaImage}
       />
     </div>
   );
