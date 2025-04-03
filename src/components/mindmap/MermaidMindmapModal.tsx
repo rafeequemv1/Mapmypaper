@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { generateMindmapFromPdf } from "@/services/geminiService";
-import { Download, Code, Eye, RefreshCw } from "lucide-react";
+import { Download, RefreshCw, Copy, Check } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import mermaid from "mermaid";
 
@@ -17,8 +17,8 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   const [mindmapCode, setMindmapCode] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
-  const [showEditor, setShowEditor] = useState(false);
   const [editorContent, setEditorContent] = useState("");
+  const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -31,7 +31,8 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       mindmap: {
         padding: 16,
         useMaxWidth: true
-      }
+      },
+      logLevel: 'error'
     });
   }, []);
 
@@ -40,7 +41,6 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     if (!open) {
       // Reset states
       setIsRendered(false);
-      setShowEditor(false);
       
       // Clear the container content to prevent DOM issues
       if (containerRef.current) {
@@ -63,22 +63,19 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     }
   }, [mindmapCode]);
 
-  // Render mindmap whenever code changes or when switching from editor view
+  // Render mindmap whenever code changes
   useEffect(() => {
     if (!mindmapCode || !open || !containerRef.current) return;
     
-    // Only attempt to render if we're not in editor mode or we just switched from editor mode
-    if (!showEditor) {
-      // Use a timeout to ensure the DOM is ready
-      const renderTimeout = setTimeout(() => {
-        renderMindmap();
-      }, 300);
-      
-      return () => {
-        clearTimeout(renderTimeout);
-      };
-    }
-  }, [mindmapCode, open, showEditor]);
+    // Use a timeout to ensure the DOM is ready
+    const renderTimeout = setTimeout(() => {
+      renderMindmap();
+    }, 300);
+    
+    return () => {
+      clearTimeout(renderTimeout);
+    };
+  }, [editorContent, open]);
 
   // Safe method to clear the container
   const clearContainer = () => {
@@ -101,18 +98,16 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       // Create a new div for mermaid to render into
       const renderDiv = document.createElement('div');
       renderDiv.id = id;
+      renderDiv.className = "w-full h-full";
       
       // Only append if containerRef still exists
       if (containerRef.current) {
         containerRef.current.appendChild(renderDiv);
         
         try {
-          // Use the editor content if available
-          const codeToRender = showEditor ? editorContent : mindmapCode;
-          
           // Check if element still exists before rendering
           if (document.getElementById(id)) {
-            const { svg } = await mermaid.render(id, codeToRender);
+            const { svg } = await mermaid.render(id, editorContent);
             
             // Check again if the element exists before updating
             const element = document.getElementById(id);
@@ -143,7 +138,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
                 
                 toast({
                   title: "Using simplified mindmap",
-                  description: "The full mindmap couldn't be rendered due to syntax issues",
+                  description: "The full mindmap couldn't be rendered due to syntax issues. Please check the syntax.",
                   variant: "default"
                 });
               }
@@ -244,22 +239,17 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setEditorContent(e.target.value);
   };
-
-  // Apply changes from the editor and render the mindmap
-  const applyEditorChanges = () => {
-    setMindmapCode(editorContent);
-    setShowEditor(false);
+  
+  // Copy code to clipboard
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(editorContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
     
-    // Re-render will happen via the useEffect
     toast({
-      title: "Changes applied",
-      description: "Your mindmap changes have been applied"
+      title: "Copied to clipboard",
+      description: "Mindmap code has been copied to your clipboard"
     });
-  };
-
-  // Toggle between editor and preview
-  const toggleEditor = () => {
-    setShowEditor(!showEditor);
   };
 
   // Function to export the mindmap as SVG
@@ -298,18 +288,18 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       }
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex justify-between items-center flex-row">
           <DialogTitle>Document Mindmap</DialogTitle>
           <div className="flex gap-2">
             <Button 
-              onClick={toggleEditor} 
+              onClick={copyToClipboard} 
               variant="outline" 
               size="sm" 
               className="flex gap-2 items-center"
             >
-              {showEditor ? <Eye className="h-4 w-4" /> : <Code className="h-4 w-4" />}
-              {showEditor ? "Preview" : "Edit Code"}
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? "Copied" : "Copy Code"}
             </Button>
             <Button 
               onClick={generateMindmap}
@@ -334,35 +324,44 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
         </DialogHeader>
         
         <DialogDescription className="text-sm text-center">
-          {isLoading ? "Generating mindmap from your document..." : "View and edit your document's concept map"}
+          {isLoading ? "Generating mindmap from your document..." : "Edit code on the left and see preview on the right"}
         </DialogDescription>
         
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-hidden p-4 flex flex-row gap-4">
           {isLoading ? (
-            <div className="flex justify-center items-center h-64">
+            <div className="flex justify-center items-center h-64 w-full">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
-          ) : showEditor ? (
-            <div className="flex flex-col gap-4 h-full">
-              <Textarea 
-                value={editorContent}
-                onChange={handleEditorChange}
-                className="font-mono text-sm min-h-[500px] h-full resize-none p-4"
-                placeholder="Edit your mindmap code here..."
-              />
-              <Button onClick={applyEditorChanges} className="self-end">
-                Apply Changes
-              </Button>
-            </div>
           ) : (
-            <div 
-              ref={containerRef}
-              className="mermaid-mindmap w-full h-full min-h-[500px] flex justify-center items-center overflow-auto"
-            >
-              {!isRendered && !isLoading && (
-                <div className="text-gray-500">Rendering mindmap...</div>
-              )}
-            </div>
+            <>
+              {/* Editor Panel - Left side */}
+              <div className="flex-1 h-full overflow-hidden">
+                <Textarea 
+                  value={editorContent}
+                  onChange={handleEditorChange}
+                  className="font-mono text-sm h-full resize-none p-4 overflow-auto"
+                  placeholder="mindmap
+  root((My Document))
+    Topic 1
+      Subtopic 1.1
+      Subtopic 1.2
+    Topic 2
+      Subtopic 2.1"
+                />
+              </div>
+              
+              {/* Preview Panel - Right side */}
+              <div className="flex-1 h-full border rounded-md overflow-auto">
+                <div 
+                  ref={containerRef}
+                  className="mermaid-mindmap w-full h-full min-h-[500px] flex justify-center items-center overflow-auto"
+                >
+                  {!isRendered && !isLoading && (
+                    <div className="text-gray-500">Rendering mindmap...</div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </DialogContent>
