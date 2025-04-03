@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 interface MindmapModalProps {
@@ -35,47 +36,63 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       Pen and paper
       Mermaid`;
 
-  // Initialize and render mermaid diagram when the modal opens
+  // Initialize mermaid when component mounts
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "default",
+      securityLevel: "loose",
+    });
+  }, []);
+
+  // Render mermaid diagram when the modal opens
   useEffect(() => {
     if (isOpen && mermaidRef.current) {
-      mermaid.initialize({
-        startOnLoad: true,
-        theme: "default",
-        securityLevel: "loose",
-      });
-      
-      try {
-        // Clear existing content
-        mermaidRef.current.innerHTML = "";
-        
-        // Create a unique ID for the diagram
-        const id = "mermaid-diagram-" + Date.now();
-        
-        // Create a div with the unique ID
-        const element = document.createElement("div");
-        element.id = id;
-        element.className = "mermaid";
-        element.textContent = mindmapCode;
-        
-        // Append to container
-        mermaidRef.current.appendChild(element);
-        
-        // Render the diagram
-        mermaid.init(undefined, element);
-      } catch (error) {
-        console.error("Mermaid rendering error:", error);
-        if (mermaidRef.current) {
-          mermaidRef.current.innerHTML = `<div class="p-4 text-red-500">Error rendering mindmap: ${error}</div>`;
+      const renderDiagram = async () => {
+        try {
+          // Clear existing content
+          if (mermaidRef.current) {
+            mermaidRef.current.innerHTML = '';
+            
+            // Create a unique ID for the diagram
+            const id = `mermaid-diagram-${Date.now()}`;
+            const element = document.createElement('div');
+            element.id = id;
+            element.className = 'mermaid';
+            element.textContent = mindmapCode;
+            
+            // Append to container
+            mermaidRef.current.appendChild(element);
+            
+            // Render using the async API
+            await mermaid.run({
+              nodes: [element],
+              suppressErrors: false
+            });
+            
+            console.log('Mermaid diagram rendered successfully');
+          }
+        } catch (error) {
+          console.error("Mermaid rendering error:", error);
+          if (mermaidRef.current) {
+            mermaidRef.current.innerHTML = `<div class="p-4 text-red-500">Error rendering mindmap: ${error}</div>`;
+          }
         }
-      }
+      };
+      
+      // Add a slight delay to ensure DOM is ready
+      setTimeout(renderDiagram, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, mindmapCode]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Mermaid Mindmap Demo</DialogTitle>
+          <DialogDescription>
+            An interactive visualization of mindmap concepts
+          </DialogDescription>
           <button
             onClick={onClose}
             className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
