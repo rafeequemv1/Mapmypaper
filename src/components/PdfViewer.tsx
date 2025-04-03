@@ -9,6 +9,7 @@ import { TooltipProvider } from "./ui/tooltip";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import html2canvas from "html2canvas";
+import Selecto from "selecto";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -37,6 +38,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const pagesRef = useRef<(HTMLDivElement | null)[]>([]);
     const { toast } = useToast();
     const activeHighlightRef = useRef<HTMLElement | null>(null);
+    const selectoRef = useRef<Selecto | null>(null);
     
     // Area selection related states
     const [isSelecting, setIsSelecting] = useState(false);
@@ -76,11 +78,20 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Create selection overlay for the entire PDF container
+    // Initialize Selecto when PDF is loaded and selection mode is active
     useEffect(() => {
-      if (!pdfContainerRef.current || !selectionMode) return;
+      if (!pdfContainerRef.current || !selectionMode || !numPages) return;
       
-      // Create or get selection overlay div
+      const container = pdfContainerRef.current;
+      const scrollContainer = container.querySelector('[data-radix-scroll-area-viewport]');
+      
+      if (!scrollContainer) return;
+      
+      // Clean up any previous instance
+      if (selectoRef.current) {
+        selectoRef.current.destroy();
+      }
+      
       if (!selectionOverlayRef.current) {
         const overlay = document.createElement('div');
         overlay.className = 'pdf-selection-overlay';
@@ -92,213 +103,36 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         overlay.style.zIndex = '50';
         overlay.style.cursor = 'crosshair';
         selectionOverlayRef.current = overlay;
-      }
-      
-      const scrollContainer = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer && !scrollContainer.contains(selectionOverlayRef.current)) {
-        scrollContainer.style.position = 'relative';
-        scrollContainer.appendChild(selectionOverlayRef.current);
-      }
-      
-      return () => {
-        // Clean up the overlay when unmounting or when selection mode is toggled off
-        if (selectionOverlayRef.current && selectionOverlayRef.current.parentNode) {
-          selectionOverlayRef.current.parentNode.removeChild(selectionOverlayRef.current);
+        
+        if (scrollContainer instanceof HTMLElement) {
+          scrollContainer.style.position = 'relative';
+          scrollContainer.appendChild(overlay);
         }
-      };
-    }, [selectionMode]);
-    
-    // Handle mouse events for selection
-    useEffect(() => {
-      if (!selectionOverlayRef.current || !selectionMode) return;
+      }
       
-      const overlay = selectionOverlayRef.current;
+      // Initialize Selecto
+      const selecto = new Selecto({
+        // The container to add a selection element
+        container: selectionOverlayRef.current,
+        // Area selection allows drag selection within the container
+        dragContainer: selectionOverlayRef.current,
+        // Enable only area selection (no clicking elements)
+        selectableTargets: [],
+        // Enable area selection
+        selectByClick: false,
+        selectFromInside: false,
+        continueSelect: false,
+        toggleContinueSelect: ["shift"],
+        keyContainer: window,
+        hitRate: 0,
+      });
       
-      const handleMouseDown = (e: MouseEvent) => {
+      // Handle selection start
+      selecto.on("selectStart", (e) => {
         if (!selectionMode) return;
-        
-        const rect = overlay.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top + overlay.parentElement!.scrollTop;
-        
-        setSelectionStart({ x, y });
         setIsSelecting(true);
         
-        // Create selection rectangle if it doesn't exist
-        if (!selectionRef.current) {
-          const selection = document.createElement('div');
-          selection.className = 'pdf-selection';
-          selection.style.position = 'absolute';
-          selection.style.border = '2px dashed #1a73e8';
-          selection.style.backgroundColor = 'rgba(26, 115, 232, 0.1)';
-          selection.style.pointerEvents = 'none';
-          selection.style.zIndex = '100';
-          selectionRef.current = selection;
-          overlay.appendChild(selection);
-        }
-        
-        // Position and reset size of selection
-        const selection = selectionRef.current;
-        selection.style.left = `${x}px`;
-        selection.style.top = `${y}px`;
-        selection.style.width = '0px';
-        selection.style.height = '0px';
-      };
-      
-      const handleMouseMove = (e: MouseEvent) => {
-        if (!isSelecting || !selectionStart || !selectionRef.current) return;
-        
-        const rect = overlay.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top + overlay.parentElement!.scrollTop;
-        
-        const selection = selectionRef.current;
-        
-        // Calculate dimensions
-        const width = Math.abs(x - selectionStart.x);
-        const height = Math.abs(y - selectionStart.y);
-        const left = Math.min(x, selectionStart.x);
-        const top = Math.min(y, selectionStart.y);
-        
-        // Update selection rectangle
-        selection.style.left = `${left}px`;
-        selection.style.top = `${top}px`;
-        selection.style.width = `${width}px`;
-        selection.style.height = `${height}px`;
-        
-        // Find which PDF page this selection is over
-        let targetPage: HTMLElement | null = null;
-        if (pagesRef.current.length > 0) {
-          for (const page of pagesRef.current) {
-            if (!page) continue;
-            
-            const pageRect = page.getBoundingClientRect();
-            const scrollTop = overlay.parentElement!.scrollTop;
-            
-            // Convert page position to overlay coordinates
-            const pageTop = pageRect.top - rect.top + scrollTop;
-            const pageBottom = pageRect.bottom - rect.top + scrollTop;
-            
-            // Check if selection overlaps with this page
-            if ((top <= pageBottom && top + height >= pageTop)) {
-              targetPage = page;
-              break;
-            }
-          }
-        }
-        
-        // Store current selection
-        setCurrentSelection({
-          x: left,
-          y: top,
-          width,
-          height,
-          pageElement: targetPage
-        });
-      };
-      
-      const handleMouseUp = () => {
-        if (isSelecting && currentSelection && currentSelection.width > 10 && currentSelection.height > 10) {
-          // Valid selection - show the explain button
-          createExplainButton();
-        } else {
-          // Invalid/too small selection - clean up
-          removeSelectionAndButton();
-        }
-        
-        setIsSelecting(false);
-      };
-      
-      // Create "Explain" button
-      const createExplainButton = () => {
-        if (!currentSelection) return;
-        
-        // Remove existing button if any
-        if (explainButtonRef.current && explainButtonRef.current.parentNode) {
-          explainButtonRef.current.parentNode.removeChild(explainButtonRef.current);
-        }
-        
-        // Create button
-        const button = document.createElement('button');
-        button.textContent = 'Explain';
-        button.className = 'pdf-explain-button bg-primary text-white px-2 py-1 rounded-md text-xs font-medium';
-        button.style.position = 'absolute';
-        button.style.left = `${currentSelection.x + currentSelection.width - 30}px`;
-        button.style.top = `${currentSelection.y - 30}px`;
-        button.style.zIndex = '200';
-        button.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
-        button.style.cursor = 'pointer';
-        
-        // Add click handler
-        button.addEventListener('click', captureAndExplainSelection);
-        
-        // Add to overlay
-        explainButtonRef.current = button;
-        if (selectionOverlayRef.current) {
-          selectionOverlayRef.current.appendChild(button);
-        }
-      };
-      
-      // Capture selected area using html2canvas
-      const captureAndExplainSelection = async () => {
-        if (!currentSelection || !currentSelection.pageElement) {
-          toast({
-            title: "Selection Error",
-            description: "Could not determine which page was selected.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        try {
-          const targetPage = currentSelection.pageElement;
-          const pageRect = targetPage.getBoundingClientRect();
-          const overlayRect = overlay.getBoundingClientRect();
-          
-          // Convert overlay coordinates to page coordinates
-          const scrollTop = overlay.parentElement!.scrollTop;
-          const relativeTop = currentSelection.y - (pageRect.top - overlayRect.top + scrollTop);
-          const relativeLeft = currentSelection.x - (pageRect.left - overlayRect.left);
-          
-          // Ensure we have positive values
-          const captureOptions = {
-            x: Math.max(0, relativeLeft),
-            y: Math.max(0, relativeTop),
-            width: currentSelection.width,
-            height: currentSelection.height,
-            backgroundColor: "#ffffff",
-          };
-          
-          toast({
-            title: "Capturing selection",
-            description: "Please wait while we process your selection...",
-          });
-          
-          // Use html2canvas to capture the selection
-          const canvas = await html2canvas(targetPage, captureOptions);
-          const imageData = canvas.toDataURL('image/png');
-          
-          // Call the callback with the image data
-          if (onAreaSelected) {
-            onAreaSelected(imageData);
-          }
-          
-          // Clean up the selection
-          removeSelectionAndButton();
-          setSelectionMode(false);
-          
-        } catch (error) {
-          console.error("Error capturing selection:", error);
-          toast({
-            title: "Capture Failed",
-            description: "Failed to capture the selected area.",
-            variant: "destructive",
-          });
-        }
-      };
-      
-      // Remove selection rectangle and explain button
-      const removeSelectionAndButton = () => {
+        // Remove any previous selection elements
         if (selectionRef.current && selectionRef.current.parentNode) {
           selectionRef.current.parentNode.removeChild(selectionRef.current);
           selectionRef.current = null;
@@ -308,27 +142,179 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           explainButtonRef.current.parentNode.removeChild(explainButtonRef.current);
           explainButtonRef.current = null;
         }
+      });
+      
+      // Handle selection in progress
+      selecto.on("select", (e) => {
+        if (!selectionMode || !e.rect) return;
         
-        setCurrentSelection(null);
-      };
+        const { left, top, width, height } = e.rect;
+        
+        // Find which PDF page this selection is over
+        let targetPage: HTMLElement | null = null;
+        
+        if (pagesRef.current.length > 0 && scrollContainer instanceof HTMLElement) {
+          const scrollTop = scrollContainer.scrollTop;
+          const containerRect = selectionOverlayRef.current?.getBoundingClientRect();
+          
+          for (const page of pagesRef.current) {
+            if (!page) continue;
+            
+            const pageRect = page.getBoundingClientRect();
+            
+            if (!containerRect) continue;
+            
+            // Convert page position to overlay coordinates
+            const pageTop = pageRect.top - containerRect.top + scrollTop;
+            const pageBottom = pageRect.bottom - containerRect.top + scrollTop;
+            
+            // Check if selection overlaps with this page
+            if ((top <= pageBottom && top + height >= pageTop)) {
+              targetPage = page;
+              break;
+            }
+          }
+        }
+        
+        // Store current selection for later use
+        setCurrentSelection({
+          x: left,
+          y: top,
+          width,
+          height,
+          pageElement: targetPage
+        });
+      });
       
-      // Attach event listeners
-      overlay.addEventListener('mousedown', handleMouseDown);
-      overlay.addEventListener('mousemove', handleMouseMove);
-      overlay.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('mouseleave', handleMouseUp);
+      // Handle selection end
+      selecto.on("selectEnd", (e) => {
+        if (!selectionMode || !currentSelection) return;
+        
+        setIsSelecting(false);
+        
+        // Only show explain button if selection is large enough
+        if (currentSelection.width > 10 && currentSelection.height > 10 && currentSelection.pageElement) {
+          createExplainButton();
+        }
+      });
       
-      // Cleanup
+      selectoRef.current = selecto;
+      
       return () => {
-        overlay.removeEventListener('mousedown', handleMouseDown);
-        overlay.removeEventListener('mousemove', handleMouseMove);
-        overlay.removeEventListener('mouseup', handleMouseUp);
-        document.removeEventListener('mouseleave', handleMouseUp);
+        if (selectoRef.current) {
+          selectoRef.current.destroy();
+          selectoRef.current = null;
+        }
         
-        // Clean up selection and button
-        removeSelectionAndButton();
+        if (selectionOverlayRef.current && selectionOverlayRef.current.parentNode) {
+          selectionOverlayRef.current.parentNode.removeChild(selectionOverlayRef.current);
+          selectionOverlayRef.current = null;
+        }
       };
-    }, [isSelecting, selectionStart, selectionMode, currentSelection, toast, onAreaSelected]);
+    }, [selectionMode, numPages, currentSelection]);
+    
+    // Create "Explain" button
+    const createExplainButton = () => {
+      if (!currentSelection || !selectionOverlayRef.current) return;
+      
+      // Remove existing button if any
+      if (explainButtonRef.current && explainButtonRef.current.parentNode) {
+        explainButtonRef.current.parentNode.removeChild(explainButtonRef.current);
+      }
+      
+      // Create button
+      const button = document.createElement('button');
+      button.textContent = 'Explain';
+      button.className = 'pdf-explain-button bg-primary text-white px-2 py-1 rounded-md text-xs font-medium';
+      button.style.position = 'absolute';
+      button.style.left = `${currentSelection.x + currentSelection.width - 30}px`;
+      button.style.top = `${currentSelection.y - 30}px`;
+      button.style.zIndex = '200';
+      button.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+      button.style.cursor = 'pointer';
+      
+      // Add click handler
+      button.addEventListener('click', captureAndExplainSelection);
+      
+      // Add to overlay
+      explainButtonRef.current = button;
+      selectionOverlayRef.current.appendChild(button);
+    };
+    
+    // Capture selected area using html2canvas
+    const captureAndExplainSelection = async () => {
+      if (!currentSelection || !currentSelection.pageElement) {
+        toast({
+          title: "Selection Error",
+          description: "Could not determine which page was selected.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      try {
+        const targetPage = currentSelection.pageElement;
+        const pageRect = targetPage.getBoundingClientRect();
+        const overlayRect = selectionOverlayRef.current?.getBoundingClientRect();
+        
+        if (!overlayRect) return;
+        
+        // Convert overlay coordinates to page coordinates
+        const scrollContainer = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+        const scrollTop = scrollContainer instanceof HTMLElement ? scrollContainer.scrollTop : 0;
+        const relativeTop = currentSelection.y - (pageRect.top - overlayRect.top + scrollTop);
+        const relativeLeft = currentSelection.x - (pageRect.left - overlayRect.left);
+        
+        // Ensure we have positive values
+        const captureOptions = {
+          x: Math.max(0, relativeLeft),
+          y: Math.max(0, relativeTop),
+          width: currentSelection.width,
+          height: currentSelection.height,
+          backgroundColor: "#ffffff",
+        };
+        
+        toast({
+          title: "Capturing selection",
+          description: "Please wait while we process your selection...",
+        });
+        
+        // Use html2canvas to capture the selection
+        const canvas = await html2canvas(targetPage, captureOptions);
+        const imageData = canvas.toDataURL('image/png');
+        
+        // Call the callback with the image data
+        if (onAreaSelected) {
+          onAreaSelected(imageData);
+        }
+        
+        // Clean up the selection
+        removeSelectionAndButton();
+        setSelectionMode(false);
+        
+      } catch (error) {
+        console.error("Error capturing selection:", error);
+        toast({
+          title: "Capture Failed",
+          description: "Failed to capture the selected area.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    // Remove selection rectangle and explain button
+    const removeSelectionAndButton = () => {
+      if (explainButtonRef.current && explainButtonRef.current.parentNode) {
+        explainButtonRef.current.parentNode.removeChild(explainButtonRef.current);
+        explainButtonRef.current = null;
+      }
+      
+      if (selectoRef.current) {
+        selectoRef.current.setSelectedTargets([]);
+      }
+      
+      setCurrentSelection(null);
+    };
 
     // Handle text selection - simplified to just pass the text without showing tooltip
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -595,17 +581,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         });
       } else {
         // Clean up any selections when disabling
-        if (selectionRef.current && selectionRef.current.parentNode) {
-          selectionRef.current.parentNode.removeChild(selectionRef.current);
-          selectionRef.current = null;
-        }
-        
-        if (explainButtonRef.current && explainButtonRef.current.parentNode) {
-          explainButtonRef.current.parentNode.removeChild(explainButtonRef.current);
-          explainButtonRef.current = null;
-        }
-        
-        setCurrentSelection(null);
+        removeSelectionAndButton();
       }
     };
 
