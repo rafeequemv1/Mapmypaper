@@ -11,8 +11,8 @@ interface MindMapContextMenuProps {
   onAddSibling?: () => void;
   onExport?: () => void;
   onExportAsMermaid?: () => void;
-  onExportAsPNG?: () => void; // New prop for PNG export
-  onExportAsSVG?: () => void; // New prop for SVG export
+  onExportAsPNG?: () => void; 
+  onExportAsSVG?: () => void; 
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
