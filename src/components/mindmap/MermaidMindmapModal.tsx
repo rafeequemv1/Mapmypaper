@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { generateMindmapFromPdf } from "@/services/geminiService";
-import { Download } from "lucide-react";
+import { Download, Code, Eye } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import mermaid from "mermaid";
 
 interface MermaidMindmapModalProps {
@@ -16,6 +17,8 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   const [mindmapCode, setMindmapCode] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editorContent, setEditorContent] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -37,6 +40,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     if (!open) {
       // Reset states
       setIsRendered(false);
+      setShowEditor(false);
       
       // Clear the container content to prevent DOM issues
       if (containerRef.current) {
@@ -52,27 +56,46 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     }
   }, [open]);
 
-  // Render mindmap whenever code changes
+  // Update editor content when mindmap code changes
+  useEffect(() => {
+    if (mindmapCode) {
+      setEditorContent(mindmapCode);
+    }
+  }, [mindmapCode]);
+
+  // Render mindmap whenever code changes or when switching from editor view
   useEffect(() => {
     if (!mindmapCode || !open || !containerRef.current) return;
     
-    // Prevent rendering if component is unmounted or modal is closed
-    const renderTimeout = setTimeout(() => {
-      renderMindmap();
-    }, 300);
-    
-    return () => {
-      clearTimeout(renderTimeout);
-    };
-  }, [mindmapCode, open]);
+    // Only attempt to render if we're not in editor mode or we just switched from editor mode
+    if (!showEditor) {
+      // Use a timeout to ensure the DOM is ready
+      const renderTimeout = setTimeout(() => {
+        renderMindmap();
+      }, 300);
+      
+      return () => {
+        clearTimeout(renderTimeout);
+      };
+    }
+  }, [mindmapCode, open, showEditor]);
+
+  // Safe method to clear the container
+  const clearContainer = () => {
+    if (containerRef.current) {
+      while (containerRef.current.firstChild) {
+        containerRef.current.removeChild(containerRef.current.firstChild);
+      }
+    }
+  };
 
   // Separate render function for the mindmap
   const renderMindmap = async () => {
     if (!containerRef.current) return;
     
     try {
-      // Clear previous content to avoid DOM conflicts
-      containerRef.current.innerHTML = '';
+      // Safely clear previous content
+      clearContainer();
       
       // Generate a unique ID for this rendering
       const id = `mindmap-${Date.now()}`;
@@ -81,15 +104,17 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       const renderDiv = document.createElement('div');
       renderDiv.id = id;
       
-      // Only append if containerRef still exists and is in the document
-      if (containerRef.current && document.body.contains(containerRef.current)) {
+      // Only append if containerRef still exists
+      if (containerRef.current) {
         containerRef.current.appendChild(renderDiv);
         
         try {
-          const { svg } = await mermaid.render(id, mindmapCode);
+          // Use the editor content if available
+          const codeToRender = showEditor ? editorContent : mindmapCode;
+          const { svg } = await mermaid.render(id, codeToRender);
           
           // Only update if the element is still in the DOM
-          if (renderDiv && document.body.contains(renderDiv)) {
+          if (document.getElementById(id)) {
             renderDiv.innerHTML = svg;
             setIsRendered(true);
           }
@@ -104,7 +129,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     Methods Used`;
           
           // Check if element still exists before retrying
-          if (renderDiv && document.body.contains(renderDiv)) {
+          if (document.getElementById(id)) {
             try {
               const { svg } = await mermaid.render(id, fallbackMindmap);
               renderDiv.innerHTML = svg;
@@ -116,7 +141,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
               });
             } catch (fallbackError) {
               console.error("Fallback mindmap rendering error:", fallbackError);
-              if (renderDiv && document.body.contains(renderDiv)) {
+              if (document.getElementById(id)) {
                 renderDiv.innerHTML = '<div class="text-red-500">Failed to render mindmap</div>';
               }
               toast({
@@ -139,9 +164,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     setIsRendered(false);
     
     // Clear existing content
-    if (containerRef.current) {
-      containerRef.current.innerHTML = '';
-    }
+    clearContainer();
     
     try {
       let mindmapText = await generateMindmapFromPdf();
@@ -206,6 +229,28 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     return fixedLines.join('\n');
   };
 
+  // Handle changes in the editor
+  const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditorContent(e.target.value);
+  };
+
+  // Apply changes from the editor and render the mindmap
+  const applyEditorChanges = () => {
+    setMindmapCode(editorContent);
+    setShowEditor(false);
+    
+    // Re-render will happen via the useEffect
+    toast({
+      title: "Changes applied",
+      description: "Your mindmap changes have been applied"
+    });
+  };
+
+  // Toggle between editor and preview
+  const toggleEditor = () => {
+    setShowEditor(!showEditor);
+  };
+
   // Function to export the mindmap as SVG
   const exportAsSVG = () => {
     const svgElement = containerRef.current?.querySelector("svg");
@@ -243,7 +288,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     <Dialog open={open} onOpenChange={(newOpen) => {
       // Ensure we clean up when closing
       if (!newOpen && containerRef.current) {
-        containerRef.current.innerHTML = '';
+        clearContainer();
       }
       onOpenChange(newOpen);
     }}>
@@ -251,6 +296,15 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
         <DialogHeader className="flex justify-between items-center flex-row">
           <DialogTitle>Document Mindmap</DialogTitle>
           <div className="flex gap-2">
+            <Button 
+              onClick={toggleEditor} 
+              variant="outline" 
+              size="sm" 
+              className="flex gap-2 items-center"
+            >
+              {showEditor ? <Eye className="h-4 w-4" /> : <Code className="h-4 w-4" />}
+              {showEditor ? "Preview" : "Edit Code"}
+            </Button>
             <Button 
               onClick={handleRetry} 
               variant="outline" 
@@ -275,6 +329,18 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : showEditor ? (
+            <div className="flex flex-col gap-4 h-full">
+              <Textarea 
+                value={editorContent}
+                onChange={handleEditorChange}
+                className="font-mono text-sm min-h-[500px] h-full resize-none p-4"
+                placeholder="Edit your mindmap code here..."
+              />
+              <Button onClick={applyEditorChanges} className="self-end">
+                Apply Changes
+              </Button>
             </div>
           ) : (
             <div 
