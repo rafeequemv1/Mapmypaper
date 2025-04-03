@@ -41,8 +41,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
     const [selectionRect, setSelectionRect] = useState<{x: number, y: number, width: number, height: number} | null>(null);
     const selectionOverlayRef = useRef<HTMLDivElement | null>(null);
+    const [isDrawing, setIsDrawing] = useState<boolean>(false);
 
-    // Extract PDF data from sessionStorage
     useEffect(() => {
       try {
         // Try to get PDF data from either key
@@ -69,7 +69,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Handle text selection - simplified to just pass the text without showing tooltip
+    // Handle text selection - modified to respect area selection mode
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
       if (isAreaSelectionMode) return; // Skip if we're in area selection mode
       
@@ -84,9 +84,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Area selection handlers
+    // Area selection handlers - improved for better UX
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!isAreaSelectionMode) return;
+      
+      setIsDrawing(true);
       
       const containerRect = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]')?.getBoundingClientRect();
       if (!containerRect) return;
@@ -99,7 +101,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAreaSelectionMode || !selectionStart) return;
+      if (!isAreaSelectionMode || !selectionStart || !isDrawing) return;
       
       const containerRect = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]')?.getBoundingClientRect();
       if (!containerRect) return;
@@ -116,12 +118,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     };
 
     const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAreaSelectionMode || !selectionRect || !selectionRect.width || !selectionRect.height) {
-        return;
-      }
+      if (!isAreaSelectionMode) return;
       
-      // Keep the selection rectangle visible
-      // The capture happens when user clicks the explain button
+      setIsDrawing(false);
+      
+      // Keep selection rectangle visible if it has meaningful dimensions
+      if (!selectionRect || selectionRect.width < 5 || selectionRect.height < 5) {
+        setSelectionRect(null);
+      }
     };
 
     const captureSelectedArea = () => {
@@ -167,6 +171,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         setSelectionRect(null);
         setSelectionStart(null);
         setIsAreaSelectionMode(false);
+        setIsDrawing(false);
         
         toast({
           title: "Area captured",
@@ -198,6 +203,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       setSelectionRect(null);
       setSelectionStart(null);
       setIsAreaSelectionMode(false);
+      setIsDrawing(false);
     };
 
     // Toggle area selection mode
@@ -213,7 +219,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
       if (!searchQuery.trim()) return;
       
@@ -336,6 +341,42 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Handle document loaded
+    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+      setNumPages(numPages);
+      // Initialize the array with the correct number of null elements
+      pagesRef.current = Array(numPages).fill(null);
+      if (onPdfLoaded) {
+        onPdfLoaded();
+      }
+    };
+
+    // Handle page render success to adjust container height
+    const onPageRenderSuccess = (page: any) => {
+      setPageHeight(page.height);
+    };
+
+    // Set page ref - use a stable callback that doesn't cause re-renders
+    const setPageRef = (index: number) => (element: HTMLDivElement | null) => {
+      if (pagesRef.current && index >= 0 && index < pagesRef.current.length) {
+        pagesRef.current[index] = element;
+      }
+    };
+
+    // Zoom handlers
+    const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
+    const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
+    const resetZoom = () => setScale(1);
+
+    // Calculate optimal width for PDF pages
+    const getOptimalPageWidth = () => {
+      if (!pdfContainerRef.current) return undefined;
+      
+      const containerWidth = pdfContainerRef.current.clientWidth;
+      // Use the full container width
+      return containerWidth - 16; // Just a small margin for aesthetics
+    };
+
     // Enhanced scroll to page functionality with highlighting
     const scrollToPage = (pageNumber: number) => {
       if (pageNumber < 1 || pageNumber > numPages) {
@@ -414,42 +455,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         window.removeEventListener('scrollToPdfPage', handleScrollToPdfPage);
       };
     }, [numPages]);
-
-    // Handle document loaded
-    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-      setNumPages(numPages);
-      // Initialize the array with the correct number of null elements
-      pagesRef.current = Array(numPages).fill(null);
-      if (onPdfLoaded) {
-        onPdfLoaded();
-      }
-    };
-
-    // Handle page render success to adjust container height
-    const onPageRenderSuccess = (page: any) => {
-      setPageHeight(page.height);
-    };
-
-    // Set page ref - use a stable callback that doesn't cause re-renders
-    const setPageRef = (index: number) => (element: HTMLDivElement | null) => {
-      if (pagesRef.current && index >= 0 && index < pagesRef.current.length) {
-        pagesRef.current[index] = element;
-      }
-    };
-
-    // Zoom handlers
-    const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
-    const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
-    const resetZoom = () => setScale(1);
-
-    // Calculate optimal width for PDF pages
-    const getOptimalPageWidth = () => {
-      if (!pdfContainerRef.current) return undefined;
-      
-      const containerWidth = pdfContainerRef.current.clientWidth;
-      // Use the full container width
-      return containerWidth - 16; // Just a small margin for aesthetics
-    };
 
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
@@ -559,8 +564,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         {pdfData ? (
           <ScrollArea className="flex-1" ref={pdfContainerRef}>
             <div 
-              className="flex flex-col items-center py-4 relative" 
-              onMouseUp={handleDocumentMouseUp}
+              className={`flex flex-col items-center py-4 relative ${isAreaSelectionMode ? 'select-none' : ''}`}
+              onMouseUp={isAreaSelectionMode ? handleMouseUp : handleDocumentMouseUp}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
             >
@@ -617,10 +622,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 />
               )}
               
-              {/* Capture button */}
+              {/* Capture button - moved outside the overlay with pointer-events-auto */}
               {selectionRect && selectionRect.width > 5 && selectionRect.height > 5 && (
                 <div
-                  className="absolute bg-white rounded-md shadow-md p-2 flex gap-2"
+                  className="absolute bg-white rounded-md shadow-md p-2 flex gap-2 pointer-events-auto"
                   style={{
                     left: `${selectionRect.x + selectionRect.width / 2}px`,
                     top: `${selectionRect.y + selectionRect.height + 8}px`,
@@ -632,6 +637,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     size="sm" 
                     variant="default"
                     onClick={captureSelectedArea}
+                    className="pointer-events-auto"
                   >
                     Explain
                   </Button>
@@ -639,6 +645,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     size="sm" 
                     variant="outline"
                     onClick={cancelAreaSelection}
+                    className="pointer-events-auto"
                   >
                     Cancel
                   </Button>
