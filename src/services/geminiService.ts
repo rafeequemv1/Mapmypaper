@@ -7,6 +7,74 @@ const apiKey = "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk";
 // Get the current API key
 export const getGeminiApiKey = () => apiKey;
 
+// New function to analyze PDF content and create a mindmap
+export const analyzePdfContent = async (pdfText: string): Promise<{mindmap: string}> => {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+    Create a valid Mermaid mindmap based on this document text. 
+    
+    IMPORTANT: Use ACTUAL SPECIFIC content from the document, not generic labels.
+    
+    CRITICAL MERMAID SYNTAX RULES:
+    1. Start with 'mindmap'
+    2. Use proper indentation for hierarchy
+    3. Root node must use this exact syntax: root((Paper Title))
+    4. First level nodes use text on their own line with proper indentation
+    5. You can use these node styles:
+       - Regular text node (just text)
+       - Text in square brackets [Text]
+       - Text in parentheses (Text)
+       - Text in double parentheses ((Text))
+    6. Max 3 levels of hierarchy
+    7. Max 15 nodes total
+    8. AVOID special characters that might break syntax
+    9. NEVER use class declarations like "class node className"
+    
+    EXAMPLE CORRECT SYNTAX:
+    mindmap
+      root((Research on Machine Learning))
+        Introduction
+          Background on neural networks
+          Problem of overfitting data
+        Methodology
+          LSTM architecture used
+          Training on 50,000 examples
+        Results
+          93% accuracy achieved
+          Compared to 85% baseline
+    
+    Here's the document text:
+    ${pdfText.slice(0, 8000)}
+    
+    Generate ONLY valid Mermaid mindmap code with SPECIFIC content from the document, nothing else.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    
+    // Remove markdown code blocks if present
+    const mermaidCode = text
+      .replace(/```mermaid\s?/g, "")
+      .replace(/```\s?/g, "")
+      .trim();
+    
+    // Use the existing cleaning function for mindmap syntax
+    return { mindmap: cleanMindmapSyntax(mermaidCode) };
+  } catch (error) {
+    console.error("Gemini API mindmap generation error:", error);
+    return { 
+      mindmap: `mindmap
+        root((Error))
+          Failed to generate mindmap
+            Please try again` 
+    };
+  }
+};
+
 // Process text with Gemini to generate mindmap data
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
@@ -775,4 +843,3 @@ const cleanMindmapSyntax = (code: string): string => {
           Please try again`;
   }
 };
-

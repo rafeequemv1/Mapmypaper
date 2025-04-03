@@ -756,7 +756,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   // Function to center the mind map
   const handleCenter = () => {
     if (mindMapRef.current) {
-      mindMapRef.current.fit();
+      // Use autoFit instead of fit as it's the available method in MindElixirInstance
+      mindMapRef.current.initSizeInfo();
+      mindMapRef.current.toCenter();
     }
   };
 
