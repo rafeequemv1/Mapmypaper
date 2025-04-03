@@ -2,12 +2,13 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, Image } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { TooltipProvider } from "./ui/tooltip";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import html2canvas from "html2canvas";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -16,6 +17,7 @@ interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
   renderTooltipContent?: () => React.ReactNode;
+  onAreaSelected?: (imageData: string) => void;
 }
 
 interface PdfViewerHandle {
@@ -23,7 +25,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onPdfLoaded, renderTooltipContent, onAreaSelected }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -35,6 +37,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const pagesRef = useRef<(HTMLDivElement | null)[]>([]);
     const { toast } = useToast();
     const activeHighlightRef = useRef<HTMLElement | null>(null);
+    
+    // Area selection related states
+    const [isSelecting, setIsSelecting] = useState(false);
+    const [selectionStart, setSelectionStart] = useState<{ x: number, y: number } | null>(null);
+    const [currentSelection, setCurrentSelection] = useState<{ 
+      x: number, y: number, width: number, height: number, pageElement: HTMLElement | null 
+    } | null>(null);
+    const selectionRef = useRef<HTMLDivElement | null>(null);
+    const selectionOverlayRef = useRef<HTMLDivElement | null>(null);
+    const explainButtonRef = useRef<HTMLButtonElement | null>(null);
+    const [selectionMode, setSelectionMode] = useState(false);
 
     // Extract PDF data from sessionStorage
     useEffect(() => {
@@ -63,8 +76,265 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
+    // Create selection overlay for the entire PDF container
+    useEffect(() => {
+      if (!pdfContainerRef.current || !selectionMode) return;
+      
+      // Create or get selection overlay div
+      if (!selectionOverlayRef.current) {
+        const overlay = document.createElement('div');
+        overlay.className = 'pdf-selection-overlay';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.zIndex = '50';
+        overlay.style.cursor = 'crosshair';
+        selectionOverlayRef.current = overlay;
+      }
+      
+      const scrollContainer = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer && !scrollContainer.contains(selectionOverlayRef.current)) {
+        scrollContainer.style.position = 'relative';
+        scrollContainer.appendChild(selectionOverlayRef.current);
+      }
+      
+      return () => {
+        // Clean up the overlay when unmounting or when selection mode is toggled off
+        if (selectionOverlayRef.current && selectionOverlayRef.current.parentNode) {
+          selectionOverlayRef.current.parentNode.removeChild(selectionOverlayRef.current);
+        }
+      };
+    }, [selectionMode]);
+    
+    // Handle mouse events for selection
+    useEffect(() => {
+      if (!selectionOverlayRef.current || !selectionMode) return;
+      
+      const overlay = selectionOverlayRef.current;
+      
+      const handleMouseDown = (e: MouseEvent) => {
+        if (!selectionMode) return;
+        
+        const rect = overlay.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top + overlay.parentElement!.scrollTop;
+        
+        setSelectionStart({ x, y });
+        setIsSelecting(true);
+        
+        // Create selection rectangle if it doesn't exist
+        if (!selectionRef.current) {
+          const selection = document.createElement('div');
+          selection.className = 'pdf-selection';
+          selection.style.position = 'absolute';
+          selection.style.border = '2px dashed #1a73e8';
+          selection.style.backgroundColor = 'rgba(26, 115, 232, 0.1)';
+          selection.style.pointerEvents = 'none';
+          selection.style.zIndex = '100';
+          selectionRef.current = selection;
+          overlay.appendChild(selection);
+        }
+        
+        // Position and reset size of selection
+        const selection = selectionRef.current;
+        selection.style.left = `${x}px`;
+        selection.style.top = `${y}px`;
+        selection.style.width = '0px';
+        selection.style.height = '0px';
+      };
+      
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!isSelecting || !selectionStart || !selectionRef.current) return;
+        
+        const rect = overlay.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top + overlay.parentElement!.scrollTop;
+        
+        const selection = selectionRef.current;
+        
+        // Calculate dimensions
+        const width = Math.abs(x - selectionStart.x);
+        const height = Math.abs(y - selectionStart.y);
+        const left = Math.min(x, selectionStart.x);
+        const top = Math.min(y, selectionStart.y);
+        
+        // Update selection rectangle
+        selection.style.left = `${left}px`;
+        selection.style.top = `${top}px`;
+        selection.style.width = `${width}px`;
+        selection.style.height = `${height}px`;
+        
+        // Find which PDF page this selection is over
+        let targetPage: HTMLElement | null = null;
+        if (pagesRef.current.length > 0) {
+          for (const page of pagesRef.current) {
+            if (!page) continue;
+            
+            const pageRect = page.getBoundingClientRect();
+            const scrollTop = overlay.parentElement!.scrollTop;
+            
+            // Convert page position to overlay coordinates
+            const pageTop = pageRect.top - rect.top + scrollTop;
+            const pageBottom = pageRect.bottom - rect.top + scrollTop;
+            
+            // Check if selection overlaps with this page
+            if ((top <= pageBottom && top + height >= pageTop)) {
+              targetPage = page;
+              break;
+            }
+          }
+        }
+        
+        // Store current selection
+        setCurrentSelection({
+          x: left,
+          y: top,
+          width,
+          height,
+          pageElement: targetPage
+        });
+      };
+      
+      const handleMouseUp = () => {
+        if (isSelecting && currentSelection && currentSelection.width > 10 && currentSelection.height > 10) {
+          // Valid selection - show the explain button
+          createExplainButton();
+        } else {
+          // Invalid/too small selection - clean up
+          removeSelectionAndButton();
+        }
+        
+        setIsSelecting(false);
+      };
+      
+      // Create "Explain" button
+      const createExplainButton = () => {
+        if (!currentSelection) return;
+        
+        // Remove existing button if any
+        if (explainButtonRef.current && explainButtonRef.current.parentNode) {
+          explainButtonRef.current.parentNode.removeChild(explainButtonRef.current);
+        }
+        
+        // Create button
+        const button = document.createElement('button');
+        button.textContent = 'Explain';
+        button.className = 'pdf-explain-button bg-primary text-white px-2 py-1 rounded-md text-xs font-medium';
+        button.style.position = 'absolute';
+        button.style.left = `${currentSelection.x + currentSelection.width - 30}px`;
+        button.style.top = `${currentSelection.y - 30}px`;
+        button.style.zIndex = '200';
+        button.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+        button.style.cursor = 'pointer';
+        
+        // Add click handler
+        button.addEventListener('click', captureAndExplainSelection);
+        
+        // Add to overlay
+        explainButtonRef.current = button;
+        if (selectionOverlayRef.current) {
+          selectionOverlayRef.current.appendChild(button);
+        }
+      };
+      
+      // Capture selected area using html2canvas
+      const captureAndExplainSelection = async () => {
+        if (!currentSelection || !currentSelection.pageElement) {
+          toast({
+            title: "Selection Error",
+            description: "Could not determine which page was selected.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        try {
+          const targetPage = currentSelection.pageElement;
+          const pageRect = targetPage.getBoundingClientRect();
+          const overlayRect = overlay.getBoundingClientRect();
+          
+          // Convert overlay coordinates to page coordinates
+          const scrollTop = overlay.parentElement!.scrollTop;
+          const relativeTop = currentSelection.y - (pageRect.top - overlayRect.top + scrollTop);
+          const relativeLeft = currentSelection.x - (pageRect.left - overlayRect.left);
+          
+          // Ensure we have positive values
+          const captureOptions = {
+            x: Math.max(0, relativeLeft),
+            y: Math.max(0, relativeTop),
+            width: currentSelection.width,
+            height: currentSelection.height,
+            backgroundColor: "#ffffff",
+          };
+          
+          toast({
+            title: "Capturing selection",
+            description: "Please wait while we process your selection...",
+          });
+          
+          // Use html2canvas to capture the selection
+          const canvas = await html2canvas(targetPage, captureOptions);
+          const imageData = canvas.toDataURL('image/png');
+          
+          // Call the callback with the image data
+          if (onAreaSelected) {
+            onAreaSelected(imageData);
+          }
+          
+          // Clean up the selection
+          removeSelectionAndButton();
+          setSelectionMode(false);
+          
+        } catch (error) {
+          console.error("Error capturing selection:", error);
+          toast({
+            title: "Capture Failed",
+            description: "Failed to capture the selected area.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      // Remove selection rectangle and explain button
+      const removeSelectionAndButton = () => {
+        if (selectionRef.current && selectionRef.current.parentNode) {
+          selectionRef.current.parentNode.removeChild(selectionRef.current);
+          selectionRef.current = null;
+        }
+        
+        if (explainButtonRef.current && explainButtonRef.current.parentNode) {
+          explainButtonRef.current.parentNode.removeChild(explainButtonRef.current);
+          explainButtonRef.current = null;
+        }
+        
+        setCurrentSelection(null);
+      };
+      
+      // Attach event listeners
+      overlay.addEventListener('mousedown', handleMouseDown);
+      overlay.addEventListener('mousemove', handleMouseMove);
+      overlay.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('mouseleave', handleMouseUp);
+      
+      // Cleanup
+      return () => {
+        overlay.removeEventListener('mousedown', handleMouseDown);
+        overlay.removeEventListener('mousemove', handleMouseMove);
+        overlay.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('mouseleave', handleMouseUp);
+        
+        // Clean up selection and button
+        removeSelectionAndButton();
+      };
+    }, [isSelecting, selectionStart, selectionMode, currentSelection, toast, onAreaSelected]);
+
     // Handle text selection - simplified to just pass the text without showing tooltip
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+      // Skip if in selection mode
+      if (selectionMode) return;
+      
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "" && onTextSelected) {
         const text = selection.toString().trim();
@@ -314,6 +584,30 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       // Use the full container width
       return containerWidth - 16; // Just a small margin for aesthetics
     };
+    
+    // Toggle selection mode
+    const toggleSelectionMode = () => {
+      setSelectionMode(prev => !prev);
+      if (!selectionMode) {
+        toast({
+          title: "Selection Mode Enabled",
+          description: "Click and drag to select an area to explain.",
+        });
+      } else {
+        // Clean up any selections when disabling
+        if (selectionRef.current && selectionRef.current.parentNode) {
+          selectionRef.current.parentNode.removeChild(selectionRef.current);
+          selectionRef.current = null;
+        }
+        
+        if (explainButtonRef.current && explainButtonRef.current.parentNode) {
+          explainButtonRef.current.parentNode.removeChild(explainButtonRef.current);
+          explainButtonRef.current = null;
+        }
+        
+        setCurrentSelection(null);
+      }
+    };
 
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
@@ -350,6 +644,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               title="Reset Zoom"
             >
               <RotateCw className="h-3.5 w-3.5" />
+            </Button>
+            {/* Selection Mode Toggle Button */}
+            <Button
+              variant={selectionMode ? "default" : "ghost"}
+              size="sm"
+              className={`h-7 flex items-center gap-1 ${selectionMode ? 'bg-primary text-white' : 'text-black'}`}
+              onClick={toggleSelectionMode}
+              title={selectionMode ? "Disable Selection Mode" : "Enable Selection Mode"}
+            >
+              <Image className="h-3.5 w-3.5" />
+              <span className="text-xs">Select Area</span>
             </Button>
           </div>
           

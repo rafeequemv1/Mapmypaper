@@ -10,17 +10,19 @@ import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
+  explainImage?: string;
 }
 
-const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
+const MobileChatSheet = ({ onScrollToPdfPosition, explainImage }: MobileChatSheetProps) => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
     { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
+  const [processingExplainImage, setProcessingExplainImage] = useState(false);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -43,6 +45,64 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
       }, 200); // Increased timeout to ensure DOM is fully ready
     }
   }, [messages, isSheetOpen, onScrollToPdfPosition]);
+  
+  // Process image to explain when it changes
+  useEffect(() => {
+    const processExplainImage = async () => {
+      if (explainImage && !processingExplainImage && isSheetOpen) {
+        setProcessingExplainImage(true);
+        
+        // Add user message with the selected area image
+        setMessages(prev => [...prev, { 
+          role: 'user', 
+          content: "Please explain this selected area from the document:", 
+          image: explainImage 
+        }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          // Call AI with the image
+          const response = await chatWithGeminiAboutPdf(
+            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection."
+          );
+          
+          // Hide typing indicator and add AI response with formatting
+          setIsTyping(false);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: formatAIResponse(response),
+              isHtml: true 
+            }
+          ]);
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("Image analysis error:", error);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: "Sorry, I encountered an error analyzing that image. Please try again." 
+            }
+          ]);
+          
+          toast({
+            title: "Image Analysis Error",
+            description: "Failed to analyze the selected area.",
+            variant: "destructive"
+          });
+        } finally {
+          setProcessingExplainImage(false);
+        }
+      }
+    };
+    
+    processExplainImage();
+  }, [explainImage, isSheetOpen, toast]);
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
@@ -157,6 +217,18 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
                       : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
                   }`}
                 >
+                  {/* Display attached image if present */}
+                  {message.image && (
+                    <div className="mb-2">
+                      <img 
+                        src={message.image} 
+                        alt="Selected area" 
+                        className="max-w-full rounded-md border border-gray-200"
+                        style={{ maxHeight: '200px' }} 
+                      />
+                    </div>
+                  )}
+                  
                   {message.isHtml ? (
                     <div 
                       className="ai-message-content" 

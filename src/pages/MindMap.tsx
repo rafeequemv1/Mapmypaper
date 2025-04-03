@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
