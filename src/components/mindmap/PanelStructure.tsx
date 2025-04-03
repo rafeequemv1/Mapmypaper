@@ -27,12 +27,17 @@ const PanelStructure = ({
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
+  const [selectedImageArea, setSelectedImageArea] = useState<string | null>(null);
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
       // @ts-ignore - we know this method exists
       pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
     }
+  };
+
+  const handleAreaSelected = (imageDataUrl: string) => {
+    setSelectedImageArea(imageDataUrl);
   };
 
   return (
@@ -44,6 +49,7 @@ const PanelStructure = ({
             <PdfViewer 
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
+              onAreaSelected={handleAreaSelected}
             />
           </TooltipProvider>
         </div>
@@ -64,6 +70,7 @@ const PanelStructure = ({
           <ChatPanel
             toggleChat={toggleChat}
             explainText={explainText}
+            explainImage={selectedImageArea}
             onExplainText={onExplainText}
             onScrollToPdfPosition={handleScrollToPdfPosition}
           />

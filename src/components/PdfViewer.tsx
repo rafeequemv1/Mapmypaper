@@ -1,19 +1,20 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, Screenshot } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
+  onAreaSelected?: (imageDataUrl: string) => void;
   onPdfLoaded?: () => void;
   renderTooltipContent?: () => React.ReactNode;
 }
@@ -23,7 +24,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onAreaSelected, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -36,6 +37,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const { toast } = useToast();
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
+    const [isAreaSelectionMode, setIsAreaSelectionMode] = useState<boolean>(false);
+    const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
+    const [selectionRect, setSelectionRect] = useState<{x: number, y: number, width: number, height: number} | null>(null);
+    const selectionOverlayRef = useRef<HTMLDivElement | null>(null);
 
     // Extract PDF data from sessionStorage
     useEffect(() => {
@@ -66,6 +71,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Handle text selection - simplified to just pass the text without showing tooltip
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (isAreaSelectionMode) return; // Skip if we're in area selection mode
+      
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "" && onTextSelected) {
         const text = selection.toString().trim();
@@ -74,6 +81,135 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         if (text.length > 2) {
           onTextSelected(text);
         }
+      }
+    };
+
+    // Area selection handlers
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!isAreaSelectionMode) return;
+      
+      const containerRect = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]')?.getBoundingClientRect();
+      if (!containerRect) return;
+      
+      const x = e.clientX - containerRect.left;
+      const y = e.clientY - containerRect.top + (pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement)?.scrollTop;
+      
+      setSelectionStart({ x, y });
+      setSelectionRect({ x, y, width: 0, height: 0 });
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!isAreaSelectionMode || !selectionStart) return;
+      
+      const containerRect = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]')?.getBoundingClientRect();
+      if (!containerRect) return;
+      
+      const currentX = e.clientX - containerRect.left;
+      const currentY = e.clientY - containerRect.top + (pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement)?.scrollTop;
+      
+      setSelectionRect({
+        x: Math.min(selectionStart.x, currentX),
+        y: Math.min(selectionStart.y, currentY),
+        width: Math.abs(currentX - selectionStart.x),
+        height: Math.abs(currentY - selectionStart.y)
+      });
+    };
+
+    const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!isAreaSelectionMode || !selectionRect || !selectionRect.width || !selectionRect.height) {
+        return;
+      }
+      
+      // Keep the selection rectangle visible
+      // The capture happens when user clicks the explain button
+    };
+
+    const captureSelectedArea = () => {
+      if (!selectionRect || !pdfContainerRef.current) return;
+      
+      const viewportElement = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (!viewportElement) return;
+      
+      // Create a canvas to draw the selected area
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // Set canvas size to match selection
+      canvas.width = selectionRect.width;
+      canvas.height = selectionRect.height;
+      
+      // Create a temporary image element to draw the PDF content
+      const tempImage = new Image();
+      tempImage.onload = () => {
+        // Draw only the selected part of the image to the canvas
+        ctx.drawImage(
+          tempImage, 
+          selectionRect.x, 
+          selectionRect.y, 
+          selectionRect.width, 
+          selectionRect.height,
+          0, 
+          0, 
+          selectionRect.width, 
+          selectionRect.height
+        );
+        
+        // Convert canvas to data URL
+        const dataUrl = canvas.toDataURL('image/png');
+        
+        // Call the callback with the captured image
+        if (onAreaSelected) {
+          onAreaSelected(dataUrl);
+        }
+        
+        // Clear selection and exit selection mode
+        setSelectionRect(null);
+        setSelectionStart(null);
+        setIsAreaSelectionMode(false);
+        
+        toast({
+          title: "Area captured",
+          description: "The selected area has been sent for explanation.",
+        });
+      };
+      
+      // Use html2canvas to capture the entire PDF container
+      import('html2canvas').then(({ default: html2canvas }) => {
+        html2canvas(viewportElement as HTMLElement, {
+          scale: window.devicePixelRatio,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+        }).then(capturedCanvas => {
+          tempImage.src = capturedCanvas.toDataURL('image/png');
+        });
+      }).catch(err => {
+        console.error("Error loading html2canvas:", err);
+        toast({
+          title: "Capture failed",
+          description: "Failed to capture the selected area.",
+          variant: "destructive",
+        });
+      });
+    };
+
+    const cancelAreaSelection = () => {
+      setSelectionRect(null);
+      setSelectionStart(null);
+      setIsAreaSelectionMode(false);
+    };
+
+    // Toggle area selection mode
+    const toggleAreaSelectionMode = () => {
+      if (isAreaSelectionMode) {
+        cancelAreaSelection();
+      } else {
+        setIsAreaSelectionMode(true);
+        toast({
+          title: "Area selection mode",
+          description: "Click and drag to select an area of the PDF.",
+        });
       }
     };
 
@@ -351,6 +487,22 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               <RotateCw className="h-3.5 w-3.5" />
             </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isAreaSelectionMode ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-7 w-7 text-black"
+                  onClick={toggleAreaSelectionMode}
+                  title={isAreaSelectionMode ? "Cancel Area Selection" : "Select Area"}
+                >
+                  <Screenshot className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isAreaSelectionMode ? "Cancel area selection" : "Select area for explanation"}
+              </TooltipContent>
+            </Tooltip>
           </div>
           
           {/* Search Input */}
@@ -407,8 +559,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         {pdfData ? (
           <ScrollArea className="flex-1" ref={pdfContainerRef}>
             <div 
-              className="flex flex-col items-center py-4" 
+              className="flex flex-col items-center py-4 relative" 
               onMouseUp={handleDocumentMouseUp}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
             >
               <Document
                 file={pdfData}
@@ -445,6 +600,51 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   </div>
                 ))}
               </Document>
+              
+              {/* Selection overlay */}
+              {selectionRect && (
+                <div 
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${selectionRect.x}px`,
+                    top: `${selectionRect.y}px`,
+                    width: `${selectionRect.width}px`,
+                    height: `${selectionRect.height}px`,
+                    border: '2px dashed blue',
+                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                    zIndex: 10,
+                  }}
+                  ref={selectionOverlayRef}
+                />
+              )}
+              
+              {/* Capture button */}
+              {selectionRect && selectionRect.width > 5 && selectionRect.height > 5 && (
+                <div
+                  className="absolute bg-white rounded-md shadow-md p-2 flex gap-2"
+                  style={{
+                    left: `${selectionRect.x + selectionRect.width / 2}px`,
+                    top: `${selectionRect.y + selectionRect.height + 8}px`,
+                    transform: 'translateX(-50%)',
+                    zIndex: 11,
+                  }}
+                >
+                  <Button 
+                    size="sm" 
+                    variant="default"
+                    onClick={captureSelectedArea}
+                  >
+                    Explain
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={cancelAreaSelection}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
           </ScrollArea>
         ) : (
