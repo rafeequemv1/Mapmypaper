@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -498,7 +499,8 @@ const cleanMermaidSyntax = (code: string): string => {
     });
     
     // Validate: ensure there's at least one connection (arrow)
-    const hasConnections = validLines = validLines.some(line => line.includes('-->'));
+    // FIX: Removed the incorrect assignment to validLines
+    const hasConnections = validLines.some(line => line.includes('-->'));
     
     if (!hasConnections) {
       console.warn("No connections found in flowchart, adding default connection");
