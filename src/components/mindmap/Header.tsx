@@ -6,7 +6,6 @@ import {
   Download,
   Upload,
   MessageSquare,
-  Network,
   Image,
   FileJson,
 } from "lucide-react";
@@ -26,7 +25,6 @@ interface HeaderProps {
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowMermaidMindmap: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
@@ -37,7 +35,6 @@ const Header = ({
   toggleChat, 
   setShowSummary,
   setShowFlowchart,
-  setShowMermaidMindmap,
   isPdfActive,
   isChatActive,
   mindMap
@@ -167,15 +164,6 @@ const Header = ({
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Flowchart</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            onClick={() => setShowMermaidMindmap(true)} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <Network className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Mindmap</span>
           </Button>
         </div>
         
