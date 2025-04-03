@@ -66,7 +66,7 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       setError(null);
       
       try {
-        // Initialize mermaid with the current theme
+        // Initialize mermaid with the current theme and proper configuration
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "loose",
@@ -75,6 +75,9 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
             padding: 16,
             useMaxWidth: true
           },
+          flowchart: {
+            useMaxWidth: true
+          }
         });
         
         // Render after a short delay to ensure DOM is ready
@@ -104,51 +107,66 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       }
       
       const id = containerId.current;
-      const { svg } = await mermaid.render(id, mindmapCode);
       
-      // Safety check before updating DOM
-      if (!isMounted.current || !mermaidRef.current || !isOpen) {
-        console.log("Component unmounted or modal closed during render, aborting");
-        return;
-      }
-      
-      // Insert the SVG content
-      mermaidRef.current.innerHTML = svg;
-      
-      // Post-process SVG for better appearance
-      const svgElement = mermaidRef.current.querySelector('svg');
-      if (svgElement) {
-        // Make SVG responsive and ensure it fits within the container
-        svgElement.setAttribute('width', '100%');
-        svgElement.setAttribute('height', '100%');
-        svgElement.style.maxWidth = '100%';
-        svgElement.style.maxHeight = '60vh'; // Limit height to fit in modal
+      // Use a try-catch block for the actual rendering to handle errors properly
+      try {
+        const { svg } = await mermaid.render(id, mindmapCode);
         
-        // Add custom styles for mindmap nodes
-        const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-        styleElement.textContent = `
-          .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse, .mindmap-node > polygon {
-            rx: 10px;
-            ry: 10px;
-            fill-opacity: 0.8 !important;
-          }
-          .mindmap-node .label {
-            font-size: 14px;
-            font-weight: 500;
-          }
-          .mindmap-root > rect, .mindmap-root > circle, .mindmap-root > ellipse {
-            fill: #E5DEFF !important;
-            stroke: #8B5CF6 !important;
-          }
-          .edge {
-            stroke-width: 2px !important;
-          }
-        `;
-        svgElement.appendChild(styleElement);
+        // Safety check before updating DOM
+        if (!isMounted.current || !mermaidRef.current || !isOpen) {
+          console.log("Component unmounted or modal closed during render, aborting");
+          return;
+        }
+        
+        // Insert the SVG content
+        mermaidRef.current.innerHTML = svg;
+        
+        // Post-process SVG for better appearance
+        const svgElement = mermaidRef.current.querySelector('svg');
+        if (svgElement) {
+          // Make SVG responsive and ensure it fits within the container
+          svgElement.setAttribute('width', '100%');
+          svgElement.setAttribute('height', '100%');
+          svgElement.style.maxWidth = '100%';
+          svgElement.style.maxHeight = '60vh'; // Limit height to fit in modal
+          
+          // Add custom styles for mindmap nodes
+          const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+          styleElement.textContent = `
+            .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse, .mindmap-node > polygon {
+              rx: 10px;
+              ry: 10px;
+              fill-opacity: 0.8 !important;
+            }
+            .mindmap-node .label {
+              font-size: 14px;
+              font-weight: 500;
+            }
+            .mindmap-root > rect, .mindmap-root > circle, .mindmap-root > ellipse {
+              fill: #E5DEFF !important;
+              stroke: #8B5CF6 !important;
+            }
+            .edge {
+              stroke-width: 2px !important;
+            }
+          `;
+          svgElement.appendChild(styleElement);
+        }
+        console.log("Mindmap rendered successfully");
+      } catch (renderError) {
+        console.error("Error during mermaid render:", renderError);
+        setError(String(renderError));
+        if (mermaidRef.current) {
+          mermaidRef.current.innerHTML = `
+            <div class="p-6 text-red-500 bg-red-50 rounded-md border border-red-200">
+              <p class="font-semibold mb-2">Error rendering mindmap:</p>
+              <pre class="text-sm overflow-auto">${String(renderError)}</pre>
+            </div>
+          `;
+        }
       }
-      console.log("Mindmap rendered successfully");
     } catch (error) {
-      console.error("Error rendering mindmap:", error);
+      console.error("Error in renderMindmap function:", error);
       
       if (isMounted.current && mermaidRef.current) {
         setError(String(error));
