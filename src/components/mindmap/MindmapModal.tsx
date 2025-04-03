@@ -22,6 +22,7 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const [isRendering, setIsRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
+  const renderContainerId = useRef(`mindmap-diagram-${Date.now()}`);
   
   // Demo mindmap code
   const mindmapCode = `mindmap
@@ -41,14 +42,28 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       Pen and paper
       Mermaid`;
 
-  // Initialize mermaid with proper configuration for mindmaps
+  // Initialize mermaid once when component mounts
   useEffect(() => {
-    if (!isOpen) return; // Only initialize when modal is open
-    
+    // Initialize mermaid only once with default config
     mermaid.initialize({
       startOnLoad: false,
-      theme: theme,
       securityLevel: "loose",
+    });
+    
+    return () => {
+      // Cleanup function runs when component unmounts
+      if (mermaidRef.current) {
+        mermaidRef.current.innerHTML = '';
+      }
+    };
+  }, []);
+  
+  // Update mermaid config and render when theme changes or modal opens
+  useEffect(() => {
+    if (!isOpen || !mermaidRef.current) return;
+    
+    const currentConfig = {
+      theme: theme,
       mindmap: {
         padding: 16,
         useMaxWidth: false
@@ -58,12 +73,22 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
         primaryTextColor: '#333',
         primaryBorderColor: '#6E59A5',
       }
+    };
+    
+    // Update mermaid configuration
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "loose",
+      ...currentConfig
     });
     
-    // Render the mindmap after initialization
+    // Create a new unique ID for each render to avoid conflicts
+    renderContainerId.current = `mindmap-diagram-${Date.now()}`;
+    
+    // Render the mindmap after a short delay to ensure modal is fully visible
     const timer = setTimeout(() => {
       renderMindmap();
-    }, 200);
+    }, 300);
     
     return () => {
       clearTimeout(timer);
@@ -72,22 +97,18 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
 
   // Function to render the mindmap diagram - separated from useEffect for better control
   const renderMindmap = async () => {
-    if (!mermaidRef.current || !isOpen) return;
+    if (!isOpen || !mermaidRef.current) return;
     
+    // Set rendering state
     setIsRendering(true);
     setError(null);
     
     try {
       // Clear existing content before inserting new content
-      if (mermaidRef.current) {
-        mermaidRef.current.innerHTML = '';
-      }
-      
-      // Generate a unique ID for this render
-      const id = `mindmap-diagram-${Date.now()}`;
+      mermaidRef.current.innerHTML = '';
       
       // Use the mermaid.render API
-      const { svg } = await mermaid.render(id, mindmapCode);
+      const { svg } = await mermaid.render(renderContainerId.current, mindmapCode);
       
       // Only insert if the component is still mounted and the modal is open
       if (mermaidRef.current && isOpen) {
@@ -129,22 +150,20 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
     } catch (error) {
       console.error("Error rendering mindmap:", error);
       
-      // Only set error if component is still mounted
-      if (isOpen) {
+      // Only set error if component is still mounted and modal is open
+      if (mermaidRef.current && isOpen) {
         setError(String(error));
         
-        // Display error message if the container is still available
-        if (mermaidRef.current) {
-          mermaidRef.current.innerHTML = `
-            <div class="p-6 text-red-500 bg-red-50 rounded-md border border-red-200">
-              <p class="font-semibold mb-2">Error rendering mindmap:</p>
-              <pre class="text-sm overflow-auto">${String(error)}</pre>
-            </div>
-          `;
-        }
+        // Display error message
+        mermaidRef.current.innerHTML = `
+          <div class="p-6 text-red-500 bg-red-50 rounded-md border border-red-200">
+            <p class="font-semibold mb-2">Error rendering mindmap:</p>
+            <pre class="text-sm overflow-auto">${String(error)}</pre>
+          </div>
+        `;
       }
     } finally {
-      // Only update state if component is still mounted
+      // Only update state if component is still mounted and modal is open
       if (isOpen) {
         setIsRendering(false);
       }
