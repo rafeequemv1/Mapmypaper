@@ -36,7 +36,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         el: containerRef.current,
         newTopicName: "New Node",
         direction: MindElixir.LEFT,
-        locale: MindElixir.LOCALE.EN, // Using the enum instead of string
+        locale: "en", // Use string directly since the LOCALE enum isn't recognized
         draggable: true,
         editable: true,
         contextMenu: true,
