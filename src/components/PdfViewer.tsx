@@ -563,7 +563,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               onMouseUp={handleDocumentMouseUp}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
             >
               <Document
                 file={pdfData}
