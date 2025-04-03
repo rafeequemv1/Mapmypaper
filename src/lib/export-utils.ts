@@ -40,8 +40,10 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
       }
     `;
     
+    // Use a single call to export the SVG
     const blob = instance.exportSvg(false, customCSS); // Don't disable foreignObject, include CSS
     if (blob) {
+      // Create and trigger download
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

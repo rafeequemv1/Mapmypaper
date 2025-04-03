@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -47,6 +48,7 @@ const Header = ({
   const [mindElixirInstance, setMindElixirInstance] = useState<any | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   
   // Handle mind map instance being ready
   const handleMindMapReady = (instance: any) => {
@@ -57,10 +59,15 @@ const Header = ({
   const handleExportPNG = () => {
     if (mindElixirInstance) {
       downloadMindMapAsPNG(mindElixirInstance, fileName);
-      setShowExportDialog(false);
       toast({
         title: "Export successful",
         description: `Mind map exported as ${fileName}.png`
+      });
+    } else {
+      toast({
+        title: "Export failed",
+        description: "Mind map instance is not ready",
+        variant: "destructive"
       });
     }
   };
@@ -69,10 +76,15 @@ const Header = ({
   const handleExportSVG = () => {
     if (mindElixirInstance) {
       downloadMindMapAsSVG(mindElixirInstance, fileName);
-      setShowExportDialog(false);
       toast({
         title: "Export successful",
         description: `Mind map exported as ${fileName}.svg`
+      });
+    } else {
+      toast({
+        title: "Export failed",
+        description: "Mind map instance is not ready",
+        variant: "destructive"
       });
     }
   };
@@ -92,10 +104,15 @@ const Header = ({
       link.download = `${fileName}.json`;
       link.href = url;
       link.click();
-      setShowExportDialog(false);
       toast({
         title: "Export successful",
         description: `Mind map exported as ${fileName}.json`
+      });
+    } else {
+      toast({
+        title: "Export failed",
+        description: "Mind map instance is not ready",
+        variant: "destructive"
       });
     }
   };
@@ -111,6 +128,22 @@ const Header = ({
       });
     }
   }, [toast]);
+  
+  // Get and store the mindmap instance from parent
+  React.useEffect(() => {
+    const handleMindMapReadyEvent = (event: any) => {
+      if (event.detail && event.detail.mindMap) {
+        setMindElixirInstance(event.detail.mindMap);
+      }
+    };
+    
+    // Register global event listener for mind map ready
+    window.addEventListener('mindMapReady', handleMindMapReadyEvent);
+    
+    return () => {
+      window.removeEventListener('mindMapReady', handleMindMapReadyEvent);
+    };
+  }, []);
   
   return (
     <header className="bg-white border-b py-2 px-4">
@@ -174,52 +207,64 @@ const Header = ({
           </Button>
         </div>
         
-        {/* Right side - Action buttons */}
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
-            <Upload className="h-3.5 w-3.5 text-black" />
+        {/* Right side - Export buttons and user actions */}
+        <div className="flex items-center gap-2">
+          {/* Download buttons */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center gap-1 h-7 px-2" 
+            onClick={handleExportPNG}
+            title="Export as PNG"
+          >
+            <Download className="h-3.5 w-3.5 text-black" />
+            <span className="hidden md:inline text-xs">PNG</span>
           </Button>
           
-          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center gap-1 h-7 px-2" 
+            onClick={handleExportSVG}
+            title="Export as SVG"
+          >
             <Download className="h-3.5 w-3.5 text-black" />
+            <span className="hidden md:inline text-xs">SVG</span>
           </Button>
+          
+          {/* Upload new PDF */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 px-3 ml-2" 
+            onClick={() => navigate("/")}
+          >
+            <Upload className="h-3.5 w-3.5 text-black" />
+            <span className="ml-1 hidden sm:inline text-xs">Upload</span>
+          </Button>
+          
+          {/* User authentication */}
+          {user ? (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-7 px-3 ml-1" 
+              onClick={signOut}
+            >
+              Sign Out
+            </Button>
+          ) : (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-7 px-3 ml-1" 
+              onClick={() => navigate("/auth")}
+            >
+              Sign In
+            </Button>
+          )}
         </div>
       </div>
-      
-      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Export Mind Map</DialogTitle>
-            <DialogDescription>
-              Choose a format to export your mind map
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="filename" className="text-right">
-                File name
-              </Label>
-              <Input
-                id="filename"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={handleExportPNG} className="text-black">
-              Export as PNG
-            </Button>
-            <Button variant="ghost" onClick={handleExportSVG} className="text-black">
-              Export as SVG
-            </Button>
-            <Button variant="ghost" onClick={handleExportJSON} className="text-black">
-              Export as JSON
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </header>
   );
 };

@@ -9,11 +9,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RefreshCw, Download, FileText } from "lucide-react";
+import { ZoomIn, ZoomOut, RefreshCw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import html2canvas from "html2canvas";
-import { analyzePdfContent } from "@/services/geminiService";
+import { generateMindmapFromText } from "@/services/geminiService";
 
 interface MermaidMindmapModalProps {
   open: boolean;
@@ -62,11 +62,11 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       });
       
       // Use Gemini AI to analyze the PDF and generate a mindmap
-      analyzePdfContent(pdfText)
+      generateMindmapFromText(pdfText)
         .then((result) => {
-          if (result && result.mindmap) {
-            // The Gemini service should return a properly formatted mindmap
-            setMermaidCode(result.mindmap);
+          if (result && result.code) {
+            // The Gemini service returns properly formatted mindmap code
+            setMermaidCode(result.code);
           } else {
             throw new Error("Failed to generate mindmap from PDF");
           }
