@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Image,
   FileJson,
+  Git,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MindElixirInstance } from "mind-elixir";
+import { MindmapModal } from "./MindmapModal";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -40,6 +42,7 @@ const Header = ({
   mindMap
 }: HeaderProps) => {
   const [fileName, setFileName] = useState("mindmap");
+  const [showMindmap, setShowMindmap] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -165,6 +168,15 @@ const Header = ({
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
+
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowMindmap(true)} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <Git className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Treemap</span>
+          </Button>
         </div>
         
         {/* Right side - Action buttons */}
@@ -196,6 +208,9 @@ const Header = ({
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Mermaid Mindmap Modal */}
+      <MindmapModal isOpen={showMindmap} onClose={() => setShowMindmap(false)} />
     </header>
   );
 };
