@@ -18,6 +18,7 @@ const MindMap = () => {
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
   const { toast } = useToast();
+  const [textExplainProcessed, setTextExplainProcessed] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   
@@ -72,11 +73,23 @@ const MindMap = () => {
   }, []);
 
   const handleExplainText = useCallback((text: string) => {
+    // Prevent duplicate text explanation
+    if (textExplainProcessed && text === explainText) {
+      return;
+    }
+    
     setExplainText(text);
+    setTextExplainProcessed(true);
+    
+    // Set a timeout to reset the flag after a short period
+    setTimeout(() => {
+      setTextExplainProcessed(false);
+    }, 500);
+    
     if (!showChat) {
       setShowChat(true);
     }
-  }, [showChat]);
+  }, [showChat, explainText, textExplainProcessed]);
 
   const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
     // Set up the mind map instance with proper line breaks for nodes
