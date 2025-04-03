@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,7 +7,7 @@ import {
   MessageSquare,
   Image,
   FileJson,
-  Network, // Replacing Git with Network for treemap visual representation
+  Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MindElixirInstance } from "mind-elixir";
+import UserMenu from "@/components/UserMenu";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -179,8 +179,8 @@ const Header = ({
           </Button>
         </div>
         
-        {/* Right side - Action buttons */}
-        <div className="flex items-center gap-1">
+        {/* Right side - Action buttons and User Menu */}
+        <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
             <Upload className="h-3.5 w-3.5 text-black" />
           </Button>
@@ -206,6 +206,8 @@ const Header = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          
+          <UserMenu />
         </div>
       </div>
     </header>
