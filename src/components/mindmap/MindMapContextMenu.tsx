@@ -11,7 +11,8 @@ interface MindMapContextMenuProps {
   onAddSibling?: () => void;
   onExport?: () => void;
   onExportAsPNG?: () => void; 
-  onExportAsSVG?: () => void; 
+  onExportAsSVG?: () => void;
+  onExplain?: () => void; 
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -23,7 +24,8 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onAddSibling,
   onExport,
   onExportAsPNG,
-  onExportAsSVG
+  onExportAsSVG,
+  onExplain
 }) => {
   const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -38,6 +40,11 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-64 bg-white shadow-lg border rounded-lg z-[9999]">
+        {onExplain && (
+          <ContextMenuItem onClick={handleAction(onExplain)} className="cursor-pointer text-indigo-600 font-medium">
+            Explain Node
+          </ContextMenuItem>
+        )}
         {onCopy && (
           <ContextMenuItem onClick={handleAction(onCopy)} className="cursor-pointer">
             Copy
