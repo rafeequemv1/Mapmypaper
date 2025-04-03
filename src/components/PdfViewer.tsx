@@ -27,10 +27,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
-    const [selectedText, setSelectedText] = useState<string>("");
-    const [showTooltip, setShowTooltip] = useState<boolean>(false);
-    const [tooltipPosition, setTooltipPosition] = useState<{x: number, y: number}>({x: 0, y: 0});
-    const [scale, setScale] = useState<number>(1);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [searchResults, setSearchResults] = useState<string[]>([]);
     const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(-1);
@@ -67,48 +63,18 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Handle text selection with tooltip positioned closer to cursor
+    // Handle text selection - simplified to just pass the text without showing tooltip
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
       const selection = window.getSelection();
-      if (selection && selection.toString().trim() !== "") {
+      if (selection && selection.toString().trim() !== "" && onTextSelected) {
         const text = selection.toString().trim();
-        setSelectedText(text);
         
-        if (text.length > 2) { // Even shorter minimum length for better usability
-          // Show tooltip very close to the cursor
-          setTooltipPosition({
-            x: e.clientX,
-            y: e.clientY - 10 // Position tooltip just above the cursor
-          });
-          setShowTooltip(true);
+        // If text is selected and has minimum length, call the callback without showing tooltip
+        if (text.length > 2) {
+          onTextSelected(text);
         }
-      } else {
-        setShowTooltip(false);
       }
     };
-
-    // Handle tooltip click to send text to chat
-    const handleExplainClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      if (selectedText && onTextSelected) {
-        onTextSelected(selectedText);
-        setShowTooltip(false);
-      }
-    };
-    
-    // Hide tooltip when clicking elsewhere
-    useEffect(() => {
-      const handleClickOutside = () => {
-        setShowTooltip(false);
-      };
-      
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
 
     // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
@@ -338,6 +304,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
+    const [scale, setScale] = useState<number>(1);
 
     // Calculate optimal width for PDF pages
     const getOptimalPageWidth = () => {
@@ -443,31 +410,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               <div 
                 className="flex flex-col items-center py-4" 
                 onMouseUp={handleDocumentMouseUp}
-                style={{ position: 'relative' }}
               >
-                {/* Selection Tooltip - positioned very close to cursor */}
-                {showTooltip && (
-                  <>
-                    {renderTooltipContent ? (
-                      renderTooltipContent()
-                    ) : (
-                      <div 
-                        className="fixed bg-black text-white px-2 py-1 text-xs rounded shadow-lg z-50 cursor-pointer"
-                        style={{ 
-                          left: `${tooltipPosition.x}px`, 
-                          top: `${tooltipPosition.y - 25}px`,
-                          transform: 'translateX(-50%)',
-                          pointerEvents: 'all'
-                        }}
-                        onClick={handleExplainClick}
-                        onMouseDown={(e) => e.stopPropagation()} 
-                      >
-                        Explain
-                      </div>
-                    )}
-                  </>
-                )}
-              
                 <Document
                   file={pdfData}
                   onLoadSuccess={onDocumentLoadSuccess}
