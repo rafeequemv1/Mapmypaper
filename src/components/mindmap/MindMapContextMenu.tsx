@@ -10,6 +10,7 @@ interface MindMapContextMenuProps {
   onAddChild?: () => void;
   onAddSibling?: () => void;
   onExport?: () => void;
+  onExportAsMermaid?: () => void; // Add a new prop for Mermaid export
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -19,7 +20,8 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onDelete,
   onAddChild,
   onAddSibling,
-  onExport
+  onExport,
+  onExportAsMermaid
 }) => {
   const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -62,6 +64,11 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {onExport && (
           <ContextMenuItem onClick={handleAction(onExport)} className="cursor-pointer text-purple-600">
             Export Node Structure
+          </ContextMenuItem>
+        )}
+        {onExportAsMermaid && (
+          <ContextMenuItem onClick={handleAction(onExportAsMermaid)} className="cursor-pointer text-indigo-600">
+            Export as Mermaid Diagram
           </ContextMenuItem>
         )}
       </ContextMenuContent>

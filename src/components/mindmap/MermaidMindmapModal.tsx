@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
@@ -46,7 +45,16 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       generateMindmapFromPdf()
         .then((mindmapCode) => {
           if (mindmapCode) {
-            setMermaidCode(mindmapCode);
+            // Make sure the mindmap code starts with the mindmap declaration
+            let formattedCode = mindmapCode;
+            if (!formattedCode.trim().startsWith("mindmap")) {
+              formattedCode = `mindmap\n${formattedCode}`;
+            }
+            
+            // Fix common syntax issues
+            formattedCode = fixMindmapSyntax(formattedCode);
+            
+            setMermaidCode(formattedCode);
             toast({
               title: "Mindmap Generated",
               description: "Your mindmap has been successfully generated"
@@ -62,29 +70,81 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
             description: "Failed to generate mindmap. Using default structure.",
             variant: "destructive"
           });
-          // Set default mindmap on failure
+          // Set default mindmap on failure with proper syntax
           setMermaidCode(`mindmap
   root((Document Overview))
-    Document Structure
+    Origins
       Introduction
+        Background
+        Problem Statement
       Methodology
-      Results
-      Discussion
-      Conclusion
+        Approach
+        Data Collection
     Key Concepts
       Concept 1
+        Sub-concept 1.1
+        Sub-concept 1.2
       Concept 2
-      Concept 3
+        Sub-concept 2.1
+        Sub-concept 2.2
     Supporting Evidence
       Data Points
-      Citations
-      Analysis`);
+        Primary Findings
+        Secondary Results
+      Analysis
+        Statistical Methods
+        Interpretations`);
         })
         .finally(() => {
           setIsGenerating(false);
         });
     }
   }, [open, toast]);
+
+  // Fix common syntax issues in Mermaid mindmap code
+  const fixMindmapSyntax = (code: string): string => {
+    // Split the code into lines
+    const lines = code.split('\n');
+    const processedLines: string[] = [];
+    
+    // Process each line
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+      
+      // Skip empty lines
+      if (!line.trim()) {
+        processedLines.push('');
+        continue;
+      }
+      
+      // Keep mindmap declaration
+      if (line.trim() === "mindmap") {
+        processedLines.push(line);
+        continue;
+      }
+      
+      // If line contains "Mindmap:" or similar instructional text, skip it
+      if (line.includes("Mindmap:") || line.includes("syntax") || line.includes("example")) {
+        continue;
+      }
+      
+      // Ensure proper indentation using spaces (not tabs)
+      if (!line.startsWith(" ") && !line.trim().startsWith("mindmap")) {
+        line = "  " + line;
+      }
+      
+      // Check for node shapes
+      if (!line.includes("[") && !line.includes("(") && !line.includes("{") && 
+          !line.includes(")") && line.includes(":")) {
+        // Replace colons with proper node syntax
+        line = line.replace(/:\s*/, " ");
+      }
+      
+      processedLines.push(line);
+    }
+    
+    return processedLines.join('\n');
+  };
 
   // Handle zoom controls
   const handleZoomIn = () => {
@@ -130,6 +190,11 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
         variant: "destructive"
       });
     }
+  };
+
+  // Handle code editing in syntax view
+  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMermaidCode(e.target.value);
   };
 
   return (
@@ -202,9 +267,13 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
               </div>
             </div>
           ) : showSyntax ? (
-            // Syntax code view
+            // Syntax code view with edit capability
             <div className="h-full w-full bg-gray-50 rounded overflow-auto p-4">
-              <pre className="text-sm font-mono">{mermaidCode}</pre>
+              <textarea 
+                className="text-sm font-mono w-full h-full p-2 bg-gray-50 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={mermaidCode}
+                onChange={handleCodeChange}
+              />
             </div>
           ) : (
             // Mindmap preview
