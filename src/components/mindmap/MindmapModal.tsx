@@ -22,7 +22,7 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const [isRendering, setIsRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
-
+  
   // Demo mindmap code
   const mindmapCode = `mindmap
   root((Mindmap))
@@ -43,6 +43,8 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
 
   // Initialize mermaid with proper configuration for mindmaps
   useEffect(() => {
+    if (!isOpen) return; // Only initialize when modal is open
+    
     mermaid.initialize({
       startOnLoad: false,
       theme: theme,
@@ -57,9 +59,18 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
         primaryBorderColor: '#6E59A5',
       }
     });
-  }, [theme]);
+    
+    // Render the mindmap after initialization
+    const timer = setTimeout(() => {
+      renderMindmap();
+    }, 200);
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isOpen, theme]);
 
-  // Function to render the mindmap diagram
+  // Function to render the mindmap diagram - separated from useEffect for better control
   const renderMindmap = async () => {
     if (!mermaidRef.current || !isOpen) return;
     
@@ -67,17 +78,19 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
     setError(null);
     
     try {
-      // Clear existing content
-      mermaidRef.current.innerHTML = '';
+      // Clear existing content before inserting new content
+      if (mermaidRef.current) {
+        mermaidRef.current.innerHTML = '';
+      }
       
       // Generate a unique ID for this render
       const id = `mindmap-diagram-${Date.now()}`;
       
-      // Use the mermaid.render API which is more reliable than mermaid.run
+      // Use the mermaid.render API
       const { svg } = await mermaid.render(id, mindmapCode);
       
-      // Insert the rendered SVG
-      if (mermaidRef.current) {
+      // Only insert if the component is still mounted and the modal is open
+      if (mermaidRef.current && isOpen) {
         mermaidRef.current.innerHTML = svg;
         
         // Post-process SVG for better appearance
@@ -115,32 +128,28 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       console.log('Mindmap rendered successfully');
     } catch (error) {
       console.error("Error rendering mindmap:", error);
-      setError(String(error));
       
-      if (mermaidRef.current) {
-        mermaidRef.current.innerHTML = `
-          <div class="p-6 text-red-500 bg-red-50 rounded-md border border-red-200">
-            <p class="font-semibold mb-2">Error rendering mindmap:</p>
-            <pre class="text-sm overflow-auto">${String(error)}</pre>
-          </div>
-        `;
+      // Only set error if component is still mounted
+      if (isOpen) {
+        setError(String(error));
+        
+        // Display error message if the container is still available
+        if (mermaidRef.current) {
+          mermaidRef.current.innerHTML = `
+            <div class="p-6 text-red-500 bg-red-50 rounded-md border border-red-200">
+              <p class="font-semibold mb-2">Error rendering mindmap:</p>
+              <pre class="text-sm overflow-auto">${String(error)}</pre>
+            </div>
+          `;
+        }
       }
     } finally {
-      setIsRendering(false);
+      // Only update state if component is still mounted
+      if (isOpen) {
+        setIsRendering(false);
+      }
     }
   };
-
-  // Render diagram when modal opens or theme changes
-  useEffect(() => {
-    if (isOpen) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        renderMindmap();
-      }, 200);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, theme]);
 
   // Toggle through available themes
   const toggleTheme = () => {
