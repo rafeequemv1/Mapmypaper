@@ -1,10 +1,10 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { generateMindmapFromPdf } from "@/services/geminiService";
-import { Download, Code, Eye } from "lucide-react";
+import { Download, Code, Eye, RefreshCw } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import mermaid from "mermaid";
 
@@ -83,9 +83,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   // Safe method to clear the container
   const clearContainer = () => {
     if (containerRef.current) {
-      while (containerRef.current.firstChild) {
-        containerRef.current.removeChild(containerRef.current.firstChild);
-      }
+      containerRef.current.innerHTML = '';
     }
   };
 
@@ -111,12 +109,17 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
         try {
           // Use the editor content if available
           const codeToRender = showEditor ? editorContent : mindmapCode;
-          const { svg } = await mermaid.render(id, codeToRender);
           
-          // Only update if the element is still in the DOM
+          // Check if element still exists before rendering
           if (document.getElementById(id)) {
-            renderDiv.innerHTML = svg;
-            setIsRendered(true);
+            const { svg } = await mermaid.render(id, codeToRender);
+            
+            // Check again if the element exists before updating
+            const element = document.getElementById(id);
+            if (element) {
+              element.innerHTML = svg;
+              setIsRendered(true);
+            }
           }
         } catch (error) {
           console.error("Mermaid rendering error:", error);
@@ -132,18 +135,26 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           if (document.getElementById(id)) {
             try {
               const { svg } = await mermaid.render(id, fallbackMindmap);
-              renderDiv.innerHTML = svg;
-              setIsRendered(true);
-              toast({
-                title: "Using simplified mindmap",
-                description: "The full mindmap couldn't be rendered due to syntax issues",
-                variant: "default"
-              });
+              
+              const element = document.getElementById(id);
+              if (element) {
+                element.innerHTML = svg;
+                setIsRendered(true);
+                
+                toast({
+                  title: "Using simplified mindmap",
+                  description: "The full mindmap couldn't be rendered due to syntax issues",
+                  variant: "default"
+                });
+              }
             } catch (fallbackError) {
               console.error("Fallback mindmap rendering error:", fallbackError);
-              if (document.getElementById(id)) {
-                renderDiv.innerHTML = '<div class="text-red-500">Failed to render mindmap</div>';
+              
+              const element = document.getElementById(id);
+              if (element) {
+                element.innerHTML = '<div class="text-red-500">Failed to render mindmap</div>';
               }
+              
               toast({
                 title: "Rendering Error",
                 description: "Failed to render the mindmap",
@@ -279,11 +290,6 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     }
   };
 
-  // Function to retry mindmap generation
-  const handleRetry = () => {
-    generateMindmap();
-  };
-
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
       // Ensure we clean up when closing
@@ -306,11 +312,13 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
               {showEditor ? "Preview" : "Edit Code"}
             </Button>
             <Button 
-              onClick={handleRetry} 
+              onClick={generateMindmap}
               variant="outline" 
               size="sm" 
               className="flex gap-2 items-center"
+              disabled={isLoading}
             >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               Regenerate
             </Button>
             <Button 
@@ -324,6 +332,10 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
             </Button>
           </div>
         </DialogHeader>
+        
+        <DialogDescription className="text-sm text-center">
+          {isLoading ? "Generating mindmap from your document..." : "View and edit your document's concept map"}
+        </DialogDescription>
         
         <div className="flex-1 overflow-auto p-4">
           {isLoading ? (
