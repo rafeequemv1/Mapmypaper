@@ -38,7 +38,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
     const [isAreaSelectionMode, setIsAreaSelectionMode] = useState<boolean>(false);
-    const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
+    const [selectionStart, setSelectionStart] =<{x: number, y: number} | null>(null);
     const [selectionRect, setSelectionRect] = useState<{x: number, y: number, width: number, height: number} | null>(null);
     const selectionOverlayRef = useRef<HTMLDivElement | null>(null);
     const [isDrawing, setIsDrawing] = useState<boolean>(false);
@@ -69,6 +69,86 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
+    // Improved area selection capture
+    const captureSelectedArea = () => {
+      if (!selectionRect || !pdfContainerRef.current) return;
+      
+      const viewportElement = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (!viewportElement) return;
+      
+      // Show a capturing toast
+      toast({
+        title: "Capturing area...",
+        description: "Please wait while we process the selection.",
+      });
+      
+      // Use html2canvas to capture the selection
+      import('html2canvas').then(({ default: html2canvas }) => {
+        html2canvas(viewportElement as HTMLElement, {
+          scale: window.devicePixelRatio,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+        }).then(canvas => {
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          
+          // Create a new canvas for just the selection
+          const selectedCanvas = document.createElement('canvas');
+          selectedCanvas.width = selectionRect.width;
+          selectedCanvas.height = selectionRect.height;
+          const selectedCtx = selectedCanvas.getContext('2d');
+          if (!selectedCtx) return;
+          
+          // Draw only the selected area to the new canvas
+          selectedCtx.drawImage(
+            canvas, 
+            selectionRect.x, 
+            selectionRect.y, 
+            selectionRect.width, 
+            selectionRect.height,
+            0, 
+            0, 
+            selectionRect.width, 
+            selectionRect.height
+          );
+          
+          // Convert to data URL
+          const dataUrl = selectedCanvas.toDataURL('image/png');
+          
+          // Send to parent component
+          if (onAreaSelected) {
+            onAreaSelected(dataUrl);
+          }
+          
+          // Clear selection and exit selection mode
+          setSelectionRect(null);
+          setSelectionStart(null);
+          setIsAreaSelectionMode(false);
+          setIsDrawing(false);
+          
+          toast({
+            title: "Area captured",
+            description: "The selected area has been sent for explanation.",
+          });
+        }).catch(err => {
+          console.error("Error capturing area:", err);
+          toast({
+            title: "Capture failed",
+            description: "Failed to capture the selected area.",
+            variant: "destructive",
+          });
+        });
+      }).catch(err => {
+        console.error("Error loading html2canvas:", err);
+        toast({
+          title: "Capture failed",
+          description: "Failed to load capture library.",
+          variant: "destructive",
+        });
+      });
+    };
+
     // Handle text selection - modified to respect area selection mode
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
       if (isAreaSelectionMode) return; // Skip if we're in area selection mode
@@ -87,6 +167,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Area selection handlers - improved for better UX
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!isAreaSelectionMode) return;
+      
+      // Prevent default to avoid text selection
+      e.preventDefault();
       
       setIsDrawing(true);
       
@@ -126,77 +209,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       if (!selectionRect || selectionRect.width < 5 || selectionRect.height < 5) {
         setSelectionRect(null);
       }
-    };
-
-    const captureSelectedArea = () => {
-      if (!selectionRect || !pdfContainerRef.current) return;
-      
-      const viewportElement = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (!viewportElement) return;
-      
-      // Create a canvas to draw the selected area
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      
-      // Set canvas size to match selection
-      canvas.width = selectionRect.width;
-      canvas.height = selectionRect.height;
-      
-      // Create a temporary image element to draw the PDF content
-      const tempImage = new Image();
-      tempImage.onload = () => {
-        // Draw only the selected part of the image to the canvas
-        ctx.drawImage(
-          tempImage, 
-          selectionRect.x, 
-          selectionRect.y, 
-          selectionRect.width, 
-          selectionRect.height,
-          0, 
-          0, 
-          selectionRect.width, 
-          selectionRect.height
-        );
-        
-        // Convert canvas to data URL
-        const dataUrl = canvas.toDataURL('image/png');
-        
-        // Call the callback with the captured image
-        if (onAreaSelected) {
-          onAreaSelected(dataUrl);
-        }
-        
-        // Clear selection and exit selection mode
-        setSelectionRect(null);
-        setSelectionStart(null);
-        setIsAreaSelectionMode(false);
-        setIsDrawing(false);
-        
-        toast({
-          title: "Area captured",
-          description: "The selected area has been sent for explanation.",
-        });
-      };
-      
-      // Use html2canvas to capture the entire PDF container
-      import('html2canvas').then(({ default: html2canvas }) => {
-        html2canvas(viewportElement as HTMLElement, {
-          scale: window.devicePixelRatio,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-        }).then(capturedCanvas => {
-          tempImage.src = capturedCanvas.toDataURL('image/png');
-        });
-      }).catch(err => {
-        console.error("Error loading html2canvas:", err);
-        toast({
-          title: "Capture failed",
-          description: "Failed to capture the selected area.",
-          variant: "destructive",
-        });
-      });
     };
 
     const cancelAreaSelection = () => {
@@ -564,10 +576,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         {pdfData ? (
           <ScrollArea className="flex-1" ref={pdfContainerRef}>
             <div 
-              className={`flex flex-col items-center py-4 relative ${isAreaSelectionMode ? 'select-none' : ''}`}
-              onMouseUp={isAreaSelectionMode ? handleMouseUp : handleDocumentMouseUp}
+              className={`flex flex-col items-center py-4 relative ${isAreaSelectionMode ? 'select-none cursor-crosshair' : ''}`}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
             >
               <Document
                 file={pdfData}
@@ -622,8 +634,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 />
               )}
               
-              {/* Capture button - moved outside the overlay with pointer-events-auto */}
-              {selectionRect && selectionRect.width > 5 && selectionRect.height > 5 && (
+              {/* Capture buttons - positioned outside the overlay with pointer-events enabled */}
+              {selectionRect && selectionRect.width > 5 && selectionRect.height > 5 && !isDrawing && (
                 <div
                   className="absolute bg-white rounded-md shadow-md p-2 flex gap-2 pointer-events-auto"
                   style={{

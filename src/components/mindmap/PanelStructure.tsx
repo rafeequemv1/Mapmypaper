@@ -38,6 +38,11 @@ const PanelStructure = ({
 
   const handleAreaSelected = (imageDataUrl: string) => {
     setSelectedImageArea(imageDataUrl);
+    
+    // Ensure chat panel is open when an area is selected
+    if (!showChat) {
+      toggleChat();
+    }
   };
 
   return (
