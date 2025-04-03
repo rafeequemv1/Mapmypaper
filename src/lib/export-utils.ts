@@ -48,3 +48,35 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
     throw error;
   }
 };
+
+/**
+ * Downloads an HTML element as PNG image using html2canvas
+ * @param element Reference to the HTML element to download
+ * @param fileName Name of the file without extension
+ */
+export const downloadElementAsPNG = async (element: HTMLElement, fileName: string = 'image'): Promise<void> => {
+  try {
+    // Dynamically import html2canvas to ensure it's available
+    const html2canvas = (await import('html2canvas')).default;
+    
+    const canvas = await html2canvas(element, {
+      scale: 2, // Higher resolution
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff'
+    });
+    
+    const dataUrl = canvas.toDataURL('image/png');
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `${fileName}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error("Error exporting element as PNG:", error);
+    throw error;
+  }
+};

@@ -9,6 +9,7 @@ interface MindMapContextMenuProps {
   onDelete?: () => void;
   onAddChild?: () => void;
   onAddSibling?: () => void;
+  onExport?: () => void;
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -17,7 +18,8 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onPaste,
   onDelete,
   onAddChild,
-  onAddSibling
+  onAddSibling,
+  onExport
 }) => {
   const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -55,6 +57,11 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {onAddSibling && (
           <ContextMenuItem onClick={handleAction(onAddSibling)} className="cursor-pointer text-emerald-600">
             Add Sibling Node
+          </ContextMenuItem>
+        )}
+        {onExport && (
+          <ContextMenuItem onClick={handleAction(onExport)} className="cursor-pointer text-purple-600">
+            Export Node Structure
           </ContextMenuItem>
         )}
       </ContextMenuContent>

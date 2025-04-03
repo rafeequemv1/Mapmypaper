@@ -9,10 +9,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RefreshCw, Download } from "lucide-react";
+import { ZoomIn, ZoomOut, RefreshCw, Download, Code } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import html2canvas from "html2canvas";
+import { generateMindmapFromPdf } from "@/services/geminiService";
 
 interface MermaidMindmapModalProps {
   open: boolean;
@@ -24,6 +25,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   const [mermaidCode, setMermaidCode] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(true);
   const [zoomLevel, setZoomLevel] = useState(1); // Start with 100% zoom
+  const [showSyntax, setShowSyntax] = useState(false); // Toggle for showing syntax code
   const { toast } = useToast();
   
   // Initialize mermaid library
@@ -34,19 +36,34 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     if (open) {
       setIsGenerating(true);
       
-      // Get PDF content from session storage to generate mindmap structure
-      const pdfText = sessionStorage.getItem("pdfText");
-      
       // Show toast when mindmap is being generated
       toast({
         title: "Generating Mermaid Mindmap",
         description: "Creating a mindmap visualization from your document...",
       });
       
-      // Simulate generation delay
-      setTimeout(() => {
-        // Create a basic mermaid mindmap from PDF content or use default structure
-        const mindmapCode = `mindmap
+      // Get PDF content from the Gemini API
+      generateMindmapFromPdf()
+        .then((mindmapCode) => {
+          if (mindmapCode) {
+            setMermaidCode(mindmapCode);
+            toast({
+              title: "Mindmap Generated",
+              description: "Your mindmap has been successfully generated"
+            });
+          } else {
+            throw new Error("Failed to generate mindmap");
+          }
+        })
+        .catch((error) => {
+          console.error("Error generating mindmap:", error);
+          toast({
+            title: "Error",
+            description: "Failed to generate mindmap. Using default structure.",
+            variant: "destructive"
+          });
+          // Set default mindmap on failure
+          setMermaidCode(`mindmap
   root((Document Overview))
     Document Structure
       Introduction
@@ -61,11 +78,11 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     Supporting Evidence
       Data Points
       Citations
-      Analysis`;
-        
-        setMermaidCode(mindmapCode);
-        setIsGenerating(false);
-      }, 1500);
+      Analysis`);
+        })
+        .finally(() => {
+          setIsGenerating(false);
+        });
     }
   }, [open, toast]);
 
@@ -80,6 +97,11 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   
   const handleZoomReset = () => {
     setZoomLevel(1);
+  };
+
+  // Toggle syntax view
+  const toggleSyntaxView = () => {
+    setShowSyntax(prev => !prev);
   };
 
   // Handle export as PNG
@@ -120,7 +142,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           </DialogDescription>
         </DialogHeader>
         
-        {/* Zoom controls */}
+        {/* Toolbar with zoom controls and syntax toggle */}
         <div className="flex items-center gap-2 mb-2">
           <Button
             variant="outline"
@@ -152,15 +174,25 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           <Button 
             variant="outline" 
             size="sm" 
+            onClick={toggleSyntaxView}
+            className="flex items-center gap-1 ml-auto"
+          >
+            <Code className="h-4 w-4 mr-1" />
+            {showSyntax ? "Hide Syntax" : "Show Syntax"}
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
             onClick={handleExportAsPNG}
-            className="ml-auto flex items-center gap-1"
+            className="flex items-center gap-1"
           >
             <Download className="h-4 w-4" />
             Export as PNG
           </Button>
         </div>
         
-        {/* Mindmap Preview */}
+        {/* Mindmap Preview or Syntax View */}
         <div className="flex-1 overflow-auto bg-white rounded-md p-4 border">
           {isGenerating ? (
             <div className="flex items-center justify-center h-full">
@@ -169,7 +201,13 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
                 <p>Generating mindmap...</p>
               </div>
             </div>
+          ) : showSyntax ? (
+            // Syntax code view
+            <div className="h-full w-full bg-gray-50 rounded overflow-auto p-4">
+              <pre className="text-sm font-mono">{mermaidCode}</pre>
+            </div>
           ) : (
+            // Mindmap preview
             <div 
               ref={previewRef} 
               className="min-h-full h-full w-full flex items-center justify-center overflow-hidden"
