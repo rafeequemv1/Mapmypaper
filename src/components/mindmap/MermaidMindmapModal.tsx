@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Initialize mermaid
+  // Initialize mermaid with specific config for mindmaps
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: false,
@@ -32,17 +31,16 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
         padding: 16,
         useMaxWidth: true
       },
-      logLevel: 'error'
+      logLevel: 'debug' // Use debug level to help troubleshooting
     });
   }, []);
 
   // Clean up when modal closes
   useEffect(() => {
     if (!open) {
-      // Reset states
       setIsRendered(false);
       
-      // Clear the container content to prevent DOM issues
+      // Safe cleanup of container
       if (containerRef.current) {
         containerRef.current.innerHTML = '';
       }
@@ -65,7 +63,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
 
   // Render mindmap whenever code changes
   useEffect(() => {
-    if (!mindmapCode || !open || !containerRef.current) return;
+    if (!editorContent || !open || !containerRef.current) return;
     
     // Use a timeout to ensure the DOM is ready
     const renderTimeout = setTimeout(() => {
@@ -80,7 +78,10 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   // Safe method to clear the container
   const clearContainer = () => {
     if (containerRef.current) {
-      containerRef.current.innerHTML = '';
+      // Instead of using innerHTML, safely remove each child node
+      while (containerRef.current.firstChild) {
+        containerRef.current.removeChild(containerRef.current.firstChild);
+      }
     }
   };
 
@@ -105,40 +106,47 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
         containerRef.current.appendChild(renderDiv);
         
         try {
+          // Ensure proper mindmap syntax
+          const processedCode = ensureProperMindmapSyntax(editorContent);
+          
+          // Debug the code being rendered
+          console.debug("Rendering mindmap with code:", processedCode);
+          
           // Check if element still exists before rendering
-          if (document.getElementById(id)) {
-            const { svg } = await mermaid.render(id, editorContent);
+          const element = document.getElementById(id);
+          if (element) {
+            const { svg } = await mermaid.render(id, processedCode);
             
             // Check again if the element exists before updating
-            const element = document.getElementById(id);
-            if (element) {
-              element.innerHTML = svg;
+            const updatedElement = document.getElementById(id);
+            if (updatedElement) {
+              updatedElement.innerHTML = svg;
               setIsRendered(true);
             }
           }
         } catch (error) {
           console.error("Mermaid rendering error:", error);
           
-          // Try with a simpler fallback mindmap if the first one fails
+          // Try with a simpler fallback mindmap that's sure to work
           const fallbackMindmap = `mindmap
-  root((Document Overview))
+  root((Document))
     Key Concepts
-    Main Findings
-    Methods Used`;
+    Main Findings`;
           
           // Check if element still exists before retrying
-          if (document.getElementById(id)) {
+          const element = document.getElementById(id);
+          if (element) {
             try {
               const { svg } = await mermaid.render(id, fallbackMindmap);
               
-              const element = document.getElementById(id);
-              if (element) {
-                element.innerHTML = svg;
+              const updatedElement = document.getElementById(id);
+              if (updatedElement) {
+                updatedElement.innerHTML = svg;
                 setIsRendered(true);
                 
                 toast({
                   title: "Using simplified mindmap",
-                  description: "The full mindmap couldn't be rendered due to syntax issues. Please check the syntax.",
+                  description: "The full mindmap couldn't be rendered due to syntax issues. Please check your syntax.",
                   variant: "default"
                 });
               }
@@ -147,12 +155,12 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
               
               const element = document.getElementById(id);
               if (element) {
-                element.innerHTML = '<div class="text-red-500">Failed to render mindmap</div>';
+                element.innerHTML = '<div class="text-red-500 p-4">Failed to render mindmap due to syntax errors. Please check your mindmap syntax.</div>';
               }
               
               toast({
                 title: "Rendering Error",
-                description: "Failed to render the mindmap",
+                description: "Failed to render the mindmap. Check syntax in the editor.",
                 variant: "destructive"
               });
             }
@@ -162,6 +170,43 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     } catch (error) {
       console.error("Mermaid processing error:", error);
     }
+  };
+
+  // Ensure proper mindmap syntax - focusing on the indentation
+  const ensureProperMindmapSyntax = (code: string): string => {
+    // Ensure code starts with mindmap declaration
+    if (!code.trim().startsWith("mindmap")) {
+      code = "mindmap\n" + code;
+    }
+    
+    // Split into lines and normalize indentation
+    const lines = code.split('\n');
+    const processedLines = [];
+    
+    // Add the mindmap declaration
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trimEnd();
+      
+      // Skip empty lines
+      if (!line.trim()) continue;
+      
+      // Keep mindmap declaration as-is
+      if (line.trim() === "mindmap") {
+        processedLines.push(line);
+        continue;
+      }
+      
+      // For other lines, ensure proper indentation
+      // Replace any mix of spaces/tabs with consistent 2-space indentation
+      const indentMatch = line.match(/^(\s*)/);
+      const indentLevel = indentMatch ? Math.floor(indentMatch[0].length / 2) : 0;
+      
+      // Re-indent with consistent spacing (2 spaces per level)
+      const normalizedLine = "  ".repeat(indentLevel) + line.trim();
+      processedLines.push(normalizedLine);
+    }
+    
+    return processedLines.join('\n');
   };
 
   // Generate the mindmap using Gemini API
@@ -176,7 +221,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       let mindmapText = await generateMindmapFromPdf();
       
       // Fix common syntax issues
-      mindmapText = fixMindmapSyntax(mindmapText);
+      mindmapText = ensureProperMindmapSyntax(mindmapText);
       
       setMindmapCode(mindmapText);
     } catch (error) {
@@ -186,8 +231,10 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
         description: "Could not generate mindmap from the PDF",
         variant: "destructive"
       });
+      
+      // Set a simple valid mindmap as fallback
       setMindmapCode(`mindmap
-  root((Error))
+  root((Document))
     Failed to generate mindmap
       Please try again`);
     } finally {
@@ -195,49 +242,14 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     }
   };
 
-  // Fix common mindmap syntax issues
-  const fixMindmapSyntax = (code: string): string => {
-    // Ensure the code starts with mindmap
-    if (!code.trim().startsWith("mindmap")) {
-      code = "mindmap\n" + code;
-    }
-
-    // Replace problematic indentation 
-    const lines = code.split('\n');
-    const fixedLines = lines.map(line => {
-      // Fix any spaces after indentation that might cause parsing errors
-      return line.replace(/^(\s+)(\S+.*)/, (match, indent, content) => {
-        // Ensure consistent indentation (2 spaces per level)
-        const level = Math.ceil(indent.length / 2);
-        return "  ".repeat(level) + content;
-      });
-    });
-
-    // Ensure root node has proper syntax
-    let hasRoot = false;
-    for (let i = 0; i < fixedLines.length; i++) {
-      if (fixedLines[i].includes("root((") && fixedLines[i].includes("))")) {
-        hasRoot = true;
-        break;
-      }
-    }
-
-    if (!hasRoot) {
-      // Insert proper root node after mindmap declaration
-      for (let i = 0; i < fixedLines.length; i++) {
-        if (fixedLines[i].trim() === "mindmap") {
-          fixedLines[i+1] = "  root((Document))" + (fixedLines[i+1] ? "\n" + fixedLines[i+1] : "");
-          break;
-        }
-      }
-    }
-
-    return fixedLines.join('\n');
-  };
-
   // Handle changes in the editor
   const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setEditorContent(e.target.value);
+  };
+  
+  // Apply changes from the editor
+  const applyChanges = () => {
+    renderMindmap();
   };
   
   // Copy code to clipboard
@@ -327,41 +339,50 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
           {isLoading ? "Generating mindmap from your document..." : "Edit code on the left and see preview on the right"}
         </DialogDescription>
         
-        <div className="flex-1 overflow-hidden p-4 flex flex-row gap-4">
+        <div className="flex-1 overflow-hidden p-4 flex flex-col gap-4">
           {isLoading ? (
             <div className="flex justify-center items-center h-64 w-full">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <>
+            <div className="flex flex-row gap-4 h-full">
               {/* Editor Panel - Left side */}
-              <div className="flex-1 h-full overflow-hidden">
-                <Textarea 
-                  value={editorContent}
-                  onChange={handleEditorChange}
-                  className="font-mono text-sm h-full resize-none p-4 overflow-auto"
-                  placeholder="mindmap
+              <div className="flex-1 h-full flex flex-col">
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <div className="text-sm font-medium mb-2">Mindmap Syntax Editor</div>
+                  <Textarea 
+                    value={editorContent}
+                    onChange={handleEditorChange}
+                    className="font-mono text-sm h-full resize-none p-4 overflow-auto flex-1"
+                    placeholder="mindmap
   root((My Document))
     Topic 1
       Subtopic 1.1
       Subtopic 1.2
     Topic 2
       Subtopic 2.1"
-                />
+                  />
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <Button onClick={applyChanges}>Apply Changes</Button>
+                </div>
               </div>
               
               {/* Preview Panel - Right side */}
-              <div className="flex-1 h-full border rounded-md overflow-auto">
-                <div 
-                  ref={containerRef}
-                  className="mermaid-mindmap w-full h-full min-h-[500px] flex justify-center items-center overflow-auto"
-                >
-                  {!isRendered && !isLoading && (
-                    <div className="text-gray-500">Rendering mindmap...</div>
-                  )}
+              <div className="flex-1 h-full">
+                <div className="text-sm font-medium mb-2">Mindmap Preview</div>
+                <div className="border rounded-md overflow-auto h-[calc(100%-2rem)]">
+                  <div 
+                    ref={containerRef}
+                    className="mermaid-mindmap w-full h-full min-h-[500px] flex justify-center items-center overflow-auto p-4"
+                  >
+                    {!isRendered && !isLoading && (
+                      <div className="text-gray-500">Rendering mindmap...</div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </DialogContent>
