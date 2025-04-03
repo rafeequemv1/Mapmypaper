@@ -4,6 +4,7 @@ import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -49,11 +50,13 @@ const PanelStructure = ({
       {/* PDF Panel - Fixed to 40% width */}
       {showPdf && (
         <div className="h-full w-[40%] flex-shrink-0">
-          <PdfViewer 
-            ref={pdfViewerRef}
-            onTextSelected={onExplainText}
-            onAreaSelected={handleAreaSelected}
-          />
+          <TooltipProvider>
+            <PdfViewer 
+              ref={pdfViewerRef}
+              onTextSelected={onExplainText}
+              onAreaSelected={handleAreaSelected}
+            />
+          </TooltipProvider>
         </div>
       )}
 
