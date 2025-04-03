@@ -14,22 +14,10 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import { useToast } from "@/hooks/use-toast";
 import { ZoomIn, ZoomOut, RefreshCw } from "lucide-react";
-import * as pdfjs from "pdfjs-dist";
-
-// Set the worker source
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface TreemapModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface PdfImage {
-  imageData: string;
-  pageNumber: number;
-  width: number;
-  height: number;
-  caption?: string;
 }
 
 const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
@@ -38,7 +26,6 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
-  const [pdfImages, setPdfImages] = useState<PdfImage[]>([]);
   
   // State for theme and zoom
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
@@ -51,144 +38,12 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
   // Show code syntax in error state so user can see the issue
   const [showSyntax, setShowSyntax] = useState(false);
 
-  // Extract images with captions from PDF
-  const extractImagesWithCaptions = async (pdfDataUrl: string): Promise<PdfImage[]> => {
-    try {
-      const pdfData = atob(pdfDataUrl.split(',')[1]);
-      const loadingTask = pdfjs.getDocument({ data: pdfData });
-      const pdf = await loadingTask.promise;
-      const extractedImages: PdfImage[] = [];
-      
-      // Process each page
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const operatorList = await page.getOperatorList();
-        const textContent = await page.getTextContent();
-        
-        // Extract all text items with their positions for caption analysis
-        const textItems = textContent.items.map(item => ({
-          text: 'str' in item ? item.str : '',
-          x: 'transform' in item ? item.transform[4] : 0,
-          y: 'transform' in item ? item.transform[5] : 0,
-          height: 'height' in item ? item.height : 0,
-          width: 'width' in item ? item.width : 0
-        }));
-        
-        // Look for image operators in the page
-        for (let i = 0; i < operatorList.fnArray.length; i++) {
-          // Check for image operators
-          if (operatorList.fnArray[i] === pdfjs.OPS.paintImageXObject) {
-            const imgArgs = operatorList.argsArray[i];
-            const imgId = imgArgs[0];
-            
-            try {
-              // Get the image data
-              const objs = await page.objs.get(imgId);
-              
-              if (objs && objs.data && objs.width && objs.height) {
-                // Create canvas to convert image data to data URL
-                const canvas = document.createElement('canvas');
-                canvas.width = objs.width;
-                canvas.height = objs.height;
-                const ctx = canvas.getContext('2d');
-                
-                if (ctx) {
-                  // Create ImageData object
-                  const imgData = new ImageData(
-                    new Uint8ClampedArray(objs.data),
-                    objs.width,
-                    objs.height
-                  );
-                  ctx.putImageData(imgData, 0, 0);
-                  
-                  // Get image as data URL
-                  const dataUrl = canvas.toDataURL('image/png');
-                  
-                  // Only add if image is not too small (likely not a meaningful figure)
-                  if (objs.width > 100 && objs.height > 100) {
-                    // Try to find caption by looking for text positioned below the image
-                    const potentialCaptions = findPotentialCaptions(textItems, objs);
-                    
-                    extractedImages.push({
-                      imageData: dataUrl,
-                      pageNumber: pageNum,
-                      width: objs.width,
-                      height: objs.height,
-                      caption: potentialCaptions.length > 0 ? potentialCaptions.join(" ") : undefined
-                    });
-                  }
-                }
-              }
-            } catch (error) {
-              console.error(`Error processing image ${imgId} on page ${pageNum}:`, error);
-            }
-          }
-        }
-      }
-      
-      return extractedImages;
-    } catch (error) {
-      console.error('Error extracting images from PDF:', error);
-      return [];
-    }
-  };
-  
-  // Find potential captions by analyzing text positioned near an image
-  const findPotentialCaptions = (textItems: any[], imgObj: any): string[] => {
-    const captions: string[] = [];
-    
-    for (let i = 0; i < textItems.length; i++) {
-      const text = textItems[i].text.trim();
-      
-      // Skip empty text
-      if (!text) continue;
-      
-      // Check for caption patterns
-      if (
-        text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) || 
-        text.match(/^(figure|fig\.?|table|diagram|chart):/i)
-      ) {
-        // Found potential caption start, collect this and following text
-        let captionText = text;
-        let j = i + 1;
-        
-        // Collect continuation text
-        while (j < textItems.length && 
-              !textItems[j].text.match(/^(figure|fig\.?|table|diagram|chart)\s*\d+/i) &&
-              Math.abs(textItems[j].y - textItems[i].y) < 20) {
-          captionText += " " + textItems[j].text.trim();
-          j++;
-        }
-        
-        captions.push(captionText);
-        i = j - 1; // Skip processed items
-      }
-    }
-    
-    return captions;
-  };
-
   // Generate treemap mindmap when modal opens
   useEffect(() => {
     if (open && !initialGeneration) {
       setIsGenerating(true);
       
       try {
-        // Get PDF data for image extraction
-        const pdfDataUrl = sessionStorage.getItem("pdfData");
-        
-        if (pdfDataUrl) {
-          // Extract images with captions from PDF
-          extractImagesWithCaptions(pdfDataUrl)
-            .then(images => {
-              setPdfImages(images);
-              console.log(`Extracted ${images.length} images from PDF for treemap`);
-            })
-            .catch(error => {
-              console.error("Error extracting images:", error);
-            });
-        }
-        
         // Try to get existing mind map data from session storage
         const mindMapData = sessionStorage.getItem('mindMapData');
         let parsedData;
@@ -218,7 +73,7 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
           // Define the rootStyle class but don't apply it yet
           const rootStyleDefinition = "classDef rootStyle fill:#9b87f5,stroke:#6E59A5,stroke-width:2px,color:white,font-weight:bold\n";
           
-          // Helper function to recursively add nodes with color classes and insert images where appropriate
+          // Helper function to recursively add nodes with color classes
           const addNodesRecursively = (node: any, parent: string, depth: number) => {
             if (!node.children) return;
             
@@ -266,48 +121,11 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
                 treemapCode += `${indent}%% ${classDeclaration}\n`;
               }
               
-              // Check if this node should have an image associated based on content
-              const relevantImage = findRelevantImageForTopic(cleanTopic, pdfImages);
-              if (relevantImage && child.children && child.children.length > 0) {
-                // Create an image node as a child of this node
-                const imageNodeId = `${nodeId}_img`;
-                const imgCaption = relevantImage.caption ? 
-                  relevantImage.caption.length > 30 ? relevantImage.caption.substring(0, 30) + "..." : relevantImage.caption 
-                  : `Image from page ${relevantImage.pageNumber}`;
-                
-                // Add the image reference as a special node
-                treemapCode += `${indent}  ${nodeId} --> ${imageNodeId}>"${imgCaption}"]\n`;
-                treemapCode += `${indent}  class ${imageNodeId} image\n`;
-                
-                // Add image class if not already defined
-                if (!treemapCode.includes("classDef image")) {
-                  treemapCode += `${indent}  %% classDef image fill:#FFEDED,stroke:#FF5050,stroke-width:1px,color:#1A1F2C,font-style:italic\n`;
-                }
-              }
-              
               // Recursively process children
               if (child.children && child.children.length > 0) {
                 addNodesRecursively(child, nodeId, depth + 1);
               }
             });
-          };
-          
-          // Find a relevant image for a given topic
-          const findRelevantImageForTopic = (topic: string, images: PdfImage[]): PdfImage | null => {
-            if (!images.length) return null;
-            
-            const lowerTopic = topic.toLowerCase();
-            const keywords = lowerTopic.split(/\s+/).filter(word => word.length > 3);
-            
-            // Find image with caption that matches the topic keywords
-            const matchedImage = images.find(img => {
-              if (!img.caption) return false;
-              
-              const lowerCaption = img.caption.toLowerCase();
-              return keywords.some(keyword => lowerCaption.includes(keyword));
-            });
-            
-            return matchedImage || null;
           };
           
           // Start recursive node addition
@@ -393,7 +211,7 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
         setIsGenerating(false);
       }
     }
-  }, [open, initialGeneration, toast, pdfImages]);
+  }, [open, initialGeneration, toast]);
 
   // Toggle color theme
   const toggleTheme = () => {
@@ -426,7 +244,7 @@ const TreemapModal = ({ open, onOpenChange }: TreemapModalProps) => {
         <DialogHeader className="space-y-1">
           <DialogTitle>Mind Map Tree Visualization</DialogTitle>
           <DialogDescription className="text-xs">
-            Tree-based visualization of your mind map with integrated document images
+            Alternate tree-based visualization of your mind map using Mermaid.js
           </DialogDescription>
         </DialogHeader>
         

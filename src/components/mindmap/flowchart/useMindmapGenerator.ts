@@ -1,73 +1,70 @@
 import { useState } from "react";
 import { generateMindmapFromPdf } from "@/services/geminiService";
 
-// Default mindmap diagram with enhanced colors and branch-based structure with emojis
+// Default mindmap diagram with enhanced colors and branch-based structure
 export const defaultMindmap = `mindmap
-  root((📑 Paper Topic))
+  root((Paper Topic))
   class root rootStyle
   
-  root --> summary["🔍 Summary"]
+  root --> summary["Summary"]
   class summary summaryClass
   
-  summary --> keyPoints["✨ Key Points"]
+  summary --> keyPoints["Key Points"]
   class keyPoints summaryDetailClass
   
-  summary --> mainContrib["⭐ Main Contributions"]
+  summary --> mainContrib["Main Contributions"]
   class mainContrib summaryDetailClass
   
-  summary --> significance["💎 Significance"]
+  summary --> significance["Significance"]
   class significance summaryDetailClass
   
-  root --> methodology["⚙️ Methodology"]
-  class methodology branch1Class
+  root --> concept1["Key Concept 1"]
+  class concept1 branch1Class
   
-  methodology --> approach["🧪 Approach"]
-  class approach subbranch1Class
+  concept1 --> sub11["Sub-concept 1.1"]
+  class sub11 subbranch1Class
   
-  approach --> design["🔧 Design"]
-  class design detail1Class
+  sub11 --> det111["Detail 1.1.1"]
+  class det111 detail1Class
   
-  approach --> implementation["⚡ Implementation"]
-  class implementation detail1Class
+  sub11 --> det112["Detail 1.1.2"]
+  class det112 detail1Class
   
-  methodology --> datasets["📊 Datasets"]
-  class datasets subbranch1Class
+  concept1 --> sub12["Sub-concept 1.2"]
+  class sub12 subbranch1Class
   
-  datasets --> preparation["🔄 Data Preparation"]
-  class preparation detail1Class
+  sub12 --> det121["Detail 1.2.1"]
+  class det121 detail1Class
   
-  root --> results["📈 Results"]
-  class results branch2Class
+  root --> concept2["Key Concept 2"]
+  class concept2 branch2Class
   
-  results --> findings["🎯 Key Findings"]
-  class findings subbranch2Class
+  concept2 --> sub21["Sub-concept 2.1"]
+  class sub21 subbranch2Class
   
-  findings --> performance["⚡ Performance"]
-  class performance detail2Class
+  sub21 --> det211["Detail 2.1.1"]
+  class det211 detail2Class
   
-  findings --> comparison["🔍 Comparison"]
-  class comparison detail2Class
+  sub21 --> det212["Detail 2.1.2"]
+  class det212 detail2Class
   
-  results --> analysis["📏 Analysis"]
-  class analysis subbranch2Class
+  concept2 --> sub22["Sub-concept 2.2"]
+  class sub22 subbranch2Class
   
-  root --> discussion["💭 Discussion"]
-  class discussion branch3Class
+  root --> concept3["Key Concept 3"]
+  class concept3 branch3Class
   
-  discussion --> implications["💡 Implications"]
-  class implications subbranch3Class
+  concept3 --> sub31["Sub-concept 3.1"]
+  class sub31 subbranch3Class
   
-  implications --> theory["📚 Theory"]
-  class theory detail3Class
+  sub31 --> det311["Detail 3.1.1"]
+  class det311 detail3Class
   
-  implications --> practice["⚒️ Practice"]
-  class practice detail3Class
+  sub31 --> det312["Detail 3.1.2"]
+  class det312 detail3Class
   
-  discussion --> limitations["🛑 Limitations"]
-  class limitations subbranch3Class
-  
-  limitations --> future["🔮 Future Work"]
-  class future detail3Class
+  det312 --> subdet3121["Sub-detail 3.1.2.1"]
+  class subdet3121 subdetail3Class
 
 %% Color styling for different branches
 %% classDef rootStyle fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-size:18px
@@ -108,358 +105,26 @@ const useMindmapGenerator = () => {
         throw new Error("No PDF content found. Please upload a PDF document first.");
       }
 
-      console.log("Generating mindmap from PDF text...");
-
-      // Call the Gemini service to generate the mindmap
       const response = await generateMindmapFromPdf();
       
       if (response) {
-        console.log("Raw mindmap response received:", response.substring(0, 100) + "...");
         // Fix potential multiple root issues and add color styling
         const fixedResponse = fixMindmapSyntax(response);
         const enhancedResponse = addColorStylingToMindmap(fixedResponse);
-        // Ensure we have enough emojis in the response
-        const withEmojis = addEmojisToMindmap(enhancedResponse);
-        setCode(withEmojis);
-        
-        // Save the mindmap data to session storage for other components to use
-        try {
-          sessionStorage.setItem("mindmapData", JSON.stringify({ 
-            mermaidCode: withEmojis,
-            timestamp: new Date().toISOString()
-          }));
-        } catch (err) {
-          console.warn("Failed to save mindmap to session storage:", err);
-        }
+        setCode(enhancedResponse);
       } else {
-        throw new Error("Failed to generate a valid mindmap diagram from PDF.");
+        throw new Error("Failed to generate a valid mindmap diagram.");
       }
     } catch (err) {
       console.error("Error generating mindmap:", err);
       setError(err instanceof Error ? err.message : "Unknown error generating mindmap");
-      
-      // Extract content directly from PDF text as a fallback
-      try {
-        console.log("Attempting direct PDF text analysis as fallback...");
-        const pdfText = sessionStorage.getItem("pdfText");
-        if (pdfText) {
-          const fallbackMindmap = generateFallbackMindmapFromText(pdfText);
-          setCode(fallbackMindmap);
-          sessionStorage.setItem("mindmapData", JSON.stringify({ 
-            mermaidCode: fallbackMindmap,
-            timestamp: new Date().toISOString()
-          }));
-        } else {
-          // Keep the default mindmap so there's something to display
-          if (code !== defaultMindmap) {
-            setCode(defaultMindmap);
-          }
-        }
-      } catch (fallbackErr) {
-        console.error("Fallback mindmap generation also failed:", fallbackErr);
-        if (code !== defaultMindmap) {
-          setCode(defaultMindmap);
-        }
+      // Keep the default mindmap so there's something to display
+      if (code !== defaultMindmap) {
+        setCode(defaultMindmap);
       }
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  /**
-   * Generate a fallback mindmap by directly analyzing the PDF text
-   */
-  const generateFallbackMindmapFromText = (pdfText: string): string => {
-    console.log("Generating fallback mindmap from PDF text...");
-    
-    // Try to extract title and main sections from the text
-    const lines = pdfText.split('\n');
-    let title = "";
-    const sections: Record<string, string[]> = {
-      "Introduction": [],
-      "Methodology": [],
-      "Results": [],
-      "Discussion": [],
-      "Conclusion": []
-    };
-    
-    // Extract potential title from first few lines
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
-      const line = lines[i].trim();
-      if (line.length > 10 && line.length < 100 && 
-          !/^(abstract|introduction|figure|table)/i.test(line)) {
-        title = line;
-        break;
-      }
-    }
-    
-    // If no title found, use default
-    if (!title) {
-      title = "Research Paper";
-    }
-    
-    // Find section content
-    let currentSection = "";
-    const sectionPatterns = {
-      "Introduction": /introduction|background|overview/i,
-      "Methodology": /method|methodology|experimental|materials|approach/i,
-      "Results": /results|findings|data|analysis/i,
-      "Discussion": /discussion|implications|interpretation/i,
-      "Conclusion": /conclusion|summary|future work/i
-    };
-    
-    // Process text line by line to extract sections
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      // Check if line is a section header
-      let foundSection = false;
-      for (const [section, pattern] of Object.entries(sectionPatterns)) {
-        if (pattern.test(line) && line.length < 100) {
-          currentSection = section;
-          foundSection = true;
-          break;
-        }
-      }
-      
-      // If not a section header and we're in a section, add line to that section
-      if (!foundSection && currentSection && sections[currentSection]) {
-        sections[currentSection].push(line);
-      }
-    }
-    
-    // Generate mindmap based on extracted content
-    let mindmap = `mindmap\n  root(("📑 ${title}"))\n`;
-    
-    // Add sections to mindmap
-    const emojis: Record<string, string> = {
-      "Introduction": "📚",
-      "Methodology": "⚙️",
-      "Results": "📊",
-      "Discussion": "💭", 
-      "Conclusion": "🏁"
-    };
-    
-    // Helper function to extract key phrases
-    const extractKeyPhrases = (text: string[], max: number = 3): string[] => {
-      const phrases: string[] = [];
-      const fullText = text.join(" ");
-      
-      // Look for sentences that might contain key information
-      const sentences = fullText.match(/[^.!?]+[.!?]+/g) || [];
-      
-      // Keywords to look for in important sentences
-      const keywords = [
-        "important", "significant", "key", "critical", "essential", "demonstrate",
-        "show", "reveal", "find", "conclude", "suggest", "indicate", "highlight",
-        "propose", "develop", "introduce", "create", "design", "implement", "analyze"
-      ];
-      
-      // Score sentences based on keywords and length
-      const scoredSentences = sentences.map(s => {
-        let score = 0;
-        const lowerSentence = s.toLowerCase();
-        
-        // Check for keywords
-        keywords.forEach(kw => {
-          if (lowerSentence.includes(kw)) score += 1;
-        });
-        
-        // Prefer medium-length sentences
-        if (s.length > 30 && s.length < 120) score += 1;
-        
-        return { text: s.trim(), score };
-      });
-      
-      // Sort by score and take the top results
-      scoredSentences.sort((a, b) => b.score - a.score);
-      
-      // Extract top phrases
-      scoredSentences.slice(0, max).forEach(s => {
-        if (s.text.length > 20) {
-          // Clean up the phrase
-          let clean = s.text.replace(/["\(\)]/g, '')
-                            .replace(/^\s*and\s+/i, '')
-                            .replace(/^\s*the\s+/i, '')
-                            .trim();
-                            
-          // Truncate if too long
-          if (clean.length > 80) {
-            clean = clean.substring(0, 77) + "...";
-          }
-          
-          phrases.push(clean);
-        }
-      });
-      
-      // If we still don't have enough phrases, add some generic ones
-      const genericPhrases = [
-        "Key findings and analysis",
-        "Main research contributions",
-        "Experimental approach",
-        "Data collection methods",
-        "Analytical framework",
-        "Theoretical foundation",
-        "Practical implications"
-      ];
-      
-      while (phrases.length < max) {
-        phrases.push(genericPhrases[phrases.length % genericPhrases.length]);
-      }
-      
-      return phrases;
-    };
-    
-    // Add sections with key phrases from content
-    for (const [section, content] of Object.entries(sections)) {
-      if (content.length > 0 || section === "Introduction") {
-        const sectionId = section.toLowerCase().replace(/\s+/g, "_");
-        mindmap += `  root --> ${sectionId}["${emojis[section] || '📄'} ${section}"]\n`;
-        
-        // Add key phrases as sub-nodes
-        const keyPhrases = extractKeyPhrases(content);
-        keyPhrases.forEach((phrase, idx) => {
-          const phraseId = `${sectionId}_p${idx}`;
-          if (idx % 2 === 0) {
-            mindmap += `    ${sectionId} --> ${phraseId}("${phrase}")\n`;
-          } else {
-            mindmap += `    ${sectionId} --> ${phraseId}["${phrase}"]\n`;
-          }
-        });
-      }
-    }
-    
-    // Add styling for better visualization
-    mindmap += `
-  %% Color styling for different branches
-  %% classDef rootStyle fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-size:18px
-  %% classDef summaryClass fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-weight:bold
-  %% classDef summaryDetailClass fill:#333333,color:#ffffff,stroke:#000000,font-style:italic
-  %% classDef branch1Class fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
-  %% classDef branch2Class fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
-  %% classDef branch3Class fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px
-  %% classDef subbranch1Class fill:#333333,color:#ffffff,stroke:#000000
-  %% classDef subbranch2Class fill:#333333,color:#ffffff,stroke:#000000
-  %% classDef subbranch3Class fill:#333333,color:#ffffff,stroke:#000000
-  %% classDef detail1Class fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
-  %% classDef detail2Class fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
-  %% classDef detail3Class fill:#555555,color:#ffffff,stroke:#000000,stroke-dasharray:2
-  %% classDef subdetail3Class fill:#777777,color:#ffffff,stroke:#000000,stroke-dasharray:3`;
-    
-    return mindmap;
-  };
-
-  /**
-   * Add emojis to mindmap nodes that don't have them
-   */
-  const addEmojisToMindmap = (mindmapCode: string): string => {
-    const lines = mindmapCode.split('\n');
-    const processedLines: string[] = [];
-    
-    // Map of keywords to emojis
-    const emojiMap: Record<string, string> = {
-      'summary': '🔍',
-      'introduction': '🚪',
-      'background': '📘',
-      'method': '⚙️',
-      'methodology': '⚙️',
-      'approach': '🧪',
-      'experiment': '🧪',
-      'data': '📊',
-      'dataset': '📊',
-      'result': '📈',
-      'finding': '✨',
-      'performance': '⚡',
-      'discussion': '💭',
-      'implication': '💡',
-      'limitation': '🛑',
-      'future': '🔮',
-      'conclusion': '🏁',
-      'reference': '📚',
-      'key point': '✨',
-      'contribution': '⭐',
-      'significance': '💎',
-      'design': '🔧',
-      'implementation': '⚡',
-      'preparation': '🔄',
-      'comparison': '🔍',
-      'analysis': '📏',
-      'theory': '📚',
-      'practice': '⚒️',
-      'objective': '🎯',
-      'hypothesis': '🎯',
-      'evaluation': '🔬',
-      'research': '🔍',
-      'question': '❓',
-      'algorithm': '⚙️',
-      'parameter': '🔢',
-      'model': '🧠',
-      'framework': '📐',
-      'tool': '🛠️',
-      'technique': '⚒️',
-      'system': '🔄',
-      'component': '🧩',
-      'process': '⚙️',
-      'step': '👣',
-      'topic': '📑',
-      'paper': '📄',
-      'study': '🔬',
-      'test': '🧪',
-      'observation': '👁️',
-      'idea': '💡',
-      'challenge': '⚠️',
-      'problem': '⚠️',
-      'solution': '🔧',
-      'goal': '🎯',
-      'measure': '📏',
-      'metric': '📊'
-    };
-
-    // Process each line
-    lines.forEach(line => {
-      // Skip empty lines or lines without node definitions
-      if (!line.trim() || !line.includes('[') || line.startsWith('%%') || line.startsWith('class')) {
-        processedLines.push(line);
-        return;
-      }
-      
-      // Check if already has emoji
-      if (/\["[^"]*\p{Emoji}[^"]*"\]/u.test(line)) {
-        processedLines.push(line);
-        return;
-      }
-      
-      // Extract node text
-      const nodeTextMatch = line.match(/\["([^"]*)"\]/);
-      if (!nodeTextMatch) {
-        processedLines.push(line);
-        return;
-      }
-      
-      const nodeText = nodeTextMatch[1];
-      const lowerText = nodeText.toLowerCase();
-      
-      // Find matching emoji
-      let emoji = '';
-      for (const [keyword, emojiChar] of Object.entries(emojiMap)) {
-        if (lowerText.includes(keyword)) {
-          emoji = emojiChar + ' ';
-          break;
-        }
-      }
-      
-      // If no specific emoji found, use a default based on position in mindmap
-      if (!emoji) {
-        emoji = '📌 '; // Default emoji
-      }
-      
-      // Replace node text with emoji + text
-      const newLine = line.replace(/\["([^"]*)"\]/, `["${emoji}${nodeText}"]`);
-      processedLines.push(newLine);
-    });
-
-    return processedLines.join('\n');
   };
 
   /**
@@ -553,7 +218,7 @@ const useMindmapGenerator = () => {
     
     // If no root was found, add one at the beginning
     if (!foundRoot) {
-      processedLines.splice(1, 0, "  root((📑 Paper Topic))");
+      processedLines.splice(1, 0, "  root((Paper Topic))");
       processedLines.splice(2, 0, "  class root rootStyle");
     }
     

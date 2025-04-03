@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   GitCommitHorizontal,
@@ -10,8 +10,18 @@ import {
   Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { downloadMindMapAsSVG } from "@/lib/export-utils";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -21,7 +31,6 @@ interface HeaderProps {
   setShowMermaidMindmap: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
-  onExportMindMap?: () => Promise<void>;
 }
 
 const Header = ({ 
@@ -32,32 +41,61 @@ const Header = ({
   setShowMermaidMindmap,
   isPdfActive,
   isChatActive,
-  onExportMindMap,
 }: HeaderProps) => {
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [fileName, setFileName] = useState("mindmap");
+  const [mindElixirInstance, setMindElixirInstance] = useState<any | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Handle export click
-  const handleExport = async () => {
-    if (onExportMindMap) {
-      try {
-        await onExportMindMap();
-        toast({
-          title: "Export successful",
-          description: "Mind map exported as SVG"
-        });
-      } catch (error) {
-        toast({
-          title: "Export failed",
-          description: "There was an error exporting the mind map",
-          variant: "destructive"
-        });
-      }
-    } else {
+  // Handle mind map instance being ready
+  const handleMindMapReady = (instance: any) => {
+    setMindElixirInstance(instance);
+  };
+  
+  // Handle export as PNG
+  const handleExportPNG = () => {
+    if (mindElixirInstance) {
+      downloadMindMapAsPNG(mindElixirInstance, fileName);
+      setShowExportDialog(false);
       toast({
-        title: "Mind map not ready",
-        description: "Please wait for the mind map to load",
-        variant: "destructive"
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.png`
+      });
+    }
+  };
+  
+  // Handle export as SVG
+  const handleExportSVG = () => {
+    if (mindElixirInstance) {
+      downloadMindMapAsSVG(mindElixirInstance, fileName);
+      setShowExportDialog(false);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.svg`
+      });
+    }
+  };
+  
+  // Handle export as JSON
+  const handleExportJSON = () => {
+    if (mindElixirInstance) {
+      const data = mindElixirInstance.getData();
+      const dataStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([
+        dataStr
+      ], {
+        type: "application/json"
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `${fileName}.json`;
+      link.href = url;
+      link.click();
+      setShowExportDialog(false);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.json`
       });
     }
   };
@@ -142,18 +180,46 @@ const Header = ({
             <Upload className="h-3.5 w-3.5 text-black" />
           </Button>
           
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-7 px-2 flex items-center gap-1"
-            onClick={handleExport}
-            title="Export as SVG"
-          >
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowExportDialog(true)}>
             <Download className="h-3.5 w-3.5 text-black" />
-            <span className="hidden md:inline text-xs">SVG</span>
           </Button>
         </div>
       </div>
+      
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Mind Map</DialogTitle>
+            <DialogDescription>
+              Choose a format to export your mind map
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="filename" className="text-right">
+                File name
+              </Label>
+              <Input
+                id="filename"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleExportPNG} className="text-black">
+              Export as PNG
+            </Button>
+            <Button variant="ghost" onClick={handleExportSVG} className="text-black">
+              Export as SVG
+            </Button>
+            <Button variant="ghost" onClick={handleExportJSON} className="text-black">
+              Export as JSON
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };
