@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   // Initialize mermaid
   useEffect(() => {
     mermaid.initialize({
-      startOnLoad: true,
+      startOnLoad: false,
       theme: 'neutral',
       securityLevel: 'loose',
       mindmap: {
@@ -31,12 +32,10 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     });
   }, []);
 
-  // Generate mindmap when modal opens
+  // Clean up when modal closes
   useEffect(() => {
-    if (open) {
-      generateMindmap();
-    } else {
-      // Reset state when closing
+    if (!open) {
+      // Reset states
       setIsRendered(false);
       
       // Clear the container content to prevent DOM issues
@@ -46,72 +45,93 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
     }
   }, [open]);
 
+  // Generate mindmap when modal opens
+  useEffect(() => {
+    if (open) {
+      generateMindmap();
+    }
+  }, [open]);
+
   // Render mindmap whenever code changes
   useEffect(() => {
     if (!mindmapCode || !open || !containerRef.current) return;
     
+    // Prevent rendering if component is unmounted or modal is closed
+    const renderTimeout = setTimeout(() => {
+      renderMindmap();
+    }, 300);
+    
+    return () => {
+      clearTimeout(renderTimeout);
+    };
+  }, [mindmapCode, open]);
+
+  // Separate render function for the mindmap
+  const renderMindmap = async () => {
+    if (!containerRef.current) return;
+    
     try {
+      // Clear previous content to avoid DOM conflicts
+      containerRef.current.innerHTML = '';
+      
       // Generate a unique ID for this rendering
       const id = `mindmap-${Date.now()}`;
       
-      // Clear previous content
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-        
-        // Create a new div for mermaid to render into
-        const renderDiv = document.createElement('div');
-        renderDiv.id = id;
+      // Create a new div for mermaid to render into
+      const renderDiv = document.createElement('div');
+      renderDiv.id = id;
+      
+      // Only append if containerRef still exists and is in the document
+      if (containerRef.current && document.body.contains(containerRef.current)) {
         containerRef.current.appendChild(renderDiv);
         
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
-          mermaid.render(id, mindmapCode)
-            .then(({ svg }) => {
-              if (renderDiv && !renderDiv.innerHTML) {
-                renderDiv.innerHTML = svg;
-                setIsRendered(true);
-              }
-            })
-            .catch(error => {
-              console.error("Mermaid rendering error:", error);
-              
-              // Try with a simpler fallback mindmap if the first one fails
-              const fallbackMindmap = `mindmap
+        try {
+          const { svg } = await mermaid.render(id, mindmapCode);
+          
+          // Only update if the element is still in the DOM
+          if (renderDiv && document.body.contains(renderDiv)) {
+            renderDiv.innerHTML = svg;
+            setIsRendered(true);
+          }
+        } catch (error) {
+          console.error("Mermaid rendering error:", error);
+          
+          // Try with a simpler fallback mindmap if the first one fails
+          const fallbackMindmap = `mindmap
   root((Document Overview))
     Key Concepts
     Main Findings
     Methods Used`;
-              
-              if (renderDiv) {
-                mermaid.render(id, fallbackMindmap)
-                  .then(({ svg }) => {
-                    renderDiv.innerHTML = svg;
-                    setIsRendered(true);
-                    toast({
-                      title: "Using simplified mindmap",
-                      description: "The full mindmap couldn't be rendered due to syntax issues",
-                      variant: "default"
-                    });
-                  })
-                  .catch(fallbackError => {
-                    console.error("Fallback mindmap rendering error:", fallbackError);
-                    if (renderDiv) {
-                      renderDiv.innerHTML = '<div class="text-red-500">Failed to render mindmap</div>';
-                    }
-                    toast({
-                      title: "Rendering Error",
-                      description: "Failed to render the mindmap",
-                      variant: "destructive"
-                    });
-                  });
+          
+          // Check if element still exists before retrying
+          if (renderDiv && document.body.contains(renderDiv)) {
+            try {
+              const { svg } = await mermaid.render(id, fallbackMindmap);
+              renderDiv.innerHTML = svg;
+              setIsRendered(true);
+              toast({
+                title: "Using simplified mindmap",
+                description: "The full mindmap couldn't be rendered due to syntax issues",
+                variant: "default"
+              });
+            } catch (fallbackError) {
+              console.error("Fallback mindmap rendering error:", fallbackError);
+              if (renderDiv && document.body.contains(renderDiv)) {
+                renderDiv.innerHTML = '<div class="text-red-500">Failed to render mindmap</div>';
               }
-            });
-        }, 300);
+              toast({
+                title: "Rendering Error",
+                description: "Failed to render the mindmap",
+                variant: "destructive"
+              });
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Mermaid processing error:", error);
     }
-  }, [mindmapCode, open, toast]);
+  };
 
   // Generate the mindmap using Gemini API
   const generateMindmap = async () => {
@@ -220,7 +240,13 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      // Ensure we clean up when closing
+      if (!newOpen && containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+      onOpenChange(newOpen);
+    }}>
       <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex justify-between items-center flex-row">
           <DialogTitle>Document Mindmap</DialogTitle>
