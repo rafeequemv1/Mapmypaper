@@ -1,17 +1,15 @@
 
 import { useState, useCallback, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, Upload, ArrowRight } from "lucide-react";
+import { Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
-import { useAuth } from "@/context/AuthProvider";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -80,17 +78,6 @@ const PdfUpload = () => {
       return;
     }
 
-    // If user is not logged in, redirect to auth page
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to generate mind maps",
-        variant: "destructive",
-      });
-      navigate("/auth");
-      return;
-    }
-
     setIsProcessing(true);
     setExtractionError(null);
     
@@ -140,14 +127,14 @@ const PdfUpload = () => {
       });
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast, user]);
+  }, [selectedFile, navigate, toast]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
       <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="text-center mb-12 mt-16">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <Brain className="h-12 w-12 text-[#333]" />
+        <div className="text-center mb-12 mt-16"> {/* Added more space above hero text */}
+          <div className="flex items-center justify-center gap-4 mb-6"> {/* Increased spacing */}
+            <Brain className="h-12 w-12 text-[#333]" /> {/* Made icon slightly larger */}
             <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl">
@@ -204,17 +191,6 @@ const PdfUpload = () => {
           >
             {isProcessing ? "Processing..." : "Generate Mind Map"}
           </Button>
-          
-          {!user && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg text-center">
-              <p className="text-blue-800 mb-2">Sign in to save and access your mind maps</p>
-              <Link to="/auth">
-                <Button variant="outline" className="text-blue-600 border-blue-600 hover:bg-blue-50">
-                  Sign In <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          )}
           
           {extractionError && (
             <p className="text-red-500 text-sm mt-4">{extractionError}</p>
