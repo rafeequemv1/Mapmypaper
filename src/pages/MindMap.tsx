@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -174,50 +173,6 @@ const MindMap = () => {
     // Apply line breaks after a brief delay to ensure nodes are rendered
     setTimeout(applyLineBreaksToNodes, 200);
   }, []);
-
-  const handleExportMindMap = useCallback(async () => {
-    if (!mindMap) {
-      toast({
-        title: "Export Failed",
-        description: "The mind map is not ready. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      // Only export SVG
-      const blob = mindMap.exportSvg();
-
-      if (!blob) {
-        throw new Error("Failed to generate export data");
-      }
-
-      // Create a download link
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `mindmap.svg`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Export Successful",
-        description: "Your mind map has been exported as SVG."
-      });
-    } catch (error) {
-      console.error("Export error:", error);
-      toast({
-        title: "Export Failed",
-        description: `There was an error exporting the mind map: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
-    }
-  }, [mindMap, toast]);
 
   return (
     <div ref={containerRef} className="h-screen flex flex-col overflow-hidden">

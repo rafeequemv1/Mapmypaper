@@ -10,7 +10,9 @@ interface MindMapContextMenuProps {
   onAddChild?: () => void;
   onAddSibling?: () => void;
   onExport?: () => void;
-  onExportAsMermaid?: () => void; // Add a new prop for Mermaid export
+  onExportAsMermaid?: () => void;
+  onExportAsPNG?: () => void; // New prop for PNG export
+  onExportAsSVG?: () => void; // New prop for SVG export
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -21,7 +23,9 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onAddChild,
   onAddSibling,
   onExport,
-  onExportAsMermaid
+  onExportAsMermaid,
+  onExportAsPNG,
+  onExportAsSVG
 }) => {
   const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -64,6 +68,16 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {onExport && (
           <ContextMenuItem onClick={handleAction(onExport)} className="cursor-pointer text-purple-600">
             Export Node Structure
+          </ContextMenuItem>
+        )}
+        {onExportAsPNG && (
+          <ContextMenuItem onClick={handleAction(onExportAsPNG)} className="cursor-pointer text-amber-600">
+            Export as PNG
+          </ContextMenuItem>
+        )}
+        {onExportAsSVG && (
+          <ContextMenuItem onClick={handleAction(onExportAsSVG)} className="cursor-pointer text-sky-600">
+            Export as SVG
           </ContextMenuItem>
         )}
         {onExportAsMermaid && (
