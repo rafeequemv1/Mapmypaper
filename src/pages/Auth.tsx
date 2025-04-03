@@ -33,13 +33,11 @@ const loginFormSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
 });
 
-// Define the form schema for signup with additional fields
+// Define the form schema for signup with simplified fields
 const signupFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters long" }),
-  researchArea: z.string().min(2, { message: "Research area must be at least 2 characters long" }),
-  institute: z.string().min(2, { message: "Institute must be at least 2 characters long" }),
 });
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
@@ -60,15 +58,13 @@ const Auth = () => {
     },
   });
 
-  // Define signup form
+  // Define signup form with simplified fields
   const signupForm = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
     defaultValues: {
       email: "",
       password: "",
       displayName: "",
-      researchArea: "",
-      institute: "",
     },
   });
 
@@ -105,7 +101,7 @@ const Auth = () => {
     }
   };
 
-  // Handle signup submission
+  // Handle signup submission with simplified data
   const onSignupSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
@@ -115,8 +111,6 @@ const Auth = () => {
         options: {
           data: {
             display_name: data.displayName,
-            research_area: data.researchArea,
-            institute: data.institute,
           },
         },
       });
@@ -285,44 +279,10 @@ const Auth = () => {
                     name="displayName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Display Name</FormLabel>
+                        <FormLabel>Name</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="John Doe"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signupForm.control}
-                    name="researchArea"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Research Area</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g. Computer Science, Biology"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signupForm.control}
-                    name="institute"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Institute</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g. MIT, Stanford University"
                             disabled={isLoading}
                             {...field}
                           />
