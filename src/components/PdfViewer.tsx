@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, Screenshot } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, Camera } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -496,7 +496,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   onClick={toggleAreaSelectionMode}
                   title={isAreaSelectionMode ? "Cancel Area Selection" : "Select Area"}
                 >
-                  <Screenshot className="h-3.5 w-3.5" />
+                  <Camera className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
