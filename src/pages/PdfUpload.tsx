@@ -2,17 +2,14 @@
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/AuthContext";
 import PdfToText from "react-pdftotext";
 import { Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
-import { supabase } from "@/integrations/supabase/client";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -81,16 +78,6 @@ const PdfUpload = () => {
       return;
     }
 
-    // If user is not logged in and tries to process a file, redirect to auth
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in or create an account to generate mind maps",
-      });
-      navigate("/auth");
-      return;
-    }
-
     setIsProcessing(true);
     setExtractionError(null);
     
@@ -124,25 +111,6 @@ const PdfUpload = () => {
       // Store the generated mind map data in sessionStorage
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
       
-      // Save to Supabase if user is logged in
-      if (user) {
-        try {
-          const { error } = await supabase.from('user_mindmaps').insert({
-            title: selectedFile.name.replace('.pdf', ''),
-            user_id: user.id,
-            pdf_filename: selectedFile.name,
-            pdf_data: reader.result as string,
-            mindmap_data: mindMapData
-          });
-          
-          if (error) {
-            console.error("Error saving to Supabase:", error);
-          }
-        } catch (saveError) {
-          console.error("Error saving to Supabase:", saveError);
-        }
-      }
-      
       // Navigate to the mind map view
       toast({
         title: "Success",
@@ -159,14 +127,14 @@ const PdfUpload = () => {
       });
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast, user]);
+  }, [selectedFile, navigate, toast]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
       <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="text-center mb-12 mt-16">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <Brain className="h-12 w-12 text-[#333]" />
+        <div className="text-center mb-12 mt-16"> {/* Added more space above hero text */}
+          <div className="flex items-center justify-center gap-4 mb-6"> {/* Increased spacing */}
+            <Brain className="h-12 w-12 text-[#333]" /> {/* Made icon slightly larger */}
             <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl">
@@ -226,18 +194,6 @@ const PdfUpload = () => {
           
           {extractionError && (
             <p className="text-red-500 text-sm mt-4">{extractionError}</p>
-          )}
-
-          {!user && (
-            <p className="text-sm text-center mt-4 text-gray-500">
-              <Button 
-                variant="link" 
-                className="p-0 h-auto" 
-                onClick={() => navigate('/auth')}
-              >
-                Sign in or create an account
-              </Button> to save your mind maps
-            </p>
           )}
         </div>
       </div>
