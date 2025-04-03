@@ -8,7 +8,7 @@ import { MindElixirInstance } from "mind-elixir";
  */
 export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
   try {
-    const blob = await instance.exportPng();
+    const blob = await instance.exportPng(false); // Don't disable foreignObject
     if (blob) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -32,7 +32,15 @@ export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileNam
  */
 export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: string = 'mindmap'): void => {
   try {
-    const blob = instance.exportSvg();
+    // Get custom CSS to ensure proper styling
+    const customCSS = `
+      .mind-elixir-topic {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        line-height: 1.5;
+      }
+    `;
+    
+    const blob = instance.exportSvg(false, customCSS); // Don't disable foreignObject, include CSS
     if (blob) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');

@@ -9,10 +9,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RefreshCw, Download } from "lucide-react";
+import { ZoomIn, ZoomOut, RefreshCw, Download, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import html2canvas from "html2canvas";
+import { analyzePdfContent } from "@/services/geminiService";
 
 interface MermaidMindmapModalProps {
   open: boolean;
@@ -29,7 +30,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
   // Initialize mermaid library
   useMermaidInit();
 
-  // Generate mindmap code when modal is opened
+  // Generate mindmap code when modal is opened using Gemini
   useEffect(() => {
     if (open) {
       setIsGenerating(true);
@@ -37,35 +38,57 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       // Get PDF content from session storage to generate mindmap structure
       const pdfText = sessionStorage.getItem("pdfText");
       
+      if (!pdfText || pdfText.length < 100) {
+        toast({
+          title: "PDF Content Missing",
+          description: "Please upload a PDF document first for analysis.",
+          variant: "destructive"
+        });
+        setIsGenerating(false);
+        
+        // Set a simple placeholder
+        setMermaidCode(`mindmap
+  root((No PDF Content))
+    Upload a PDF
+      To analyze content
+      And generate mindmap`);
+        return;
+      }
+      
       // Show toast when mindmap is being generated
       toast({
         title: "Generating Mermaid Mindmap",
-        description: "Creating a mindmap visualization from your document...",
+        description: "Analyzing your document and creating a mindmap visualization...",
       });
       
-      // Simulate generation delay
-      setTimeout(() => {
-        // Create a basic mermaid mindmap from PDF content or use default structure
-        const mindmapCode = `mindmap
-  root((Document Overview))
-    Document Structure
-      Introduction
-      Methodology
-      Results
-      Discussion
-      Conclusion
-    Key Concepts
-      Concept 1
-      Concept 2
-      Concept 3
-    Supporting Evidence
-      Data Points
-      Citations
-      Analysis`;
-        
-        setMermaidCode(mindmapCode);
-        setIsGenerating(false);
-      }, 1500);
+      // Use Gemini AI to analyze the PDF and generate a mindmap
+      analyzePdfContent(pdfText)
+        .then((result) => {
+          if (result && result.mindmap) {
+            // The Gemini service should return a properly formatted mindmap
+            setMermaidCode(result.mindmap);
+          } else {
+            throw new Error("Failed to generate mindmap from PDF");
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to generate mindmap:", error);
+          toast({
+            title: "Generation Failed",
+            description: "Could not create mindmap from PDF. Please try again.",
+            variant: "destructive"
+          });
+          
+          // Set a basic fallback mindmap
+          setMermaidCode(`mindmap
+  root((Document Analysis))
+    Error Generating Content
+      Please try again
+      Or check PDF content`);
+        })
+        .finally(() => {
+          setIsGenerating(false);
+        });
     }
   }, [open, toast]);
 
@@ -94,7 +117,10 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
       const link = document.createElement('a');
       link.href = dataUrl;
       link.download = 'mermaid-mindmap.png';
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(dataUrl);
       
       toast({
         title: "Export successful",
@@ -166,7 +192,7 @@ const MermaidMindmapModal = ({ open, onOpenChange }: MermaidMindmapModalProps) =
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p>Generating mindmap...</p>
+                <p>Generating mindmap from your document...</p>
               </div>
             </div>
           ) : (

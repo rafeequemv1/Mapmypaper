@@ -9,6 +9,7 @@ interface MindMapContextMenuProps {
   onDelete?: () => void;
   onAddChild?: () => void;
   onAddSibling?: () => void;
+  onExplainNode?: () => void; // Added explain node option
 }
 
 const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
@@ -17,7 +18,8 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onPaste,
   onDelete,
   onAddChild,
-  onAddSibling
+  onAddSibling,
+  onExplainNode // Add explain node handler
 }) => {
   const handleAction = useCallback((handler?: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -32,6 +34,11 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-64 bg-white shadow-lg border rounded-lg z-[9999]">
+        {onExplainNode && (
+          <ContextMenuItem onClick={handleAction(onExplainNode)} className="cursor-pointer text-purple-600 font-medium">
+            Explain Node
+          </ContextMenuItem>
+        )}
         {onCopy && (
           <ContextMenuItem onClick={handleAction(onCopy)} className="cursor-pointer">
             Copy
