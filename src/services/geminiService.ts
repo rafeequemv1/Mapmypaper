@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -182,39 +181,47 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
   }
 };
 
-// Chat with Gemini about PDF content with citation support
+// Enhanced chat function with improved prompts for a more conversational experience
 export const chatWithGeminiAboutPdf = async (message: string): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage
     const pdfText = sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
-      return "I don't have access to the PDF content. Please make sure you've uploaded a PDF first.";
+      return "I don't have access to the PDF content yet. Could you upload a research paper so I can help you understand it?";
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    // Use a history array to maintain context
+    // Enhanced prompt for more conversational responses
     const prompt = `
-    You are an AI research assistant chatting with a user about a PDF document. 
+    You are a helpful and supportive research assistant chatting with a user about an academic paper.
+    You have the personality of an experienced PhD student or postdoc who's skilled at explaining complex
+    research in an accessible way. You're friendly, conversational, and genuinely enthusiastic about
+    helping people understand research.
+    
     The user has the following question or request: "${message}"
     
-    Here's an excerpt from the document they're referring to (it may be truncated):
+    Here's the document they're referring to:
     ${pdfText.slice(0, 15000)}
     
-    Provide a helpful, detailed, and accurate response based solely on the document content.
+    IMPORTANT GUIDELINES:
+    1. Write in a conversational style, like you're explaining to a colleague over coffee. Be friendly and approachable.
+    2. Use "I" statements occasionally ("I noticed that the authors...", "I think this means...").
+    3. Use appropriate analogies to explain complex concepts when helpful.
+    4. When appropriate, add follow-up questions at the end to keep the conversation going.
+    5. Provide citations in [citation:pageX] format when referencing specific content.
+    6. Structure your response with appropriate markdown formatting:
+       - Use ## for main headings and ### for subheadings
+       - Use bullet points (*) for lists
+       - Use **bold** for emphasis and *italics* for technical terms
+       - Use > for important quotes from the paper
+    7. Don't be overly formal - it's okay to use contractions and conversational phrases.
+    8. If you're uncertain about something, it's okay to say so (e.g., "The paper doesn't explicitly state this, but I think...")
+    9. Use occasionally use emojis when they add value, but don't overdo it.
     
-    IMPORTANT FORMATTING GUIDELINES:
-    1. Use proper markdown formatting with clear headings (# for main headings, ## for subheadings).
-    2. Format your response with **bold text** for emphasis and *italics* for technical terms.
-    3. Use bullet points (- or *) and numbered lists (1., 2., etc.) for better organization.
-    4. When referencing specific parts of the document, include a citation in this format: [citation:pageX] where X is the page number or section identifier.
-    5. For multi-paragraph responses, use proper paragraph breaks.
-    6. For important quotes or excerpts, use blockquotes (> text).
-    7. Structure your response with a clear hierarchy: Start with a brief overview, then provide detailed information.
-    
-    If you can't answer based on the provided text, be honest about your limitations.
+    Remember: You're a knowledgeable mentor having a conversation, not an AI delivering a formal response.
     `;
     
     const result = await model.generateContent(prompt);
@@ -222,7 +229,7 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
     return response.text();
   } catch (error) {
     console.error("Gemini API chat error:", error);
-    return "Sorry, I encountered an error while processing your request. Please try again.";
+    return "I'm having a bit of trouble processing that right now. Could you try asking in a different way, or perhaps you'd like to know something else about the paper?";
   }
 };
 
@@ -491,7 +498,7 @@ const cleanMermaidSyntax = (code: string): string => {
     });
     
     // Validate: ensure there's at least one connection (arrow)
-    const hasConnections = validLines.some(line => line.includes('-->'));
+    const hasConnections = validLines = validLines.some(line => line.includes('-->'));
     
     if (!hasConnections) {
       console.warn("No connections found in flowchart, adding default connection");
@@ -775,4 +782,3 @@ const cleanMindmapSyntax = (code: string): string => {
           Please try again`;
   }
 };
-
