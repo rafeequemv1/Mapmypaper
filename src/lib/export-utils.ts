@@ -87,7 +87,8 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
  * @returns Mermaid mindmap syntax string
  */
 export const convertMindMapToMermaidSyntax = (instance: MindElixirInstance): string => {
-  const data = instance.exportData();
+  // Mind Elixir provides data() method to get the current mind map data structure
+  const data = instance.getData();
   const rootTopic = data.nodeData.topic;
   
   let mermaidCode = `mindmap\n`;
