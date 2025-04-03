@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -593,8 +594,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               className={`flex flex-col items-center py-4 relative ${isAreaSelectionMode ? 'select-none cursor-crosshair' : ''}`}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseUp={handleDocumentMouseUp}
+              onMouseUp={(e) => {
+                handleMouseUp(e);
+                handleDocumentMouseUp(e);
+              }}
             >
               <Document
                 file={pdfData}
