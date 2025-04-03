@@ -58,3 +58,32 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
     throw error;
   }
 };
+
+/**
+ * Custom zoom functions for the mind map
+ * These are not natively available in MindElixir but we implement them ourselves
+ */
+export const customZoomIn = (instance: MindElixirInstance): void => {
+  try {
+    // Mind Elixir doesn't have built-in zoomIn but has scale method
+    // Get the current scale and increase by 0.1
+    const currentScale = instance.scale || 1;
+    instance.scale(Math.min(currentScale + 0.1, 2)); // Limit max zoom to 2x
+  } catch (error) {
+    console.error("Error zooming in:", error);
+  }
+};
+
+/**
+ * Custom zoom out function for the mind map
+ */
+export const customZoomOut = (instance: MindElixirInstance): void => {
+  try {
+    // Mind Elixir doesn't have built-in zoomOut but has scale method
+    // Get the current scale and decrease by 0.1
+    const currentScale = instance.scale || 1;
+    instance.scale(Math.max(currentScale - 0.1, 0.5)); // Limit min zoom to 0.5x
+  } catch (error) {
+    console.error("Error zooming out:", error);
+  }
+};
