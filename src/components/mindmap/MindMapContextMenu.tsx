@@ -10,7 +10,6 @@ interface MindMapContextMenuProps {
   onAddChild?: () => void;
   onAddSibling?: () => void;
   onExport?: () => void;
-  onExportAsMermaid?: () => void;
   onExportAsPNG?: () => void; 
   onExportAsSVG?: () => void; 
 }
@@ -23,7 +22,6 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
   onAddChild,
   onAddSibling,
   onExport,
-  onExportAsMermaid,
   onExportAsPNG,
   onExportAsSVG
 }) => {
@@ -78,11 +76,6 @@ const MindMapContextMenu: React.FC<MindMapContextMenuProps> = ({
         {onExportAsSVG && (
           <ContextMenuItem onClick={handleAction(onExportAsSVG)} className="cursor-pointer text-sky-600">
             Export as SVG
-          </ContextMenuItem>
-        )}
-        {onExportAsMermaid && (
-          <ContextMenuItem onClick={handleAction(onExportAsMermaid)} className="cursor-pointer text-indigo-600">
-            Export as Mermaid Diagram
           </ContextMenuItem>
         )}
       </ContextMenuContent>

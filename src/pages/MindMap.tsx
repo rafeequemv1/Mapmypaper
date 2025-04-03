@@ -185,6 +185,7 @@ const MindMap = () => {
         setShowMermaidMindmap={setShowMermaidMindmap}
         isPdfActive={showPdf && pdfAvailable}
         isChatActive={showChat}
+        mindMap={mindMap}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
