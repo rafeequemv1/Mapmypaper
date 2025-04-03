@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -6,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, LayoutGrid, Download } from "lucide-react";
 import { downloadMindMapAsSVG, downloadMindMapAsPNG } from "@/lib/export-utils";
+import MindMapContextMenu from "@/components/mindmap/MindMapContextMenu";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -702,4 +704,102 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   // Function to generate summaries for nodes and their children
-  const generateNodeSummary =
+  const generateNodeSummary = (node: any) => {
+    console.log("Generating summary for node:", node);
+    // Implementation would go here
+    setSummary("This is a sample summary for the selected node.");
+    setShowSummary(true);
+  };
+
+  // Function to handle downloading the mind map
+  const handleDownload = (format: 'svg' | 'png') => {
+    if (mindMapRef.current) {
+      try {
+        if (format === 'svg') {
+          downloadMindMapAsSVG(mindMapRef.current, 'mindmap');
+          toast({
+            title: "Download Started",
+            description: "Your mind map is being downloaded as SVG.",
+            duration: 3000,
+          });
+        } else {
+          downloadMindMapAsPNG(mindMapRef.current, 'mindmap');
+          toast({
+            title: "Download Started",
+            description: "Your mind map is being downloaded as PNG.",
+            duration: 3000,
+          });
+        }
+      } catch (error) {
+        console.error("Error downloading mind map:", error);
+        toast({
+          title: "Download Error",
+          description: "There was an error downloading your mind map. Please try again.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+    }
+  };
+
+  // Function to handle zooming the mind map
+  const handleZoom = (zoomIn: boolean) => {
+    if (mindMapRef.current) {
+      if (zoomIn) {
+        mindMapRef.current.scale(1.1);
+      } else {
+        mindMapRef.current.scale(0.9);
+      }
+    }
+  };
+
+  // Function to center the mind map
+  const handleCenter = () => {
+    if (mindMapRef.current) {
+      mindMapRef.current.fit();
+    }
+  };
+
+  return (
+    <div className="relative h-full w-full flex flex-col">
+      {/* Toolbar */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 p-2 bg-white/80 backdrop-blur-sm rounded-lg shadow-md">
+        <Button size="sm" variant="outline" onClick={() => handleZoom(true)}>
+          <ZoomIn className="w-4 h-4" />
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => handleZoom(false)}>
+          <ZoomOut className="w-4 h-4" />
+        </Button>
+        <Button size="sm" variant="outline" onClick={handleCenter}>
+          <LayoutGrid className="w-4 h-4" />
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => handleDownload('svg')}
+          title="Download as SVG"
+        >
+          <Download className="w-4 h-4" />
+          <span className="ml-1">SVG</span>
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => handleDownload('png')}
+          title="Download as PNG"
+        >
+          <Download className="w-4 h-4" />
+          <span className="ml-1">PNG</span>
+        </Button>
+      </div>
+      
+      {/* Mind Map Container */}
+      <div 
+        ref={containerRef} 
+        className="h-full w-full overflow-hidden border border-slate-200 rounded-lg"
+      />
+    </div>
+  );
+};
+
+export default MindMapViewer;
