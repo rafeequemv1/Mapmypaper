@@ -15,7 +15,7 @@ mermaid.initialize({
   securityLevel: "loose",
   fontFamily: "Inter, sans-serif",
   themeVariables: {
-    // Colorful theme variables for mindmap and flowchart
+    // Colorful theme variables for mindmap
     primaryColor: "#8B5CF6", // Purple
     primaryTextColor: "#ffffff",
     primaryBorderColor: "#7C3AED",
@@ -28,15 +28,6 @@ mermaid.initialize({
     edgeLabelBackground: "#F9F7FF",
     // More vibrant colors for nodes
     nodeBkg: "#E5DEFF",
-    // Flowchart specific colors
-    clusterBkg: "#F9F7FF",
-    clusterBorder: "#8B5CF6",
-  },
-  flowchart: {
-    curve: 'basis',
-    useMaxWidth: false,
-    htmlLabels: true,
-    defaultRenderer: 'dagre-wrapper' // Changed from 'dagre' to 'dagre-wrapper'
   },
   mindmap: {
     padding: 16,
@@ -67,29 +58,6 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
   const [renderKey, setRenderKey] = useState(0);
   const mermaidRef = useRef<HTMLDivElement>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
-  
-  // Function to fix common flowchart syntax issues
-  const fixFlowchartSyntax = (syntax: string): string => {
-    if (visualizationType !== "flowchart") return syntax;
-    
-    let fixedSyntax = syntax;
-    
-    // Make sure flowchart has a direction
-    if (!fixedSyntax.match(/flowchart\s+(TD|TB|BT|RL|LR)/i)) {
-      fixedSyntax = fixedSyntax.replace(/flowchart/i, 'flowchart TD');
-    }
-    
-    // Fix issues with "end" nodes - capitalize End
-    fixedSyntax = fixedSyntax.replace(/\[(end)\]/gi, (match, p1) => {
-      if (p1 === 'end') return '[End]';
-      return match;
-    });
-    
-    // Fix any issues with nodes starting with o or x by adding space
-    fixedSyntax = fixedSyntax.replace(/---([ox])/g, '--- $1');
-    
-    return fixedSyntax;
-  };
   
   // Custom theme for mindmap to make it more colorful
   const applyCustomTheme = () => {
@@ -189,11 +157,8 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
         // Clear previous content
         mermaidRef.current.innerHTML = "";
         
-        // Fix any flowchart syntax issues
-        const processedSyntax = fixFlowchartSyntax(mermaidSyntax);
-        
         // Render the diagram
-        mermaid.render(`mermaid-${renderKey}`, processedSyntax).then(({ svg }) => {
+        mermaid.render(`mermaid-${renderKey}`, mermaidSyntax).then(({ svg }) => {
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = svg;
             
@@ -255,9 +220,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
     URL.revokeObjectURL(url);
   };
   
-  const title = visualizationType === "mindmap" 
-    ? "Mind Map Visualization" 
-    : "Flowchart Visualization";
+  const title = "Mind Map Visualization";
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -344,12 +307,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
             </p>
             {renderError && (
               <div className="bg-amber-50 border border-amber-200 text-amber-700 p-2 mb-2 rounded text-sm">
-                <strong>Note:</strong> There are syntax errors in your diagram. Common flowchart issues include:
-                <ul className="list-disc pl-5 mt-1">
-                  <li>Using lowercase "end" - use "End" instead</li>
-                  <li>Starting node names with "o" or "x" without a space</li>
-                  <li>Missing direction specifier (TD, LR, etc.)</li>
-                </ul>
+                <strong>Note:</strong> There are syntax errors in your diagram.
               </div>
             )}
             <Textarea 
