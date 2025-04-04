@@ -9,11 +9,12 @@ import {
   FileJson,
   Upload,
   GitBranch,
-  Share2
+  Share2,
+  FilePdf
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsPDF } from "@/lib/export-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +74,23 @@ const Header = ({
       toast({
         title: "Export successful",
         description: `Mind map exported as ${fileName}.svg`
+      });
+    } else {
+      toast({
+        title: "Export failed",
+        description: "Mind map instance not available",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Handle export as PDF
+  const handleExportPDF = () => {
+    if (mindMap) {
+      downloadMindMapAsPDF(mindMap, fileName);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.pdf`
       });
     } else {
       toast({
@@ -200,6 +218,10 @@ const Header = ({
               <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
                 <Image className="h-4 w-4" />
                 <span>Export as PNG</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF} className="flex items-center gap-2 cursor-pointer">
+                <FilePdf className="h-4 w-4" />
+                <span>Export as PDF</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
                 <FileJson className="h-4 w-4" />

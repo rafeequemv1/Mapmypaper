@@ -5,9 +5,17 @@ import { Textarea } from "@/components/ui/textarea";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
 import { generateMindmapFromPdf } from "@/services/geminiService";
-import { Loader } from "lucide-react";
+import { Loader, Download, FilePdf, Image } from "lucide-react";
 import { isPdfAvailable } from "@/utils/pdfStorage";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface MermaidMindMapModalProps {
   open: boolean;
@@ -154,6 +162,128 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
     }
   };
 
+  // Export diagram as PNG
+  const handleExportPNG = async () => {
+    if (!mermaidContainerRef.current) return;
+    
+    try {
+      const container = mermaidContainerRef.current;
+      const svgElement = container.querySelector('svg');
+      
+      if (svgElement) {
+        const canvas = await html2canvas(svgElement, {
+          scale: 2,
+          backgroundColor: '#ffffff'
+        });
+        
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = 'mermaid-mindmap.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Export successful",
+          description: "Mindmap exported as PNG"
+        });
+      } else {
+        toast({
+          title: "Export failed",
+          description: "SVG element not found",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error exporting as PNG:", error);
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Export diagram as PDF
+  const handleExportPDF = async () => {
+    if (!mermaidContainerRef.current) return;
+    
+    try {
+      const container = mermaidContainerRef.current;
+      const svgElement = container.querySelector('svg');
+      
+      if (svgElement) {
+        // Create a canvas from the SVG
+        const canvas = await html2canvas(svgElement, {
+          scale: 2,
+          backgroundColor: '#ffffff'
+        });
+        
+        // Convert canvas to data URL
+        const dataUrl = canvas.toDataURL('image/png');
+        
+        // Create PDF
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        // Get dimensions
+        const imgProps = pdf.getImageProperties(dataUrl);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        
+        // Calculate proper scaling
+        const margin = 10;
+        const availableWidth = pdfWidth - (margin * 2);
+        const availableHeight = pdfHeight - (margin * 2);
+        
+        const aspectRatio = imgProps.width / imgProps.height;
+        let width = availableWidth;
+        let height = width / aspectRatio;
+        
+        if (height > availableHeight) {
+          height = availableHeight;
+          width = height * aspectRatio;
+        }
+        
+        // Add image to PDF
+        const x = (pdfWidth - width) / 2;
+        const y = (pdfHeight - height) / 2;
+        
+        pdf.addImage(dataUrl, 'PNG', x, y, width, height);
+        
+        // Add metadata
+        pdf.setFontSize(10);
+        pdf.text(`MapMyPaper - Mermaid Mindmap`, pdfWidth / 2, 10, { align: 'center' });
+        pdf.text(`Generated on ${new Date().toLocaleDateString()}`, pdfWidth / 2, pdfHeight - 5, { align: 'center' });
+        
+        // Save PDF
+        pdf.save('mermaid-mindmap.pdf');
+        
+        toast({
+          title: "Export successful",
+          description: "Mindmap exported as PDF"
+        });
+      } else {
+        toast({
+          title: "Export failed",
+          description: "SVG element not found",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error exporting as PDF:", error);
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[80vh] flex flex-col">
@@ -166,21 +296,42 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
           <div className="w-full md:w-2/5 flex flex-col">
             <div className="flex justify-between items-center mb-2">
               <p className="text-sm text-muted-foreground">Edit Mindmap Syntax</p>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={handleGenerateFromPaper}
-                disabled={isGenerating || !isPdfLoaded}
-                className="text-xs"
-                title={!isPdfLoaded ? "Upload a PDF first to enable this feature" : ""}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader className="h-3 w-3 mr-1 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : "Generate from Paper"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleGenerateFromPaper}
+                  disabled={isGenerating || !isPdfLoaded}
+                  className="text-xs h-8"
+                  title={!isPdfLoaded ? "Upload a PDF first to enable this feature" : ""}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader className="h-3 w-3 mr-1 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : "Generate from Paper"}
+                </Button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-xs h-8">
+                      <Download className="h-3 w-3 mr-1" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
+                      <Image className="h-4 w-4" />
+                      <span>Export as PNG</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPDF} className="flex items-center gap-2 cursor-pointer">
+                      <FilePdf className="h-4 w-4" />
+                      <span>Export as PDF</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             <Textarea 
               className="flex-1 font-mono text-sm resize-none overflow-auto"
