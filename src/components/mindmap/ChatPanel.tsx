@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface ChatPanelProps {
@@ -109,13 +109,9 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
         setIsTyping(true);
         
         try {
-          // Call AI with the image
-          // Here we're using the existing chatWithGeminiAboutPdf function
-          // In a real implementation, you would want to modify this to accept an image
-          // or create a new function that can process images
-          const response = await chatWithGeminiAboutPdf(
-            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection."
-          );
+          console.log("ChatPanel: Processing image analysis with Gemini");
+          // Call enhanced Gemini API with the image
+          const response = await analyzeImageWithGemini(explainImage);
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface MobileChatSheetProps {
@@ -65,10 +65,9 @@ const MobileChatSheet = ({
         setIsTyping(true);
         
         try {
-          // Call AI with the image context
-          const response = await chatWithGeminiAboutPdf(
-            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection. Add relevant emojis to make your response more engaging."
-          );
+          console.log("MobileChatSheet: Processing image analysis with Gemini");
+          // Call AI with the image using the enhanced function
+          const response = await analyzeImageWithGemini(explainImage);
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);

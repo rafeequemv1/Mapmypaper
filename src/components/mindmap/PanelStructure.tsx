@@ -5,6 +5,7 @@ import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -28,6 +29,7 @@ const PanelStructure = ({
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [selectedImageArea, setSelectedImageArea] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
@@ -39,6 +41,11 @@ const PanelStructure = ({
   const handleAreaSelected = (imageDataUrl: string) => {
     console.log("Area selected in PanelStructure, image length:", imageDataUrl.length);
     setSelectedImageArea(imageDataUrl);
+    
+    toast({
+      title: "Image captured",
+      description: "Sending to AI for analysis...",
+    });
     
     // Ensure chat panel is open when an area is selected
     if (!showChat) {
