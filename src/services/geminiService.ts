@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -405,16 +404,12 @@ export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfT
       4. Keep the flowchart readable and logical
       5. Use directional flow that makes sense for the process
       6. Include 10-20 nodes for an appropriate level of detail
-      7. IMPORTANT: Avoid using the word "end" in lowercase as this breaks the flowchart - use "End" or "END" instead
-      8. IMPORTANT: If starting a node name with "o" or "x", add a space before it (e.g., use " operations" not "operations")
-      9. IMPORTANT: Never use A---oB or A---xB syntax as this creates special edges
-      10. IMPORTANT: Always use a direction specifier like TD (top-down) or LR (left-right) 
       
       Return only the Mermaid.js flowchart syntax without any other text. Here's an example of the syntax format:
       
       \`\`\`mermaid
       flowchart TD
-          A[Start] --> B{Decision Point}
+          A[Start] --> B{Decision}
           B -->|Option 1| C[Process 1]
           B -->|Option 2| D[Process 2]
           C --> E[Next Step]

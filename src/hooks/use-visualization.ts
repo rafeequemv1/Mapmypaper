@@ -33,14 +33,9 @@ export function useVisualization() {
       return;
     }
     
-    // Check if we already have saved syntax for this type
-    if (savedSyntax[type]) {
-      // Use the saved syntax
-      setMermaidSyntax(savedSyntax[type]);
-    } else {
-      // Generate new visualization
-      generateVisualization(type);
-    }
+    // Always generate a visualization when opening the modal
+    // This removes the need to click the regenerate button
+    generateVisualization(type);
   };
   
   const generateVisualization = async (type: VisualizationType) => {
@@ -55,38 +50,13 @@ export function useVisualization() {
       console.log(`Generating ${type} visualization...`);
       const syntax = await generateMermaidDiagram(type, pdfText);
       
-      // Validate the syntax to ensure it starts with the right keyword
-      let validatedSyntax = syntax;
-      
-      if (type === "flowchart" && !syntax.trim().startsWith("flowchart")) {
-        // Missing the flowchart keyword, add it with TD (top-down) direction
-        validatedSyntax = `flowchart TD\n${syntax}`;
-        console.log("Added missing flowchart keyword");
-      } else if (type === "mindmap" && !syntax.trim().startsWith("mindmap")) {
-        // Missing the mindmap keyword, add it
-        validatedSyntax = `mindmap\n${syntax}`;
-        console.log("Added missing mindmap keyword");
-      }
-      
-      // Fix common issues with flowchart syntax
-      if (type === "flowchart") {
-        // Replace lowercase "end" with "End" to avoid syntax errors
-        validatedSyntax = validatedSyntax.replace(/\[(end)\]/gi, (match, p1) => {
-          if (p1 === 'end') return '[End]';
-          return match;
-        });
-        
-        // Fix issues with nodes starting with o or x by adding space
-        validatedSyntax = validatedSyntax.replace(/---([ox])/g, '--- $1');
-      }
-      
       // Save the syntax for future use
       setSavedSyntax(prev => ({
         ...prev,
-        [type]: validatedSyntax
+        [type]: syntax
       }));
       
-      setMermaidSyntax(validatedSyntax);
+      setMermaidSyntax(syntax);
       
       toast({
         title: "Visualization generated",
