@@ -36,7 +36,7 @@ mermaid.initialize({
     curve: 'basis',
     useMaxWidth: false,
     htmlLabels: true,
-    defaultRenderer: 'dagre' // Default renderer for flowcharts
+    defaultRenderer: 'dagre-d3' // Fixed renderer type
   },
   mindmap: {
     padding: 16,
@@ -311,7 +311,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
           
           <TabsContent 
             value="preview" 
-            className="flex-1 overflow-auto border rounded-md p-4 bg-white"
+            className="flex-1 overflow-auto border rounded-md p-4 bg-white relative"
           >
             {isGenerating ? (
               <div className="flex items-center justify-center h-full">
@@ -327,7 +327,9 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                 <p className="mt-4 text-gray-600">Try switching to the "Edit Syntax" tab to fix the issues or click "Regenerate".</p>
               </div>
             ) : mermaidSyntax ? (
-              <div ref={mermaidRef} className="mermaid-container overflow-auto h-full w-full"></div>
+              <div ref={mermaidRef} className="mermaid-container w-full h-full flex items-center justify-center">
+                {/* SVG will be rendered here */}
+              </div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
                 No {visualizationType} diagram available. Click Regenerate to create one.
