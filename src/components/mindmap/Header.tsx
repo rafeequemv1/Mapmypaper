@@ -8,7 +8,8 @@ import {
   Image,
   FileJson,
   Upload,
-  FileIcon
+  FileIcon,
+  BarChart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,7 @@ import {
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
 import PaperLogo from "@/components/PaperLogo";
+import { useVisualizerModal } from "@/hooks/use-visualizer-modal";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -43,6 +45,7 @@ const Header = ({
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { openVisualizerModal } = useVisualizerModal();
   
   // Handle export as PNG
   const handleExportPNG = () => {
@@ -131,6 +134,11 @@ const Header = ({
       });
     }
   }, [toast]);
+
+  // Handle visualization selection
+  const handleVisualizationSelect = (type: string) => {
+    openVisualizerModal(type);
+  };
   
   return (
     <header className="bg-white border-b py-2 px-4">
@@ -172,6 +180,38 @@ const Header = ({
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="flex items-center gap-1 text-black h-8 px-3"
+              >
+                <BarChart className="h-3.5 w-3.5" />
+                <span className="hidden md:inline text-sm">Visualize</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-48">
+              <DropdownMenuItem onClick={() => handleVisualizationSelect("flowchart")} className="cursor-pointer">
+                Flowchart
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleVisualizationSelect("sequence")} className="cursor-pointer">
+                Sequence Diagram
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleVisualizationSelect("class")} className="cursor-pointer">
+                Class Diagram
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleVisualizationSelect("gantt")} className="cursor-pointer">
+                Gantt Chart
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleVisualizationSelect("er")} className="cursor-pointer">
+                Entity Relationship
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleVisualizationSelect("pie")} className="cursor-pointer">
+                Pie Chart
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {/* Right side - Action buttons and User Menu */}
