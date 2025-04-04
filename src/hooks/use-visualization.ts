@@ -75,6 +75,27 @@ export function useVisualization() {
           if (p1 === 'end') return '[End]';
           return match;
         });
+        
+        // Fix semicolons that shouldn't be there
+        validatedSyntax = validatedSyntax.replace(/;(\s*$|\s*\n)/g, '$1');
+        
+        // Fix common syntax errors with parentheses and special characters
+        validatedSyntax = validatedSyntax.replace(/\(([^)]*[&%])[^)]*\)/g, (match) => {
+          // Escape the problematic characters by replacing them
+          return match.replace(/[&]/g, 'and').replace(/[%]/g, 'pct');
+        });
+        
+        // Remove lines that might cause parsing errors (lines with just punctuation or incomplete nodes)
+        const lines = validatedSyntax.split('\n');
+        validatedSyntax = lines
+          .filter(line => !line.match(/^[\s\-_;:,\\\/]*$/)) // Remove lines with just punctuation
+          .join('\n');
+        
+        // Make sure node connections use proper syntax
+        validatedSyntax = validatedSyntax.replace(/-{2,}>/g, '-->');
+        validatedSyntax = validatedSyntax.replace(/<-{2,}/g, '<--');
+        
+        console.log("Applied flowchart syntax fixes");
       }
       
       // Save the syntax for future use
