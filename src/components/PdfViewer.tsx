@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -873,4 +874,132 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 style={{
                   left: `${selectionPosition.x}px`,
                   top: `${selectionPosition.y}px`,
-                  transform: 'translate(-50%, -
+                  transform: 'translate(-50%, -100%)',
+                }}
+                data-explain-tooltip
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-blue-600 hover:text-blue-800"
+                  onClick={handleExplain}
+                >
+                  Explain This
+                </Button>
+              </div>
+            )}
+            
+            {/* Floating Explain Tooltip for Image Selection */}
+            {showImageExplainTooltip && selectedAreaPosition && (
+              <div
+                className="absolute z-50 bg-white border rounded-md shadow-md px-3 py-2 flex items-center gap-2"
+                style={{
+                  left: `${selectedAreaPosition.x}px`,
+                  top: `${selectedAreaPosition.y}px`,
+                  transform: 'translate(-50%, -100%)',
+                }}
+                data-image-explain-tooltip
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-blue-600 hover:text-blue-800"
+                  onClick={handleExplainImage}
+                >
+                  Explain This Area
+                </Button>
+              </div>
+            )}
+            
+            {/* Selection overlay for area selection */}
+            <div
+              ref={selectionBoxRef}
+              className="absolute border-2 border-blue-500 bg-blue-100 bg-opacity-20 pointer-events-none"
+              style={{
+                display: 'none',
+                zIndex: 20
+              }}
+            />
+            
+            {/* PDF Document */}
+            <div 
+              className="flex justify-center p-4"
+              onMouseDown={handleAreaSelectionMouseDown}
+              onMouseMove={handleAreaSelectionMouseMove}
+              onMouseUp={handleAreaSelectionMouseUp}
+              onMouseLeave={isSelecting ? handleAreaSelectionMouseUp : undefined}
+            >
+              <Document
+                file={pdfData}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
+                loading={
+                  <div className="flex justify-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                      <Skeleton className="h-6 w-32" />
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-6 w-40" />
+                    </div>
+                  </div>
+                }
+                error={
+                  <div className="flex justify-center py-12 text-red-500">
+                    Failed to load PDF. Please check the file and try again.
+                  </div>
+                }
+              >
+                {Array.from(new Array(numPages), (el, index) => (
+                  <div 
+                    key={`page_${index + 1}`}
+                    className="mb-8 shadow-md rounded-md overflow-hidden"
+                    ref={setPageRef(index)}
+                  >
+                    <Page
+                      pageNumber={index + 1}
+                      width={getOptimalPageWidth()}
+                      scale={scale}
+                      onRenderSuccess={onPageRenderSuccess}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      onMouseUp={handleDocumentMouseUp}
+                      loading={
+                        <div className="h-[600px] flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <Skeleton className="h-6 w-32" />
+                            <Skeleton className="h-6 w-48" />
+                          </div>
+                        </div>
+                      }
+                      className="bg-white"
+                    />
+                    <div className="text-center py-2 bg-white text-gray-500 text-sm border-t">
+                      Page {index + 1} of {numPages}
+                    </div>
+                  </div>
+                ))}
+              </Document>
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full py-12">
+            <div className="text-center text-gray-500 mb-6">
+              No PDF document found. Please upload a document.
+            </div>
+            <Button 
+              onClick={refreshPdfData} 
+              variant="outline" 
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Check Again</span>
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
