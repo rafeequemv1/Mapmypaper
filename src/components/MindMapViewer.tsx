@@ -1,10 +1,11 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileText, ZoomIn, ZoomOut, LayoutGrid, AlignHorizontalJustifyCenter, AlignLeft, AlignRight } from "lucide-react";
+import { FileText } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -198,9 +199,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         palette: [
           '#dd7878', '#ea76cb', '#8839ef', '#e64553', 
           '#fe640b', '#df8e1d', '#40a02b', '#209fb5', 
-          '#1e66f5', '#7287fd', '#ea81bb', '#dd7878', 
-          '#4699d9', '#fe640b', '#6dc7be', '#a5adcb',
-          '#fea45c', '#40a02b', '#e64553', '#8839ef'
+          '#1e66f5', '#7287fd', '#ea81bb', '#fea45c'
         ],
         cssVar: {
           '--main-color': '#333',
@@ -755,84 +754,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     setShowSummary(false);
   };
 
-  // Handle left-sided layout
-  const handleLeftLayout = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.initSide();
-      toast({
-        title: "Alignment Changed",
-        description: "Mind map aligned to the left",
-        duration: 3000,
-      });
-    }
-  };
-
-  // Handle right-sided layout
-  const handleRightLayout = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.initSide();
-      toast({
-        title: "Alignment Changed",
-        description: "Mind map aligned to the right",
-        duration: 3000,
-      });
-    }
-  };
-
-  // Handle two-sided layout
-  const handleTwoSidedLayout = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.initSide();
-      toast({
-        title: "Alignment Changed",
-        description: "Mind map using two-sided layout",
-        duration: 3000,
-      });
-    }
-  };
-
-  // Handle zoom in
-  const handleZoomIn = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.scale(1.1);
-    }
-  };
-
-  // Handle zoom out
-  const handleZoomOut = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.scale(0.9);
-    }
-  };
-
-  // Handle reset layout
-  const handleResetLayout = () => {
-    if (mindMapRef.current) {
-      // Since resetLayout() is not available in the MindElixirInstance type,
-      // we'll use a combination of methods to achieve the same effect:
-      // 1. Center the mind map using setTranslate
-      // 2. Reset the scale to 1
-      if (mindMapRef.current.container) {
-        // Get the container dimensions
-        const container = mindMapRef.current.container;
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        
-        // Center the mind map in the container
-        mindMapRef.current.setTranslate(containerWidth / 2, containerHeight / 2);
-        
-        // Reset the scale to 1
-        mindMapRef.current.scale(1, true); // Set the second parameter to true to set absolute scale
-      }
-      
-      toast({
-        title: "Layout Reset",
-        description: "Mind map layout has been reset",
-        duration: 3000,
-      });
-    }
-  };
-
   if (!isMapGenerated) {
     return null;
   }
@@ -852,73 +773,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           </div>
         </div>
       )}
-      
-      {/* Mind Map Toolbar */}
-      <div className="p-2 bg-white border-b flex items-center gap-2 overflow-x-auto">
-        <div className="flex items-center mr-4">
-          <span className="text-sm font-medium mr-2">Layout:</span>
-          <Button 
-            onClick={handleTwoSidedLayout} 
-            size="sm" 
-            variant="ghost" 
-            className="h-8 px-2 tooltip-wrapper"
-            title="Two-sided layout"
-          >
-            <AlignHorizontalJustifyCenter size={18} />
-          </Button>
-          <Button 
-            onClick={handleLeftLayout} 
-            size="sm" 
-            variant="ghost" 
-            className="h-8 px-2 tooltip-wrapper"
-            title="Left-sided layout"
-          >
-            <AlignLeft size={18} />
-          </Button>
-          <Button 
-            onClick={handleRightLayout} 
-            size="sm" 
-            variant="ghost" 
-            className="h-8 px-2 tooltip-wrapper"
-            title="Right-sided layout"
-          >
-            <AlignRight size={18} />
-          </Button>
-        </div>
-        
-        <div className="h-6 border-l mx-1"></div>
-        
-        <div className="flex items-center">
-          <span className="text-sm font-medium mr-2">Zoom:</span>
-          <Button 
-            onClick={handleZoomIn} 
-            size="sm" 
-            variant="ghost" 
-            className="h-8 px-2 tooltip-wrapper"
-            title="Zoom in"
-          >
-            <ZoomIn size={18} />
-          </Button>
-          <Button 
-            onClick={handleZoomOut} 
-            size="sm" 
-            variant="ghost" 
-            className="h-8 px-2 tooltip-wrapper"
-            title="Zoom out"
-          >
-            <ZoomOut size={18} />
-          </Button>
-          <Button 
-            onClick={handleResetLayout} 
-            size="sm" 
-            variant="ghost" 
-            className="h-8 px-2 tooltip-wrapper"
-            title="Reset layout"
-          >
-            <LayoutGrid size={18} />
-          </Button>
-        </div>
-      </div>
       
       <div className="w-full h-full overflow-hidden relative">
         <div 
