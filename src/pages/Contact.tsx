@@ -1,27 +1,19 @@
 
 import React from 'react';
-import { Separator } from "@/components/ui/separator";
-import PaperLogo from "@/components/PaperLogo";
 import { Link } from "react-router-dom";
-import { ChevronLeft, Mail, Phone, Linkedin } from "lucide-react";
+import { Mail, Phone, Linkedin } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
+import Footer from "@/components/Footer";
 
 const Contact = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="w-full bg-card shadow-sm py-4 px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <PaperLogo size="md" />
-            <h1 className="text-xl font-medium text-foreground">mapmypaper</h1>
-          </div>
-          
-          <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ChevronLeft className="h-4 w-4" />
-            Back to Home
-          </Link>
-        </div>
-      </header>
+      <PageHeader 
+        additionalLinks={[
+          { to: "/about", label: "About" },
+          { to: "/pricing", label: "Pricing" },
+        ]}
+      />
       
       {/* Main Content */}
       <div className="flex-1 py-12">
@@ -100,14 +92,7 @@ const Contact = () => {
         </div>
       </div>
       
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-8 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} MapMyPaper by Scidart Academy. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

@@ -1,176 +1,117 @@
 
-import React from 'react';
-import { Separator } from "@/components/ui/separator";
-import PaperLogo from "@/components/PaperLogo";
+import React from "react";
+import PageHeader from "@/components/PageHeader";
+import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, BookOpen, Brain, Clock, BarChart2, Zap, Users } from "lucide-react";
 
 const About = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="w-full bg-card shadow-sm py-4 px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <PaperLogo size="md" />
-            <h1 className="text-xl font-medium text-foreground">mapmypaper</h1>
-          </div>
-          
-          <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ChevronLeft className="h-4 w-4" />
-            Back to Home
-          </Link>
-        </div>
-      </header>
+      <PageHeader 
+        additionalLinks={[
+          { to: "/pricing", label: "Pricing" },
+          { to: "/contact", label: "Contact" },
+        ]}
+      />
       
       {/* Main Content */}
       <div className="flex-1 py-12">
         <div className="max-w-4xl mx-auto px-6">
           <h1 className="text-3xl font-bold mb-8">About MapMyPaper</h1>
           
-          <div className="prose prose-neutral max-w-none">
-            <h2 className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-primary" />
-              Our Mission
-            </h2>
-            <p>
-              MapMyPaper was developed by Scidart Academy with a clear mission: to accelerate scientific research and 
-              learning by transforming how researchers, academics, and students interact with complex academic content.
+          <div className="bg-card rounded-lg shadow-sm p-8 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Our Mission</h2>
+            <p className="text-foreground/80 mb-4">
+              At MapMyPaper, our mission is to transform how researchers, academics, and students interact with 
+              scientific literature. We believe that visual learning can dramatically improve comprehension, 
+              retention, and the ability to make connections between complex concepts.
             </p>
-            
-            <h2 className="flex items-center gap-2 mt-8">
-              <Brain className="h-6 w-6 text-primary" />
-              Why We Built This
-            </h2>
-            <p>
-              As researchers ourselves, we understand the challenges of processing dense academic papers efficiently. 
-              Traditional methods of reading research papers can be time-consuming, leading to information overload 
-              and difficulty in connecting concepts across multiple sources.
+            <p className="text-foreground/80 mb-4">
+              By converting dense academic text into interactive visual knowledge maps, we help you:
             </p>
-            <p>
-              We created MapMyPaper to address these pain points by leveraging the power of visual learning and AI 
-              assistance to make research papers more accessible, digestible, and interconnected.
-            </p>
-            
-            <h2 className="flex items-center gap-2 mt-8">
-              <Zap className="h-6 w-6 text-primary" />
-              Accelerating Research
-            </h2>
-            <p>
-              MapMyPaper is designed to dramatically improve research productivity by:
-            </p>
-            <ul>
-              <li>
-                <strong>Reducing reading time</strong> - Transform dense text into visual knowledge maps that 
-                can be scanned and understood in a fraction of the time
-              </li>
-              <li>
-                <strong>Improving comprehension</strong> - Visualize complex relationships between concepts and 
-                see the bigger picture of a paper's structure and arguments
-              </li>
-              <li>
-                <strong>Enhancing retention</strong> - Leverage visual memory to better recall key information 
-                from papers you've processed
-              </li>
-              <li>
-                <strong>Connecting ideas</strong> - See connections between different papers and research areas 
-                more clearly through visual representation
-              </li>
+            <ul className="list-disc pl-6 mb-6 text-foreground/80 space-y-2">
+              <li>Extract key concepts and relationships from papers more efficiently</li>
+              <li>Understand complex methodologies through visual representations</li>
+              <li>Accelerate your research process by reducing reading time</li>
+              <li>Improve knowledge retention through multi-modal learning</li>
+              <li>Discover connections between concepts that might be missed in linear reading</li>
             </ul>
-            
-            <h2 className="flex items-center gap-2 mt-8">
-              <BarChart2 className="h-6 w-6 text-primary" />
-              Key Features
-            </h2>
-            <p>Our platform offers several powerful tools to enhance your research experience:</p>
-            <ul>
-              <li>
-                <strong>Interactive Mind Maps</strong> - Automatically convert papers into intuitive mind maps 
-                that capture the key concepts and their relationships
-              </li>
-              <li>
-                <strong>AI Research Assistant</strong> - Get instant answers to questions about the paper without 
-                having to scan through pages of text
-              </li>
-              <li>
-                <strong>Summary Generation</strong> - Create concise summaries of papers to quickly grasp the 
-                main points
-              </li>
-              <li>
-                <strong>Flowcharts & Process Diagrams</strong> - Visualize methodologies and procedures as 
-                step-by-step flowcharts
-              </li>
-              <li>
-                <strong>Tree Maps</strong> - Organize hierarchical information in papers using intuitive tree 
-                structures
-              </li>
-              <li>
-                <strong>Export & Share</strong> - Save your visualizations in multiple formats for presentations, 
-                notes, or sharing with colleagues
-              </li>
+            <p className="text-foreground/80">
+              Our goal is to make scientific literature more accessible and to help researchers work 
+              more efficiently, allowing you to focus on generating insights rather than getting bogged 
+              down in information processing.
+            </p>
+          </div>
+          
+          <div className="bg-card rounded-lg shadow-sm p-8 mb-8">
+            <h2 className="text-xl font-semibold mb-4">About Scidart Academy</h2>
+            <p className="text-foreground/80 mb-4">
+              MapMyPaper is developed by Scidart Academy, an organization dedicated to advancing scientific 
+              research and education through innovative tools and technologies.
+            </p>
+            <p className="text-foreground/80 mb-4">
+              Founded by researchers for researchers, Scidart Academy understands the challenges that 
+              academics face when dealing with the ever-growing volume of scientific literature. Our team 
+              combines expertise in artificial intelligence, education technology, and academic research 
+              to create tools that make the research process more efficient and effective.
+            </p>
+            <p className="text-foreground/80 mb-4">
+              At Scidart Academy, we believe that technology should augment human intelligence, not replace it. 
+              Our tools are designed to help researchers process information more quickly and effectively, 
+              allowing them to spend more time on creative thinking, analysis, and discovery.
+            </p>
+            <div className="flex justify-center mt-6">
+              <a 
+                href="https://scidart.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground py-2 px-4 rounded transition-colors"
+              >
+                Visit Scidart Academy
+              </a>
+            </div>
+          </div>
+          
+          <div className="bg-card rounded-lg shadow-sm p-8">
+            <h2 className="text-xl font-semibold mb-4">Our Technology</h2>
+            <p className="text-foreground/80 mb-4">
+              MapMyPaper uses advanced natural language processing and machine learning techniques to analyze 
+              academic papers and extract key concepts, relationships, methodologies, and findings.
+            </p>
+            <p className="text-foreground/80 mb-4">
+              Our platform generates multiple visualizations that help you understand papers from different perspectives:
+            </p>
+            <ul className="list-disc pl-6 mb-6 text-foreground/80 space-y-2">
+              <li><strong>Mind Maps</strong>: Visualize the hierarchical structure and relationships between concepts</li>
+              <li><strong>Flowcharts</strong>: Understand methodologies and processes through step-by-step visualizations</li>
+              <li><strong>Treemaps</strong>: See the relative importance and distribution of topics within a paper</li>
+              <li><strong>Interactive AI Chat</strong>: Discuss and ask questions about the paper with our AI research assistant</li>
             </ul>
-            
-            <h2 className="flex items-center gap-2 mt-8">
-              <Users className="h-6 w-6 text-primary" />
-              Who It's For
-            </h2>
-            <p>MapMyPaper is an invaluable tool for:</p>
-            <ul>
-              <li>
-                <strong>Academic Researchers</strong> - Process more papers in less time, stay on top of your field
-              </li>
-              <li>
-                <strong>PhD Students</strong> - Accelerate literature reviews and dissertation research
-              </li>
-              <li>
-                <strong>Professors</strong> - Quickly understand new research in your field for teaching or 
-                collaboration
-              </li>
-              <li>
-                <strong>Research Scientists</strong> - Extract meaningful insights from papers more efficiently
-              </li>
-              <li>
-                <strong>Students</strong> - Learn complex academic content through visual representations
-              </li>
-              <li>
-                <strong>Knowledge Workers</strong> - Process information-heavy documents more effectively
-              </li>
-            </ul>
-            
-            <h2 className="flex items-center gap-2 mt-8">
-              <Clock className="h-6 w-6 text-primary" />
-              Save Time, Accelerate Discovery
-            </h2>
-            <p>
-              In the fast-paced world of research and academia, time is one of your most valuable resources. 
-              MapMyPaper helps you reclaim hours spent on reading and processing papers, allowing you to focus 
-              on what truly matters: generating insights, making connections, and advancing your research.
-            </p>
-            <p>
-              By transforming how you interact with academic content, we aim to accelerate the pace of discovery 
-              and innovation across all fields of research.
+            <p className="text-foreground/80 mb-6">
+              We prioritize security and privacy in all aspects of our platform. Your documents are processed 
+              securely, and we use encryption to protect your data. We do not share your documents with third 
+              parties, and you retain full ownership of your content at all times.
             </p>
             
-            <h2 className="mt-8">About Scidart Academy</h2>
-            <p>
-              MapMyPaper is developed by Scidart Academy, a platform dedicated to advancing scientific research 
-              and education through innovative tools and technologies. Learn more at 
-              <a href="https://scidart.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
-                scidart.com
-              </a>.
-            </p>
+            <div className="flex justify-center">
+              <Link to="/">
+                <Button className="mr-4">
+                  Try MapMyPaper Now
+                </Button>
+              </Link>
+              <Link to="/pricing">
+                <Button variant="outline" className="flex items-center gap-2">
+                  View Pricing <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-8 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} MapMyPaper by Scidart Academy. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

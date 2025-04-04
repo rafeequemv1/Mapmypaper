@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -42,6 +43,14 @@
     --sidebar-accent-foreground: 222 20% 18%;
     --sidebar-border: 214.3 20% 91.4%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Feature section pastel colors */
+    --feature-bg-1: 152 60% 95%;
+    --feature-bg-2: 219 70% 95%;
+    --feature-bg-3: 262 60% 95%;
+    --feature-bg-4: 332 70% 95%;
+    --feature-bg-5: 28 80% 95%;
+    --feature-bg-6: 184 70% 95%;
   }
 
   .dark {
@@ -80,6 +89,14 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Feature section dark pastel colors */
+    --feature-bg-1: 152 30% 15%;
+    --feature-bg-2: 219 30% 15%;
+    --feature-bg-3: 262 30% 15%;
+    --feature-bg-4: 332 30% 15%;
+    --feature-bg-5: 28 30% 15%;
+    --feature-bg-6: 184 30% 15%;
   }
 }
 
@@ -89,7 +106,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-roboto;
   }
   
   /* Enhanced typography for AI responses */
@@ -190,5 +207,30 @@
   
   .ai-message-content {
     @apply prose max-w-none;
+  }
+
+  /* Feature section color classes */
+  .feature-bg-1 {
+    @apply bg-[hsl(var(--feature-bg-1))];
+  }
+  .feature-bg-2 {
+    @apply bg-[hsl(var(--feature-bg-2))];
+  }
+  .feature-bg-3 {
+    @apply bg-[hsl(var(--feature-bg-3))];
+  }
+  .feature-bg-4 {
+    @apply bg-[hsl(var(--feature-bg-4))];
+  }
+  .feature-bg-5 {
+    @apply bg-[hsl(var(--feature-bg-5))];
+  }
+  .feature-bg-6 {
+    @apply bg-[hsl(var(--feature-bg-6))];
+  }
+
+  /* Beta tag */
+  .beta-tag {
+    @apply bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium;
   }
 }

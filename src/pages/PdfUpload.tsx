@@ -1,9 +1,8 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Upload, ExternalLink, Braces, GitBranch, BrainCircuit, MessageSquare, FileDown, Clock, BarChart2 } from "lucide-react";
+import { Upload, ExternalLink, Braces, GitBranch, BrainCircuit, MessageSquare, FileDown, Clock, BarChart2, Lock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import PaperLogo from "@/components/PaperLogo";
@@ -13,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import UserMenu from "@/components/UserMenu";
 import { trackPdfUpload, trackFeatureUsage, trackMindMapGeneration, trackEvent } from "@/utils/analytics";
 import { useVisualizationContext } from "@/contexts/VisualizationContext";
+import Footer from "@/components/Footer";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -212,12 +212,15 @@ const PdfUpload = () => {
       <header className="w-full bg-card shadow-sm py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <PaperLogo size="md" />
-            <h1 className="text-xl font-medium text-foreground">mapmypaper</h1>
+            <Link to="/" className="flex items-center gap-3">
+              <PaperLogo size="md" />
+              <h1 className="text-xl font-medium text-foreground">mapmypaper</h1>
+            </Link>
           </div>
           
           <div className="flex items-center gap-4">
             <Link to="/about" className="text-sm text-foreground/80 hover:text-foreground transition-colors">About</Link>
+            <Link to="/pricing" className="text-sm text-foreground/80 hover:text-foreground transition-colors">Pricing</Link>
             <Link to="/contact" className="text-sm text-foreground/80 hover:text-foreground transition-colors">Contact</Link>
             
             {selectedFile && (
@@ -251,9 +254,12 @@ const PdfUpload = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         <div className="text-center mb-8 mt-6">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <PaperLogo size="lg" />
-            <h1 className="text-4xl font-bold text-foreground">mapmypaper</h1>
+          <div className="flex flex-col items-center justify-center gap-2 mb-4">
+            <span className="beta-tag mb-2">BETA</span>
+            <div className="flex items-center gap-4">
+              <PaperLogo size="lg" />
+              <h1 className="text-4xl font-bold text-foreground">mapmypaper</h1>
+            </div>
           </div>
           <p className="text-lg text-foreground/90 max-w-2xl mx-auto">
             Transform academic papers into visual knowledge maps. Read research papers faster, 
@@ -290,6 +296,12 @@ const PdfUpload = () => {
               <p className="text-lg font-medium">Drag and drop your PDF here</p>
               <p className="text-muted-foreground">or select a file from your computer</p>
             </div>
+          </div>
+          
+          {/* Security message */}
+          <div className="flex items-center gap-2 bg-blue-50/50 p-3 rounded-md mb-6 text-xs text-blue-800">
+            <Lock className="h-4 w-4" />
+            <p>Your documents are secure and never shared with third parties</p>
           </div>
           
           {/* Selected File Info with size warning if needed */}
@@ -329,7 +341,7 @@ const PdfUpload = () => {
           <h2 className="text-3xl font-bold text-center mb-12">Transform How You Process Academic Content</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-secondary/50 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+            <div className="feature-bg-1 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
               <BrainCircuit className="h-12 w-12 text-primary mb-4" />
               <h3 className="text-xl font-semibold mb-2">Interactive Mind Maps</h3>
               <p className="text-foreground/80">
@@ -337,7 +349,7 @@ const PdfUpload = () => {
               </p>
             </div>
             
-            <div className="bg-secondary/50 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+            <div className="feature-bg-2 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
               <MessageSquare className="h-12 w-12 text-primary mb-4" />
               <h3 className="text-xl font-semibold mb-2">AI Research Assistant</h3>
               <p className="text-foreground/80">
@@ -345,7 +357,7 @@ const PdfUpload = () => {
               </p>
             </div>
             
-            <div className="bg-secondary/50 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+            <div className="feature-bg-3 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
               <GitBranch className="h-12 w-12 text-primary mb-4" />
               <h3 className="text-xl font-semibold mb-2">Flowcharts & Diagrams</h3>
               <p className="text-foreground/80">
@@ -353,7 +365,7 @@ const PdfUpload = () => {
               </p>
             </div>
             
-            <div className="bg-secondary/50 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+            <div className="feature-bg-4 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
               <FileDown className="h-12 w-12 text-primary mb-4" />
               <h3 className="text-xl font-semibold mb-2">Export & Share</h3>
               <p className="text-foreground/80">
@@ -361,7 +373,7 @@ const PdfUpload = () => {
               </p>
             </div>
             
-            <div className="bg-secondary/50 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+            <div className="feature-bg-5 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
               <Clock className="h-12 w-12 text-primary mb-4" />
               <h3 className="text-xl font-semibold mb-2">Save Time</h3>
               <p className="text-foreground/80">
@@ -369,7 +381,7 @@ const PdfUpload = () => {
               </p>
             </div>
             
-            <div className="bg-secondary/50 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+            <div className="feature-bg-6 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
               <BarChart2 className="h-12 w-12 text-primary mb-4" />
               <h3 className="text-xl font-semibold mb-2">Visual Learning</h3>
               <p className="text-foreground/80">
@@ -382,17 +394,28 @@ const PdfUpload = () => {
             <p className="text-foreground/80 max-w-2xl mx-auto mb-6">
               MapMyPaper is designed for researchers, students, and academics who need to process large volumes of complex information efficiently.
             </p>
-            <Button 
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              size="lg"
-              onClick={() => {
-                if (fileInputRef.current) {
-                  fileInputRef.current.click();
-                }
-              }}
-            >
-              Try It Now
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                size="lg"
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.click();
+                  }
+                }}
+              >
+                Try It Now
+              </Button>
+              <Link to="/pricing">
+                <Button 
+                  variant="outline"
+                  size="lg"
+                  className="flex items-center gap-2"
+                >
+                  View Pricing <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -430,60 +453,7 @@ const PdfUpload = () => {
         </div>
       </div>
       
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-8 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <PaperLogo size="sm" />
-                <h2 className="text-lg font-medium text-foreground">mapmypaper</h2>
-              </div>
-              <p className="text-foreground/70 text-sm">
-                Transform research papers into interactive mind maps for better comprehension and retention.
-              </p>
-              <p className="text-foreground/70 text-sm mt-2">
-                Developed by <a href="https://scidart.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Scidart Academy</a>
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-4">Links</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/" className="text-foreground/70 hover:text-foreground transition-colors">Home</Link></li>
-                <li><Link to="/about" className="text-foreground/70 hover:text-foreground transition-colors">About</Link></li>
-                <li><Link to="/contact" className="text-foreground/70 hover:text-foreground transition-colors">Contact</Link></li>
-                <li><Link to="/auth" className="text-foreground/70 hover:text-foreground transition-colors">Sign In</Link></li>
-                <li>
-                  <a 
-                    href="https://blog.mapmypaper.com" 
-                    className="text-foreground/70 hover:text-foreground transition-colors flex items-center gap-1"
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    Blog <ExternalLink className="h-3 w-3" />
-                  </a>
-                </li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-4">Legal</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/privacy-policy" className="text-foreground/70 hover:text-foreground transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/terms-of-service" className="text-foreground/70 hover:text-foreground transition-colors">Terms of Service</Link></li>
-                <li><Link to="/contact" className="text-foreground/70 hover:text-foreground transition-colors">Contact</Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <Separator className="my-6" />
-          
-          <div className="text-center text-sm text-foreground/60">
-            <p>© {new Date().getFullYear()} MapMyPaper by Scidart Academy. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
