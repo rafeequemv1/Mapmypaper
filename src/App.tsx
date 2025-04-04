@@ -12,6 +12,10 @@ import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -36,6 +40,10 @@ const App = () => (
                 {/* Public routes */}
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<PdfUpload />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/about" element={<About />} />
                 
                 {/* Protected routes */}
                 <Route element={<RequireAuth />}>
