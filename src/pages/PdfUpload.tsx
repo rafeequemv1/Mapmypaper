@@ -162,9 +162,6 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
 
-      // Store the text for use with other features
-      sessionStorage.setItem('pdfText', extractedText);
-
       // Process the text with Gemini to generate mind map data
       console.log("Generating mind map...");
       const mindMapData = await generateMindMapFromText(extractedText);
@@ -199,9 +196,7 @@ const PdfUpload = () => {
       setIsProcessing(false);
     }
   }, [selectedFile, navigate, toast, user]);
-
-  return (
-    <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
+  return <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
       {/* Header */}
       <header className="w-full bg-white shadow-sm py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -214,19 +209,13 @@ const PdfUpload = () => {
             <a href="#about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">About</a>
             <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Features</a>
             
-            {selectedFile && (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => openVisualization("mindmap")} className="flex items-center gap-1">
-                  <Braces className="h-4 w-4" />
-                  <span className="text-sm">Mind Map</span>
-                </Button>
+            {selectedFile && <>
                 
                 <Button variant="ghost" size="sm" onClick={() => openVisualization("flowchart")} className="flex items-center gap-1">
                   <GitBranch className="h-4 w-4" />
                   <span className="text-sm">Flowchart</span>
                 </Button>
-              </>
-            )}
+              </>}
             
             <UserMenu />
           </div>
@@ -255,21 +244,8 @@ const PdfUpload = () => {
         {/* PDF Upload Box */}
         <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
           {/* Dropzone */}
-          <div 
-            className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"} cursor-pointer flex flex-col items-center justify-center gap-4`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={handleFileChange}
-            />
+          <div className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"} cursor-pointer flex flex-col items-center justify-center gap-4`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}>
+            <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
             <Upload className="h-12 w-12 text-gray-400" />
             <div className="text-center">
               <p className="text-lg font-medium">Drag and drop your PDF here</p>
@@ -278,8 +254,7 @@ const PdfUpload = () => {
           </div>
           
           {/* Selected File Info with size warning if needed */}
-          {selectedFile && (
-            <div className={`p-4 ${pdfSize > 15 * 1024 * 1024 ? 'bg-yellow-50' : 'bg-gray-50'} rounded-lg flex items-center justify-between mb-6`}>
+          {selectedFile && <div className={`p-4 ${pdfSize > 15 * 1024 * 1024 ? 'bg-yellow-50' : 'bg-gray-50'} rounded-lg flex items-center justify-between mb-6`}>
               <p className="font-medium truncate">{selectedFile.name}</p>
               <div className="flex flex-col items-end">
                 <p className="text-sm text-gray-500">
@@ -287,16 +262,10 @@ const PdfUpload = () => {
                 </p>
                 {pdfSize > 15 * 1024 * 1024 && <p className="text-xs text-amber-600 mt-1">Large file - processing may take longer</p>}
               </div>
-            </div>
-          )}
+            </div>}
           
           {/* Generate Button */}
-          <Button
-            onClick={handleGenerateMindmap}
-            className="w-full bg-[#333] hover:bg-[#444] text-white"
-            disabled={!selectedFile || isProcessing}
-            size="lg"
-          >
+          <Button onClick={handleGenerateMindmap} className="w-full bg-[#333] hover:bg-[#444] text-white" disabled={!selectedFile || isProcessing} size="lg">
             {isProcessing ? "Processing..." : "Generate Mind Map"}
           </Button>
           
@@ -350,8 +319,6 @@ const PdfUpload = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default PdfUpload;

@@ -1,13 +1,10 @@
-
 import { useEffect, useState } from "react";
 import { getUsageStatistics } from "@/utils/analytics";
 import { Skeleton } from "./ui/skeleton";
-
 interface StatsDisplayProps {
   className?: string;
   refreshInterval?: number; // In milliseconds
 }
-
 const StatsDisplay = ({
   className = "",
   refreshInterval = 60000 // Default refresh every minute
@@ -18,7 +15,6 @@ const StatsDisplay = ({
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -52,31 +48,6 @@ const StatsDisplay = ({
   }, [refreshInterval]);
 
   // Return JSX with stat display
-  return (
-    <div className={`flex flex-wrap justify-center gap-6 ${className}`}>
-      <div className="bg-white rounded-lg shadow-sm px-6 py-4">
-        {loading ? (
-          <Skeleton className="h-16 w-36" />
-        ) : (
-          <div className="text-center">
-            <p className="text-3xl font-bold text-purple-600">{stats?.papersAnalyzed || 0}</p>
-            <p className="text-sm text-gray-600">Papers Analyzed</p>
-          </div>
-        )}
-      </div>
-      
-      <div className="bg-white rounded-lg shadow-sm px-6 py-4">
-        {loading ? (
-          <Skeleton className="h-16 w-36" />
-        ) : (
-          <div className="text-center">
-            <p className="text-3xl font-bold text-blue-600">{stats?.researchersCount || 0}</p>
-            <p className="text-sm text-gray-600">Researchers</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return;
 };
-
 export default StatsDisplay;
