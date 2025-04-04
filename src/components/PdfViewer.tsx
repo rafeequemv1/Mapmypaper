@@ -118,8 +118,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         viewportElement: viewportElement
       });
       
-      // Use a dedicated function to handle the capture to avoid callback hell
-      performCapture(viewportElement as HTMLElement, selectionRect);
+      // Use requestAnimationFrame for better rendering timing
+      requestAnimationFrame(() => {
+        performCapture(viewportElement as HTMLElement, selectionRect);
+      });
     };
 
     const performCapture = async (element: HTMLElement, rect: SelectionRect) => {
@@ -152,46 +154,46 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           throw new Error("Invalid selection dimensions");
         }
         
-        // Create a new canvas for just the selection
-        const selectedCanvas = document.createElement('canvas');
-        selectedCanvas.width = rect.width;
-        selectedCanvas.height = rect.height;
-        const selectedCtx = selectedCanvas.getContext('2d');
+        // Use device pixel ratio for accurate scaling
+        const ratio = window.devicePixelRatio || 1;
         
-        if (!selectedCtx) {
-          throw new Error("Failed to get selected canvas context");
-        }
+        // Calculate selection coordinates adjusted for device pixel ratio
+        const sx = Math.round(rect.x * ratio);
+        const sy = Math.round(rect.y * ratio);
+        const sw = Math.round(rect.width * ratio);
+        const sh = Math.round(rect.height * ratio);
         
-        console.log("Drawing selected area", {
-          from: {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height
-          },
-          to: {
-            x: 0,
-            y: 0,
-            width: rect.width,
-            height: rect.height
-          }
+        console.log("Cropping with pixel ratio adjustment", {
+          ratio,
+          adjusted: { sx, sy, sw, sh },
+          original: rect
         });
         
+        // Create a new canvas for just the selection
+        const croppedCanvas = document.createElement('canvas');
+        croppedCanvas.width = sw;
+        croppedCanvas.height = sh;
+        const croppedCtx = croppedCanvas.getContext('2d');
+        
+        if (!croppedCtx) {
+          throw new Error("Failed to get cropped canvas context");
+        }
+        
         // Draw only the selected area to the new canvas
-        selectedCtx.drawImage(
+        croppedCtx.drawImage(
           canvas, 
-          rect.x, 
-          rect.y, 
-          rect.width, 
-          rect.height,
+          sx, 
+          sy, 
+          sw, 
+          sh,
           0, 
           0, 
-          rect.width, 
-          rect.height
+          sw, 
+          sh
         );
         
         // Convert to data URL - force JPEG for smaller size to avoid storage quota issues
-        const dataUrl = selectedCanvas.toDataURL('image/jpeg', 0.85);
+        const dataUrl = croppedCanvas.toDataURL('image/jpeg', 0.85);
         console.log("Data URL generated successfully", {
           length: dataUrl.length,
           preview: dataUrl.substring(0, 50) + "...",
@@ -255,24 +257,39 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       
       setIsDrawing(true);
       
-      const containerRect = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]')?.getBoundingClientRect();
-      if (!containerRect) return;
+      // Get viewport element and its scroll position
+      const viewportElement = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      if (!viewportElement) return;
       
+      const containerRect = viewportElement.getBoundingClientRect();
+      const scrollTop = viewportElement.scrollTop;
+      
+      // Calculate position relative to viewport accounting for scroll
       const x = e.clientX - containerRect.left;
-      const y = e.clientY - containerRect.top + (pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement)?.scrollTop;
+      const y = e.clientY - containerRect.top + scrollTop;
+      
+      console.log("Selection started at", { x, y, scrollTop });
       
       setSelectionStart({ x, y });
       setSelectionRect({ x, y, width: 0, height: 0 });
+      
+      // Add no-select class to body to prevent text selection
+      document.body.classList.add('no-select');
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!isAreaSelectionMode || !selectionStart || !isDrawing) return;
       
-      const containerRect = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]')?.getBoundingClientRect();
-      if (!containerRect) return;
+      // Get viewport element
+      const viewportElement = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      if (!viewportElement) return;
       
+      const containerRect = viewportElement.getBoundingClientRect();
+      const scrollTop = viewportElement.scrollTop;
+      
+      // Calculate position relative to viewport accounting for scroll
       const currentX = e.clientX - containerRect.left;
-      const currentY = e.clientY - containerRect.top + (pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement)?.scrollTop;
+      const currentY = e.clientY - containerRect.top + scrollTop;
       
       setSelectionRect({
         x: Math.min(selectionStart.x, currentX),
@@ -287,6 +304,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       
       setIsDrawing(false);
       
+      // Remove no-select class from body
+      document.body.classList.remove('no-select');
+      
       // Keep selection rectangle visible if it has meaningful dimensions
       if (!selectionRect || selectionRect.width < 5 || selectionRect.height < 5) {
         setSelectionRect(null);
@@ -298,6 +318,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       setSelectionStart(null);
       setIsAreaSelectionMode(false);
       setIsDrawing(false);
+      
+      // Remove no-select class from body
+      document.body.classList.remove('no-select');
     };
 
     // Toggle area selection mode
@@ -404,7 +427,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Navigate through search results
     const navigateSearch = (direction: 'next' | 'prev') => {
       if (searchResults.length === 0) return;
       
@@ -549,6 +571,23 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         window.removeEventListener('scrollToPdfPage', handleScrollToPdfPage);
       };
     }, [numPages]);
+    
+    // Add global CSS for preventing text selection during area selection
+    useEffect(() => {
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .no-select {
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      return () => {
+        document.body.classList.remove('no-select');
+      };
+    }, []);
 
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
@@ -658,7 +697,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         {pdfData ? (
           <ScrollArea className="flex-1" ref={pdfContainerRef}>
             <div 
-              className={`flex flex-col items-center py-4 relative ${isAreaSelectionMode ? 'select-none cursor-crosshair' : ''}`}
+              className={`flex flex-col items-center py-4 relative ${isAreaSelectionMode ? 'cursor-crosshair' : ''}`}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={(e) => {
