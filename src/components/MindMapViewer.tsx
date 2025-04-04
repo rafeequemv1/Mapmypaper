@@ -238,6 +238,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         },
         theme: colorfulTheme,
         autoFit: true,
+        // Set a lower initial scale to show more of the mind map
+        scale: 0.75, // Add an initial scale that's smaller than default (usually 1.0)
         // Add custom style to nodes based on their level and content
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
           // Get branch color from palette based on branch position
@@ -544,6 +546,18 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
 
       // Initialize the mind map with data
       mind.init(data);
+      
+      // Set initial zoom level to show more of the map
+      setTimeout(() => {
+        if (mind && mind.refresh) {
+          mind.refresh(0.65); // Apply a reduced scale factor (0.65 is 35% smaller than normal)
+          
+          // Force a layout refresh for better visibility
+          if (mind.toCenter) {
+            mind.toCenter();
+          }
+        }
+      }, 300);
       
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;

@@ -13,7 +13,7 @@ mermaid.initialize({
   startOnLoad: true,
   theme: "default",
   securityLevel: "loose",
-  fontFamily: "Inter, sans-serif",
+  fontFamily: "Roboto, sans-serif",
   themeVariables: {
     // Colorful theme variables for mindmap and flowchart
     primaryColor: "#8B5CF6", // Purple
@@ -88,7 +88,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
             "#3B82F6", // Blue (repeated)
           ],
           "fontSize": "16px",
-          "fontFamily": "Inter, sans-serif",
+          "fontFamily": "Roboto, sans-serif",
           "curve": "basis",
           "border": "2px solid",
           "padding": "24px",
@@ -170,8 +170,22 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
               svgElement.setAttribute('width', '100%');
               svgElement.setAttribute('height', '100%');
               svgElement.style.maxHeight = '100%';
+              svgElement.style.minHeight = '500px'; // Ensure minimum height
               svgElement.style.display = 'block';
               svgElement.style.margin = '0 auto';
+              
+              // Ensure diagram uses full available space
+              const viewBox = svgElement.getAttribute('viewBox');
+              if (viewBox) {
+                const [x, y, width, height] = viewBox.split(' ').map(Number);
+                // Expand the viewBox to ensure the diagram fits well
+                const newWidth = Math.max(width, 1000);
+                const newHeight = Math.max(height, 800);
+                svgElement.setAttribute('viewBox', `${x} ${y} ${newWidth} ${newHeight}`);
+                
+                // Add preserveAspectRatio to ensure it fills the container
+                svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+              }
             }
           }
         });
@@ -280,7 +294,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                 </div>
               </div>
             ) : mermaidSyntax ? (
-              <div ref={mermaidRef} className="mermaid-container overflow-auto h-full w-full"></div>
+              <div ref={mermaidRef} className="mermaid-container overflow-auto h-full w-full flex items-center justify-center"></div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
                 No {visualizationType} diagram available. Click Regenerate to create one.
