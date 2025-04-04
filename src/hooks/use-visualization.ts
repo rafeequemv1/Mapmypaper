@@ -95,6 +95,30 @@ export function useVisualization() {
         validatedSyntax = validatedSyntax.replace(/-{2,}>/g, '-->');
         validatedSyntax = validatedSyntax.replace(/<-{2,}/g, '<--');
         
+        // Replace ampersands with 'and' in the whole document to prevent syntax errors
+        validatedSyntax = validatedSyntax.replace(/&/g, 'and');
+        
+        // Remove trailing semicolons from all lines
+        validatedSyntax = validatedSyntax.replace(/;(\s*\n|\s*$)/g, '$1');
+        
+        // Fix issues with curly braces - ensure they're properly closed
+        const openBracesCount = (validatedSyntax.match(/{/g) || []).length;
+        const closeBracesCount = (validatedSyntax.match(/}/g) || []).length;
+        
+        if (openBracesCount > closeBracesCount) {
+          // Add missing closing braces
+          validatedSyntax += '\n' + '}'.repeat(openBracesCount - closeBracesCount);
+        }
+        
+        // Fix common syntax error with unclosed nodes
+        validatedSyntax = validatedSyntax.replace(/([A-Za-z0-9_-]+)\s*{([^}]*$)/gm, '$1[$2]');
+        
+        // Fix nested curly braces - common error in flowcharts
+        validatedSyntax = validatedSyntax.replace(/{([^{}]*){/g, '{$1 ');
+        
+        // Make sure all node definitions end with proper syntax
+        validatedSyntax = validatedSyntax.replace(/([A-Za-z0-9_-]+)\s*{\s*([^}]*)\s*}/g, '$1["$2"]');
+        
         console.log("Applied flowchart syntax fixes");
       }
       
