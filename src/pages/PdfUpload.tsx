@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -91,6 +90,21 @@ const PdfUpload = () => {
       return;
     }
 
+    // Check if user is logged in
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to generate a mind map",
+      });
+      // Store a flag in sessionStorage to indicate we should return to mindmap generation
+      sessionStorage.setItem('pendingPdfProcessing', 'true');
+      // Save the selected file name to session storage for better UX
+      sessionStorage.setItem('pendingPdfName', selectedFile.name);
+      // Redirect to login page
+      navigate("/auth");
+      return;
+    }
+
     setIsProcessing(true);
     setExtractionError(null);
     
@@ -170,7 +184,7 @@ const PdfUpload = () => {
       });
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast]);
+  }, [selectedFile, navigate, toast, user]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
@@ -185,7 +199,6 @@ const PdfUpload = () => {
           <div className="flex items-center gap-4">
             <a href="#about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">About</a>
             <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Features</a>
-            {/* Replace the Sign In button with UserMenu component for authenticated users */}
             <UserMenu />
           </div>
         </div>
@@ -207,77 +220,62 @@ const PdfUpload = () => {
           </p>
         </div>
         
-        {user && (
-          <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
-            {/* Dropzone */}
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${
-                dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"
-              } cursor-pointer flex flex-col items-center justify-center gap-4`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <Upload className="h-12 w-12 text-gray-400" />
-              <div className="text-center">
-                <p className="text-lg font-medium">Drag and drop your PDF here</p>
-                <p className="text-gray-500">or select a file from your computer</p>
+        {/* PDF Upload Box - Now visible to all users */}
+        <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
+          {/* Dropzone */}
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${
+              dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"
+            } cursor-pointer flex flex-col items-center justify-center gap-4`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Upload className="h-12 w-12 text-gray-400" />
+            <div className="text-center">
+              <p className="text-lg font-medium">Drag and drop your PDF here</p>
+              <p className="text-gray-500">or select a file from your computer</p>
+            </div>
+          </div>
+          
+          {/* Selected File Info with size warning if needed */}
+          {selectedFile && (
+            <div className={`p-4 ${pdfSize > 15 * 1024 * 1024 ? 'bg-yellow-50' : 'bg-gray-50'} rounded-lg flex items-center justify-between mb-6`}>
+              <p className="font-medium truncate">{selectedFile.name}</p>
+              <div className="flex flex-col items-end">
+                <p className="text-sm text-gray-500">
+                  {(pdfSize / 1024 / 1024).toFixed(2)} MB
+                </p>
+                {pdfSize > 15 * 1024 * 1024 && (
+                  <p className="text-xs text-amber-600 mt-1">Large file - processing may take longer</p>
+                )}
               </div>
             </div>
-            
-            {/* Selected File Info with size warning if needed */}
-            {selectedFile && (
-              <div className={`p-4 ${pdfSize > 15 * 1024 * 1024 ? 'bg-yellow-50' : 'bg-gray-50'} rounded-lg flex items-center justify-between mb-6`}>
-                <p className="font-medium truncate">{selectedFile.name}</p>
-                <div className="flex flex-col items-end">
-                  <p className="text-sm text-gray-500">
-                    {(pdfSize / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                  {pdfSize > 15 * 1024 * 1024 && (
-                    <p className="text-xs text-amber-600 mt-1">Large file - processing may take longer</p>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Generate Button */}
-            <Button 
-              onClick={handleGenerateMindmap} 
-              className="w-full bg-[#333] hover:bg-[#444] text-white" 
-              disabled={!selectedFile || isProcessing}
-              size="lg"
-            >
-              {isProcessing ? "Processing..." : "Generate Mind Map"}
-            </Button>
-            
-            {extractionError && (
-              <p className="text-red-500 text-sm mt-4">{extractionError}</p>
-            )}
-          </div>
-        )}
-        
-        {!user && (
-          <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8 text-center">
-            <h2 className="text-xl font-medium mb-4">Authentication Required</h2>
-            <p className="text-gray-600 mb-6">Please sign in to upload and process PDF files.</p>
-            <Button 
-              onClick={() => navigate("/auth")}
-              className="bg-[#333] hover:bg-[#444] text-white" 
-              size="lg"
-            >
-              Sign In or Create Account
-            </Button>
-          </div>
-        )}
+          )}
+          
+          {/* Generate Button */}
+          <Button 
+            onClick={handleGenerateMindmap} 
+            className="w-full bg-[#333] hover:bg-[#444] text-white" 
+            disabled={!selectedFile || isProcessing}
+            size="lg"
+          >
+            {isProcessing ? "Processing..." : "Generate Mind Map"}
+          </Button>
+          
+          {extractionError && (
+            <p className="text-red-500 text-sm mt-4">{extractionError}</p>
+          )}
+        </div>
       </div>
       
       {/* Footer */}

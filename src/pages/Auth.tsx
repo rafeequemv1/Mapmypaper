@@ -1,383 +1,247 @@
-
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { PaperLogo } from "@/components/PaperLogo";
 import { Separator } from "@/components/ui/separator";
-
-// Define the form schema for login
-const loginFormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
-});
-
-// Define the form schema for signup with simplified fields
-const signupFormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
-  displayName: z.string().min(2, { message: "Display name must be at least 2 characters long" }),
-});
-
-type LoginFormValues = z.infer<typeof loginFormSchema>;
-type SignupFormValues = z.infer<typeof signupFormSchema>;
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
-  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [type, setType] = useState<"sign_in" | "sign_up">("sign_in");
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || "/";
-  const [isLoading, setIsLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Define login form
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
-  // Define signup form with simplified fields
-  const signupForm = useForm<SignupFormValues>({
-    resolver: zodResolver(signupFormSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      displayName: "",
-    },
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // Handle login submission
-  const onLoginSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
+    if (!email || !password) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all fields.",
+        variant: "destructive",
       });
+      setLoading(false);
+      return;
+    }
 
-      if (error) {
+    try {
+      if (type === "sign_in") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
         toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: error.message || "Failed to sign in with those credentials",
+          title: "Success",
+          description: "Signed in successfully!",
         });
       } else {
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
-        navigate(from);
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: "An unexpected error occurred. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle signup submission with simplified data
-  const onSignupSubmit = async (data: SignupFormValues) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            display_name: data.displayName,
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              email: email,
+            },
           },
-        },
-      });
-
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Signup failed",
-          description: error.message || "Failed to create account",
         });
-      } else {
+        if (error) throw error;
         toast({
-          title: "Signup successful",
-          description: "Please check your email to verify your account",
+          title: "Success",
+          description: "Signed up successfully! Please check your email to verify your account.",
         });
-        setActiveTab("login");
       }
-    } catch (error) {
+      setEmail("");
+      setPassword("");
+    } catch (error: any) {
       toast({
+        title: "Error",
+        description: error.message,
         variant: "destructive",
-        title: "Signup failed",
-        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Handle Google sign in/sign up
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        }
-      });
-
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Google authentication failed",
-          description: error.message || "Failed to sign in with Google",
-        });
-      }
-    } catch (error) {
+  useEffect(() => {
+    // Check if we were in the middle of processing a PDF
+    const pendingPdfProcessing = sessionStorage.getItem('pendingPdfProcessing');
+    
+    // If user is authenticated and we have a pending PDF processing
+    if (user && pendingPdfProcessing === 'true') {
+      // Clear the flag
+      sessionStorage.removeItem('pendingPdfProcessing');
+      
+      // Show toast notification to continue
       toast({
-        variant: "destructive",
-        title: "Google authentication failed",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Continue to Mind Map",
+        description: "Now you can generate your mind map!",
       });
-    } finally {
-      setGoogleLoading(false);
+      
+      // Redirect back to home to continue PDF processing
+      navigate("/");
     }
-  };
+  }, [user, navigate, toast]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-black text-white p-1.5 rounded-md">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </div>
-            <CardTitle>mapmypaper</CardTitle>
+    <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
+      {/* Header */}
+      <header className="w-full bg-white shadow-sm py-4 px-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <PaperLogo size="md" />
+            <h1 className="text-xl font-medium text-[#333]">mapmypaper</h1>
           </div>
-          <CardDescription>
-            Sign in to your account or create a new one
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Google Sign In Button */}
-          <div className="mb-6">
-            <Button 
-              type="button" 
-              className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
+          <div></div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
+          <div className="text-center mb-6">
+            <PaperLogo size="lg" />
+            <h1 className="text-2xl font-bold text-[#333]">{type === "sign_in" ? "Sign In" : "Create Account"}</h1>
+            <p className="text-gray-600 mt-2">
+              {type === "sign_in"
+                ? "Sign in to access your account"
+                : "Create an account to start mapping your papers"}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                type="email"
+                id="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                type="password"
+                id="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-[#333] hover:bg-[#444] text-white"
+              disabled={loading}
+              size="lg"
             >
-              {googleLoading ? (
-                "Loading..."
-              ) : (
-                <>
-                  <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                    <path fill="none" d="M0 0h48v48H0z"/>
-                  </svg>
-                  Continue with Google
-                </>
-              )}
+              {loading ? "Loading..." : type === "sign_in" ? "Sign In" : "Sign Up"}
             </Button>
+          </form>
+
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              onClick={() => setType(type === "sign_in" ? "sign_up" : "sign_in")}
+              disabled={loading}
+            >
+              {type === "sign_in"
+                ? "Don't have an account? Create one"
+                : "Already have an account? Sign in"}
+            </button>
           </div>
-          
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-8 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <PaperLogo size="sm" />
+                <h2 className="text-lg font-medium text-[#333]">mapmypaper</h2>
+              </div>
+              <p className="text-gray-600 text-sm">
+                Transform research papers into interactive mind maps for better comprehension and retention.
+              </p>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">
-                Or continue with
-              </span>
+
+            <div>
+              <h3 className="font-medium mb-4">Links</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Home
+                  </a>
+                </li>
+                <li>
+                  <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="/auth" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Sign In
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-medium mb-4">Legal</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Contact
+                  </a>
+                </li>
+              </ul>
             </div>
           </div>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as "login" | "signup")}
-          >
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <Form {...loginForm}>
-                <form
-                  onSubmit={loginForm.handleSubmit(onLoginSubmit)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="your-email@example.com"
-                            type="email"
-                            autoComplete="email"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="••••••••"
-                            type="password"
-                            autoComplete="current-password"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Logging in..." : "Login"}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-            <TabsContent value="signup">
-              <Form {...signupForm}>
-                <form
-                  onSubmit={signupForm.handleSubmit(onSignupSubmit)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={signupForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="your-email@example.com"
-                            type="email"
-                            autoComplete="email"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signupForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="••••••••"
-                            type="password"
-                            autoComplete="new-password"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signupForm.control}
-                    name="displayName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="John Doe"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Creating account..." : "Create account"}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-        <CardFooter className="flex flex-col">
-          <Separator className="mb-4" />
-          <p className="text-sm text-center text-gray-500">
-            By creating an account, you agree to our Terms of Service and Privacy Policy
-          </p>
-        </CardFooter>
-      </Card>
+          <Separator className="my-6" />
+
+          <div className="text-center text-sm text-gray-500">
+            <p>© {new Date().getFullYear()} MapMyPaper. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

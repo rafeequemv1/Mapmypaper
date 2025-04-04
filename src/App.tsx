@@ -31,11 +31,12 @@ const App = () => (
         <div className="relative">
           <BrowserRouter>
             <Routes>
+              {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<PdfUpload />} />
               
               {/* Protected routes */}
               <Route element={<RequireAuth />}>
-                <Route path="/" element={<PdfUpload />} />
                 <Route path="/mindmap" element={<MindMap />} />
               </Route>
               
