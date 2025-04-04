@@ -19,6 +19,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
+  onImageSelected?: (imageData: string) => void;
   onPdfLoaded?: () => void;
   renderTooltipContent?: () => React.ReactNode;
 }
