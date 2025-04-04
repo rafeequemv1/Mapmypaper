@@ -224,19 +224,18 @@ const PdfUpload = () => {
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="text-center mb-12 mt-12">
+        <div className="text-center mb-6 mt-12">
           <div className="flex items-center justify-center gap-4 mb-6">
             <PaperLogo size="lg" />
             <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl">Read research papers faster, save time, increase comprehension, and boost retention with this AI-powered mindmap and chatbot</p>
           
-          
           {/* Statistics Display */}
-          <StatsDisplay className="mt-8 mb-6" />
+          <StatsDisplay className="mt-8 mb-4" />
         </div>
         
-        {/* PDF Upload Box */}
+        {/* PDF Upload Box - moved closer to the text above */}
         <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
           {/* Dropzone */}
           <div className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"} cursor-pointer flex flex-col items-center justify-center gap-4`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}>
@@ -266,6 +265,9 @@ const PdfUpload = () => {
           
           {extractionError && <p className="text-red-500 text-sm mt-4">{extractionError}</p>}
         </div>
+        
+        {/* Keeping space below empty as requested */}
+        <div className="flex-grow"></div>
       </div>
       
       {/* Footer */}
@@ -316,4 +318,5 @@ const PdfUpload = () => {
       </footer>
     </div>;
 };
+
 export default PdfUpload;
