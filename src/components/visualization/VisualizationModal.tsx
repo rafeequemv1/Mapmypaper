@@ -8,12 +8,39 @@ import { Textarea } from "@/components/ui/textarea";
 import { Download, RefreshCw } from "lucide-react";
 import { VisualizationType } from "@/hooks/use-visualization";
 
-// Initialize mermaid
+// Initialize mermaid with colorful theme settings
 mermaid.initialize({
   startOnLoad: true,
-  theme: "neutral",
+  theme: "default",
   securityLevel: "loose",
   fontFamily: "Inter, sans-serif",
+  themeVariables: {
+    // Colorful theme variables for mindmap and flowchart
+    primaryColor: "#8B5CF6", // Purple
+    primaryTextColor: "#ffffff",
+    primaryBorderColor: "#7C3AED",
+    lineColor: "#8B5CF6",
+    secondaryColor: "#F97316", // Orange
+    tertiaryColor: "#3B82F6", // Blue
+    // Mindmap specific colors
+    nodeBorder: "#7C3AED",
+    mainBkg: "#F9F7FF",
+    edgeLabelBackground: "#F9F7FF",
+    // More vibrant colors for nodes
+    nodeBkg: "#E5DEFF",
+    // Flowchart specific colors
+    clusterBkg: "#F9F7FF",
+    clusterBorder: "#8B5CF6",
+  },
+  flowchart: {
+    curve: 'basis',
+    useMaxWidth: false,
+    htmlLabels: true,
+  },
+  mindmap: {
+    padding: 16,
+    useMaxWidth: false,
+  }
 });
 
 interface VisualizationModalProps {
@@ -39,9 +66,97 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
   const [renderKey, setRenderKey] = useState(0);
   const mermaidRef = useRef<HTMLDivElement>(null);
   
+  // Custom theme for mindmap to make it more colorful
+  const applyCustomTheme = () => {
+    if (visualizationType === "mindmap") {
+      // Define a colorful mindmap theme
+      const colorfulMindmapTheme = {
+        "mindmap": {
+          // Colors from the purple palette with additional vibrant colors
+          "nodeColors": [
+            "#8B5CF6", // Purple
+            "#F97316", // Orange
+            "#3B82F6", // Blue
+            "#EC4899", // Pink
+            "#10B981", // Green
+            "#6366F1", // Indigo
+            "#EF4444", // Red
+            "#F59E0B", // Amber
+            "#14B8A6", // Teal
+            "#8B5CF6", // Purple (repeated)
+            "#F97316", // Orange (repeated)
+            "#3B82F6", // Blue (repeated)
+          ],
+          "fontSize": "16px",
+          "fontFamily": "Inter, sans-serif",
+          "curve": "basis",
+          "border": "2px solid",
+          "padding": "24px",
+          "useMaxWidth": "false"
+        }
+      };
+      
+      const style = document.createElement('style');
+      style.setAttribute('id', 'mermaid-mindmap-custom-theme');
+      style.innerHTML = `
+        .node rect, .node circle, .node ellipse, .node polygon, .node path {
+          fill: #E5DEFF !important;
+          stroke: #8B5CF6 !important;
+          stroke-width: 2px !important;
+        }
+        .node.mindmap-level-1 rect, .node.mindmap-level-1 circle, .node.mindmap-level-1 ellipse, .node.mindmap-level-1 polygon {
+          fill: #F0DBFF !important;
+          stroke: #9333EA !important;
+        }
+        .node.mindmap-level-2 rect, .node.mindmap-level-2 circle, .node.mindmap-level-2 ellipse, .node.mindmap-level-2 polygon {
+          fill: #FEF3C7 !important;
+          stroke: #F97316 !important;
+        }
+        .node.mindmap-level-3 rect, .node.mindmap-level-3 circle, .node.mindmap-level-3 ellipse, .node.mindmap-level-3 polygon {
+          fill: #DBEAFE !important;
+          stroke: #3B82F6 !important;
+        }
+        .node.mindmap-level-4 rect, .node.mindmap-level-4 circle, .node.mindmap-level-4 ellipse, .node.mindmap-level-4 polygon {
+          fill: #FCE7F3 !important;
+          stroke: #EC4899 !important;
+        }
+        .node.mindmap-level-5 rect, .node.mindmap-level-5 circle, .node.mindmap-level-5 ellipse, .node.mindmap-level-5 polygon {
+          fill: #DCFCE7 !important;
+          stroke: #10B981 !important;
+        }
+        .edgePath .path {
+          stroke-width: 2px !important;
+        }
+        .mindmap-root > g > rect {
+          fill: #F5F3FF !important;
+          stroke: #8B5CF6 !important;
+          stroke-width: 2px !important;
+        }
+        .mindmap-node-label {
+          font-weight: 500 !important;
+        }
+        .mindmap-root > g > .mindmap-node-label {
+          font-weight: 700 !important;
+          font-size: 18px !important;
+        }
+      `;
+      document.head.appendChild(style);
+
+      return () => {
+        const existingStyle = document.getElementById('mermaid-mindmap-custom-theme');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      };
+    }
+  };
+  
   // Re-render mermaid diagram when syntax changes
   useEffect(() => {
     if (isOpen && mermaidSyntax && mermaidRef.current && activeTab === "preview") {
+      // Apply custom theme for mindmap
+      const cleanup = applyCustomTheme();
+      
       try {
         mermaidRef.current.innerHTML = "";
         mermaid.render(`mermaid-${renderKey}`, mermaidSyntax).then(({ svg }) => {
@@ -66,8 +181,10 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
           mermaidRef.current.innerHTML = `<div class="p-4 text-red-500">Error rendering diagram: ${error.message}</div>`;
         }
       }
+      
+      return cleanup;
     }
-  }, [mermaidSyntax, isOpen, activeTab, renderKey]);
+  }, [mermaidSyntax, isOpen, activeTab, renderKey, visualizationType]);
   
   // Handle syntax change
   const handleSyntaxChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

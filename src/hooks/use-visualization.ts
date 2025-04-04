@@ -33,13 +33,9 @@ export function useVisualization() {
       return;
     }
     
-    // Use saved syntax if available for this type
-    if (savedSyntax[type]) {
-      setMermaidSyntax(savedSyntax[type]);
-    } else {
-      // Generate visualization if we don't have saved syntax for this type
-      await generateVisualization(type);
-    }
+    // Always generate a visualization when opening the modal
+    // This removes the need to click the regenerate button
+    generateVisualization(type);
   };
   
   const generateVisualization = async (type: VisualizationType) => {
