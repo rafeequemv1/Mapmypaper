@@ -711,14 +711,9 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     if (!pdfText || pdfText.trim() === '') {
       console.error("No PDF content available in sessionStorage");
       return `mindmap
-  root((Error)):::important
+  root((Error))
     No PDF Content
-      Please upload a PDF first
-      
-classDef important fill:#f96,stroke:#333,stroke-width:2px
-classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
+      Please upload a PDF first`;
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -731,12 +726,12 @@ classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
     
     IMPORTANT: 
     1. Use ACTUAL SPECIFIC content from the document, not generic labels.
-    2. Include colors for better visualization using the Mermaid color syntax.
+    2. DO NOT use any styling or class declarations as they are not supported in mindmaps.
     
     CRITICAL MERMAID SYNTAX RULES:
     1. Start with 'mindmap'
-    2. Use proper indentation for hierarchy
-    3. Root node must use this exact syntax: root((Paper Title)):::important
+    2. Use proper indentation for hierarchy (2 spaces per level)
+    3. Root node must use this exact syntax: root((Paper Title))
     4. First level nodes use text on their own line with proper indentation
     5. You can use these node styles:
        - Regular text node (just text)
@@ -746,35 +741,21 @@ classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
     6. Max 3 levels of hierarchy
     7. Max 15 nodes total
     8. AVOID special characters that might break syntax
-    9. NEVER use class declarations like "class node className"
-    10. ADD COLORS using three colons followed by a class name, like this:
-        - root((Title)):::important
-        - First level:::primary
-        - Second level:::secondary
-    11. ADD CLASS DEFINITIONS AT THE ROOT LEVEL (not indented under any node) at the end like this:
-        
-        classDef important fill:#f96,stroke:#333,stroke-width:2px
-        classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-        classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-        classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050
+    9. DO NOT USE class declarations or styling with :::classname as they are NOT SUPPORTED in mindmaps
+    10. DO NOT ADD ANY class definitions with classDef
     
     EXAMPLE CORRECT SYNTAX:
     mindmap
-      root((Research on Machine Learning)):::important
-        Introduction:::primary
-          Background on neural networks:::secondary
-          Problem of overfitting data:::secondary
-        Methodology:::primary
-          LSTM architecture used:::secondary
-          Training on 50,000 examples:::success
-        Results:::primary
-          93% accuracy achieved:::success
-          Compared to 85% baseline:::secondary
-      
-    classDef important fill:#f96,stroke:#333,stroke-width:2px
-    classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-    classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-    classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050
+      root((Research on Machine Learning))
+        Introduction
+          Background on neural networks
+          Problem of overfitting data
+        Methodology
+          LSTM architecture used
+          Training on 50,000 examples
+        Results
+          93% accuracy achieved
+          Compared to 85% baseline
     
     Here's the document text:
     ${pdfText.slice(0, 10000)}
@@ -792,33 +773,23 @@ classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
       .replace(/```\s?/g, "")
       .trim();
     
-    return cleanAndEnhanceMindmapSyntax(mermaidCode);
+    return cleanMindmapSyntax(mermaidCode);
   } catch (error) {
     console.error("Gemini API mindmap generation error:", error);
     return `mindmap
-  root((Error)):::important
+  root((Error))
     Failed to generate mindmap
-      Please try again
-      
-classDef important fill:#f96,stroke:#333,stroke-width:2px
-classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
+      Please try again`;
   }
 };
 
-// Helper function to clean and enhance mindmap syntax
-const cleanAndEnhanceMindmapSyntax = (code: string): string => {
+// Helper function to clean mindmap syntax
+const cleanMindmapSyntax = (code: string): string => {
   if (!code || !code.trim()) {
     return `mindmap
-  root((Error)):::important
+  root((Error))
     No Mindmap Generated
-      Please try again
-      
-classDef important fill:#f96,stroke:#333,stroke-width:2px
-classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
+      Please try again`;
   }
 
   try {
@@ -828,47 +799,12 @@ classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
       cleaned = "mindmap\n" + cleaned;
     }
     
-    // Extract all class definitions and remove them from the main code
-    const classDefRegex = /classDef\s+\w+\s+[^]+?(?=classDef|\s*$)/g;
-    const classDefinitions: string[] = [];
-    
-    // Find all class definitions
-    const matches = cleaned.match(classDefRegex) || [];
-    matches.forEach(match => {
-      classDefinitions.push(match.trim());
-      cleaned = cleaned.replace(match, '');
-    });
-    
-    // Clean up the mindmap content by removing any class definitions that might be indented incorrectly
+    // Process line by line to remove any class styling
     const lines = cleaned.split('\n');
-    const cleanedLines = lines.filter(line => !line.trim().startsWith('classDef'));
+    const cleanedLines = lines.map(line => {
+      // Remove any class styling (:::classname)
+      return line.replace(/:::[\w-]+/g, '');
+    }).filter(line => !line.trim().startsWith('classDef'));
     
-    // Build the final mindmap with class definitions at the root level
-    let finalMindmap = cleanedLines.join('\n').trim();
-    
-    // Add standard class definitions if none were found
-    if (classDefinitions.length === 0) {
-      finalMindmap += `\n
-classDef important fill:#f96,stroke:#333,stroke-width:2px
-classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
-    } else {
-      // Add the extracted class definitions at the root level
-      finalMindmap += '\n\n' + classDefinitions.join('\n');
-    }
-    
-    return finalMindmap;
+    return cleanedLines.join('\n').trim();
   } catch (error) {
-    console.error("Error cleaning mindmap syntax:", error);
-    return `mindmap
-  root((Error)):::important
-    Syntax Cleaning Failed
-      Please try again
-      
-classDef important fill:#f96,stroke:#333,stroke-width:2px
-classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
-  }
-};
