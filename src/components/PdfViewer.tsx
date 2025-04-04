@@ -11,6 +11,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useRef as useStateRef } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { retrievePDF } from "@/utils/pdfStorage";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -50,23 +51,21 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Store the onTextSelected callback in a ref to avoid stale closures
     const onTextSelectedRef = useStateRef(onTextSelected);
 
-    // Function to refresh and reload the PDF data
-    const refreshPdfData = () => {
+    // Function to refresh and reload the PDF data using IndexedDB
+    const refreshPdfData = async () => {
       setIsLoading(true);
       setLoadError(null);
       
       try {
-        // Clear both storage keys and re-get the data
-        const pdfData = sessionStorage.getItem("pdfData") || 
-                       sessionStorage.getItem("uploadedPdfData");
+        console.log("Refreshing PDF data from storage...");
+        const pdfData = await retrievePDF();
         
         if (pdfData) {
-          console.log("Refreshing PDF data, length:", pdfData.length);
-          sessionStorage.setItem("pdfData", pdfData);
-          sessionStorage.setItem("uploadedPdfData", pdfData);
+          console.log("PDF retrieved, length:", pdfData.length);
           setPdfData(null); // Force reload
           setTimeout(() => setPdfData(pdfData), 100);
         } else {
+          console.log("No PDF data found in storage");
           setLoadError("No PDF data found. Please upload a document first.");
           toast({
             title: "No PDF Found",
@@ -82,41 +81,46 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           description: "Could not reload the PDF document.",
           variant: "destructive",
         });
-      }
-    };
-
-    useEffect(() => {
-      try {
-        setIsLoading(true);
-        // Try to get PDF data from either key
-        console.log("PdfViewer initializing - checking for PDF data");
-        const storedData =
-          sessionStorage.getItem("pdfData") || 
-          sessionStorage.getItem("uploadedPdfData");
-        
-        if (storedData) {
-          console.log("Found PDF data in storage, length:", storedData.length);
-          setPdfData(storedData);
-        } else {
-          console.log("No PDF data found in storage");
-          setLoadError("No PDF data found. Please upload a document first.");
-          toast({
-            title: "No PDF Found",
-            description: "Please upload a PDF document first.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Error retrieving PDF data:", error);
-        setLoadError("Error loading PDF. Please try again.");
-        toast({
-          title: "Error loading PDF",
-          description: "Could not load the PDF document.",
-          variant: "destructive",
-        });
       } finally {
         setIsLoading(false);
       }
+    };
+
+    // Load PDF from IndexedDB when component mounts
+    useEffect(() => {
+      const loadPdf = async () => {
+        try {
+          setIsLoading(true);
+          console.log("PdfViewer initializing - loading PDF from storage");
+          
+          const pdfData = await retrievePDF();
+          
+          if (pdfData) {
+            console.log("PDF data retrieved, length:", pdfData.length);
+            setPdfData(pdfData);
+          } else {
+            console.log("No PDF data found in storage");
+            setLoadError("No PDF data found. Please upload a document first.");
+            toast({
+              title: "No PDF Found",
+              description: "Please upload a PDF document first.",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error("Error retrieving PDF data:", error);
+          setLoadError("Error loading PDF. Please try again.");
+          toast({
+            title: "Error loading PDF",
+            description: "Could not load the PDF document.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadPdf();
     }, [toast]);
 
     // Handle text selection

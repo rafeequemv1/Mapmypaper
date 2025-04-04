@@ -6,6 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { retrievePDF } from "@/utils/pdfStorage";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -32,36 +33,20 @@ const PanelStructure = ({
   const [pdfKey, setPdfKey] = useState(Date.now());
   const [pdfLoaded, setPdfLoaded] = useState(false);
   
-  // Force refresh PDF component when the component mounts to avoid caching issues
+  // Check for PDF availability when component mounts
   useEffect(() => {
-    // Clear PDF data cache from sessionStorage to ensure fresh loading
-    const refreshPdf = () => {
+    const checkPdfAvailability = async () => {
       try {
-        console.log("Checking for PDF data in session storage...");
+        console.log("Checking for PDF data in storage...");
         
-        // Check both storage keys for PDF data
-        const pdfFromPdfData = sessionStorage.getItem("pdfData");
-        const pdfFromUploadedData = sessionStorage.getItem("uploadedPdfData");
-        const existingPdfData = pdfFromPdfData || pdfFromUploadedData;
+        // Try to retrieve PDF from IndexedDB (which will also check session storage)
+        const pdfData = await retrievePDF();
         
-        if (existingPdfData) {
-          console.log("Found PDF data in storage, length:", existingPdfData.length);
-          
-          // Always ensure data is stored in both keys for consistency
-          if (!pdfFromPdfData) {
-            sessionStorage.setItem("pdfData", existingPdfData);
-            console.log("Copied PDF data to pdfData key");
-          }
-          
-          if (!pdfFromUploadedData) {
-            sessionStorage.setItem("uploadedPdfData", existingPdfData);
-            console.log("Copied PDF data to uploadedPdfData key");
-          }
-          
+        if (pdfData) {
+          console.log("Found PDF data in storage, length:", pdfData.length);
           // Update the key to force component remount
           setPdfKey(Date.now());
           setPdfLoaded(true);
-          
           console.log("PDF refreshed to avoid cache issues");
         } else {
           console.log("No PDF data found in storage");
@@ -72,7 +57,7 @@ const PanelStructure = ({
           });
         }
       } catch (error) {
-        console.error("Error refreshing PDF:", error);
+        console.error("Error checking PDF availability:", error);
         toast({
           title: "Error Loading PDF",
           description: "There was a problem loading your PDF. Please try uploading it again.",
@@ -81,8 +66,8 @@ const PanelStructure = ({
       }
     };
     
-    // Run refresh with a slight delay to ensure storage is checked after navigation
-    setTimeout(refreshPdf, 300);
+    // Run check with a slight delay to ensure storage is checked after navigation
+    setTimeout(checkPdfAvailability, 300);
   }, [toast]);
   
   const handlePdfLoaded = () => {

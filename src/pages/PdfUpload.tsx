@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import PaperLogo from "@/components/PaperLogo";
 import { Separator } from "@/components/ui/separator";
+import { storePDF } from "@/utils/pdfStorage";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const PdfUpload = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pdfSize, setPdfSize] = useState<number>(0);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -35,11 +37,7 @@ const PdfUpload = () => {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type === "application/pdf") {
-        setSelectedFile(file);
-        toast({
-          title: "PDF uploaded successfully",
-          description: `File: ${file.name}`,
-        });
+        handleFileSelection(file);
       } else {
         toast({
           title: "Invalid file type",
@@ -54,11 +52,7 @@ const PdfUpload = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.type === "application/pdf") {
-        setSelectedFile(file);
-        toast({
-          title: "PDF uploaded successfully",
-          description: `File: ${file.name}`,
-        });
+        handleFileSelection(file);
       } else {
         toast({
           title: "Invalid file type",
@@ -67,6 +61,20 @@ const PdfUpload = () => {
         });
       }
     }
+  }, [toast]);
+  
+  const handleFileSelection = useCallback((file: File) => {
+    setSelectedFile(file);
+    setPdfSize(file.size);
+    
+    const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+    const sizeWarning = parseFloat(sizeMB) > 15;
+    
+    toast({
+      title: "PDF uploaded successfully",
+      description: `File: ${file.name}${sizeWarning ? " (Large file, processing may take longer)" : ""}`,
+      variant: sizeWarning ? "warning" : "default",
+    });
   }, [toast]);
 
   const handleGenerateMindmap = useCallback(async () => {
@@ -90,16 +98,35 @@ const PdfUpload = () => {
     try {
       // First, read the PDF as DataURL for viewing later
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64data = e.target?.result as string;
-        // Store PDF data under both keys for compatibility
-        sessionStorage.setItem('pdfData', base64data);
-        sessionStorage.setItem('uploadedPdfData', base64data);
-        console.log("PDF data stored, length:", base64data.length);
-      };
+      
+      // Set up a promise for the file reading
+      const readerPromise = new Promise<string>((resolve, reject) => {
+        reader.onload = (e) => {
+          try {
+            const base64data = e.target?.result as string;
+            if (!base64data) {
+              reject(new Error("Failed to read PDF file"));
+              return;
+            }
+            resolve(base64data);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error("Error reading file"));
+      });
+      
+      // Start reading the file
       reader.readAsDataURL(selectedFile);
       
+      // Wait for the file to be read and store it
+      const base64data = await readerPromise;
+      console.log("PDF loaded, storing data...");
+      await storePDF(base64data);
+      console.log("PDF data stored successfully");
+      
       // Extract text from PDF
+      console.log("Extracting text from PDF...");
       const extractedText = await PdfToText(selectedFile);
       
       if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
@@ -107,6 +134,7 @@ const PdfUpload = () => {
       }
       
       // Process the text with Gemini to generate mind map data
+      console.log("Generating mind map...");
       const mindMapData = await generateMindMapFromText(extractedText);
       
       // Store the generated mind map data in sessionStorage
@@ -192,13 +220,18 @@ const PdfUpload = () => {
             </div>
           </div>
           
-          {/* Selected File Info */}
+          {/* Selected File Info with size warning if needed */}
           {selectedFile && (
-            <div className="p-4 bg-gray-50 rounded-lg flex items-center justify-between mb-6">
+            <div className={`p-4 ${pdfSize > 15 * 1024 * 1024 ? 'bg-yellow-50' : 'bg-gray-50'} rounded-lg flex items-center justify-between mb-6`}>
               <p className="font-medium truncate">{selectedFile.name}</p>
-              <p className="text-sm text-gray-500">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
+              <div className="flex flex-col items-end">
+                <p className="text-sm text-gray-500">
+                  {(pdfSize / 1024 / 1024).toFixed(2)} MB
+                </p>
+                {pdfSize > 15 * 1024 * 1024 && (
+                  <p className="text-xs text-amber-600 mt-1">Large file - processing may take longer</p>
+                )}
+              </div>
             </div>
           )}
           
