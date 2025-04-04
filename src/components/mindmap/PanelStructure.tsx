@@ -71,16 +71,6 @@ const PanelStructure = ({
         console.log("Opening chat panel for image analysis");
         toggleChat();
       }
-      
-      // Small delay to ensure state is updated properly
-      setTimeout(() => {
-        // Double check if image data is still available after state update
-        console.log("Image data verification after state update:", {
-          inState: !!selectedImageArea,
-          justSet: !!imageDataUrl,
-          chatIsOpen: showChat
-        });
-      }, 100);
     } else {
       console.error("Invalid image data received:", {
         length: imageDataUrl?.length || 0,

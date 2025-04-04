@@ -124,9 +124,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     const performCapture = async (element: HTMLElement, rect: SelectionRect) => {
       try {
-        console.log("Importing html2canvas...");
-        const html2canvas = (await import('html2canvas')).default;
-        
         console.log("Starting html2canvas with scale:", window.devicePixelRatio || 2);
         
         const canvas = await html2canvas(element, {
@@ -200,9 +197,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           preview: dataUrl.substring(0, 50) + "...",
           type: dataUrl.split(';')[0]
         });
-        
-        // Log the complete dataUrl if debug is needed
-        // console.log("Full data URL:", dataUrl);
         
         if (dataUrl.length < 100) {
           throw new Error("Generated image is too small or empty");
@@ -708,7 +702,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 ))}
               </Document>
               
-              {/* Selection overlay - Fixed syntax issues */}
+              {/* Selection overlay with improved styling */}
               {selectionRect && (
                 <div 
                   className="absolute pointer-events-none"
@@ -717,8 +711,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     top: `${selectionRect.y}px`,
                     width: `${selectionRect.width}px`,
                     height: `${selectionRect.height}px`,
-                    border: '2px dashed blue',
-                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                    border: '2px dashed #9b87f5', 
+                    backgroundColor: 'rgba(155, 135, 245, 0.15)',
                     zIndex: 10,
                   }}
                   ref={selectionOverlayRef}
@@ -740,7 +734,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     size="sm" 
                     variant="default"
                     onClick={captureSelectedArea}
-                    className="pointer-events-auto"
+                    className="pointer-events-auto bg-purple-500 hover:bg-purple-600"
                   >
                     Explain
                   </Button>
