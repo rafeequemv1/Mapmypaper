@@ -1,14 +1,14 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { UploadCloud } from "lucide-react";
-import { storePDF as savePDF, clearPDF as clearPDFData } from '@/utils/pdfStorage';
-import { useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
+import { UploadCloud } from "lucide-react"
+import { savePDF, clearPDFData } from '@/utils/pdfStorage';
 import { extractTextFromPDF } from '@/services/pdfService';
+import { useRouter } from 'next/router';
 
 // Import our wrapper instead of the original
 import StatsDisplayWrapper from '@/components/StatsDisplayWrapper';
@@ -17,7 +17,7 @@ const PdfUpload: React.FC = () => {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfText, setPdfText] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const navigate = useNavigate();
+  const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,7 +50,7 @@ const PdfUpload: React.FC = () => {
       // Clear existing PDF data
       await clearPDFData();
 
-      // Save the PDF file - now accepts File object directly
+      // Save the PDF file
       await savePDF(pdfFile);
 
       // Extract text from PDF
@@ -66,8 +66,8 @@ const PdfUpload: React.FC = () => {
         description: `${pdfFile.name} has been uploaded and processed.`,
       });
 
-      // Redirect to the mindmap page using react-router
-      navigate('/MindMap');
+      // Redirect to the mindmap page
+      router.push('/MindMap');
     } catch (error: any) {
       console.error("Error during upload and processing:", error);
       toast({
