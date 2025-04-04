@@ -701,4 +701,134 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         mindMapRef.current.initSide(2);
         toast({
           title: "Alignment Changed",
-          description: "Mind
+          description: "Mind map aligned to the center",
+        });
+      } else if (alignment === 'right') {
+        // Set all primary nodes to the right (1)
+        mindMapRef.current.initSide(1);
+        toast({
+          title: "Alignment Changed",
+          description: "Mind map aligned to the right",
+        });
+      }
+    } catch (error) {
+      console.error("Error changing alignment:", error);
+      toast({
+        title: "Alignment Error",
+        description: "Could not change mind map alignment",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Function to handle zoom
+  const handleZoom = (zoomIn: boolean) => {
+    if (!mindMapRef.current) return;
+    
+    try {
+      if (zoomIn) {
+        mindMapRef.current.scale(1.1);
+        setZoomLevel(prev => Math.min(prev * 1.1, 2));
+      } else {
+        mindMapRef.current.scale(0.9);
+        setZoomLevel(prev => Math.max(prev * 0.9, 0.5));
+      }
+    } catch (error) {
+      console.error("Error zooming:", error);
+      toast({
+        title: "Zoom Error",
+        description: "Could not zoom the mind map",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Function to handle node summaries
+  const generateNodeSummary = (node: any) => {
+    if (!node || !node.topic) return;
+    
+    // Generate a summary for the selected node
+    const nodeTopic = node.topic;
+    
+    // Set summary text and show summary modal
+    setSummary(nodeTopic);
+    setShowSummary(true);
+    
+    // If text explanation callback is provided, use it
+    if (onExplainText) {
+      onExplainText(nodeTopic);
+    }
+    
+    // If chat panel needs to be opened, request it
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+  };
+  
+  return (
+    <div className="h-full flex flex-col">
+      {/* Alignment and zoom toolbar */}
+      <div className="flex justify-center p-2 gap-2 border-b bg-white">
+        <div className="flex gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleAlignment('left')}
+            title="Align Left"
+          >
+            <AlignLeft size={18} />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleAlignment('center')}
+            title="Align Center"
+          >
+            <AlignCenter size={18} />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleAlignment('right')}
+            title="Align Right"
+          >
+            <AlignRight size={18} />
+          </Button>
+        </div>
+        
+        <div className="h-6 border-l mx-1"></div>
+        
+        <div className="flex gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleZoom(true)}
+            title="Zoom In"
+          >
+            <ZoomIn size={18} />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleZoom(false)}
+            title="Zoom Out"
+          >
+            <ZoomOut size={18} />
+          </Button>
+        </div>
+      </div>
+      
+      {/* Mind Map Container */}
+      <div 
+        ref={containerRef} 
+        className="flex-1"
+        style={{ 
+          opacity: isReady ? 1 : 0,
+          transition: 'opacity 0.5s ease-in-out',
+        }}
+      />
+    </div>
+  );
+};
+
+export default MindMapViewer;
