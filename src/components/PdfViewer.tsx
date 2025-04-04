@@ -439,6 +439,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Handle search functionality
     const handleSearch = () => {
       if (!searchQuery.trim()) return;
       
@@ -530,6 +531,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Navigation functions for search
     const navigateSearch = (direction: 'next' | 'prev') => {
       if (searchResults.length === 0) return;
       
@@ -633,6 +635,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Page scrolling functionality
     const scrollToPage = (pageNumber: number) => {
       if (pageNumber < 1 || pageNumber > numPages) {
         console.warn(`Invalid page number: ${pageNumber}. Pages range from 1 to ${numPages}`);
@@ -689,6 +692,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // useImperativeHandle for scrollToPage
     useImperativeHandle(ref, () => ({
       scrollToPage
     }), [numPages]);
@@ -869,9 +873,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 style={{
                   left: `${selectionPosition.x}px`,
                   top: `${selectionPosition.y}px`,
-                  transform: 'translate(-50%, -100%)',
-                }}
-                data-explain-tooltip
-              >
-                <Button
-                  variant="ghost"
+                  transform: 'translate(-50%, -
