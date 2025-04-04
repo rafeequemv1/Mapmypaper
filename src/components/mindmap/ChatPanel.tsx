@@ -20,7 +20,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
-    { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
+    { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. I can help you understand the paper you\'ve uploaded. Feel free to ask questions about specific sections, figures, or concepts, and I\'ll provide explanations with citations to the relevant parts of the document. What aspect of the paper would you like to explore first?' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -192,10 +192,8 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
       setIsTyping(true);
       
       try {
-        // Enhanced prompt to encourage complete sentences and page citations with emojis
-        const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`
-        );
+        // Use the enhanced research-focused prompt from geminiService
+        const response = await chatWithGeminiAboutPdf(userMessage);
         
         // Hide typing indicator and add AI response with enhanced formatting
         setIsTyping(false);
