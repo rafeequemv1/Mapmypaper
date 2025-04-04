@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
+import { MessageSquare, X, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
-import { getWelcomeMessage, exampleQuestions } from "@/utils/chatExampleQuestions";
+import { getWelcomeMessage, getContextualQuestions } from "@/utils/chatExampleQuestions";
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -28,6 +28,13 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
+  const [contextQuestions, setContextQuestions] = useState<string[]>([]);
+  
+  // Initial load of contextual questions
+  useEffect(() => {
+    // Get contextual questions based on document content
+    setContextQuestions(getContextualQuestions());
+  }, []);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -290,7 +297,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
         </Button>
       </div>
       
-      {/* Chat messages area with enhanced styling */}
+      {/* Chat messages area with enhanced styling for better scrollable citations */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="flex flex-col gap-4">
           {messages.map((message, i) => (
@@ -316,7 +323,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
                 
                 {message.isHtml ? (
                   <div 
-                    className="ai-message-content" 
+                    className="ai-message-content overflow-auto" 
                     dangerouslySetInnerHTML={{ __html: message.content }} 
                   />
                 ) : (
@@ -325,8 +332,8 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
                 
                 {/* Example questions buttons - only show for first welcome message */}
                 {message.role === 'assistant' && i === 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {exampleQuestions.slice(0, 4).map((question, idx) => (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {contextQuestions.slice(0, 5).map((question, idx) => (
                       <Button
                         key={idx}
                         variant="outline"
