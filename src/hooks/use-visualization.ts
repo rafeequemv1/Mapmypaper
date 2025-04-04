@@ -37,7 +37,7 @@ export function useVisualization() {
     if (savedSyntax[type]) {
       setMermaidSyntax(savedSyntax[type]);
     } else {
-      // Always generate visualization when opening the modal
+      // Generate visualization if we don't have saved syntax for this type
       await generateVisualization(type);
     }
   };
