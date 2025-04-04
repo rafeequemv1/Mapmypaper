@@ -47,6 +47,17 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
         mermaid.render(`mermaid-${renderKey}`, mermaidSyntax).then(({ svg }) => {
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = svg;
+            
+            // Add zoom and pan functionality to SVG
+            const svgElement = mermaidRef.current.querySelector('svg');
+            if (svgElement) {
+              // Make SVG responsive and fit container
+              svgElement.setAttribute('width', '100%');
+              svgElement.setAttribute('height', '100%');
+              svgElement.style.maxHeight = '100%';
+              svgElement.style.display = 'block';
+              svgElement.style.margin = '0 auto';
+            }
           }
         });
       } catch (error) {
@@ -92,7 +103,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[90vw] w-[900px] max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] max-h-[90vh] flex flex-col overflow-hidden p-4">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -102,7 +113,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
           onValueChange={(value) => setActiveTab(value as "preview" | "syntax")}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <TabsList>
               <TabsTrigger value="preview">Preview</TabsTrigger>
               <TabsTrigger value="syntax">Edit Syntax</TabsTrigger>
@@ -152,7 +163,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                 </div>
               </div>
             ) : mermaidSyntax ? (
-              <div ref={mermaidRef} className="mermaid-container overflow-auto h-full"></div>
+              <div ref={mermaidRef} className="mermaid-container overflow-auto h-full w-full"></div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
                 No {visualizationType} diagram available. Click Regenerate to create one.

@@ -11,6 +11,10 @@ export function useVisualization() {
   const [visualizationType, setVisualizationType] = useState<VisualizationType>("mindmap");
   const [mermaidSyntax, setMermaidSyntax] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [savedSyntax, setSavedSyntax] = useState<Record<VisualizationType, string>>({
+    mindmap: "",
+    flowchart: ""
+  });
 
   const openModal = async (type: VisualizationType) => {
     setVisualizationType(type);
@@ -29,8 +33,11 @@ export function useVisualization() {
       return;
     }
     
-    // Generate visualization if we don't already have one for this type
-    if (!mermaidSyntax) {
+    // Use saved syntax if available for this type
+    if (savedSyntax[type]) {
+      setMermaidSyntax(savedSyntax[type]);
+    } else {
+      // Generate visualization if we don't have saved syntax for this type
       await generateVisualization(type);
     }
   };
@@ -44,7 +51,15 @@ export function useVisualization() {
         throw new Error("No PDF text found in session storage");
       }
       
+      console.log(`Generating ${type} visualization...`);
       const syntax = await generateMermaidDiagram(type, pdfText);
+      
+      // Save the syntax for future use
+      setSavedSyntax(prev => ({
+        ...prev,
+        [type]: syntax
+      }));
+      
       setMermaidSyntax(syntax);
       
       toast({
@@ -69,6 +84,11 @@ export function useVisualization() {
   
   const updateSyntax = (newSyntax: string) => {
     setMermaidSyntax(newSyntax);
+    // Also update saved syntax for this type
+    setSavedSyntax(prev => ({
+      ...prev,
+      [visualizationType]: newSyntax
+    }));
   };
   
   return {
