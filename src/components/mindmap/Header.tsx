@@ -1,30 +1,14 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FileText,
-  Download,
-  MessageSquare,
-  Image,
-  FileJson,
-  Upload,
-  FileIcon,
-  Braces
-} from "lucide-react";
+import { FileText, Download, MessageSquare, Image, FileJson, Upload, FileIcon, Braces, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsPDF } from "@/lib/export-utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
 import PaperLogo from "@/components/PaperLogo";
 import { useVisualizationContext } from "@/contexts/VisualizationContext";
-
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
@@ -33,20 +17,23 @@ interface HeaderProps {
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
 }
-
-const Header = ({ 
-  togglePdf, 
-  toggleChat, 
+const Header = ({
+  togglePdf,
+  toggleChat,
   setShowSummary,
   isPdfActive,
   isChatActive,
   mindMap
 }: HeaderProps) => {
   const [fileName, setFileName] = useState("mindmap");
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
-  const { openVisualization } = useVisualizationContext();
-  
+  const {
+    openVisualization
+  } = useVisualizationContext();
+
   // Handle export as PNG
   const handleExportPNG = () => {
     if (mindMap) {
@@ -63,7 +50,7 @@ const Header = ({
       });
     }
   };
-  
+
   // Handle export as SVG
   const handleExportSVG = () => {
     if (mindMap) {
@@ -80,7 +67,7 @@ const Header = ({
       });
     }
   };
-  
+
   // Handle export as PDF
   const handleExportPDF = () => {
     if (mindMap) {
@@ -97,13 +84,15 @@ const Header = ({
       });
     }
   };
-  
+
   // Handle export as JSON
   const handleExportJSON = () => {
     if (mindMap) {
       const data = mindMap.getData();
       const dataStr = JSON.stringify(data, null, 2);
-      const blob = new Blob([dataStr], { type: "application/json" });
+      const blob = new Blob([dataStr], {
+        type: "application/json"
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = `${fileName}.json`;
@@ -122,7 +111,7 @@ const Header = ({
       });
     }
   };
-  
+
   // Check if we have PDF data
   React.useEffect(() => {
     const pdfData = sessionStorage.getItem("pdfData") || sessionStorage.getItem("uploadedPdfData");
@@ -134,9 +123,7 @@ const Header = ({
       });
     }
   }, [toast]);
-  
-  return (
-    <header className="bg-white border-b py-2 px-4">
+  return <header className="bg-white border-b py-2 px-4">
       <div className="flex items-center justify-between">
         {/* Left side - Logo with Beta tag */}
         <div className="flex items-center gap-2">
@@ -149,40 +136,29 @@ const Header = ({
         
         {/* Center - Main Button Group */}
         <div className="flex items-center gap-2 md:gap-3 absolute left-1/2 transform -translate-x-1/2">
-          <Button 
-            variant={isPdfActive ? "default" : "ghost"} 
-            onClick={togglePdf} 
-            className={`flex items-center gap-1 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
-          >
+          <Button variant={isPdfActive ? "default" : "ghost"} onClick={togglePdf} className={`flex items-center gap-1 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}>
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">PDF</span>
           </Button>
           
-          <Button 
-            variant={isChatActive ? "default" : "ghost"} 
-            onClick={toggleChat} 
-            className={`flex items-center gap-1 ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
-          >
+          <Button variant={isChatActive ? "default" : "ghost"} onClick={toggleChat} className={`flex items-center gap-1 ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}>
             <MessageSquare className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Chat</span>
           </Button>
           
-          <Button 
-            variant="ghost" 
-            onClick={() => setShowSummary(true)} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
+          <Button variant="ghost" onClick={() => setShowSummary(true)} className="flex items-center gap-1 text-black h-8 px-3">
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
           
-          <Button 
-            variant="ghost" 
-            onClick={() => openVisualization("mindmap")} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
+          <Button variant="ghost" onClick={() => openVisualization("mindmap")} className="flex items-center gap-1 text-black h-8 px-3">
             <Braces className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Mind Map</span>
+            <span className="hidden md:inline text-sm">Tree Map</span>
+          </Button>
+          
+          <Button variant="ghost" onClick={() => openVisualization("flowchart")} className="flex items-center gap-1 text-black h-8 px-3">
+            <GitBranch className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
         </div>
         
@@ -221,8 +197,6 @@ const Header = ({
           <UserMenu />
         </div>
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default Header;
