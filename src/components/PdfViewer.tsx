@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -871,4 +872,54 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               onMouseDown={isAreaSelectionMode ? handleAreaSelectionMouseDown : undefined}
               onMouseMove={isAreaSelectionMode ? handleAreaSelectionMouseMove : undefined}
             >
-              <
+              <Document
+                file={pdfData}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
+                loading={
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <Skeleton className="h-96 w-full" />
+                    <div className="mt-4 text-gray-500">Loading PDF content...</div>
+                  </div>
+                }
+                className="mb-4"
+              >
+                {Array.from(new Array(numPages), (el, index) => (
+                  <div key={`page_${index + 1}`} className="mb-8" ref={setPageRef(index)}>
+                    <div className="flex justify-between items-center mb-1 px-2">
+                      <span className="text-xs text-gray-500 font-medium">
+                        Page {index + 1} of {numPages}
+                      </span>
+                    </div>
+                    <Page
+                      pageNumber={index + 1}
+                      width={getOptimalPageWidth()}
+                      scale={scale}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      onRenderSuccess={onPageRenderSuccess}
+                      className="shadow-md"
+                      loading={
+                        <Skeleton className="h-[800px] w-full" />
+                      }
+                    />
+                  </div>
+                ))}
+              </Document>
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-6 text-center">
+            <div className="text-gray-500 mb-6">
+              No PDF available. Please upload a document to get started.
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
