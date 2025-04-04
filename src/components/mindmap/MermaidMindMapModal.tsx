@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import mermaid from "mermaid";
@@ -41,25 +41,41 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPdfLoaded, setIsPdfLoaded] = useState(false);
+  const mermaidContainerRef = useRef<HTMLDivElement>(null);
   
-  // Check if PDF is available when component mounts or modal opens
+  // Initialize mermaid when component mounts
+  useEffect(() => {
+    try {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "default",
+        securityLevel: "loose",
+      });
+    } catch (error) {
+      console.error("Error initializing mermaid:", error);
+    }
+  }, []);
+  
+  // Re-render mermaid diagram whenever syntax changes or modal opens
   useEffect(() => {
     if (open) {
       checkPdfAvailability();
       
-      try {
-        mermaid.initialize({
-          startOnLoad: true,
-          theme: "default",
-          securityLevel: "loose",
-        });
-        
-        setTimeout(() => {
-          mermaid.contentLoaded();
-        }, 100);
-      } catch (error) {
-        console.error("Error initializing mermaid:", error);
-      }
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        try {
+          if (mermaidContainerRef.current) {
+            mermaidContainerRef.current.innerHTML = '';
+            mermaidContainerRef.current.className = 'mermaid';
+            mermaidContainerRef.current.textContent = mermaidSyntax;
+            mermaid.contentLoaded();
+          }
+        } catch (error) {
+          console.error("Error rendering mermaid:", error);
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [open, mermaidSyntax]);
 
@@ -100,6 +116,16 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
           title: "Mindmap generated",
           description: "Successfully created mindmap from your paper content."
         });
+        
+        // Force re-render of the mermaid diagram after a short delay
+        setTimeout(() => {
+          if (mermaidContainerRef.current) {
+            mermaidContainerRef.current.innerHTML = '';
+            mermaidContainerRef.current.className = 'mermaid';
+            mermaidContainerRef.current.textContent = generatedMindmap;
+            mermaid.contentLoaded();
+          }
+        }, 200);
       } else {
         toast({
           title: "Generation issue",
@@ -116,10 +142,6 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
       });
     } finally {
       setIsGenerating(false);
-      // Ensure mermaid re-renders the diagram
-      setTimeout(() => {
-        mermaid.contentLoaded();
-      }, 100);
     }
   };
 
@@ -172,7 +194,7 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
           <div className="w-full md:w-3/5 border rounded-md p-4 overflow-auto bg-white">
             <p className="text-sm text-muted-foreground mb-2">Preview</p>
             <div className="mermaid-container overflow-auto">
-              <div className="mermaid">{mermaidSyntax}</div>
+              <div ref={mermaidContainerRef} className="mermaid">{mermaidSyntax}</div>
             </div>
           </div>
         </div>
