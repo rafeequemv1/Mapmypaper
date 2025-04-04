@@ -1,13 +1,20 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
-import { Loader } from "lucide-react";
+import { Loader, Download, FileIcon, Image } from "lucide-react";
 import { isPdfAvailable } from "@/utils/pdfStorage";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -115,6 +122,167 @@ const FlowchartModal: React.FC<FlowchartModalProps> = ({
       setTimeout(() => {
         mermaid.contentLoaded();
       }, 100);
+    }
+  };
+
+  // Export diagram as PNG
+  const handleExportPNG = async () => {
+    if (!open) return;
+    
+    try {
+      const mermaidContainer = document.querySelector('.mermaid-container .mermaid');
+      if (!mermaidContainer) {
+        toast({
+          title: "Export failed",
+          description: "Diagram not found",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const svgElement = mermaidContainer.querySelector('svg');
+      
+      if (svgElement) {
+        // Create a container div to hold the SVG for capture
+        const tempContainer = document.createElement('div');
+        tempContainer.appendChild(svgElement.cloneNode(true));
+        document.body.appendChild(tempContainer);
+        
+        try {
+          // Use html2canvas on the div containing the SVG
+          const canvas = await html2canvas(tempContainer, {
+            scale: 2,
+            backgroundColor: '#ffffff'
+          });
+          
+          const dataUrl = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = dataUrl;
+          link.download = 'flowchart.png';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast({
+            title: "Export successful",
+            description: "Flowchart exported as PNG"
+          });
+        } finally {
+          // Clean up
+          document.body.removeChild(tempContainer);
+        }
+      } else {
+        toast({
+          title: "Export failed",
+          description: "SVG element not found",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error exporting as PNG:", error);
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Export diagram as PDF
+  const handleExportPDF = async () => {
+    if (!open) return;
+    
+    try {
+      const mermaidContainer = document.querySelector('.mermaid-container .mermaid');
+      if (!mermaidContainer) {
+        toast({
+          title: "Export failed",
+          description: "Diagram not found",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const svgElement = mermaidContainer.querySelector('svg');
+      
+      if (svgElement) {
+        // Create a container div to hold the SVG for capture
+        const tempContainer = document.createElement('div');
+        tempContainer.appendChild(svgElement.cloneNode(true));
+        document.body.appendChild(tempContainer);
+        
+        try {
+          // Use html2canvas on the div containing the SVG
+          const canvas = await html2canvas(tempContainer, {
+            scale: 2,
+            backgroundColor: '#ffffff'
+          });
+          
+          // Convert canvas to data URL
+          const dataUrl = canvas.toDataURL('image/png');
+          
+          // Create PDF
+          const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+          });
+          
+          // Get dimensions
+          const imgProps = pdf.getImageProperties(dataUrl);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          
+          // Calculate proper scaling
+          const margin = 10;
+          const availableWidth = pdfWidth - (margin * 2);
+          const availableHeight = pdfHeight - (margin * 2);
+          
+          const aspectRatio = imgProps.width / imgProps.height;
+          let width = availableWidth;
+          let height = width / aspectRatio;
+          
+          if (height > availableHeight) {
+            height = availableHeight;
+            width = height * aspectRatio;
+          }
+          
+          // Add image to PDF
+          const x = (pdfWidth - width) / 2;
+          const y = (pdfHeight - height) / 2;
+          
+          pdf.addImage(dataUrl, 'PNG', x, y, width, height);
+          
+          // Add metadata
+          pdf.setFontSize(10);
+          pdf.text(`MapMyPaper - Flowchart`, pdfWidth / 2, 10, { align: 'center' });
+          pdf.text(`Generated on ${new Date().toLocaleDateString()}`, pdfWidth / 2, pdfHeight - 5, { align: 'center' });
+          
+          // Save PDF
+          pdf.save('flowchart.pdf');
+          
+          toast({
+            title: "Export successful",
+            description: "Flowchart exported as PDF"
+          });
+        } finally {
+          // Clean up
+          document.body.removeChild(tempContainer);
+        }
+      } else {
+        toast({
+          title: "Export failed",
+          description: "SVG element not found",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error exporting as PDF:", error);
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
     }
   };
 

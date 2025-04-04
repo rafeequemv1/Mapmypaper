@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,7 +9,7 @@ import {
   Upload,
   GitBranch,
   Share2,
-  FilePdf
+  FileIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -220,7 +219,7 @@ const Header = ({
                 <span>Export as PNG</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPDF} className="flex items-center gap-2 cursor-pointer">
-                <FilePdf className="h-4 w-4" />
+                <FileIcon className="h-4 w-4" />
                 <span>Export as PDF</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
@@ -234,7 +233,7 @@ const Header = ({
         </div>
       </div>
 
-      {/* Mermaid Mindmap Modal */}
+      {/* Modals */}
       <MermaidMindMapModal open={showMermaidModal} onOpenChange={setShowMermaidModal} />
       
       {/* Flowchart Modal */}

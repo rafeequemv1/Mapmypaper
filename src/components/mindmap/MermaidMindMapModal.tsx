@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
 import { generateMindmapFromPdf } from "@/services/geminiService";
-import { Loader, Download, FilePdf, Image } from "lucide-react";
+import { Loader, Download, FileIcon, Image } from "lucide-react";
 import { isPdfAvailable } from "@/utils/pdfStorage";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -171,23 +170,34 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
       const svgElement = container.querySelector('svg');
       
       if (svgElement) {
-        const canvas = await html2canvas(svgElement, {
-          scale: 2,
-          backgroundColor: '#ffffff'
-        });
+        // Create a container div to hold the SVG for capture
+        const tempContainer = document.createElement('div');
+        tempContainer.appendChild(svgElement.cloneNode(true));
+        document.body.appendChild(tempContainer);
         
-        const dataUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = 'mermaid-mindmap.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        toast({
-          title: "Export successful",
-          description: "Mindmap exported as PNG"
-        });
+        try {
+          // Use html2canvas on the div containing the SVG
+          const canvas = await html2canvas(tempContainer, {
+            scale: 2,
+            backgroundColor: '#ffffff'
+          });
+          
+          const dataUrl = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = dataUrl;
+          link.download = 'mermaid-mindmap.png';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast({
+            title: "Export successful",
+            description: "Mindmap exported as PNG"
+          });
+        } finally {
+          // Clean up
+          document.body.removeChild(tempContainer);
+        }
       } else {
         toast({
           title: "Export failed",
@@ -214,59 +224,69 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
       const svgElement = container.querySelector('svg');
       
       if (svgElement) {
-        // Create a canvas from the SVG
-        const canvas = await html2canvas(svgElement, {
-          scale: 2,
-          backgroundColor: '#ffffff'
-        });
+        // Create a container div to hold the SVG for capture
+        const tempContainer = document.createElement('div');
+        tempContainer.appendChild(svgElement.cloneNode(true));
+        document.body.appendChild(tempContainer);
         
-        // Convert canvas to data URL
-        const dataUrl = canvas.toDataURL('image/png');
-        
-        // Create PDF
-        const pdf = new jsPDF({
-          orientation: 'landscape',
-          unit: 'mm',
-          format: 'a4'
-        });
-        
-        // Get dimensions
-        const imgProps = pdf.getImageProperties(dataUrl);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        
-        // Calculate proper scaling
-        const margin = 10;
-        const availableWidth = pdfWidth - (margin * 2);
-        const availableHeight = pdfHeight - (margin * 2);
-        
-        const aspectRatio = imgProps.width / imgProps.height;
-        let width = availableWidth;
-        let height = width / aspectRatio;
-        
-        if (height > availableHeight) {
-          height = availableHeight;
-          width = height * aspectRatio;
+        try {
+          // Use html2canvas on the div containing the SVG
+          const canvas = await html2canvas(tempContainer, {
+            scale: 2,
+            backgroundColor: '#ffffff'
+          });
+          
+          // Convert canvas to data URL
+          const dataUrl = canvas.toDataURL('image/png');
+          
+          // Create PDF
+          const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+          });
+          
+          // Get dimensions
+          const imgProps = pdf.getImageProperties(dataUrl);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          
+          // Calculate proper scaling
+          const margin = 10;
+          const availableWidth = pdfWidth - (margin * 2);
+          const availableHeight = pdfHeight - (margin * 2);
+          
+          const aspectRatio = imgProps.width / imgProps.height;
+          let width = availableWidth;
+          let height = width / aspectRatio;
+          
+          if (height > availableHeight) {
+            height = availableHeight;
+            width = height * aspectRatio;
+          }
+          
+          // Add image to PDF
+          const x = (pdfWidth - width) / 2;
+          const y = (pdfHeight - height) / 2;
+          
+          pdf.addImage(dataUrl, 'PNG', x, y, width, height);
+          
+          // Add metadata
+          pdf.setFontSize(10);
+          pdf.text(`MapMyPaper - Mermaid Mindmap`, pdfWidth / 2, 10, { align: 'center' });
+          pdf.text(`Generated on ${new Date().toLocaleDateString()}`, pdfWidth / 2, pdfHeight - 5, { align: 'center' });
+          
+          // Save PDF
+          pdf.save('mermaid-mindmap.pdf');
+          
+          toast({
+            title: "Export successful",
+            description: "Mindmap exported as PDF"
+          });
+        } finally {
+          // Clean up
+          document.body.removeChild(tempContainer);
         }
-        
-        // Add image to PDF
-        const x = (pdfWidth - width) / 2;
-        const y = (pdfHeight - height) / 2;
-        
-        pdf.addImage(dataUrl, 'PNG', x, y, width, height);
-        
-        // Add metadata
-        pdf.setFontSize(10);
-        pdf.text(`MapMyPaper - Mermaid Mindmap`, pdfWidth / 2, 10, { align: 'center' });
-        pdf.text(`Generated on ${new Date().toLocaleDateString()}`, pdfWidth / 2, pdfHeight - 5, { align: 'center' });
-        
-        // Save PDF
-        pdf.save('mermaid-mindmap.pdf');
-        
-        toast({
-          title: "Export successful",
-          description: "Mindmap exported as PDF"
-        });
       } else {
         toast({
           title: "Export failed",
@@ -326,7 +346,7 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
                       <span>Export as PNG</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleExportPDF} className="flex items-center gap-2 cursor-pointer">
-                      <FilePdf className="h-4 w-4" />
+                      <FileIcon className="h-4 w-4" />
                       <span>Export as PDF</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
