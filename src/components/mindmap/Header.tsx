@@ -153,7 +153,7 @@ const Header = ({
           
           <Button variant="ghost" onClick={() => openVisualization("mindmap")} className="flex items-center gap-1 text-black h-8 px-3">
             <Braces className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Tree Map</span>
+            <span className="hidden md:inline text-sm">Mind Map</span>
           </Button>
           
           <Button variant="ghost" onClick={() => openVisualization("flowchart")} className="flex items-center gap-1 text-black h-8 px-3">
