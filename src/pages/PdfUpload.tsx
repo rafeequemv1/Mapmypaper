@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { storePDF } from "@/utils/pdfStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import UserMenu from "@/components/UserMenu";
+import { trackPdfUpload } from "@/utils/analytics";
+import StatsDisplay from "@/components/StatsDisplay";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -72,6 +74,9 @@ const PdfUpload = () => {
     
     const sizeMB = (file.size / 1024 / 1024).toFixed(2);
     const sizeWarning = parseFloat(sizeMB) > 15;
+    
+    // Track the PDF upload event
+    trackPdfUpload(file.name, file.size);
     
     toast({
       title: "PDF uploaded successfully",
@@ -218,9 +223,12 @@ const PdfUpload = () => {
           <p className="mt-4 text-sm text-gray-500 max-w-xl mx-auto">
             Perfect for visual learners, researchers, scientists, and students who want to quickly grasp and remember complex information.
           </p>
+          
+          {/* Statistics Display */}
+          <StatsDisplay className="mt-8 mb-6" />
         </div>
         
-        {/* PDF Upload Box - Now visible to all users */}
+        {/* PDF Upload Box */}
         <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
           {/* Dropzone */}
           <div
