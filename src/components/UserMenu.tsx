@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, User, Settings, LogOut } from "lucide-react";
+import { Loader2, User, Settings, LogOut, LogIn } from "lucide-react";
 
 const UserMenu = () => {
   const { user, profile, isLoading, signOut } = useAuth();
@@ -44,10 +44,11 @@ const UserMenu = () => {
       <Button
         variant="outline"
         size="sm"
-        className="h-8"
+        className="h-8 flex items-center gap-1"
         onClick={() => navigate("/auth")}
       >
-        Sign In
+        <LogIn className="h-4 w-4" />
+        <span>Sign In</span>
       </Button>
     );
   }
