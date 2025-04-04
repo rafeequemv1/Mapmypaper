@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Upload, ExternalLink, Braces, Flowchart } from "lucide-react";
+import { Upload, ExternalLink, Braces, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import PaperLogo from "@/components/PaperLogo";
@@ -237,7 +237,7 @@ const PdfUpload = () => {
                   onClick={() => openVisualization("flowchart")}
                   className="flex items-center gap-1"
                 >
-                  <Flowchart className="h-4 w-4" />
+                  <GitBranch className="h-4 w-4" />
                   <span className="text-sm">Flowchart</span>
                 </Button>
               </>
