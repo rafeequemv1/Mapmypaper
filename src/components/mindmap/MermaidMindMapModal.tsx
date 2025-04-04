@@ -18,23 +18,23 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
 }) => {
   const [mermaidSyntax, setMermaidSyntax] = useState<string>(
 `mindmap
-  root((MapMyPaper))::purple
-    [Research Paper]::blue
-      (Introduction)::cyan
-        Background::teal
-        Objectives::teal
-      (Methods)::green
-        Data Collection::lightgreen
-        Analysis::lightgreen
-      (Results)::orange
-        Key Findings::yellow
-        Charts & Tables::yellow
-      (Discussion)::red
-        Implications::pink
-        Limitations::pink
-      (Conclusion)::purple
-        Summary::violet
-        Future Research::violet`
+  root((MapMyPaper))
+    Research Paper
+      Introduction
+        Background
+        Objectives
+      Methods
+        Data Collection
+        Analysis
+      Results
+        Key Findings
+        Charts & Tables
+      Discussion
+        Implications
+        Limitations
+      Conclusion
+        Summary
+        Future Research`
   );
   const [isGenerating, setIsGenerating] = useState(false);
   
