@@ -1,11 +1,12 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
+import PaperLogo from "@/components/PaperLogo";
+import { Separator } from "@/components/ui/separator";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -131,10 +132,29 @@ const PdfUpload = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
+      {/* Header */}
+      <header className="w-full bg-white shadow-sm py-4 px-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <PaperLogo size="md" />
+            <h1 className="text-xl font-medium text-[#333]">mapmypaper</h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <a href="#about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">About</a>
+            <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Features</a>
+            <Button variant="outline" size="sm" className="text-sm" onClick={() => navigate("/auth")}>
+              Sign In
+            </Button>
+          </div>
+        </div>
+      </header>
+      
+      {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="text-center mb-12 mt-16"> {/* Added more space above hero text */}
-          <div className="flex items-center justify-center gap-4 mb-6"> {/* Increased spacing */}
-            <Brain className="h-12 w-12 text-[#333]" /> {/* Made icon slightly larger */}
+        <div className="text-center mb-12 mt-12">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <PaperLogo size="lg" />
             <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl">
@@ -198,8 +218,46 @@ const PdfUpload = () => {
         </div>
       </div>
       
-      <footer className="py-4 text-center text-gray-500 text-sm">
-        mapmypaper — Transform research into visual knowledge for better learning
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-8 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <PaperLogo size="sm" />
+                <h2 className="text-lg font-medium text-[#333]">mapmypaper</h2>
+              </div>
+              <p className="text-gray-600 text-sm">
+                Transform research papers into interactive mind maps for better comprehension and retention.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-4">Links</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Home</a></li>
+                <li><a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">About</a></li>
+                <li><a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a></li>
+                <li><a href="/auth" className="text-gray-600 hover:text-gray-900 transition-colors">Sign In</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-4">Legal</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <Separator className="my-6" />
+          
+          <div className="text-center text-sm text-gray-500">
+            <p>© {new Date().getFullYear()} MapMyPaper. All rights reserved.</p>
+          </div>
+        </div>
       </footer>
     </div>
   );

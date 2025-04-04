@@ -1,10 +1,8 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
   Download,
-  Upload,
   MessageSquare,
   Image,
   FileJson,
@@ -20,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
+import PaperLogo from "@/components/PaperLogo";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -118,9 +117,7 @@ const Header = ({
       <div className="flex items-center justify-between">
         {/* Left side - Logo with Beta tag */}
         <div className="flex items-center gap-2">
-          <div className="bg-black text-white p-1.5 rounded-md">
-            <Upload className="h-4 w-4" />
-          </div>
+          <PaperLogo size="sm" />
           <div className="flex items-center">
             <h1 className="text-lg font-bold">mapmypaper</h1>
             <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
