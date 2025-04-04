@@ -189,7 +189,7 @@ const Header = ({
             className="flex items-center gap-1 text-black h-8 px-3"
           >
             <Braces className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Mind Map</span>
+            <span className="hidden md:inline text-sm">Treemap</span>
           </Button>
         </div>
         
