@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -720,42 +719,46 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Create a valid Mermaid mindmap based on this document text. 
+    Create a visually appealing Mermaid mindmap based on this document text.
     
-    IMPORTANT: Use ACTUAL SPECIFIC content from the document, not generic labels.
-    
+    IMPORTANT: 
+    1. Use ACTUAL SPECIFIC content from the document, not generic labels
+    2. Include relevant colors for different sections using the ::color syntax
+    3. Use different node shapes for different levels of hierarchy
+
     CRITICAL MERMAID SYNTAX RULES:
     1. Start with 'mindmap'
     2. Use proper indentation for hierarchy
-    3. Root node must use this exact syntax: root((Paper Title))
-    4. First level nodes use text on their own line with proper indentation
-    5. You can use these node styles:
-       - Regular text node (just text)
-       - Text in square brackets [Text]
-       - Text in parentheses (Text)
-       - Text in double parentheses ((Text))
-    6. Max 3 levels of hierarchy
-    7. Max 15 nodes total
-    8. AVOID special characters that might break syntax
-    9. NEVER use class declarations like "class node className"
+    3. Root node must use this exact syntax: root((Paper Title))::purple
+    4. First level nodes should use square brackets [Text]::color
+    5. Second level nodes can use parentheses (Text)::color
+    6. Third level nodes can use plain text::color
+    7. Possible colors: red, green, blue, yellow, orange, purple, pink
+    8. Example of color syntax: root((Title))::purple or [Topic]::blue
+    9. Max 3-4 levels of hierarchy
+    10. Max 20 nodes total
+    11. AVOID special characters that might break syntax
+    12. NEVER use class declarations like "class node className"
     
     EXAMPLE CORRECT SYNTAX:
     mindmap
-      root((Research on Machine Learning))
-        Introduction
-          Background on neural networks
-          Problem of overfitting data
-        Methodology
-          LSTM architecture used
-          Training on 50,000 examples
-        Results
-          93% accuracy achieved
-          Compared to 85% baseline
+      root((Machine Learning Research))::purple
+        [Introduction]::blue
+          (Background on neural networks)::cyan
+          (Problem of overfitting)::cyan
+        [Methodology]::green
+          (LSTM architecture)::teal
+          (Training process)::teal
+            50,000 training examples::yellow
+            Cross-validation::yellow
+        [Results]::orange
+          (93% accuracy achieved)::red
+          (Compared to 85% baseline)::red
     
     Here's the document text:
-    ${pdfText.slice(0, 8000)}
+    ${pdfText.slice(0, 10000)}
     
-    Generate ONLY valid Mermaid mindmap code with SPECIFIC content from the document, nothing else.
+    Generate ONLY valid Mermaid mindmap code with SPECIFIC content from the document and colorful nodes, nothing else.
     `;
     
     const result = await model.generateContent(prompt);
@@ -772,17 +775,17 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
   } catch (error) {
     console.error("Gemini API mindmap generation error:", error);
     return `mindmap
-      root((Error))
+      root((Error))::red
         Failed to generate mindmap
           Please try again`;
   }
 };
 
-// Helper function to clean and fix common Mermaid mindmap syntax issues
+// Helper function to clean and fix common Mermaid mindmap syntax issues, enhanced for colors
 const cleanMindmapSyntax = (code: string): string => {
   if (!code || !code.trim()) {
     return `mindmap
-      root((Error))
+      root((Error))::red
         Empty mindmap
           Please try again`;
   }
@@ -817,6 +820,23 @@ const cleanMindmapSyntax = (code: string): string => {
       let fixedLine = line;
       fixedLine = fixedLine.replace(/;/g, "");
       
+      // Handle color syntax - if no color is specified for nodes, add a default color based on indentation level
+      if (!fixedLine.includes("::")) {
+        // Count leading spaces to determine indentation level
+        const leadingSpaces = fixedLine.search(/\S|$/);
+        const indentationLevel = Math.floor(leadingSpaces / 2);
+        
+        // Add color based on indentation level
+        const colors = ["purple", "blue", "green", "orange", "red", "yellow", "pink"];
+        const color = colors[indentationLevel % colors.length];
+        
+        // Check if line contains a node and append color
+        if (fixedLine.includes("((") || fixedLine.includes("[") || 
+            fixedLine.includes("(") || !fixedLine.match(/[:{}]/)) {
+            fixedLine += `::${color}`;
+        }
+      }
+      
       // Remove special characters that might break the syntax
       fixedLine = fixedLine.replace(/[<>]/g, m => m === '<' ? '(' : ')');
       
@@ -832,7 +852,7 @@ const cleanMindmapSyntax = (code: string): string => {
   } catch (error) {
     console.error("Error cleaning mindmap syntax:", error);
     return `mindmap
-      root((Error))
+      root((Error))::red
         Syntax Cleaning Failed
           Please try again`;
   }
