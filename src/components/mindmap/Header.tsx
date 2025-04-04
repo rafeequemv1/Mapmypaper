@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Download, MessageSquare, Image, FileJson, Upload, FileIcon, Braces, GitBranch } from "lucide-react";
+import { FileText, Download, MessageSquare, Image, FileJson, Upload, FileIcon, Braces } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsPDF } from "@/lib/export-utils";
@@ -9,6 +10,7 @@ import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
 import PaperLogo from "@/components/PaperLogo";
 import { useVisualizationContext } from "@/contexts/VisualizationContext";
+
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
@@ -17,6 +19,7 @@ interface HeaderProps {
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
 }
+
 const Header = ({
   togglePdf,
   toggleChat,
@@ -123,6 +126,7 @@ const Header = ({
       });
     }
   }, [toast]);
+
   return <header className="bg-white border-b py-2 px-4">
       <div className="flex items-center justify-between">
         {/* Left side - Logo with Beta tag */}
@@ -154,11 +158,6 @@ const Header = ({
           <Button variant="ghost" onClick={() => openVisualization("mindmap")} className="flex items-center gap-1 text-black h-8 px-3">
             <Braces className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Mind Map</span>
-          </Button>
-          
-          <Button variant="ghost" onClick={() => openVisualization("flowchart")} className="flex items-center gap-1 text-black h-8 px-3">
-            <GitBranch className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
         </div>
         
@@ -199,4 +198,5 @@ const Header = ({
       </div>
     </header>;
 };
+
 export default Header;
