@@ -1,15 +1,14 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, AlignLeft, AlignCenter, AlignRight, ZoomIn, ZoomOut } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
-  onMindMapReady?: (mindMap: MindElixirInstance) => void;
+  onMindMapReady?: (MindElixirInstance: any) => void;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
 }
@@ -185,10 +184,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [summary, setSummary] = useState<string>('');
   const { toast } = useToast();
 
+  // Add zoom level state
+  const [zoomLevel, setZoomLevel] = useState(1);
+
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
-      // Initialize the mind map only once when it's generated
-      
       // Define a enhanced colorful theme based on the Catppuccin Theme
       const colorfulTheme = {
         name: 'Catppuccin',
@@ -684,108 +684,21 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
-  // Function to generate summaries for nodes and their children
-  const generateNodeSummary = (nodeData: any) => {
-    if (!nodeData) return;
+  // Function to handle alignment changes
+  const handleAlignment = (alignment: 'left' | 'center' | 'right') => {
+    if (!mindMapRef.current) return;
     
-    // Generate a simple summary from the node hierarchy
-    let summaryText = `## Summary of "${nodeData.topic}"\n\n`;
-    
-    // Helper function to extract node topics and build a hierarchical summary
-    const extractTopics = (node: any, level: number = 0) => {
-      if (!node) return '';
-      
-      // Replace emojis and extra whitespace
-      const cleanTopic = (topic: string) => {
-        return topic.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]\s?/g, '').trim();
-      };
-      
-      let result = '';
-      const indent = '  '.repeat(level);
-      
-      if (node.topic) {
-        result += `${indent}- ${cleanTopic(node.topic)}\n`;
-      }
-      
-      if (node.children && node.children.length > 0) {
-        node.children.forEach((child: any) => {
-          result += extractTopics(child, level + 1);
+    try {
+      if (alignment === 'left') {
+        // Set all primary nodes to the left (3)
+        mindMapRef.current.initSide(3);
+        toast({
+          title: "Alignment Changed",
+          description: "Mind map aligned to the left",
         });
-      }
-      
-      return result;
-    };
-    
-    // Generate the hierarchical summary
-    summaryText += extractTopics(nodeData);
-    
-    // Add a conclusion
-    summaryText += `\n## Key Points\n\n`;
-    summaryText += `This branch of the mind map contains ${countNodes(nodeData)} nodes in total.\n`;
-    
-    // Display the summary
-    setSummary(summaryText);
-    setShowSummary(true);
-    
-    toast({
-      title: "Summary Generated",
-      description: `Summary for "${nodeData.topic}" is ready to view.`,
-      duration: 3000,
-    });
-  };
-  
-  // Helper function to count nodes in a branch
-  const countNodes = (node: any): number => {
-    if (!node) return 0;
-    
-    let count = 1; // Count the current node
-    
-    if (node.children && node.children.length > 0) {
-      node.children.forEach((child: any) => {
-        count += countNodes(child);
-      });
-    }
-    
-    return count;
-  };
-  
-  // Close the summary panel
-  const closeSummary = () => {
-    setShowSummary(false);
-  };
-
-  if (!isMapGenerated) {
-    return null;
-  }
-
-  return (
-    <div className="w-full h-full flex-1 flex flex-col">
-      {showSummary && (
-        <div className="absolute top-0 right-0 bottom-0 w-80 bg-white z-10 shadow-lg flex flex-col">
-          <div className="bg-primary p-3 text-white flex justify-between items-center">
-            <h3 className="font-medium">Mind Map Summary</h3>
-            <Button variant="ghost" size="sm" onClick={closeSummary} className="text-white">
-              Close
-            </Button>
-          </div>
-          <div className="p-4 overflow-auto flex-1">
-            <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
-          </div>
-        </div>
-      )}
-      
-      <div className="w-full h-full overflow-hidden relative">
-        <div 
-          ref={containerRef} 
-          className="w-full h-full" 
-          style={{ 
-            background: `linear-gradient(90deg, #F9F7FF 0%, #E5DEFF 100%)`,
-            transition: 'background-color 0.5s ease'
-          }}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default MindMapViewer;
+      } else if (alignment === 'center') {
+        // Set nodes on both sides (2)
+        mindMapRef.current.initSide(2);
+        toast({
+          title: "Alignment Changed",
+          description: "Mind
