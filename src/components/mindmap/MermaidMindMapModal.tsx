@@ -21,23 +21,28 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
   const { toast } = useToast();
   const [mermaidSyntax, setMermaidSyntax] = useState<string>(
 `mindmap
-  root((MapMyPaper))
-    Research Paper
-      Introduction
+  root((MapMyPaper)):::important
+    Research Paper:::primary
+      Introduction:::secondary
         Background
         Objectives
-      Methods
+      Methods:::secondary
         Data Collection
         Analysis
-      Results
-        Key Findings
+      Results:::secondary
+        Key Findings:::success
         Charts & Tables
-      Discussion
+      Discussion:::secondary
         Implications
         Limitations
-      Conclusion
+      Conclusion:::secondary
         Summary
-        Future Research`
+        Future Research
+
+classDef important fill:#f96,stroke:#333,stroke-width:2px
+classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPdfLoaded, setIsPdfLoaded] = useState(false);
@@ -160,10 +165,10 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
               <p className="font-semibold">Syntax Tips:</p>
               <ul className="list-disc pl-4 mt-1 space-y-1">
                 <li>Indentation defines hierarchy (children indented more than parents)</li>
-                <li>Node shapes: default (text), circle: ((text)), square: [text], rounded: (text), hexagon: {{text}}</li>
-                <li>Each indentation level is a new depth in the mindmap</li>
-                <li>Keep node text concise for better readability</li>
-                <li>Mindmaps do not support color styling with :::className syntax</li>
+                <li>Node shapes: default (text), circle: ((text)), square: [text], rounded: (text), hexagon: {"{{text}}"})</li>
+                <li>Apply styling with <code>:::classname</code> after node text</li>
+                <li>Use built-in classes: important, primary, secondary, success</li>
+                <li>Class definitions must be at the root level (not indented)</li>
               </ul>
             </div>
           </div>
