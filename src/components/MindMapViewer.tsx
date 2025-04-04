@@ -4,7 +4,7 @@ import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, AlignLeft, AlignRight, AlignVerticalJustifyCenter } from "lucide-react";
 import { FileText } from "lucide-react";
 
 interface MindMapViewerProps {
@@ -186,6 +186,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [showTempMessage, setShowTempMessage] = useState(false);
   const { toast } = useToast();
   const [scale, setScale] = useState(0.7);
+  const [direction, setDirection] = useState<0 | 1 | 2>(1); // 0: left, 1: right, 2: both sides
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -697,6 +698,44 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
+  // Function to change the map direction/alignment
+  const changeMapDirection = (newDirection: 0 | 1 | 2) => {
+    if (!mindMapRef.current) return;
+    
+    // Update direction state
+    setDirection(newDirection);
+    
+    try {
+      // Update direction in mind map instance
+      mindMapRef.current.direction = newDirection;
+      
+      // Rerender the mind map with new direction
+      mindMapRef.current.refresh();
+      
+      // After refresh, update the scale and center
+      setTimeout(() => {
+        if (mindMapRef.current) {
+          mindMapRef.current.toCenter();
+          mindMapRef.current.scale(scale);
+        }
+      }, 100);
+      
+      // Show toast to confirm direction change
+      const directionNames = ["Left", "Right", "Bidirectional"];
+      toast({
+        title: "Layout Changed",
+        description: `Mind map layout changed to ${directionNames[newDirection]}`,
+      });
+    } catch (error) {
+      console.error("Error changing map direction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to change mind map layout",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {
     if (!nodeData) return;
@@ -752,6 +791,39 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         </div>
       )}
       
+      {/* Layout controls */}
+      <div className="absolute bottom-6 left-6 flex bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-200 overflow-hidden">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={`p-2 h-10 rounded-none hover:bg-gray-100 ${direction === 0 ? 'bg-purple-100' : ''}`}
+          onClick={() => changeMapDirection(0)}
+          title="Align Left"
+        >
+          <AlignLeft className="h-5 w-5" />
+        </Button>
+        <div className="w-px h-full bg-gray-200"></div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={`p-2 h-10 rounded-none hover:bg-gray-100 ${direction === 2 ? 'bg-purple-100' : ''}`}
+          onClick={() => changeMapDirection(2)}
+          title="Bidirectional"
+        >
+          <AlignVerticalJustifyCenter className="h-5 w-5" />
+        </Button>
+        <div className="w-px h-full bg-gray-200"></div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={`p-2 h-10 rounded-none hover:bg-gray-100 ${direction === 1 ? 'bg-purple-100' : ''}`}
+          onClick={() => changeMapDirection(1)}
+          title="Align Right"
+        >
+          <AlignRight className="h-5 w-5" />
+        </Button>
+      </div>
+      
       {/* Zoom controls */}
       <div className="absolute bottom-6 right-6 flex flex-col bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-200 overflow-hidden">
         <Button 
@@ -765,6 +837,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
               setScale(newScale);
             }
           }}
+          title="Zoom In"
         >
           <ZoomIn className="h-5 w-5" />
         </Button>
@@ -780,6 +853,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
               setScale(newScale);
             }
           }}
+          title="Zoom Out"
         >
           <ZoomOut className="h-5 w-5" />
         </Button>
@@ -795,6 +869,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
               setScale(0.65);
             }
           }}
+          title="Reset View"
         >
           <RotateCcw className="h-5 w-5" />
         </Button>
