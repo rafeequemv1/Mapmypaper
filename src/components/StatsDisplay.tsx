@@ -51,25 +51,27 @@ const StatsDisplay = ({
     };
   }, [refreshInterval]);
 
-  // Return JSX with stat display
-  return <div className={`text-center ${className}`}>
-      {loading ? <div className="space-y-2">
-          <Skeleton className="h-6 w-32 mx-auto" />
-          <Skeleton className="h-6 w-24 mx-auto" />
-        </div> : error ? <div className="text-sm text-muted-foreground">
-          {error}
-        </div> : stats ? <div className="flex gap-4 justify-center items-center">
-          <div>
-            <p className="text-2xl font-bold text-[#333]">{stats.papersAnalyzed.toLocaleString()}</p>
-            <p className="text-sm text-gray-500">Papers Analyzed</p>
-          </div>
-          <div className="h-8 border-l"></div>
-          <div>
-            <p className="text-2xl font-bold text-[#333]">{stats.researchersCount.toLocaleString()}</p>
-            <p className="text-sm text-gray-500">Researchers</p>
-          </div>
-        </div> : null}
-    </div>;
+  // Return JSX instead of implicit undefined/void
+  return (
+    <div className={`rounded-lg border p-4 ${className}`}>
+      <h3 className="text-lg font-medium mb-2">Research Statistics</h3>
+      {loading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[250px]" />
+          <Skeleton className="h-4 w-[200px]" />
+        </div>
+      ) : error ? (
+        <p className="text-red-500">{error}</p>
+      ) : stats ? (
+        <div className="space-y-1">
+          <p>Papers analyzed: {stats.papersAnalyzed.toLocaleString()}</p>
+          <p>Active researchers: {stats.researchersCount.toLocaleString()}</p>
+        </div>
+      ) : (
+        <p>No statistics available</p>
+      )}
+    </div>
+  );
 };
 
 export default StatsDisplay;

@@ -76,50 +76,8 @@ export function useVisualization() {
           return match;
         });
         
-        // Fix semicolons that shouldn't be there
-        validatedSyntax = validatedSyntax.replace(/;(\s*$|\s*\n)/g, '$1');
-        
-        // Fix common syntax errors with parentheses and special characters
-        validatedSyntax = validatedSyntax.replace(/\(([^)]*[&%])[^)]*\)/g, (match) => {
-          // Escape the problematic characters by replacing them
-          return match.replace(/[&]/g, 'and').replace(/[%]/g, 'pct');
-        });
-        
-        // Remove lines that might cause parsing errors (lines with just punctuation or incomplete nodes)
-        const lines = validatedSyntax.split('\n');
-        validatedSyntax = lines
-          .filter(line => !line.match(/^[\s\-_;:,\\\/]*$/)) // Remove lines with just punctuation
-          .join('\n');
-        
-        // Make sure node connections use proper syntax
-        validatedSyntax = validatedSyntax.replace(/-{2,}>/g, '-->');
-        validatedSyntax = validatedSyntax.replace(/<-{2,}/g, '<--');
-        
-        // Replace ampersands with 'and' in the whole document to prevent syntax errors
-        validatedSyntax = validatedSyntax.replace(/&/g, 'and');
-        
-        // Remove trailing semicolons from all lines
-        validatedSyntax = validatedSyntax.replace(/;(\s*\n|\s*$)/g, '$1');
-        
-        // Fix issues with curly braces - ensure they're properly closed
-        const openBracesCount = (validatedSyntax.match(/{/g) || []).length;
-        const closeBracesCount = (validatedSyntax.match(/}/g) || []).length;
-        
-        if (openBracesCount > closeBracesCount) {
-          // Add missing closing braces
-          validatedSyntax += '\n' + '}'.repeat(openBracesCount - closeBracesCount);
-        }
-        
-        // Fix common syntax error with unclosed nodes
-        validatedSyntax = validatedSyntax.replace(/([A-Za-z0-9_-]+)\s*{([^}]*$)/gm, '$1[$2]');
-        
-        // Fix nested curly braces - common error in flowcharts
-        validatedSyntax = validatedSyntax.replace(/{([^{}]*){/g, '{$1 ');
-        
-        // Make sure all node definitions end with proper syntax
-        validatedSyntax = validatedSyntax.replace(/([A-Za-z0-9_-]+)\s*{\s*([^}]*)\s*}/g, '$1["$2"]');
-        
-        console.log("Applied flowchart syntax fixes");
+        // Fix issues with nodes starting with o or x by adding space
+        validatedSyntax = validatedSyntax.replace(/---([ox])/g, '--- $1');
       }
       
       // Save the syntax for future use
