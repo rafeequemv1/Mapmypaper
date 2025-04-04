@@ -148,8 +148,8 @@ const FlowchartModal: React.FC<FlowchartModalProps> = ({
               <p className="font-semibold">Syntax Tips:</p>
               <ul className="list-disc pl-4 mt-1 space-y-1">
                 <li>Start with <code>flowchart TD</code> for top-down flow</li>
-                <li>Node shapes: <code>A[Rectangle]</code>, <code>B(Rounded)</code>, <code>C{'{{Hexagon}}'}</code>, <code>D{'>'Diamond'<'}</code></li>
-                <li>Arrows: <code>--></code> for lines, <code>-->|text|</code> for labels</li>
+                <li>Node shapes: <code>A[Rectangle]</code>, <code>B(Rounded)</code>, <code>C{"{"}Hexagon{"}"}</code>, <code>D{">"}"Diamond"{"<"}</code></li>
+                <li>Arrows: <code>--&gt;</code> for lines, <code>--&gt;|text|</code> for labels</li>
                 <li>Styling: <code>style A fill:#f9f,stroke:#333</code></li>
                 <li>Subgraphs: <code>subgraph title ... end</code></li>
               </ul>
