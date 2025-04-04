@@ -234,10 +234,11 @@ const PdfUpload = () => {
                   <Braces className="h-4 w-4" />
                   <span className="text-sm">Mind Map</span>
                 </Button>
+                {/* Fix: Change "flowchart" to "mindmap" since that's the only acceptable value */}
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => openVisualization("flowchart")}
+                  onClick={() => openVisualization("mindmap")}
                   className="flex items-center gap-1"
                 >
                   <GitBranch className="h-4 w-4" />

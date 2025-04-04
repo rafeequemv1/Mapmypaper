@@ -349,7 +349,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         const observer = new MutationObserver((mutations) => {
           mutations.forEach(mutation => {
             if (mutation.addedNodes.length) {
-              mutations.addedNodes.forEach(node => {
+              mutation.addedNodes.forEach(node => {
                 if (node instanceof HTMLElement) {
                   // Style panel/node menu appeared - ensure it's visible
                   if (node.classList.contains('mind-elixir-style-panel') || 
@@ -771,7 +771,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             : direction; // Set to specified direction otherwise
         });
         
-        mindMapRef.current.getOptions().direction = direction;
         mindMapRef.current.init(data);
         setLayoutDirection(direction);
         
