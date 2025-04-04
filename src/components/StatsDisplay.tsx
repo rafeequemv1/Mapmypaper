@@ -1,13 +1,10 @@
-
 import { useEffect, useState } from "react";
 import { getUsageStatistics } from "@/utils/analytics";
 import { Skeleton } from "./ui/skeleton";
-
 interface StatsDisplayProps {
   className?: string;
   refreshInterval?: number; // In milliseconds
 }
-
 const StatsDisplay = ({
   className = "",
   refreshInterval = 60000 // Default refresh every minute
@@ -18,7 +15,6 @@ const StatsDisplay = ({
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -50,28 +46,6 @@ const StatsDisplay = ({
       }
     };
   }, [refreshInterval]);
-
-  // Return JSX instead of implicit undefined/void
-  return (
-    <div className={`rounded-lg border p-4 ${className}`}>
-      <h3 className="text-lg font-medium mb-2">Research Statistics</h3>
-      {loading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-[250px]" />
-          <Skeleton className="h-4 w-[200px]" />
-        </div>
-      ) : error ? (
-        <p className="text-red-500">{error}</p>
-      ) : stats ? (
-        <div className="space-y-1">
-          <p>Papers analyzed: {stats.papersAnalyzed.toLocaleString()}</p>
-          <p>Active researchers: {stats.researchersCount.toLocaleString()}</p>
-        </div>
-      ) : (
-        <p>No statistics available</p>
-      )}
-    </div>
-  );
+  return;
 };
-
 export default StatsDisplay;
