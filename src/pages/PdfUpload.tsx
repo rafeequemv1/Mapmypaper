@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Upload } from "lucide-react";
+import { Upload, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import PaperLogo from "@/components/PaperLogo";
@@ -299,6 +299,16 @@ const PdfUpload = () => {
                 <li><a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">About</a></li>
                 <li><a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a></li>
                 <li><a href="/auth" className="text-gray-600 hover:text-gray-900 transition-colors">Sign In</a></li>
+                <li>
+                  <a 
+                    href="https://blog.mapmypaper.com" 
+                    className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    Blog <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
               </ul>
             </div>
             
