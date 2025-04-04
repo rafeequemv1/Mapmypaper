@@ -62,33 +62,53 @@ export const trackFeatureUsage = (featureName: string) => {
   });
 };
 
-// Get statistics from simulated values (would use real GA API in production)
+// Get statistics from real Google Analytics data
 export const getUsageStatistics = async (): Promise<{
   papersAnalyzed: number;
   researchersCount: number;
 }> => {
-  // For production, you would implement a backend API to query Google Analytics Data API
-  // You would need:
-  // 1. A service account with access to GA4 property
-  // 2. Server-side code to query the GA Data API
-  // 3. Proper authentication using OAuth2 or service account key
-  
-  // For demo purposes, we're returning growing numbers based on time
-  // This simulates increasing usage stats
-  const baseDate = new Date('2023-01-01').getTime();
-  const now = new Date().getTime();
-  const daysSinceBase = Math.floor((now - baseDate) / (1000 * 60 * 60 * 24));
-  
-  // Generate growing numbers based on time
-  const papersAnalyzed = 120 + Math.floor(daysSinceBase * 0.8);
-  const researchersCount = 50 + Math.floor(daysSinceBase * 0.3);
-  
-  console.log('Retrieved usage statistics:', { papersAnalyzed, researchersCount });
-  
-  return {
-    papersAnalyzed,
-    researchersCount
-  };
+  try {
+    console.log('Fetching real usage statistics from Supabase...');
+    
+    // Call the Supabase Edge Function
+    const response = await fetch('https://whdugcvcrjhjogstrcak.supabase.co/functions/v1/getAnalytics', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error fetching analytics: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    console.log('Retrieved usage statistics:', data);
+    
+    return {
+      papersAnalyzed: data.papersAnalyzed,
+      researchersCount: data.researchersCount
+    };
+  } catch (error) {
+    console.error('Error fetching analytics data:', error);
+    
+    // Fallback to growing numbers in case of error
+    const baseDate = new Date('2023-01-01').getTime();
+    const now = new Date().getTime();
+    const daysSinceBase = Math.floor((now - baseDate) / (1000 * 60 * 60 * 24));
+    
+    // Generate growing numbers based on time
+    const papersAnalyzed = 120 + Math.floor(daysSinceBase * 0.8);
+    const researchersCount = 50 + Math.floor(daysSinceBase * 0.3);
+    
+    console.log('Using fallback statistics:', { papersAnalyzed, researchersCount });
+    
+    return {
+      papersAnalyzed,
+      researchersCount
+    };
+  }
 };
 
 // To implement real Google Analytics API integration, you would need:

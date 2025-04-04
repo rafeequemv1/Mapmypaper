@@ -17,15 +17,18 @@ const StatsDisplay = ({
     researchersCount: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         setLoading(true);
+        setError(null);
         const data = await getUsageStatistics();
         setStats(data);
       } catch (error) {
         console.error("Error fetching statistics:", error);
+        setError("Failed to load statistics");
       } finally {
         setLoading(false);
       }
@@ -55,7 +58,7 @@ const StatsDisplay = ({
           <Skeleton className="h-10 w-24 mb-2" />
         ) : (
           <div className="text-3xl font-bold text-blue-600">
-            {stats?.papersAnalyzed.toLocaleString()}+
+            {stats?.papersAnalyzed.toLocaleString() || '0'}+
           </div>
         )}
         <div className="text-sm text-gray-600">Research Papers Analyzed</div>
@@ -66,11 +69,17 @@ const StatsDisplay = ({
           <Skeleton className="h-10 w-24 mb-2" />
         ) : (
           <div className="text-3xl font-bold text-blue-600">
-            {stats?.researchersCount.toLocaleString()}+
+            {stats?.researchersCount.toLocaleString() || '0'}+
           </div>
         )}
         <div className="text-sm text-gray-600">Researchers Using MapMyPaper</div>
       </div>
+      
+      {error && (
+        <div className="w-full text-center mt-2">
+          <p className="text-xs text-red-500">{error}</p>
+        </div>
+      )}
     </div>
   );
 };
