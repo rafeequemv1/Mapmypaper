@@ -90,6 +90,11 @@ const PanelStructure = ({
   const handleImageSelected = (imageData: string) => {
     console.log("Image area selected in PDF, data length:", imageData.length);
     setExplainImage(imageData);
+    
+    // Automatically open chat panel when an image is selected for explanation
+    if (!showChat) {
+      toggleChat();
+    }
   };
 
   return (
