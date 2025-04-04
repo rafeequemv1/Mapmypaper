@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Download, RefreshCw } from "lucide-react";
 import { VisualizationType } from "@/hooks/use-visualization";
 
-// Initialize mermaid with colorful theme settings
+// Initialize mermaid with colorful theme settings and proper configuration
 mermaid.initialize({
   startOnLoad: true,
   theme: "default",
@@ -36,6 +36,7 @@ mermaid.initialize({
     curve: 'basis',
     useMaxWidth: false,
     htmlLabels: true,
+    defaultRenderer: 'dagre' // Default renderer for flowcharts
   },
   mindmap: {
     padding: 16,
@@ -65,6 +66,30 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
   const [activeTab, setActiveTab] = useState<"preview" | "syntax">("preview");
   const [renderKey, setRenderKey] = useState(0);
   const mermaidRef = useRef<HTMLDivElement>(null);
+  const [renderError, setRenderError] = useState<string | null>(null);
+  
+  // Function to fix common flowchart syntax issues
+  const fixFlowchartSyntax = (syntax: string): string => {
+    if (visualizationType !== "flowchart") return syntax;
+    
+    let fixedSyntax = syntax;
+    
+    // Make sure flowchart has a direction
+    if (!fixedSyntax.match(/flowchart\s+(TD|TB|BT|RL|LR)/i)) {
+      fixedSyntax = fixedSyntax.replace(/flowchart/i, 'flowchart TD');
+    }
+    
+    // Fix issues with "end" nodes - capitalize End
+    fixedSyntax = fixedSyntax.replace(/\[(end)\]/gi, (match, p1) => {
+      if (p1 === 'end') return '[End]';
+      return match;
+    });
+    
+    // Fix any issues with nodes starting with o or x by adding space
+    fixedSyntax = fixedSyntax.replace(/---([ox])/g, '--- $1');
+    
+    return fixedSyntax;
+  };
   
   // Custom theme for mindmap to make it more colorful
   const applyCustomTheme = () => {
@@ -158,8 +183,17 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
       const cleanup = applyCustomTheme();
       
       try {
+        // Clear previous error
+        setRenderError(null);
+        
+        // Clear previous content
         mermaidRef.current.innerHTML = "";
-        mermaid.render(`mermaid-${renderKey}`, mermaidSyntax).then(({ svg }) => {
+        
+        // Fix any flowchart syntax issues
+        const processedSyntax = fixFlowchartSyntax(mermaidSyntax);
+        
+        // Render the diagram
+        mermaid.render(`mermaid-${renderKey}`, processedSyntax).then(({ svg }) => {
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = svg;
             
@@ -174,11 +208,18 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
               svgElement.style.margin = '0 auto';
             }
           }
+        }).catch(error => {
+          console.error("Error rendering mermaid diagram:", error);
+          setRenderError(error.message);
+          if (mermaidRef.current) {
+            mermaidRef.current.innerHTML = `<div class="p-4 text-red-500">Error rendering diagram: ${error.message}</div>`;
+          }
         });
       } catch (error) {
-        console.error("Error rendering mermaid diagram:", error);
+        console.error("Error in mermaid rendering:", error);
+        setRenderError(error instanceof Error ? error.message : String(error));
         if (mermaidRef.current) {
-          mermaidRef.current.innerHTML = `<div class="p-4 text-red-500">Error rendering diagram: ${error.message}</div>`;
+          mermaidRef.current.innerHTML = `<div class="p-4 text-red-500">Error rendering diagram: ${error instanceof Error ? error.message : String(error)}</div>`;
         }
       }
       
@@ -251,7 +292,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                 variant="outline" 
                 size="sm" 
                 onClick={downloadSVG}
-                disabled={!mermaidSyntax || activeTab !== "preview"}
+                disabled={!mermaidSyntax || activeTab !== "preview" || !!renderError}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download SVG
@@ -279,6 +320,12 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                   <p>Generating {visualizationType}...</p>
                 </div>
               </div>
+            ) : renderError ? (
+              <div className="flex flex-col items-center justify-center h-full text-red-500">
+                <p className="font-semibold mb-2">Error rendering diagram:</p>
+                <p className="text-sm bg-red-50 p-3 rounded max-w-md">{renderError}</p>
+                <p className="mt-4 text-gray-600">Try switching to the "Edit Syntax" tab to fix the issues or click "Regenerate".</p>
+              </div>
             ) : mermaidSyntax ? (
               <div ref={mermaidRef} className="mermaid-container overflow-auto h-full w-full"></div>
             ) : (
@@ -295,6 +342,16 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
             <p className="text-sm text-gray-500 mb-2">
               Edit the Mermaid syntax below to customize your {visualizationType} diagram:
             </p>
+            {renderError && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-700 p-2 mb-2 rounded text-sm">
+                <strong>Note:</strong> There are syntax errors in your diagram. Common flowchart issues include:
+                <ul className="list-disc pl-5 mt-1">
+                  <li>Using lowercase "end" - use "End" instead</li>
+                  <li>Starting node names with "o" or "x" without a space</li>
+                  <li>Missing direction specifier (TD, LR, etc.)</li>
+                </ul>
+              </div>
+            )}
             <Textarea 
               value={mermaidSyntax} 
               onChange={handleSyntaxChange}
