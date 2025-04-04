@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -48,8 +49,10 @@ const MindMap = () => {
   }, [toast]);
 
   const togglePdf = useCallback(() => {
+    console.log("Toggle PDF clicked. Current state:", showPdf);
+    // Always allow toggling regardless of availability
     setShowPdf(prev => !prev);
-  }, []);
+  }, [showPdf]);
 
   const toggleChat = useCallback(() => {
     setShowChat(prev => !prev);
@@ -182,7 +185,7 @@ const MindMap = () => {
         togglePdf={togglePdf}
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
-        isPdfActive={showPdf && pdfAvailable}
+        isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMap}
       />
@@ -190,7 +193,7 @@ const MindMap = () => {
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 overflow-hidden">
         <PanelStructure 
-          showPdf={showPdf && pdfAvailable}
+          showPdf={showPdf}
           showChat={showChat}
           toggleChat={toggleChat}
           togglePdf={togglePdf}

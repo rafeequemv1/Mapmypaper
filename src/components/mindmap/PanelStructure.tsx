@@ -30,6 +30,7 @@ const PanelStructure = ({
   const pdfViewerRef = useRef(null);
   const { toast } = useToast();
   const [pdfKey, setPdfKey] = useState(Date.now());
+  const [pdfLoaded, setPdfLoaded] = useState(false);
   
   // Force refresh PDF component when the component mounts to avoid caching issues
   useEffect(() => {
@@ -47,8 +48,11 @@ const PanelStructure = ({
           
           // Update the key to force component remount
           setPdfKey(Date.now());
+          setPdfLoaded(true);
           
           console.log("PDF refreshed to avoid cache issues");
+        } else {
+          console.log("No PDF data found in storage");
         }
       } catch (error) {
         console.error("Error refreshing PDF:", error);
@@ -58,6 +62,11 @@ const PanelStructure = ({
     // Run refresh on component mount
     refreshPdf();
   }, []);
+  
+  const handlePdfLoaded = () => {
+    console.log("PDF loaded successfully");
+    setPdfLoaded(true);
+  };
   
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
@@ -76,6 +85,7 @@ const PanelStructure = ({
               key={pdfKey} // Add key to force remount when changed
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
+              onPdfLoaded={handlePdfLoaded}
             />
           </TooltipProvider>
         </div>
