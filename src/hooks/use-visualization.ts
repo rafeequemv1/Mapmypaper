@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { generateMermaidDiagram } from "@/services/geminiService";
 
-export type VisualizationType = "mindmap";
+export type VisualizationType = "mindmap" | "flowchart";
 
 export function useVisualization() {
   const { toast } = useToast();
@@ -12,7 +12,8 @@ export function useVisualization() {
   const [mermaidSyntax, setMermaidSyntax] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [savedSyntax, setSavedSyntax] = useState<Record<VisualizationType, string>>({
-    mindmap: ""
+    mindmap: "",
+    flowchart: ""
   });
 
   const openModal = async (type: VisualizationType) => {
@@ -57,10 +58,23 @@ export function useVisualization() {
       // Validate the syntax to ensure it starts with the right keyword
       let validatedSyntax = syntax;
       
-      if (type === "mindmap" && !syntax.trim().startsWith("mindmap")) {
+      if (type === "flowchart" && !syntax.trim().startsWith("flowchart")) {
+        // Missing the flowchart keyword, add it with TD (top-down) direction
+        validatedSyntax = `flowchart TD\n${syntax}`;
+        console.log("Added missing flowchart keyword");
+      } else if (type === "mindmap" && !syntax.trim().startsWith("mindmap")) {
         // Missing the mindmap keyword, add it
         validatedSyntax = `mindmap\n${syntax}`;
         console.log("Added missing mindmap keyword");
+      }
+      
+      // Fix common issues with flowchart syntax
+      if (type === "flowchart") {
+        // Replace lowercase "end" with "End" to avoid syntax errors
+        validatedSyntax = validatedSyntax.replace(/\[(end)\]/gi, (match, p1) => {
+          if (p1 === 'end') return '[End]';
+          return match;
+        });
       }
       
       // Save the syntax for future use

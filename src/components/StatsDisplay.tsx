@@ -53,38 +53,26 @@ const StatsDisplay = ({
 
   // Return JSX with stat display
   return (
-    <div className={`grid grid-cols-2 gap-6 ${className}`}>
-      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-        {loading ? (
-          <Skeleton className="h-16 w-full" />
-        ) : (
+    <div className={`flex justify-center gap-8 ${className}`}>
+      {loading ? (
+        <>
+          <Skeleton className="h-14 w-32" />
+          <Skeleton className="h-14 w-32" />
+        </>
+      ) : error ? (
+        <p className="text-sm text-red-500">{error}</p>
+      ) : stats ? (
+        <>
           <div className="text-center">
-            <p className="text-3xl font-bold text-purple-600">
-              {stats?.papersAnalyzed.toLocaleString() || "0"}
-            </p>
-            <p className="text-sm text-gray-600 mt-1">Papers Analyzed</p>
+            <p className="text-3xl font-bold">{stats.papersAnalyzed.toLocaleString()}</p>
+            <p className="text-gray-500 text-sm">Papers Analyzed</p>
           </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-        {loading ? (
-          <Skeleton className="h-16 w-full" />
-        ) : (
           <div className="text-center">
-            <p className="text-3xl font-bold text-blue-600">
-              {stats?.researchersCount.toLocaleString() || "0"}
-            </p>
-            <p className="text-sm text-gray-600 mt-1">Researchers</p>
+            <p className="text-3xl font-bold">{stats.researchersCount.toLocaleString()}</p>
+            <p className="text-gray-500 text-sm">Researchers</p>
           </div>
-        )}
-      </div>
-      
-      {error && (
-        <div className="col-span-2 text-center text-sm text-red-500">
-          {error}
-        </div>
-      )}
+        </>
+      ) : null}
     </div>
   );
 };
