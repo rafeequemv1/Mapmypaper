@@ -186,7 +186,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [showTempMessage, setShowTempMessage] = useState(false);
   const { toast } = useToast();
   const [scale, setScale] = useState(0.7);
-  const [layoutDirection, setLayoutDirection] = useState<0 | 1 | 2>(1); // 0: left, 1: right, 2: both sides
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -349,7 +348,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         const observer = new MutationObserver((mutations) => {
           mutations.forEach(mutation => {
             if (mutation.addedNodes.length) {
-              mutation.addedNodes.forEach(node => {
+              Array.from(mutation.addedNodes).forEach(node => {
                 if (node instanceof HTMLElement) {
                   // Style panel/node menu appeared - ensure it's visible
                   if (node.classList.contains('mind-elixir-style-panel') || 
@@ -598,7 +597,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.addedNodes.length > 0) {
-            mutation.addedNodes.forEach((node) => {
+            Array.from(mutation.addedNodes).forEach((node) => {
               if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
                 node.addEventListener('click', () => {
                   // Node is clicked - let Mind Elixir handle it
@@ -703,154 +702,116 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     if (!nodeData) return;
     
     // Get all text from node and its children
-    const getAllText = (node: any): string => {
+    const extractNodeText = (node: any): string => {
       let text = node.topic || '';
       
       if (node.children && node.children.length > 0) {
         node.children.forEach((child: any) => {
-          text += ' ' + getAllText(child);
+          text += ' ' + extractNodeText(child);
         });
       }
       
       return text;
     };
     
-    const nodeText = getAllText(nodeData);
+    const nodeText = extractNodeText(nodeData);
     
-    // Set summary
-    setSummary(nodeText);
-    setShowSummary(true);
+    // Show a temporary message that we're generating a summary
+    toast({
+      title: "Generating summary...",
+      description: "Analyzing the selected branch of your mind map."
+    });
     
-    // If text explanation is requested, send it to parent
+    // Call the parent component with the text to explain
     if (onExplainText) {
       onExplainText(nodeText);
     }
     
-    // Open chat if requested
+    // Request to open the chat panel if it's not already open
     if (onRequestOpenChat) {
       onRequestOpenChat();
     }
   };
 
-  // Zoom in functionality
-  const handleZoomIn = () => {
-    if (mindMapRef.current) {
-      const newScale = Math.min(scale + 0.1, 2.0);
-      mindMapRef.current.scale(newScale);
-      setScale(newScale);
-    }
-  };
-
-  // Zoom out functionality
-  const handleZoomOut = () => {
-    if (mindMapRef.current) {
-      const newScale = Math.max(scale - 0.1, 0.3);
-      mindMapRef.current.scale(newScale);
-      setScale(newScale);
-    }
-  };
-
-  // Reset view functionality
-  const handleResetView = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.scale(0.65);
-      mindMapRef.current.toCenter();
-      setScale(0.65);
-    }
-  };
-
-  // Change layout direction
-  const changeLayoutDirection = (direction: 0 | 1 | 2) => {
-    if (mindMapRef.current) {
-      // Update the direction for all top-level nodes
-      const data = mindMapRef.current.getData();
-      if (data.nodeData && data.nodeData.children) {
-        data.nodeData.children.forEach((child: any) => {
-          child.direction = direction === 2 
-            ? (child.direction === 0 ? 0 : 1) // Keep current direction if bidirectional
-            : direction; // Set to specified direction otherwise
-        });
-        
-        mindMapRef.current.init(data);
-        setLayoutDirection(direction);
-        
-        // Re-center and scale after direction change
-        setTimeout(() => {
-          mindMapRef.current?.scale(scale);
-          mindMapRef.current?.toCenter();
-        }, 100);
-        
-        toast({
-          title: "Layout Changed",
-          description: direction === 0 
-            ? "Left-side layout applied" 
-            : direction === 1 
-              ? "Right-side layout applied" 
-              : "Bidirectional layout applied"
-        });
-      }
-    }
-  };
-
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      {/* Mind Map Container */}
+    <div className="relative w-full h-full overflow-hidden">
+      {/* Main mind map container */}
       <div 
         ref={containerRef} 
-        className="mind-map-container h-full w-full overflow-hidden"
-      ></div>
+        className="w-full h-full bg-white overflow-hidden"
+        style={{ visibility: isReady ? 'visible' : 'hidden' }}
+      />
       
-      {/* Zoom and Layout Controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-md flex gap-2">
-          <Button variant="outline" size="icon" onClick={handleZoomIn} title="Zoom In">
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleZoomOut} title="Zoom Out">
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleResetView} title="Reset View">
-            <RotateCcw className="h-4 w-4" />
-          </Button>
+      {/* Temporary right-click and pan instruction message */}
+      {showTempMessage && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm border border-purple-200 rounded-lg shadow-lg px-6 py-3 text-sm text-center z-50 max-w-md">
+          <p className="font-medium text-purple-800 mb-1">Mind Map Controls</p>
+          <p className="text-gray-600">
+            <strong>Right-click</strong> nodes for more options. <strong>Click and drag</strong> the background to pan.
+          </p>
         </div>
-        
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-md flex gap-2">
-          <Button 
-            variant={layoutDirection === 0 ? "default" : "outline"} 
-            size="sm" 
-            onClick={() => changeLayoutDirection(0)} 
-            title="Left-side Layout"
-            className="h-8 w-8 p-0 flex items-center justify-center"
-          >
-            <div className="transform rotate-180">➡</div>
-          </Button>
-          <Button 
-            variant={layoutDirection === 1 ? "default" : "outline"} 
-            size="sm" 
-            onClick={() => changeLayoutDirection(1)} 
-            title="Right-side Layout"
-            className="h-8 w-8 p-0 flex items-center justify-center"
-          >
-            ➡
-          </Button>
-          <Button 
-            variant={layoutDirection === 2 ? "default" : "outline"} 
-            size="sm" 
-            onClick={() => changeLayoutDirection(2)} 
-            title="Bidirectional Layout"
-            className="h-8 w-8 p-0 flex items-center justify-center"
-          >
-            ↔
-          </Button>
-        </div>
+      )}
+      
+      {/* Zoom controls */}
+      <div className="absolute bottom-6 right-6 flex flex-col bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-200 overflow-hidden">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="p-2 h-10 rounded-none hover:bg-gray-100"
+          onClick={() => {
+            if (mindMapRef.current) {
+              const newScale = scale + 0.1;
+              mindMapRef.current.scale(newScale);
+              setScale(newScale);
+            }
+          }}
+        >
+          <ZoomIn className="h-5 w-5" />
+        </Button>
+        <div className="h-px bg-gray-200 w-full"></div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="p-2 h-10 rounded-none hover:bg-gray-100"
+          onClick={() => {
+            if (mindMapRef.current) {
+              const newScale = Math.max(0.3, scale - 0.1);
+              mindMapRef.current.scale(newScale);
+              setScale(newScale);
+            }
+          }}
+        >
+          <ZoomOut className="h-5 w-5" />
+        </Button>
+        <div className="h-px bg-gray-200 w-full"></div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="p-2 h-10 rounded-none hover:bg-gray-100"
+          onClick={() => {
+            if (mindMapRef.current) {
+              mindMapRef.current.toCenter();
+              mindMapRef.current.scale(0.65);
+              setScale(0.65);
+            }
+          }}
+        >
+          <RotateCcw className="h-5 w-5" />
+        </Button>
       </div>
       
-      {/* Temporary Instruction Message */}
-      {showTempMessage && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg z-10 animate-fade-in pointer-events-none max-w-md">
-          <p className="text-center text-sm font-medium">
-            <span className="font-bold">Pro Tip:</span> Right-click on nodes for options. Right-click and drag to pan the mind map.
-          </p>
+      {/* Summary dialog */}
+      {showSummary && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-auto">
+            <h3 className="text-lg font-medium mb-4">Summary</h3>
+            <div className="prose prose-purple max-w-none">
+              {summary}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => setShowSummary(false)}>Close</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
