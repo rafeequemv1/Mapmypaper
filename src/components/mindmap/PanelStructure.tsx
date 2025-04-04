@@ -37,14 +37,26 @@ const PanelStructure = ({
     // Clear PDF data cache from sessionStorage to ensure fresh loading
     const refreshPdf = () => {
       try {
-        // Store the existing PDF data
-        const existingPdfData = sessionStorage.getItem("pdfData") || 
-                               sessionStorage.getItem("uploadedPdfData");
+        console.log("Checking for PDF data in session storage...");
+        
+        // Check both storage keys for PDF data
+        const pdfFromPdfData = sessionStorage.getItem("pdfData");
+        const pdfFromUploadedData = sessionStorage.getItem("uploadedPdfData");
+        const existingPdfData = pdfFromPdfData || pdfFromUploadedData;
         
         if (existingPdfData) {
-          // Clear and reset with the timestamp to force refresh
-          sessionStorage.removeItem("pdfData");
-          sessionStorage.setItem("pdfData", existingPdfData);
+          console.log("Found PDF data in storage, length:", existingPdfData.length);
+          
+          // Always ensure data is stored in both keys for consistency
+          if (!pdfFromPdfData) {
+            sessionStorage.setItem("pdfData", existingPdfData);
+            console.log("Copied PDF data to pdfData key");
+          }
+          
+          if (!pdfFromUploadedData) {
+            sessionStorage.setItem("uploadedPdfData", existingPdfData);
+            console.log("Copied PDF data to uploadedPdfData key");
+          }
           
           // Update the key to force component remount
           setPdfKey(Date.now());
@@ -53,15 +65,25 @@ const PanelStructure = ({
           console.log("PDF refreshed to avoid cache issues");
         } else {
           console.log("No PDF data found in storage");
+          toast({
+            title: "No PDF Found",
+            description: "Please upload a PDF document first",
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error("Error refreshing PDF:", error);
+        toast({
+          title: "Error Loading PDF",
+          description: "There was a problem loading your PDF. Please try uploading it again.",
+          variant: "destructive",
+        });
       }
     };
     
-    // Run refresh on component mount
-    refreshPdf();
-  }, []);
+    // Run refresh with a slight delay to ensure storage is checked after navigation
+    setTimeout(refreshPdf, 300);
+  }, [toast]);
   
   const handlePdfLoaded = () => {
     console.log("PDF loaded successfully");

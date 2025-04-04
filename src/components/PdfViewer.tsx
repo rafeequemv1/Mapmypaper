@@ -2,9 +2,10 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, HelpCircle } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, HelpCircle, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Skeleton } from "./ui/skeleton";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -38,6 +39,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const { toast } = useToast();
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     
     // Text selection states
     const [selectedText, setSelectedText] = useState<string>("");
@@ -47,16 +50,56 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Store the onTextSelected callback in a ref to avoid stale closures
     const onTextSelectedRef = useStateRef(onTextSelected);
 
+    // Function to refresh and reload the PDF data
+    const refreshPdfData = () => {
+      setIsLoading(true);
+      setLoadError(null);
+      
+      try {
+        // Clear both storage keys and re-get the data
+        const pdfData = sessionStorage.getItem("pdfData") || 
+                       sessionStorage.getItem("uploadedPdfData");
+        
+        if (pdfData) {
+          console.log("Refreshing PDF data, length:", pdfData.length);
+          sessionStorage.setItem("pdfData", pdfData);
+          sessionStorage.setItem("uploadedPdfData", pdfData);
+          setPdfData(null); // Force reload
+          setTimeout(() => setPdfData(pdfData), 100);
+        } else {
+          setLoadError("No PDF data found. Please upload a document first.");
+          toast({
+            title: "No PDF Found",
+            description: "Please upload a PDF document first.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error refreshing PDF data:", error);
+        setLoadError("Error loading PDF. Please try again.");
+        toast({
+          title: "Error Refreshing PDF",
+          description: "Could not reload the PDF document.",
+          variant: "destructive",
+        });
+      }
+    };
+
     useEffect(() => {
       try {
+        setIsLoading(true);
         // Try to get PDF data from either key
+        console.log("PdfViewer initializing - checking for PDF data");
         const storedData =
           sessionStorage.getItem("pdfData") || 
           sessionStorage.getItem("uploadedPdfData");
         
         if (storedData) {
+          console.log("Found PDF data in storage, length:", storedData.length);
           setPdfData(storedData);
         } else {
+          console.log("No PDF data found in storage");
+          setLoadError("No PDF data found. Please upload a document first.");
           toast({
             title: "No PDF Found",
             description: "Please upload a PDF document first.",
@@ -65,11 +108,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         }
       } catch (error) {
         console.error("Error retrieving PDF data:", error);
+        setLoadError("Error loading PDF. Please try again.");
         toast({
           title: "Error loading PDF",
           description: "Could not load the PDF document.",
           variant: "destructive",
         });
+      } finally {
+        setIsLoading(false);
       }
     }, [toast]);
 
@@ -260,12 +306,27 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Handle document loaded
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+      console.log(`PDF loaded successfully with ${numPages} pages`);
       setNumPages(numPages);
+      setIsLoading(false);
+      setLoadError(null);
       // Initialize the array with the correct number of null elements
       pagesRef.current = Array(numPages).fill(null);
       if (onPdfLoaded) {
         onPdfLoaded();
       }
+    };
+
+    // Handle document load error
+    const onDocumentLoadError = (error: Error) => {
+      console.error("Error loading PDF document:", error);
+      setIsLoading(false);
+      setLoadError("Failed to load PDF. The file might be corrupted or in an unsupported format.");
+      toast({
+        title: "Error Loading PDF",
+        description: "Could not load the PDF document. Try uploading it again.",
+        variant: "destructive",
+      });
     };
 
     // Handle page render success to adjust container height
@@ -377,6 +438,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
         <div className="bg-white border-b p-1 flex flex-wrap items-center gap-2 z-10">
+          {/* Refresh Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 text-black" 
+            onClick={refreshPdfData}
+            title="Refresh PDF"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+          
           {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-1">
             <Button 
@@ -385,6 +457,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               className="h-7 w-7 text-black" 
               onClick={zoomOut}
               title="Zoom Out"
+              disabled={isLoading || !pdfData}
             >
               <ZoomOut className="h-3.5 w-3.5" />
             </Button>
@@ -397,6 +470,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               className="h-7 w-7 text-black" 
               onClick={zoomIn}
               title="Zoom In"
+              disabled={isLoading || !pdfData}
             >
               <ZoomIn className="h-3.5 w-3.5" />
             </Button>
@@ -406,6 +480,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               className="h-7 w-7 text-black" 
               onClick={resetZoom}
               title="Reset Zoom"
+              disabled={isLoading || !pdfData}
             >
               <RotateCw className="h-3.5 w-3.5" />
             </Button>
@@ -420,12 +495,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-7 text-sm mr-2"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                disabled={isLoading || !pdfData}
               />
               <Button 
                 variant="ghost" 
                 size="sm" 
                 className="h-7 flex items-center gap-1 text-black"
                 onClick={handleSearch}
+                disabled={isLoading || !pdfData}
               >
                 <Search className="h-3.5 w-3.5" />
                 <span>Search</span>
@@ -462,7 +539,33 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         </div>
 
         {/* PDF Content with full width */}
-        {pdfData ? (
+        {isLoading && !pdfData ? (
+          <div className="flex flex-col items-center justify-center h-full">
+            <Skeleton className="h-10 w-3/4 mb-4" />
+            <Skeleton className="h-96 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-28 mb-8" />
+            <Skeleton className="h-96 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-28" />
+            <div className="mt-6 text-gray-500">Loading PDF...</div>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center h-full bg-red-50 p-6 text-center">
+            <div className="bg-red-100 text-red-500 font-medium mb-4 p-4 rounded-md">
+              {loadError}
+            </div>
+            <div className="text-gray-600 mb-6">
+              If you were expecting a PDF to be available, try uploading it again.
+            </div>
+            <Button 
+              onClick={refreshPdfData} 
+              variant="outline" 
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Try Again</span>
+            </Button>
+          </div>
+        ) : pdfData ? (
           <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
             {/* Floating Explain Tooltip */}
             {showExplainTooltip && selectionPosition && (
@@ -494,9 +597,29 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               <Document
                 file={pdfData}
                 onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
                 className="w-full"
-                loading={<div className="text-center py-4">Loading PDF...</div>}
-                error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
+                loading={
+                  <div className="flex flex-col items-center py-12">
+                    <Skeleton className="h-96 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-28 mb-8" />
+                    <div className="mt-2 text-gray-500">Loading PDF...</div>
+                  </div>
+                }
+                error={
+                  <div className="text-center py-8 bg-red-50 rounded-lg">
+                    <div className="text-red-500 mb-2 font-medium">Failed to load PDF</div>
+                    <div className="text-gray-600 mb-4">The document might be corrupted or in an unsupported format.</div>
+                    <Button 
+                      onClick={refreshPdfData} 
+                      variant="outline" 
+                      className="flex items-center gap-2"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      <span>Try Again</span>
+                    </Button>
+                  </div>
+                }
               >
                 {Array.from(new Array(numPages), (_, index) => (
                   <div
@@ -516,7 +639,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                       className="mx-auto"
                       loading={
                         <div className="flex items-center justify-center h-[600px] w-full">
-                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
+                          <Skeleton className="h-full w-full" />
                         </div>
                       }
                     />

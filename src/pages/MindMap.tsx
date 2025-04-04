@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -15,6 +14,7 @@ const MindMap = () => {
   const [explainText, setExplainText] = useState<string>('');
   const { toast } = useToast();
   const [textExplainProcessed, setTextExplainProcessed] = useState(false);
+  const [pdfLoadAttempted, setPdfLoadAttempted] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   
@@ -29,6 +29,20 @@ const MindMap = () => {
         console.log("PDF check on mount - available:", hasPdfData, "PDF data length:", pdfData ? pdfData.length : 0);
         
         setPdfAvailable(hasPdfData);
+        setPdfLoadAttempted(true);
+        
+        if (!hasPdfData) {
+          // If no PDF is found, show a toast notification
+          toast({
+            title: "PDF Not Found",
+            description: "Please upload a PDF document first",
+            variant: "destructive",
+          });
+          // Redirect to upload page if no PDF data is available
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 2000);
+        }
         
         // Keep PDF panel visible if data is available
         setShowPdf(hasPdfData);
@@ -37,10 +51,15 @@ const MindMap = () => {
         if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
           sessionStorage.setItem('pdfData', sessionStorage.getItem('uploadedPdfData')!);
         }
+        
+        if (sessionStorage.getItem('pdfData') && !sessionStorage.getItem('uploadedPdfData')) {
+          sessionStorage.setItem('uploadedPdfData', sessionStorage.getItem('pdfData')!);
+        }
       } catch (error) {
         console.error("Error checking PDF availability:", error);
         setPdfAvailable(false);
         setShowPdf(false);
+        setPdfLoadAttempted(true);
       }
     };
     
@@ -50,9 +69,18 @@ const MindMap = () => {
 
   const togglePdf = useCallback(() => {
     console.log("Toggle PDF clicked. Current state:", showPdf);
-    // Always allow toggling regardless of availability
-    setShowPdf(prev => !prev);
-  }, [showPdf]);
+    
+    // Only toggle if PDF is available
+    if (pdfAvailable) {
+      setShowPdf(prev => !prev);
+    } else {
+      toast({
+        title: "No PDF Found",
+        description: "Please upload a PDF document first",
+        variant: "destructive",
+      });
+    }
+  }, [showPdf, pdfAvailable, toast]);
 
   const toggleChat = useCallback(() => {
     setShowChat(prev => !prev);
@@ -178,6 +206,18 @@ const MindMap = () => {
     setTimeout(applyLineBreaksToNodes, 200);
   }, []);
 
+  // If PDF load has been attempted and no PDF is available, show loading state
+  if (!pdfLoadAttempted) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg font-medium">Loading your document...</p>
+          <div className="mt-4 w-16 h-16 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={containerRef} className="h-screen flex flex-col overflow-hidden">
       {/* Header with all icons */}
@@ -185,7 +225,7 @@ const MindMap = () => {
         togglePdf={togglePdf}
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
-        isPdfActive={showPdf}
+        isPdfActive={showPdf && pdfAvailable}
         isChatActive={showChat}
         mindMap={mindMap}
       />
@@ -193,7 +233,7 @@ const MindMap = () => {
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 overflow-hidden">
         <PanelStructure 
-          showPdf={showPdf}
+          showPdf={showPdf && pdfAvailable}
           showChat={showChat}
           toggleChat={toggleChat}
           togglePdf={togglePdf}
