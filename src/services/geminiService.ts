@@ -711,9 +711,14 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     if (!pdfText || pdfText.trim() === '') {
       console.error("No PDF content available in sessionStorage");
       return `mindmap
-        root((Error))
-          No PDF Content
-            Please upload a PDF first`;
+  root((Error)):::important
+    No PDF Content
+      Please upload a PDF first
+      
+classDef important fill:#f96,stroke:#333,stroke-width:2px
+classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -735,9 +740,9 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     4. First level nodes use text on their own line with proper indentation
     5. You can use these node styles:
        - Regular text node (just text)
-       - Text in square brackets [Text]
-       - Text in parentheses (Text)
-       - Text in double parentheses ((Text))
+       - Text in square brackets [text]
+       - Text in parentheses (text)
+       - Text in double parentheses ((text))
     6. Max 3 levels of hierarchy
     7. Max 15 nodes total
     8. AVOID special characters that might break syntax
@@ -746,7 +751,8 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
         - root((Title)):::important
         - First level:::primary
         - Second level:::secondary
-    11. Add these class definitions at the end of the mindmap:
+    11. ADD CLASS DEFINITIONS AT THE ROOT LEVEL (not indented under any node) at the end like this:
+        
         classDef important fill:#f96,stroke:#333,stroke-width:2px
         classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
         classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
@@ -765,10 +771,10 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
           93% accuracy achieved:::success
           Compared to 85% baseline:::secondary
       
-      classDef important fill:#f96,stroke:#333,stroke-width:2px
-      classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-      classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-      classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050
+    classDef important fill:#f96,stroke:#333,stroke-width:2px
+    classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+    classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+    classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050
     
     Here's the document text:
     ${pdfText.slice(0, 10000)}
@@ -790,9 +796,14 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
   } catch (error) {
     console.error("Gemini API mindmap generation error:", error);
     return `mindmap
-      root((Error))
-        Failed to generate mindmap
-          Please try again`;
+  root((Error)):::important
+    Failed to generate mindmap
+      Please try again
+      
+classDef important fill:#f96,stroke:#333,stroke-width:2px
+classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
   }
 };
 
@@ -800,9 +811,14 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
 const cleanAndEnhanceMindmapSyntax = (code: string): string => {
   if (!code || !code.trim()) {
     return `mindmap
-      root((Error))
-        No Mindmap Generated
-          Please try again`;
+  root((Error)):::important
+    No Mindmap Generated
+      Please try again
+      
+classDef important fill:#f96,stroke:#333,stroke-width:2px
+classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
   }
 
   try {
@@ -812,21 +828,47 @@ const cleanAndEnhanceMindmapSyntax = (code: string): string => {
       cleaned = "mindmap\n" + cleaned;
     }
     
-    // Add class definitions if they don't exist
-    if (!cleaned.includes("classDef important")) {
-      cleaned += `\n
-      classDef important fill:#f96,stroke:#333,stroke-width:2px
-      classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
-      classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
-      classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
+    // Extract all class definitions and remove them from the main code
+    const classDefRegex = /classDef\s+\w+\s+[^]+?(?=classDef|\s*$)/g;
+    const classDefinitions: string[] = [];
+    
+    // Find all class definitions
+    const matches = cleaned.match(classDefRegex) || [];
+    matches.forEach(match => {
+      classDefinitions.push(match.trim());
+      cleaned = cleaned.replace(match, '');
+    });
+    
+    // Clean up the mindmap content by removing any class definitions that might be indented incorrectly
+    const lines = cleaned.split('\n');
+    const cleanedLines = lines.filter(line => !line.trim().startsWith('classDef'));
+    
+    // Build the final mindmap with class definitions at the root level
+    let finalMindmap = cleanedLines.join('\n').trim();
+    
+    // Add standard class definitions if none were found
+    if (classDefinitions.length === 0) {
+      finalMindmap += `\n
+classDef important fill:#f96,stroke:#333,stroke-width:2px
+classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
+    } else {
+      // Add the extracted class definitions at the root level
+      finalMindmap += '\n\n' + classDefinitions.join('\n');
     }
     
-    return cleaned;
+    return finalMindmap;
   } catch (error) {
     console.error("Error cleaning mindmap syntax:", error);
     return `mindmap
-      root((Error))
-        Syntax Cleaning Failed
-          Please try again`;
+  root((Error)):::important
+    Syntax Cleaning Failed
+      Please try again
+      
+classDef important fill:#f96,stroke:#333,stroke-width:2px
+classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
   }
 };
