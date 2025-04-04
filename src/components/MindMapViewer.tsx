@@ -548,7 +548,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       // Scale the mind map to fit better (slightly zoomed out)
       setTimeout(() => {
-        mind.scale(0.8); // Set to smaller initial scale
+        mind.scale(0.7); // Set to smaller initial scale (decreased from 0.8)
         mind.toCenter(); // Center the mind map
       }, 100);
       
@@ -700,5 +700,3 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {
     if (!nodeData) return;
-    
-    // Generate a simple summary from
