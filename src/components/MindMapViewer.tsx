@@ -698,4 +698,124 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   // Function to generate summaries for nodes and their children
-  const generateNodeSummary =
+  const generateNodeSummary = (nodeData: any) => {
+    if (!nodeData) return;
+    
+    // Get all text from node and its children
+    const extractNodeText = (node: any): string => {
+      let text = node.topic || '';
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => {
+          text += ' ' + extractNodeText(child);
+        });
+      }
+      
+      return text;
+    };
+    
+    const nodeText = extractNodeText(nodeData);
+    
+    // Show a temporary message that we're generating a summary
+    toast({
+      title: "Generating summary...",
+      description: "Analyzing the selected branch of your mind map."
+    });
+    
+    // Call the parent component with the text to explain
+    if (onExplainText) {
+      onExplainText(nodeText);
+    }
+    
+    // Request to open the chat panel if it's not already open
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      {/* Main mind map container */}
+      <div 
+        ref={containerRef} 
+        className="w-full h-full bg-white overflow-hidden"
+        style={{ visibility: isReady ? 'visible' : 'hidden' }}
+      />
+      
+      {/* Temporary right-click and pan instruction message */}
+      {showTempMessage && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm border border-purple-200 rounded-lg shadow-lg px-6 py-3 text-sm text-center z-50 max-w-md">
+          <p className="font-medium text-purple-800 mb-1">Mind Map Controls</p>
+          <p className="text-gray-600">
+            <strong>Right-click</strong> nodes for more options. <strong>Click and drag</strong> the background to pan.
+          </p>
+        </div>
+      )}
+      
+      {/* Zoom controls */}
+      <div className="absolute bottom-6 right-6 flex flex-col bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-200 overflow-hidden">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="p-2 h-10 rounded-none hover:bg-gray-100"
+          onClick={() => {
+            if (mindMapRef.current) {
+              const newScale = scale + 0.1;
+              mindMapRef.current.scale(newScale);
+              setScale(newScale);
+            }
+          }}
+        >
+          <ZoomIn className="h-5 w-5" />
+        </Button>
+        <div className="h-px bg-gray-200 w-full"></div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="p-2 h-10 rounded-none hover:bg-gray-100"
+          onClick={() => {
+            if (mindMapRef.current) {
+              const newScale = Math.max(0.3, scale - 0.1);
+              mindMapRef.current.scale(newScale);
+              setScale(newScale);
+            }
+          }}
+        >
+          <ZoomOut className="h-5 w-5" />
+        </Button>
+        <div className="h-px bg-gray-200 w-full"></div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="p-2 h-10 rounded-none hover:bg-gray-100"
+          onClick={() => {
+            if (mindMapRef.current) {
+              mindMapRef.current.toCenter();
+              mindMapRef.current.scale(0.65);
+              setScale(0.65);
+            }
+          }}
+        >
+          <RotateCcw className="h-5 w-5" />
+        </Button>
+      </div>
+      
+      {/* Summary dialog */}
+      {showSummary && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-auto">
+            <h3 className="text-lg font-medium mb-4">Summary</h3>
+            <div className="prose prose-purple max-w-none">
+              {summary}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => setShowSummary(false)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
