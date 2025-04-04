@@ -8,6 +8,7 @@ import {
   Image,
   FileJson,
   Upload,
+  GitBranch
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,7 @@ import {
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
 import PaperLogo from "@/components/PaperLogo";
+import MermaidMindMapModal from "@/components/mindmap/MermaidMindMapModal";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -40,6 +42,7 @@ const Header = ({
   mindMap
 }: HeaderProps) => {
   const [fileName, setFileName] = useState("mindmap");
+  const [showMermaidModal, setShowMermaidModal] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -154,6 +157,15 @@ const Header = ({
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
+
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowMermaidModal(true)} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Mindmap</span>
+          </Button>
         </div>
         
         {/* Right side - Action buttons and User Menu */}
@@ -187,6 +199,9 @@ const Header = ({
           <UserMenu />
         </div>
       </div>
+
+      {/* Mermaid Mindmap Modal */}
+      <MermaidMindMapModal open={showMermaidModal} onOpenChange={setShowMermaidModal} />
     </header>
   );
 };
