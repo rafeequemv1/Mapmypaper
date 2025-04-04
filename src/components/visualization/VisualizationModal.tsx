@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -247,7 +246,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
   const title = "Mind Map Visualization";
   
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
       <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] flex flex-col overflow-hidden p-4">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>{title}</DialogTitle>
