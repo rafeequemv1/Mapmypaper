@@ -11,7 +11,6 @@ import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
-import { VisualizerModalProvider } from "./contexts/VisualizerModalContext";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -26,29 +25,27 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <VisualizerModalProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <div className="relative">
-            <BrowserRouter>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/" element={<PdfUpload />} />
-                
-                {/* Protected routes */}
-                <Route element={<RequireAuth />}>
-                  <Route path="/mindmap" element={<MindMap />} />
-                </Route>
-                
-                {/* Catch-all route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </div>
-        </TooltipProvider>
-      </VisualizerModalProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <div className="relative">
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<PdfUpload />} />
+              
+              {/* Protected routes */}
+              <Route element={<RequireAuth />}>
+                <Route path="/mindmap" element={<MindMap />} />
+              </Route>
+              
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </div>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

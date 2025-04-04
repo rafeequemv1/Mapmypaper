@@ -11,6 +11,7 @@ import { storePDF } from "@/utils/pdfStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import UserMenu from "@/components/UserMenu";
 import { trackPdfUpload, trackFeatureUsage, trackMindMapGeneration, trackEvent } from "@/utils/analytics";
+import StatsDisplay from "@/components/StatsDisplay";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -235,6 +236,9 @@ const PdfUpload = () => {
           <p className="mt-4 text-sm text-gray-500 max-w-xl mx-auto">
             Perfect for visual learners, researchers, scientists, and students who want to quickly grasp and remember complex information.
           </p>
+          
+          {/* Statistics Display */}
+          <StatsDisplay className="mt-8 mb-6" />
         </div>
         
         {/* PDF Upload Box */}
