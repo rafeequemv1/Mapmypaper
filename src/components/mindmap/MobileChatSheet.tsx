@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import { getWelcomeMessage, exampleQuestions } from "@/utils/chatExampleQuestions";
 
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
@@ -18,7 +19,7 @@ const MobileChatSheet = ({
 }: MobileChatSheetProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
-    { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. I can help you understand the paper you\'ve uploaded. Feel free to ask questions about specific sections, figures, or concepts, and I\'ll provide explanations with citations to the relevant parts of the document. What aspect of the paper would you like to explore first?' }
+    { role: 'assistant', content: getWelcomeMessage(), isHtml: true }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -26,7 +27,6 @@ const MobileChatSheet = ({
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
   
-  // Activate citations in messages when they are rendered
   useEffect(() => {
     if (isSheetOpen) {
       setTimeout(() => {
@@ -114,6 +114,16 @@ const MobileChatSheet = ({
     
     processExplainImage();
   }, [explainImage, isSheetOpen, toast]);
+  
+  // Add a function to handle clicking on example questions
+  const handleExampleQuestionClick = (question: string) => {
+    setInputValue(question);
+    // Focus the textarea
+    const textarea = document.querySelector(".mobile-chat-input") as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.focus();
+    }
+  };
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
@@ -247,6 +257,23 @@ const MobileChatSheet = ({
                     message.content
                   )}
                   
+                  {/* Example questions buttons - only show for first welcome message */}
+                  {message.role === 'assistant' && i === 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {exampleQuestions.slice(0, 4).map((question, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs bg-white border-gray-200 hover:bg-gray-50 text-left justify-start"
+                          onClick={() => handleExampleQuestionClick(question)}
+                        >
+                          {question.length > 25 ? question.substring(0, 22) + '...' : question}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  
                   {message.role === 'assistant' && (
                     <Button 
                       variant="ghost" 
@@ -280,7 +307,7 @@ const MobileChatSheet = ({
         <div className="p-3 border-t mt-auto">
           <div className="flex gap-2">
             <textarea
-              className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none"
+              className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none mobile-chat-input"
               placeholder="Type your message..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
