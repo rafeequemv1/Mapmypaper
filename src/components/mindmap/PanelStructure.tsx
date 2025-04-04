@@ -29,6 +29,35 @@ const PanelStructure = ({
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const { toast } = useToast();
+  const [pdfKey, setPdfKey] = useState(Date.now());
+  
+  // Force refresh PDF component when the component mounts to avoid caching issues
+  useEffect(() => {
+    // Clear PDF data cache from sessionStorage to ensure fresh loading
+    const refreshPdf = () => {
+      try {
+        // Store the existing PDF data
+        const existingPdfData = sessionStorage.getItem("pdfData") || 
+                               sessionStorage.getItem("uploadedPdfData");
+        
+        if (existingPdfData) {
+          // Clear and reset with the timestamp to force refresh
+          sessionStorage.removeItem("pdfData");
+          sessionStorage.setItem("pdfData", existingPdfData);
+          
+          // Update the key to force component remount
+          setPdfKey(Date.now());
+          
+          console.log("PDF refreshed to avoid cache issues");
+        }
+      } catch (error) {
+        console.error("Error refreshing PDF:", error);
+      }
+    };
+    
+    // Run refresh on component mount
+    refreshPdf();
+  }, []);
   
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
@@ -44,6 +73,7 @@ const PanelStructure = ({
         <div className="h-full w-[40%] flex-shrink-0">
           <TooltipProvider>
             <PdfViewer 
+              key={pdfKey} // Add key to force remount when changed
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
             />
