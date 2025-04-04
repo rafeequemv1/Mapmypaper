@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
@@ -9,24 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { UploadCloud } from "lucide-react";
 import { storePDF as savePDF, clearPDF as clearPDFData } from '@/utils/pdfStorage';
 import { useNavigate } from 'react-router-dom';
+import { extractTextFromPDF } from '@/services/pdfService';
 
 // Import our wrapper instead of the original
 import StatsDisplayWrapper from '@/components/StatsDisplayWrapper';
-
-// Create a simple extractTextFromPDF function since the service is missing
-const extractTextFromPDF = async (file: File): Promise<string> => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      // In a real app, we would extract text from PDF
-      // This is a placeholder that returns some sample text
-      const text = `Sample text extracted from ${file.name}. 
-      This is a placeholder since we don't have the real PDF extraction service.`;
-      resolve(text);
-    };
-    reader.readAsArrayBuffer(file);
-  });
-};
 
 const PdfUpload: React.FC = () => {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -65,7 +50,7 @@ const PdfUpload: React.FC = () => {
       // Clear existing PDF data
       await clearPDFData();
 
-      // Save the PDF file
+      // Save the PDF file - now accepts File object directly
       await savePDF(pdfFile);
 
       // Extract text from PDF

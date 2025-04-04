@@ -1,4 +1,3 @@
-
 /**
  * PDF Storage utility - Uses IndexedDB for storing large PDF files
  * more reliably than sessionStorage
@@ -38,12 +37,20 @@ const initDB = (): Promise<IDBDatabase> => {
 
 /**
  * Store PDF data in IndexedDB
- * @param pdfData Base64 string representation of the PDF
+ * @param pdfData File object or Base64 string representation of the PDF
  * @returns Promise that resolves when storage is complete
  */
-export const storePDF = async (pdfData: string): Promise<void> => {
+export const storePDF = async (pdfData: File | string): Promise<void> => {
   try {
-    console.log('Storing PDF in IndexedDB, data length:', pdfData.length);
+    // Convert File to string if needed
+    let dataToStore: string;
+    if (pdfData instanceof File) {
+      dataToStore = await fileToBase64(pdfData);
+    } else {
+      dataToStore = pdfData;
+    }
+    
+    console.log('Storing PDF in IndexedDB, data length:', dataToStore.length);
     
     const db = await initDB();
     const transaction = db.transaction([STORE_NAME], 'readwrite');
@@ -52,7 +59,7 @@ export const storePDF = async (pdfData: string): Promise<void> => {
     // Store as a single object with id as key
     const storeRequest = store.put({
       id: PDF_KEY,
-      data: pdfData,
+      data: dataToStore,
       timestamp: Date.now()
     });
     
@@ -86,6 +93,21 @@ export const storePDF = async (pdfData: string): Promise<void> => {
     console.error('Error in storePDF:', error);
     throw new Error(`Failed to store PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+};
+
+/**
+ * Convert a File object to base64 string
+ */
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 };
 
 /**
