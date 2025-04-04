@@ -42,7 +42,7 @@ const Pricing = () => {
                 <p className="text-foreground/70 text-sm mb-6">Perfect for casual users and students</p>
                 
                 <div className="mb-6">
-                  <span className="text-3xl font-bold">₹0</span>
+                  <span className="text-3xl font-bold">$0</span>
                   <span className="text-foreground/70">/month</span>
                 </div>
                 
@@ -86,9 +86,8 @@ const Pricing = () => {
                 <p className="text-foreground/70 text-sm mb-6">For researchers and professionals</p>
                 
                 <div className="mb-6">
-                  <span className="text-3xl font-bold">₹599</span>
+                  <span className="text-3xl font-bold">$6.99</span>
                   <span className="text-foreground/70">/month</span>
-                  <div className="text-xs text-foreground/60 mt-1">Approximately $6.99 USD</div>
                 </div>
                 
                 <Button className="w-full mb-6">

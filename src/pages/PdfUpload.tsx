@@ -375,9 +375,9 @@ const PdfUpload = () => {
             
             <div className="feature-bg-5 p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
               <Clock className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Save Time</h3>
+              <h3 className="text-xl font-semibold mb-2">Auto-Summaries</h3>
               <p className="text-foreground/80">
-                Process papers in minutes instead of hours. Quick comprehension of key concepts, methodologies, and findings with auto-generated summaries.
+                Get instant AI-generated summaries of key paper sections. Quickly understand the core findings and methodology without reading the entire paper.
               </p>
             </div>
             

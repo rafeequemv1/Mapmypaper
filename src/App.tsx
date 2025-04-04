@@ -12,6 +12,8 @@ import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Contact from "./pages/Contact";
@@ -50,6 +52,8 @@ const App = () => (
                 {/* Protected routes */}
                 <Route element={<RequireAuth />}>
                   <Route path="/mindmap" element={<MindMap />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Route>
                 
                 {/* Catch-all route */}
