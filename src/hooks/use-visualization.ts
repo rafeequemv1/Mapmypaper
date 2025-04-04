@@ -75,9 +75,6 @@ export function useVisualization() {
           if (p1 === 'end') return '[End]';
           return match;
         });
-        
-        // Fix issues with nodes starting with o or x by adding space
-        validatedSyntax = validatedSyntax.replace(/---([ox])/g, '--- $1');
       }
       
       // Save the syntax for future use
