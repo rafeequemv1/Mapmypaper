@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -189,8 +188,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
-      // Initialize the mind map only once when it's generated
-      
       // Define a enhanced colorful theme based on the Catppuccin Theme
       const colorfulTheme = {
         name: 'Catppuccin',
@@ -350,7 +347,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         const observer = new MutationObserver((mutations) => {
           mutations.forEach(mutation => {
             if (mutation.addedNodes.length) {
-              mutation.addedNodes.forEach(node => {
+              mutations.addedNodes.forEach(node => {
                 if (node instanceof HTMLElement) {
                   // Style panel/node menu appeared - ensure it's visible
                   if (node.classList.contains('mind-elixir-style-panel') || 
@@ -703,104 +700,4 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     if (!nodeData) return;
     
     // Get all text from node and its children
-    const getNodeText = (node: any): string => {
-      let text = node.topic || '';
-      if (node.children && node.children.length > 0) {
-        const childrenText = node.children.map((child: any) => getNodeText(child)).join(' ');
-        text += ' ' + childrenText;
-      }
-      return text;
-    };
-    
-    // Generate a simple summary from node text
-    const nodeText = getNodeText(nodeData);
-    
-    // Show summary message
-    setSummary(nodeText);
-    setShowSummary(true);
-    
-    // If there's a callback for explaining text, use it
-    if (onExplainText) {
-      onExplainText(nodeText);
-    }
-    
-    // Open the chat panel if requested
-    if (onRequestOpenChat) {
-      onRequestOpenChat();
-    }
-  };
-  
-  // Function to handle zoom in
-  const handleZoomIn = () => {
-    if (mindMapRef.current) {
-      const currentScale = mindMapRef.current.scaleVal;
-      mindMapRef.current.scale(currentScale + 0.1);
-    }
-  };
-  
-  // Function to handle zoom out
-  const handleZoomOut = () => {
-    if (mindMapRef.current) {
-      const currentScale = mindMapRef.current.scaleVal;
-      // Don't allow zooming out too far
-      if (currentScale > 0.3) {
-        mindMapRef.current.scale(currentScale - 0.1);
-      }
-    }
-  };
-  
-  // Function to reset zoom and position
-  const handleReset = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.scale(0.7); // Reset to initial scale
-      mindMapRef.current.toCenter(); // Center the mind map
-    }
-  };
-  
-  return (
-    <div className="relative w-full h-full flex flex-col">
-      {/* Zoom controls */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-md shadow-md">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleZoomIn}
-          title="Zoom In"
-        >
-          <ZoomIn size={18} />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleZoomOut}
-          title="Zoom Out"
-        >
-          <ZoomOut size={18} />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleReset}
-          title="Reset View"
-        >
-          <RotateCcw size={18} />
-        </Button>
-      </div>
-      
-      {/* Mind map container */}
-      <div 
-        ref={containerRef} 
-        className="flex-1 h-full w-full overflow-hidden"
-      ></div>
-      
-      {/* Temporary message for map controls */}
-      {showTempMessage && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-sm animate-fade-in-out z-10 whitespace-nowrap">
-          Right-click on nodes for options • Click and drag to pan the map
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default MindMapViewer;
+    const

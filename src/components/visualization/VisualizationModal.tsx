@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, RefreshCw, X } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { VisualizationType } from "@/hooks/use-visualization";
 
 // Initialize mermaid with colorful theme settings
@@ -250,9 +250,6 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
       <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] flex flex-col overflow-hidden p-4">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>{title}</DialogTitle>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
         
         <Tabs 
