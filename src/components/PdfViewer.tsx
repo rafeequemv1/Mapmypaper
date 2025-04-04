@@ -1,13 +1,16 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, HelpCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "./ui/tooltip";
+import { useRef as useStateRef } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -36,6 +39,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const { toast } = useToast();
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
+    
+    // Text selection states
+    const [selectedText, setSelectedText] = useState<string>("");
+    const [selectionPosition, setSelectionPosition] = useState<{x: number, y: number} | null>(null);
+    const [showExplainTooltip, setShowExplainTooltip] = useState(false);
+    
+    // Store the onTextSelected callback in a ref to avoid stale closures
+    const onTextSelectedRef = useStateRef(onTextSelected);
 
     useEffect(() => {
       try {
@@ -66,13 +77,64 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Handle text selection
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
       const selection = window.getSelection();
-      if (selection && selection.toString().trim() !== "" && onTextSelected) {
+      if (selection && selection.toString().trim() !== "") {
         const text = selection.toString().trim();
         
-        // If text is selected and has minimum length, call the callback without showing tooltip
+        // If text is selected and has minimum length, show tooltip
         if (text.length > 2) {
-          onTextSelected(text);
+          setSelectedText(text);
+          
+          // Calculate position for tooltip
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          
+          // Get the position relative to viewport
+          setSelectionPosition({
+            x: rect.left + (rect.width / 2),
+            y: rect.top - 10 // Position it slightly above the selection
+          });
+          
+          setShowExplainTooltip(true);
         }
+      } else {
+        // Close the tooltip if no text is selected
+        setShowExplainTooltip(false);
+        setSelectionPosition(null);
+      }
+    };
+    
+    // Handle document click to hide tooltip when clicking elsewhere
+    useEffect(() => {
+      const handleDocumentClick = (e: MouseEvent) => {
+        // If clicking outside the selection and tooltip
+        if (showExplainTooltip && selectionPosition) {
+          // Check if the click is within the tooltip
+          const tooltipElement = document.querySelector('[data-explain-tooltip]');
+          if (tooltipElement && !tooltipElement.contains(e.target as Node)) {
+            // Get the current selection
+            const selection = window.getSelection();
+            // If there's no selection or it's empty, hide the tooltip
+            if (!selection || selection.toString().trim() === "") {
+              setShowExplainTooltip(false);
+              setSelectionPosition(null);
+            }
+          }
+        }
+      };
+      
+      document.addEventListener('mousedown', handleDocumentClick);
+      
+      return () => {
+        document.removeEventListener('mousedown', handleDocumentClick);
+      };
+    }, [showExplainTooltip, selectionPosition]);
+    
+    // Function to handle explain button click
+    const handleExplain = () => {
+      if (selectedText && onTextSelectedRef.current) {
+        onTextSelectedRef.current(selectedText);
+        setShowExplainTooltip(false);
+        setSelectionPosition(null);
       }
     };
 
@@ -402,7 +464,30 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
         {/* PDF Content with full width */}
         {pdfData ? (
-          <ScrollArea className="flex-1" ref={pdfContainerRef}>
+          <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
+            {/* Floating Explain Tooltip */}
+            {showExplainTooltip && selectionPosition && (
+              <div
+                className="absolute z-50 bg-white border rounded-md shadow-md px-3 py-2 flex items-center gap-2"
+                style={{
+                  left: `${selectionPosition.x}px`,
+                  top: `${selectionPosition.y}px`,
+                  transform: 'translate(-50%, -100%)',
+                }}
+                data-explain-tooltip
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-blue-600 hover:bg-blue-50 flex items-center gap-1"
+                  onClick={handleExplain}
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  <span>Explain</span>
+                </Button>
+              </div>
+            )}
+            
             <div 
               className="flex flex-col items-center py-4 relative"
               onMouseUp={handleDocumentMouseUp}
