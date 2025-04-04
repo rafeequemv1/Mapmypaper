@@ -107,8 +107,8 @@ const FlowchartModal: React.FC<FlowchartModalProps> = ({
               <ul className="list-disc pl-4 mt-1 space-y-1">
                 <li>Use <code>graph TD</code> for top-down flowcharts</li>
                 <li>Use <code>graph LR</code> for left-right flowcharts</li>
-                <li>Node shapes: [Rectangle], (Rounded), {`{{Rhombus}}`}, {`{Diamond}`}</li>
-                <li>Arrows: -->, --text-->, ==> (thick arrow)</li>
+                <li>Node shapes: [Rectangle], (Rounded), {'{{Rhombus}}'}, {'{'+'Diamond'+'}'}</li>
+                <li>Arrows: --{'>'}, --text--{'>'}, =={'>'} (thick arrow)</li>
                 <li>For more syntax, see the <a href="https://mermaid.js.org/syntax/flowchart.html" target="_blank" className="text-blue-500 hover:underline">Mermaid documentation</a></li>
               </ul>
             </div>
