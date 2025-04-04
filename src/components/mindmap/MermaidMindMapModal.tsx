@@ -6,6 +6,8 @@ import mermaid from "mermaid";
 import { Button } from "@/components/ui/button";
 import { generateMindmapFromPdf } from "@/services/geminiService";
 import { Loader } from "lucide-react";
+import { isPdfAvailable } from "@/utils/pdfStorage";
+import { useToast } from "@/hooks/use-toast";
 
 interface MermaidMindMapModalProps {
   open: boolean;
@@ -16,6 +18,7 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
   open,
   onOpenChange,
 }) => {
+  const { toast } = useToast();
   const [mermaidSyntax, setMermaidSyntax] = useState<string>(
 `mindmap
   root((MapMyPaper))
@@ -37,9 +40,13 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
         Future Research`
   );
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPdfLoaded, setIsPdfLoaded] = useState(false);
   
+  // Check if PDF is available when component mounts or modal opens
   useEffect(() => {
     if (open) {
+      checkPdfAvailability();
+      
       try {
         mermaid.initialize({
           startOnLoad: true,
@@ -56,18 +63,57 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
     }
   }, [open, mermaidSyntax]);
 
+  // Check if PDF content is available
+  const checkPdfAvailability = async () => {
+    const hasPdf = await isPdfAvailable();
+    setIsPdfLoaded(hasPdf);
+    
+    if (!hasPdf) {
+      console.log("No PDF content is available for generating a mindmap");
+    } else {
+      console.log("PDF content is available for mindmap generation");
+    }
+  };
+
   const handleSyntaxChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMermaidSyntax(e.target.value);
   };
 
   const handleGenerateFromPaper = async () => {
+    if (!isPdfLoaded) {
+      toast({
+        title: "No paper content available",
+        description: "Please upload a PDF paper first before generating a mindmap.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setIsGenerating(true);
       // Use Gemini to generate a mindmap syntax from the PDF content
       const generatedMindmap = await generateMindmapFromPdf();
-      setMermaidSyntax(generatedMindmap);
+      
+      if (generatedMindmap && generatedMindmap.trim() !== '') {
+        setMermaidSyntax(generatedMindmap);
+        toast({
+          title: "Mindmap generated",
+          description: "Successfully created mindmap from your paper content."
+        });
+      } else {
+        toast({
+          title: "Generation issue",
+          description: "Couldn't generate a proper mindmap. Please try again.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error("Error generating mindmap from paper:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate mindmap",
+        variant: "destructive"
+      });
     } finally {
       setIsGenerating(false);
       // Ensure mermaid re-renders the diagram
@@ -93,8 +139,9 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
                 size="sm" 
                 variant="outline" 
                 onClick={handleGenerateFromPaper}
-                disabled={isGenerating}
+                disabled={isGenerating || !isPdfLoaded}
                 className="text-xs"
+                title={!isPdfLoaded ? "Upload a PDF first to enable this feature" : ""}
               >
                 {isGenerating ? (
                   <>

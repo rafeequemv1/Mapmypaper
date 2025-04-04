@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -710,6 +709,7 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     const pdfText = sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
+      console.error("No PDF content available in sessionStorage");
       return `mindmap
         root((Error))
           No PDF Content
@@ -719,15 +719,19 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
+    console.log("Generating mindmap from PDF text, length:", pdfText.length);
+    
     const prompt = `
     Create a valid Mermaid mindmap based on this document text. 
     
-    IMPORTANT: Use ACTUAL SPECIFIC content from the document, not generic labels.
+    IMPORTANT: 
+    1. Use ACTUAL SPECIFIC content from the document, not generic labels.
+    2. Include colors for better visualization using the Mermaid color syntax.
     
     CRITICAL MERMAID SYNTAX RULES:
     1. Start with 'mindmap'
     2. Use proper indentation for hierarchy
-    3. Root node must use this exact syntax: root((Paper Title))
+    3. Root node must use this exact syntax: root((Paper Title)):::important
     4. First level nodes use text on their own line with proper indentation
     5. You can use these node styles:
        - Regular text node (just text)
@@ -738,22 +742,36 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
     7. Max 15 nodes total
     8. AVOID special characters that might break syntax
     9. NEVER use class declarations like "class node className"
+    10. ADD COLORS using three colons followed by a class name, like this:
+        - root((Title)):::important
+        - First level:::primary
+        - Second level:::secondary
+    11. Add these class definitions at the end of the mindmap:
+        classDef important fill:#f96,stroke:#333,stroke-width:2px
+        classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+        classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+        classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050
     
     EXAMPLE CORRECT SYNTAX:
     mindmap
-      root((Research on Machine Learning))
-        Introduction
-          Background on neural networks
-          Problem of overfitting data
-        Methodology
-          LSTM architecture used
-          Training on 50,000 examples
-        Results
-          93% accuracy achieved
-          Compared to 85% baseline
+      root((Research on Machine Learning)):::important
+        Introduction:::primary
+          Background on neural networks:::secondary
+          Problem of overfitting data:::secondary
+        Methodology:::primary
+          LSTM architecture used:::secondary
+          Training on 50,000 examples:::success
+        Results:::primary
+          93% accuracy achieved:::success
+          Compared to 85% baseline:::secondary
+      
+      classDef important fill:#f96,stroke:#333,stroke-width:2px
+      classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+      classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+      classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050
     
     Here's the document text:
-    ${pdfText.slice(0, 8000)}
+    ${pdfText.slice(0, 10000)}
     
     Generate ONLY valid Mermaid mindmap code with SPECIFIC content from the document, nothing else.
     `;
@@ -768,72 +786,5 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
       .replace(/```\s?/g, "")
       .trim();
     
-    return cleanMindmapSyntax(mermaidCode);
-  } catch (error) {
-    console.error("Gemini API mindmap generation error:", error);
-    return `mindmap
-      root((Error))
-        Failed to generate mindmap
-          Please try again`;
-  }
-};
-
-// Helper function to clean and fix common Mermaid mindmap syntax issues
-const cleanMindmapSyntax = (code: string): string => {
-  if (!code || !code.trim()) {
-    return `mindmap
-      root((Error))
-        Empty mindmap
-          Please try again`;
-  }
-
-  try {
-    // Ensure the code starts with mindmap directive
-    let cleaned = code.trim();
-    if (!cleaned.startsWith("mindmap")) {
-      cleaned = "mindmap\n" + cleaned;
-    }
-
-    // Process line by line to ensure each line is valid
-    const lines = cleaned.split('\n');
-    const validLines: string[] = [];
-    
-    lines.forEach(line => {
-      const trimmedLine = line.trim();
-      
-      // Skip empty lines and keep comments
-      if (trimmedLine === '' || trimmedLine.startsWith('%')) {
-        validLines.push(line);
-        return;
-      }
-      
-      // Keep mindmap directive
-      if (trimmedLine.startsWith('mindmap')) {
-        validLines.push(line);
-        return;
-      }
-      
-      // Remove semicolons which can cause issues
-      let fixedLine = line;
-      fixedLine = fixedLine.replace(/;/g, "");
-      
-      // Remove special characters that might break the syntax
-      fixedLine = fixedLine.replace(/[<>]/g, m => m === '<' ? '(' : ')');
-      
-      // CRITICAL: Remove class declarations that could cause errors
-      if (fixedLine.includes("class ")) {
-        fixedLine = fixedLine.split("class ")[0].trim();
-      }
-      
-      validLines.push(fixedLine);
-    });
-    
-    return validLines.join('\n');
-  } catch (error) {
-    console.error("Error cleaning mindmap syntax:", error);
-    return `mindmap
-      root((Error))
-        Syntax Cleaning Failed
-          Please try again`;
-  }
-};
+    return cleanAndEnhanceMindmapSyntax(mermaidCode);
+  } catch (
