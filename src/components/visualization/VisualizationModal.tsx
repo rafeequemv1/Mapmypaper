@@ -36,7 +36,7 @@ mermaid.initialize({
     curve: 'basis',
     useMaxWidth: false,
     htmlLabels: true,
-    defaultRenderer: 'dagre' // Default renderer for flowcharts
+    defaultRenderer: 'dagre-wrapper' // Changed from 'dagre' to 'dagre-wrapper'
   },
   mindmap: {
     padding: 16,

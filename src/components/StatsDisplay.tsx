@@ -1,10 +1,13 @@
+
 import { useEffect, useState } from "react";
 import { getUsageStatistics } from "@/utils/analytics";
 import { Skeleton } from "./ui/skeleton";
+
 interface StatsDisplayProps {
   className?: string;
   refreshInterval?: number; // In milliseconds
 }
+
 const StatsDisplay = ({
   className = "",
   refreshInterval = 60000 // Default refresh every minute
@@ -15,6 +18,7 @@ const StatsDisplay = ({
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -46,6 +50,31 @@ const StatsDisplay = ({
       }
     };
   }, [refreshInterval]);
-  return;
+
+  // Return JSX with stat display
+  return (
+    <div className={`flex justify-center gap-8 ${className}`}>
+      {loading ? (
+        <>
+          <Skeleton className="h-14 w-32" />
+          <Skeleton className="h-14 w-32" />
+        </>
+      ) : error ? (
+        <p className="text-sm text-red-500">{error}</p>
+      ) : stats ? (
+        <>
+          <div className="text-center">
+            <p className="text-3xl font-bold">{stats.papersAnalyzed.toLocaleString()}</p>
+            <p className="text-gray-500 text-sm">Papers Analyzed</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold">{stats.researchersCount.toLocaleString()}</p>
+            <p className="text-gray-500 text-sm">Researchers</p>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
 };
+
 export default StatsDisplay;
