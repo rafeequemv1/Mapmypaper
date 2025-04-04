@@ -61,33 +61,42 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
     if (!mermaidContainerRef.current || !open) return;
     
     try {
-      console.log("Rendering mindmap with syntax length:", mermaidSyntax.length);
+      console.log("Rendering mindmap with syntax:", mermaidSyntax);
       
-      // Clear the container and set new content
-      mermaidContainerRef.current.innerHTML = '';
-      mermaidContainerRef.current.className = 'mermaid';
-      mermaidContainerRef.current.textContent = mermaidSyntax;
+      // The key fix: completely recreate the mermaid container element
+      const container = mermaidContainerRef.current;
+      container.innerHTML = ''; // Clear existing content
+      
+      // Create a new pre element with class mermaid
+      const pre = document.createElement('pre');
+      pre.className = 'mermaid';
+      pre.textContent = mermaidSyntax;
+      
+      // Add it to the container
+      container.appendChild(pre);
       
       // Force mermaid to process the content
-      mermaid.contentLoaded();
+      setTimeout(() => {
+        mermaid.contentLoaded();
+      }, 10);
     } catch (error) {
       console.error("Error rendering mermaid diagram:", error);
     }
   };
   
-  // Re-render mermaid diagram whenever syntax changes or modal opens
+  // Re-render mermaid diagram whenever syntax changes
+  useEffect(() => {
+    if (open) {
+      renderMindmap();
+    }
+  }, [mermaidSyntax, open]);
+  
+  // Check if PDF content is available when modal opens
   useEffect(() => {
     if (open) {
       checkPdfAvailability();
-      
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        renderMindmap();
-      }, 200);
-      
-      return () => clearTimeout(timer);
     }
-  }, [open, mermaidSyntax]);
+  }, [open]);
 
   // Check if PDF content is available
   const checkPdfAvailability = async () => {
@@ -126,11 +135,6 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
           title: "Mindmap generated",
           description: "Successfully created mindmap from your paper content."
         });
-        
-        // Force re-render of the mermaid diagram after setting new syntax
-        setTimeout(() => {
-          renderMindmap();
-        }, 300);
       } else {
         toast({
           title: "Generation issue",
@@ -199,7 +203,7 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
           <div className="w-full md:w-3/5 border rounded-md p-4 overflow-auto bg-white">
             <p className="text-sm text-muted-foreground mb-2">Preview</p>
             <div className="mermaid-container overflow-auto">
-              <div ref={mermaidContainerRef} className="mermaid"></div>
+              <div ref={mermaidContainerRef} className="mermaid-render"></div>
             </div>
           </div>
         </div>
