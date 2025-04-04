@@ -787,4 +787,46 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
       .trim();
     
     return cleanAndEnhanceMindmapSyntax(mermaidCode);
-  } catch (
+  } catch (error) {
+    console.error("Gemini API mindmap generation error:", error);
+    return `mindmap
+      root((Error))
+        Failed to generate mindmap
+          Please try again`;
+  }
+};
+
+// Helper function to clean and enhance mindmap syntax
+const cleanAndEnhanceMindmapSyntax = (code: string): string => {
+  if (!code || !code.trim()) {
+    return `mindmap
+      root((Error))
+        No Mindmap Generated
+          Please try again`;
+  }
+
+  try {
+    // Ensure the code starts with mindmap directive
+    let cleaned = code.trim();
+    if (!cleaned.startsWith("mindmap")) {
+      cleaned = "mindmap\n" + cleaned;
+    }
+    
+    // Add class definitions if they don't exist
+    if (!cleaned.includes("classDef important")) {
+      cleaned += `\n
+      classDef important fill:#f96,stroke:#333,stroke-width:2px
+      classDef primary fill:#bbf,stroke:#33f,stroke-width:1px,color:#003
+      classDef secondary fill:#faa,stroke:#a33,stroke-width:1px,color:#500
+      classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`;
+    }
+    
+    return cleaned;
+  } catch (error) {
+    console.error("Error cleaning mindmap syntax:", error);
+    return `mindmap
+      root((Error))
+        Syntax Cleaning Failed
+          Please try again`;
+  }
+};
