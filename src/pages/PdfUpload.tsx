@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Upload, ExternalLink, Braces, GitBranch } from "lucide-react";
+import { Upload, ExternalLink, Braces, GitBranch, BookOpen, MessageSquare, DownloadCloud, Brain, FlowChart, BarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import PaperLogo from "@/components/PaperLogo";
@@ -195,6 +195,7 @@ const PdfUpload = () => {
       setIsProcessing(false);
     }
   }, [selectedFile, navigate, toast, user]);
+  
   return <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
       {/* Header */}
       <header className="w-full bg-white shadow-sm py-4 px-6">
@@ -205,8 +206,8 @@ const PdfUpload = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <a href="#about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">About</a>
             <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Features</a>
+            <a href="#about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">About</a>
             
             {selectedFile && <>
                 
@@ -262,7 +263,68 @@ const PdfUpload = () => {
           {extractionError && <p className="text-red-500 text-sm mt-4">{extractionError}</p>}
         </div>
         
-        {/* Keeping space below empty as requested */}
+        {/* Features Section */}
+        <div id="features" className="w-full max-w-5xl mt-24 mb-12">
+          <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Feature 1 - Mind Map */}
+            <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+                <Brain className="h-6 w-6 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-xl mb-2">Interactive Mind Maps</h3>
+              <p className="text-gray-600">Transform research papers into visual knowledge maps that help you understand complex concepts faster.</p>
+            </div>
+            
+            {/* Feature 2 - Chatbot */}
+            <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                <MessageSquare className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-xl mb-2">AI Research Assistant</h3>
+              <p className="text-gray-600">Chat with your papers to get explanations, summaries, and insights without reading every detail.</p>
+            </div>
+            
+            {/* Feature 3 - Flowcharts */}
+            <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                <FlowChart className="h-6 w-6 text-orange-600" />
+              </div>
+              <h3 className="font-semibold text-xl mb-2">Flowcharts & Visualizations</h3>
+              <p className="text-gray-600">Automatically generate flowcharts to understand processes and methodologies in your research papers.</p>
+            </div>
+            
+            {/* Feature 4 - Save Time */}
+            <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <BookOpen className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-xl mb-2">Faster Comprehension</h3>
+              <p className="text-gray-600">Reduce reading time by up to 60% while improving understanding and retention of key concepts.</p>
+            </div>
+            
+            {/* Feature 5 - Visual Learning */}
+            <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center mb-4">
+                <BarChart className="h-6 w-6 text-pink-600" />
+              </div>
+              <h3 className="font-semibold text-xl mb-2">Visual Learning</h3>
+              <p className="text-gray-600">Leverage visual representations for better information retention and improved learning outcomes.</p>
+            </div>
+            
+            {/* Feature 6 - Export & Download */}
+            <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center mb-4">
+                <DownloadCloud className="h-6 w-6 text-teal-600" />
+              </div>
+              <h3 className="font-semibold text-xl mb-2">Export & Download</h3>
+              <p className="text-gray-600">Save your visualizations as images to include in presentations, notes, or share with colleagues.</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Empty space below as requested */}
         <div className="flex-grow"></div>
       </div>
       
@@ -284,8 +346,8 @@ const PdfUpload = () => {
               <h3 className="font-medium mb-4">Links</h3>
               <ul className="space-y-2 text-sm">
                 <li><a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Home</a></li>
-                <li><a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">About</a></li>
                 <li><a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a></li>
+                <li><a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">About</a></li>
                 <li><a href="/auth" className="text-gray-600 hover:text-gray-900 transition-colors">Sign In</a></li>
                 <li>
                   <a href="https://blog.mapmypaper.com" className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1" target="_blank" rel="noopener noreferrer">
