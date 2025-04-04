@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "./ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useRef as useStateRef } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 

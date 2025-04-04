@@ -43,6 +43,25 @@ export const formatAIResponse = (content: string): string => {
     }
   );
   
+  // Handle figure and table references more elegantly
+  formattedContent = formattedContent.replace(
+    /(figure|fig\.|table|equation|eq\.) (\d+)/gi,
+    (match, refType, refNum) => {
+      // Extract page from context if possible
+      const pageMatch = match.match(/page\s*(\d+)/i);
+      const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : null;
+      const validPageNumber = pageNumber && pageNumber > 0 && pageNumber <= 7 ? pageNumber : null;
+      
+      // Create citation span with appropriate data attribute
+      const typeFormatted = refType.charAt(0).toUpperCase() + refType.slice(1).toLowerCase();
+      if (validPageNumber) {
+        return `<span class="citation" data-citation="page${validPageNumber}" role="button" tabindex="0" title="Click to view ${typeFormatted} ${refNum} on page ${validPageNumber}"><strong class="text-primary">${typeFormatted} ${refNum}</strong></span>`;
+      } else {
+        return `<strong class="text-primary">${typeFormatted} ${refNum}</strong>`;
+      }
+    }
+  );
+  
   // Standard citation format as fallback - showing citation text in circles
   formattedContent = formattedContent.replace(
     /\[citation:([^\]]+)\]/g, 
