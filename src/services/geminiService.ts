@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -248,7 +249,7 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
     
     console.log("Prepared base64 image length:", base64Image.length);
     
-    const prompt = `
+    const promptText = `
       You are an AI research assistant helping a user understand content from an academic PDF. 
       The user has shared a snapshot from the PDF document. 
       
@@ -267,9 +268,9 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
     
     console.log("Sending prompt to Gemini for image analysis");
     
-    // Create properly typed parts for the generation
-    const parts: Part[] = [
-      { text: prompt },
+    // Create content parts for the Gemini API
+    const content: Array<Part> = [
+      { text: promptText },
       {
         inlineData: {
           mimeType: "image/jpeg",
@@ -279,7 +280,7 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
     ];
     
     // Generate content with the image
-    const result = await model.generateContent(parts);
+    const result = await model.generateContent(content);
     const response = await result.response;
     const generatedText = response.text();
     
