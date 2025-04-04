@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
 const apiKey = "AIzaSyDTLG_PFXTvuYCOS_i8eP-btQWAJDb5rDk";
@@ -267,14 +267,12 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
     
     console.log("Sending prompt to Gemini for image analysis");
     
-    // Create parts for the generation
-    const parts = [
-      {
-        text: prompt
-      },
+    // Create properly typed parts for the generation
+    const parts: Part[] = [
+      { text: prompt },
       {
         inlineData: {
-          mimeType: "image/png",
+          mimeType: "image/jpeg",
           data: base64Image
         }
       }
