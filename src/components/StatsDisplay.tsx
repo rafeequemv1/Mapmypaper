@@ -5,9 +5,13 @@ import { Skeleton } from "./ui/skeleton";
 
 interface StatsDisplayProps {
   className?: string;
+  refreshInterval?: number; // In milliseconds
 }
 
-const StatsDisplay = ({ className = "" }: StatsDisplayProps) => {
+const StatsDisplay = ({ 
+  className = "", 
+  refreshInterval = 60000 // Default refresh every minute
+}: StatsDisplayProps) => {
   const [stats, setStats] = useState<{
     papersAnalyzed: number;
     researchersCount: number;
@@ -27,13 +31,27 @@ const StatsDisplay = ({ className = "" }: StatsDisplayProps) => {
       }
     };
 
+    // Initial fetch
     fetchStats();
-  }, []);
+    
+    // Set up periodic refresh if interval > 0
+    let intervalId: number | undefined;
+    if (refreshInterval > 0) {
+      intervalId = window.setInterval(fetchStats, refreshInterval);
+    }
+    
+    // Clean up on unmount
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [refreshInterval]);
 
   return (
     <div className={`flex flex-wrap justify-center gap-8 ${className}`}>
       <div className="text-center">
-        {loading ? (
+        {loading && !stats ? (
           <Skeleton className="h-10 w-24 mb-2" />
         ) : (
           <div className="text-3xl font-bold text-blue-600">
@@ -44,7 +62,7 @@ const StatsDisplay = ({ className = "" }: StatsDisplayProps) => {
       </div>
       
       <div className="text-center">
-        {loading ? (
+        {loading && !stats ? (
           <Skeleton className="h-10 w-24 mb-2" />
         ) : (
           <div className="text-3xl font-bold text-blue-600">

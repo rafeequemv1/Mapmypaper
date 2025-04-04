@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { storePDF } from "@/utils/pdfStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import UserMenu from "@/components/UserMenu";
-import { trackPdfUpload } from "@/utils/analytics";
+import { trackPdfUpload, trackFeatureUsage, trackMindMapGeneration, trackEvent } from "@/utils/analytics";
 import StatsDisplay from "@/components/StatsDisplay";
 
 const PdfUpload = () => {
@@ -75,7 +75,7 @@ const PdfUpload = () => {
     const sizeMB = (file.size / 1024 / 1024).toFixed(2);
     const sizeWarning = parseFloat(sizeMB) > 15;
     
-    // Track the PDF upload event
+    // Track the PDF upload event with more details
     trackPdfUpload(file.name, file.size);
     
     toast({
@@ -105,6 +105,8 @@ const PdfUpload = () => {
       sessionStorage.setItem('pendingPdfProcessing', 'true');
       // Save the selected file name to session storage for better UX
       sessionStorage.setItem('pendingPdfName', selectedFile.name);
+      // Track this event
+      trackFeatureUsage('mindmap_generation_login_redirect');
       // Redirect to login page
       navigate("/auth");
       return;
@@ -173,6 +175,9 @@ const PdfUpload = () => {
       // Store the generated mind map data in sessionStorage
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
       
+      // Track successful mind map generation
+      trackMindMapGeneration(selectedFile.name);
+      
       // Navigate to the mind map view
       toast({
         title: "Success",
@@ -182,6 +187,14 @@ const PdfUpload = () => {
     } catch (error) {
       console.error("Error processing PDF:", error);
       setExtractionError(error instanceof Error ? error.message : "Failed to process PDF");
+      
+      // Track error event
+      trackEvent('mindmap_generation_error', {
+        error_message: error instanceof Error ? error.message : "Unknown error",
+        pdf_name: selectedFile.name,
+        pdf_size: selectedFile.size
+      });
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to process PDF",
