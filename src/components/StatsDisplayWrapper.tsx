@@ -7,7 +7,6 @@ export interface StatsDisplayProps {
   refreshInterval?: number;
 }
 
-// Fix the component to properly return JSX
 const StatsDisplayWrapper: React.FC<StatsDisplayProps> = ({ className, refreshInterval }) => {
   return <StatsDisplay className={className} refreshInterval={refreshInterval} />;
 };

@@ -1,38 +1,23 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { UploadCloud } from "lucide-react";
-import { storePDF as savePDF, clearPDF as clearPDFData } from '@/utils/pdfStorage';
-import { useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
+import { UploadCloud } from "lucide-react"
+import { savePDF, clearPDFData } from '@/utils/pdfStorage';
+import { extractTextFromPDF } from '@/services/pdfService';
+import { useRouter } from 'next/router';
 
 // Import our wrapper instead of the original
 import StatsDisplayWrapper from '@/components/StatsDisplayWrapper';
-
-// Create a simple extractTextFromPDF function since the service is missing
-const extractTextFromPDF = async (file: File): Promise<string> => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      // In a real app, we would extract text from PDF
-      // This is a placeholder that returns some sample text
-      const text = `Sample text extracted from ${file.name}. 
-      This is a placeholder since we don't have the real PDF extraction service.`;
-      resolve(text);
-    };
-    reader.readAsArrayBuffer(file);
-  });
-};
 
 const PdfUpload: React.FC = () => {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfText, setPdfText] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const navigate = useNavigate();
+  const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,8 +66,8 @@ const PdfUpload: React.FC = () => {
         description: `${pdfFile.name} has been uploaded and processed.`,
       });
 
-      // Redirect to the mindmap page using react-router
-      navigate('/MindMap');
+      // Redirect to the mindmap page
+      router.push('/MindMap');
     } catch (error: any) {
       console.error("Error during upload and processing:", error);
       toast({
