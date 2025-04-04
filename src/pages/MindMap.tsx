@@ -4,6 +4,8 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
+import { retrievePDF } from "@/utils/pdfStorage";
+import { Loader } from "lucide-react";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -15,15 +17,17 @@ const MindMap = () => {
   const { toast } = useToast();
   const [textExplainProcessed, setTextExplainProcessed] = useState(false);
   const [pdfLoadAttempted, setPdfLoadAttempted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
-    const checkPdfAvailability = () => {
+    const checkPdfAvailability = async () => {
       try {
-        // Check if PDF data exists in either storage key
-        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+        setIsLoading(true);
+        // Check if PDF data exists using our utility function that checks both IndexedDB and sessionStorage
+        const pdfData = await retrievePDF();
         const hasPdfData = !!pdfData;
         
         console.log("PDF check on mount - available:", hasPdfData, "PDF data length:", pdfData ? pdfData.length : 0);
@@ -46,20 +50,13 @@ const MindMap = () => {
         
         // Keep PDF panel visible if data is available
         setShowPdf(hasPdfData);
-        
-        // Ensure PDF data is stored with the consistent key name
-        if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
-          sessionStorage.setItem('pdfData', sessionStorage.getItem('uploadedPdfData')!);
-        }
-        
-        if (sessionStorage.getItem('pdfData') && !sessionStorage.getItem('uploadedPdfData')) {
-          sessionStorage.setItem('uploadedPdfData', sessionStorage.getItem('pdfData')!);
-        }
       } catch (error) {
         console.error("Error checking PDF availability:", error);
         setPdfAvailable(false);
         setShowPdf(false);
         setPdfLoadAttempted(true);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -206,13 +203,13 @@ const MindMap = () => {
     setTimeout(applyLineBreaksToNodes, 200);
   }, []);
 
-  // If PDF load has been attempted and no PDF is available, show loading state
-  if (!pdfLoadAttempted) {
+  // Loading state
+  if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin mx-auto mb-4 text-gray-400" />
           <p className="text-lg font-medium">Loading your document...</p>
-          <div className="mt-4 w-16 h-16 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
         </div>
       </div>
     );

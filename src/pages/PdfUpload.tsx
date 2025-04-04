@@ -122,7 +122,17 @@ const PdfUpload = () => {
       // Wait for the file to be read and store it
       const base64data = await readerPromise;
       console.log("PDF loaded, storing data...");
+      
+      // Store in both IndexedDB and SessionStorage (for backwards compatibility)
       await storePDF(base64data);
+      
+      // Also set a marker in SessionStorage that will be used for quick availability checks
+      try {
+        sessionStorage.setItem('pdfAvailable', 'true');
+      } catch (e) {
+        console.warn('Could not set pdfAvailable marker in sessionStorage, but IndexedDB storage succeeded');
+      }
+      
       console.log("PDF data stored successfully");
       
       // Extract text from PDF

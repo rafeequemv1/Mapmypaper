@@ -32,12 +32,14 @@ const PanelStructure = ({
   const { toast } = useToast();
   const [pdfKey, setPdfKey] = useState(Date.now());
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [loadingPdf, setLoadingPdf] = useState(true);
   
   // Check for PDF availability when component mounts
   useEffect(() => {
     const checkPdfAvailability = async () => {
       try {
         console.log("Checking for PDF data in storage...");
+        setLoadingPdf(true);
         
         // Try to retrieve PDF from IndexedDB (which will also check session storage)
         const pdfData = await retrievePDF();
@@ -63,11 +65,13 @@ const PanelStructure = ({
           description: "There was a problem loading your PDF. Please try uploading it again.",
           variant: "destructive",
         });
+      } finally {
+        setLoadingPdf(false);
       }
     };
     
     // Run check with a slight delay to ensure storage is checked after navigation
-    setTimeout(checkPdfAvailability, 300);
+    checkPdfAvailability();
   }, [toast]);
   
   const handlePdfLoaded = () => {

@@ -64,6 +64,7 @@ export const storePDF = async (pdfData: string): Promise<void> => {
         try {
           // Store a marker in sessionStorage to indicate IndexedDB is used
           sessionStorage.setItem('pdfStorageMethod', 'indexedDB');
+          sessionStorage.setItem('pdfAvailable', 'true');
         } catch (e) {
           // Ignore session storage errors - IndexedDB is our primary storage
           console.log('Could not update sessionStorage, but IndexedDB storage succeeded');
@@ -92,6 +93,16 @@ export const storePDF = async (pdfData: string): Promise<void> => {
  * @returns Promise that resolves with the PDF data
  */
 export const retrievePDF = async (): Promise<string | null> => {
+  // First try session storage for a quick check if PDF exists
+  try {
+    const pdfAvailable = sessionStorage.getItem('pdfAvailable');
+    if (pdfAvailable !== 'true') {
+      console.log('Quick check - no PDF marker in sessionStorage');
+    }
+  } catch (e) {
+    // Ignore session storage errors
+  }
+  
   try {
     const db = await initDB();
     const transaction = db.transaction([STORE_NAME], 'readonly');
@@ -103,6 +114,14 @@ export const retrievePDF = async (): Promise<string | null> => {
         const result = getRequest.result;
         if (result) {
           console.log('PDF retrieved from IndexedDB, length:', result.data.length);
+          
+          // Update session storage marker
+          try {
+            sessionStorage.setItem('pdfAvailable', 'true');
+          } catch (e) {
+            // Ignore session storage errors
+          }
+          
           resolve(result.data);
         } else {
           console.log('No PDF found in IndexedDB, checking sessionStorage');
@@ -116,8 +135,10 @@ export const retrievePDF = async (): Promise<string | null> => {
               // Migrate to IndexedDB for future use
               storePDF(pdfFromSession)
                 .catch(err => console.error('Migration to IndexedDB failed:', err));
+              
+              return resolve(pdfFromSession);
             }
-            resolve(pdfFromSession);
+            resolve(null);
           } catch (e) {
             console.error('Error reading from sessionStorage:', e);
             resolve(null);
@@ -165,6 +186,7 @@ export const clearPDF = async (): Promise<void> => {
       sessionStorage.removeItem('pdfData');
       sessionStorage.removeItem('uploadedPdfData');
       sessionStorage.removeItem('pdfStorageMethod');
+      sessionStorage.removeItem('pdfAvailable');
     } catch (e) {
       console.log('Error clearing sessionStorage:', e);
     }
@@ -183,6 +205,31 @@ export const clearPDF = async (): Promise<void> => {
     });
   } catch (error) {
     console.error('Error in clearPDF:', error);
+  }
+};
+
+/**
+ * Check if a PDF is available in storage (quick check)
+ * @returns Promise that resolves with a boolean indicating availability
+ */
+export const isPdfAvailable = async (): Promise<boolean> => {
+  // Try session storage first for a quick check
+  try {
+    const markerExists = sessionStorage.getItem('pdfAvailable') === 'true';
+    if (markerExists) {
+      return true;
+    }
+  } catch (e) {
+    // Ignore session storage errors
+  }
+  
+  // If not in session storage, check IndexedDB
+  try {
+    const pdfData = await retrievePDF();
+    return !!pdfData;
+  } catch (error) {
+    console.error('Error checking PDF availability:', error);
+    return false;
   }
 };
 
