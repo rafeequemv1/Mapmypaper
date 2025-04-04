@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +8,7 @@ import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import html2canvas from 'html2canvas';
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -84,12 +84,28 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Improved area selection capture
+    // Improved area selection capture with better error handling and debugging
     const captureSelectedArea = () => {
-      if (!selectionRect || !pdfContainerRef.current) return;
+      if (!selectionRect || !pdfContainerRef.current) {
+        console.error("Cannot capture: missing selection rectangle or container reference");
+        toast({
+          title: "Capture failed",
+          description: "Invalid selection area. Please try drawing the rectangle again.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       const viewportElement = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (!viewportElement) return;
+      if (!viewportElement) {
+        console.error("Cannot capture: viewport element not found");
+        toast({
+          title: "Capture failed",
+          description: "PDF viewer element not found. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       // Show a capturing toast
       toast({
@@ -97,74 +113,118 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         description: "Please wait while we process the selection.",
       });
       
-      console.log("Starting area capture process");
+      console.log("Starting area capture process", {
+        selection: selectionRect,
+        viewportElement: viewportElement
+      });
       
-      // Use html2canvas to capture the selection
+      // Pre-load the html2canvas library to avoid delays
       import('html2canvas').then(({ default: html2canvas }) => {
-        console.log("html2canvas loaded, starting capture");
+        console.log("html2canvas loaded, starting capture with scale:", window.devicePixelRatio);
+        
         html2canvas(viewportElement as HTMLElement, {
-          scale: window.devicePixelRatio,
-          logging: false,
+          scale: window.devicePixelRatio || 2,
+          logging: true,
           useCORS: true,
           allowTaint: true,
+          backgroundColor: null,
+          imageTimeout: 15000, // Extend timeout for large PDFs
         }).then(canvas => {
-          console.log("Canvas capture complete");
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            console.error("Failed to get canvas context");
-            return;
-          }
-          
-          // Create a new canvas for just the selection
-          const selectedCanvas = document.createElement('canvas');
-          selectedCanvas.width = selectionRect.width;
-          selectedCanvas.height = selectionRect.height;
-          const selectedCtx = selectedCanvas.getContext('2d');
-          if (!selectedCtx) {
-            console.error("Failed to get selected canvas context");
-            return;
-          }
-          
-          console.log("Drawing selected area", selectionRect);
-          
-          // Draw only the selected area to the new canvas
-          selectedCtx.drawImage(
-            canvas, 
-            selectionRect.x, 
-            selectionRect.y, 
-            selectionRect.width, 
-            selectionRect.height,
-            0, 
-            0, 
-            selectionRect.width, 
-            selectionRect.height
-          );
-          
-          // Convert to data URL
-          const dataUrl = selectedCanvas.toDataURL('image/png');
-          console.log("Data URL generated, length:", dataUrl.length);
-          
-          // Send to parent component
-          if (onAreaSelected) {
-            console.log("Calling onAreaSelected callback");
-            onAreaSelected(dataUrl);
-          }
-          
-          // Clear selection and exit selection mode
-          setSelectionRect(null);
-          setSelectionStart(null);
-          setIsAreaSelectionMode(false);
-          setIsDrawing(false);
-          
-          toast({
-            title: "Area captured",
-            description: "The selected area has been sent for explanation.",
+          console.log("Canvas capture complete", {
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height,
+            selectionRect: selectionRect
           });
+          
+          try {
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              throw new Error("Failed to get canvas context");
+            }
+            
+            // Ensure selection rectangle values are valid
+            if (selectionRect.width <= 0 || selectionRect.height <= 0) {
+              throw new Error("Invalid selection dimensions");
+            }
+            
+            // Create a new canvas for just the selection
+            const selectedCanvas = document.createElement('canvas');
+            selectedCanvas.width = selectionRect.width;
+            selectedCanvas.height = selectionRect.height;
+            const selectedCtx = selectedCanvas.getContext('2d');
+            
+            if (!selectedCtx) {
+              throw new Error("Failed to get selected canvas context");
+            }
+            
+            console.log("Drawing selected area", {
+              from: {
+                x: selectionRect.x,
+                y: selectionRect.y,
+                width: selectionRect.width,
+                height: selectionRect.height
+              },
+              to: {
+                x: 0,
+                y: 0,
+                width: selectionRect.width,
+                height: selectionRect.height
+              }
+            });
+            
+            // Draw only the selected area to the new canvas
+            selectedCtx.drawImage(
+              canvas, 
+              selectionRect.x, 
+              selectionRect.y, 
+              selectionRect.width, 
+              selectionRect.height,
+              0, 
+              0, 
+              selectionRect.width, 
+              selectionRect.height
+            );
+            
+            // Convert to data URL
+            const dataUrl = selectedCanvas.toDataURL('image/png');
+            console.log("Data URL generated, length:", dataUrl.length, "preview:", dataUrl.substring(0, 50) + "...");
+            
+            if (dataUrl.length < 100) {
+              throw new Error("Generated image is too small or empty");
+            }
+            
+            // Send to parent component
+            if (onAreaSelected) {
+              console.log("Calling onAreaSelected callback with image data");
+              onAreaSelected(dataUrl);
+              
+              // Clear selection and exit selection mode
+              setSelectionRect(null);
+              setSelectionStart(null);
+              setIsAreaSelectionMode(false);
+              setIsDrawing(false);
+              
+              toast({
+                title: "Area captured",
+                description: "The selected area has been sent for explanation.",
+              });
+            } else {
+              console.error("onAreaSelected callback not provided");
+              throw new Error("Cannot process image: callback not found");
+            }
+          } catch (err) {
+            console.error("Error processing captured area:", err);
+            toast({
+              title: "Processing failed",
+              description: "Failed to process the selected area: " + (err as Error).message,
+              variant: "destructive",
+            });
+          }
         }).catch(err => {
-          console.error("Error capturing area:", err);
+          console.error("Error capturing area with html2canvas:", err);
           toast({
             title: "Capture failed",
-            description: "Failed to capture the selected area.",
+            description: "Failed to capture the selected area: " + (err as Error).message,
             variant: "destructive",
           });
         });
@@ -172,7 +232,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         console.error("Error loading html2canvas:", err);
         toast({
           title: "Capture failed",
-          description: "Failed to load capture library.",
+          description: "Failed to load capture library: " + (err as Error).message,
           variant: "destructive",
         });
       });

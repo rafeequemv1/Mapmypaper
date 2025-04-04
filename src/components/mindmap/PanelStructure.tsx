@@ -1,5 +1,5 @@
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
@@ -30,6 +30,13 @@ const PanelStructure = ({
   const pdfViewerRef = useRef(null);
   const [selectedImageArea, setSelectedImageArea] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Add debugging for image selection process
+  useEffect(() => {
+    if (selectedImageArea) {
+      console.log("PanelStructure: Image area state updated, length:", selectedImageArea.length);
+    }
+  }, [selectedImageArea]);
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
@@ -40,16 +47,30 @@ const PanelStructure = ({
 
   const handleAreaSelected = (imageDataUrl: string) => {
     console.log("Area selected in PanelStructure, image length:", imageDataUrl.length);
-    setSelectedImageArea(imageDataUrl);
     
-    toast({
-      title: "Image captured",
-      description: "Sending to AI for analysis...",
-    });
-    
-    // Ensure chat panel is open when an area is selected
-    if (!showChat) {
-      toggleChat();
+    // Validate the image data before setting state
+    if (imageDataUrl && imageDataUrl.startsWith('data:image/') && imageDataUrl.length > 100) {
+      setSelectedImageArea(imageDataUrl);
+      
+      toast({
+        title: "Image captured",
+        description: "Sending to AI for analysis...",
+      });
+      
+      // Ensure chat panel is open when an area is selected
+      if (!showChat) {
+        console.log("Opening chat panel for image analysis");
+        toggleChat();
+      }
+    } else {
+      console.error("Invalid image data received:", 
+        imageDataUrl ? `Length: ${imageDataUrl.length}, Prefix: ${imageDataUrl.substring(0, 20)}...` : "undefined");
+      
+      toast({
+        title: "Image capture failed",
+        description: "The selected area could not be processed.",
+        variant: "destructive"
+      });
     }
   };
 

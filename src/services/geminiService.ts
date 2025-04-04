@@ -268,19 +268,24 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
     
     console.log("Sending prompt to Gemini for image analysis");
     
-    // Create content parts for the Gemini API
-    const content: Array<Part> = [
-      { text: promptText },
-      {
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: base64Image
-        }
+    // Create the properly typed content parts array
+    const contentParts: Part[] = [];
+    
+    // Add the text prompt
+    contentParts.push({
+      text: promptText
+    });
+    
+    // Add the image data
+    contentParts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: base64Image
       }
-    ];
+    });
     
     // Generate content with the image
-    const result = await model.generateContent(content);
+    const result = await model.generateContent(contentParts);
     const response = await result.response;
     const generatedText = response.text();
     
