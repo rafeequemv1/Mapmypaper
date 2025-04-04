@@ -52,7 +52,12 @@ const UserMenu = () => {
     );
   }
 
-  const displayName = profile?.display_name || user.email?.split("@")[0] || "User";
+  // Get user display name using multiple fallback options
+  const displayName = profile?.display_name || 
+                      user.user_metadata?.display_name || 
+                      user.user_metadata?.full_name || 
+                      user.email?.split("@")[0] || 
+                      "User";
 
   return (
     <DropdownMenu>
@@ -63,7 +68,11 @@ const UserMenu = () => {
           className="h-8 w-8 rounded-full p-0 overflow-hidden"
         >
           <Avatar className="h-8 w-8">
-            <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+            {user.user_metadata?.avatar_url ? (
+              <img src={user.user_metadata.avatar_url} alt={displayName} />
+            ) : (
+              <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+            )}
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
