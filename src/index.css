@@ -3,234 +3,88 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .animate-fade-in-out {
+    animation: fadeInOut 6s ease-in-out forwards;
+  }
+  
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(10px); }
+    15% { opacity: 1; transform: translateY(0); }
+    85% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+  }
+}
+ 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 20% 18%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-    --card: 210 40% 98%;
-    --card-foreground: 222 20% 18%;
-
-    --popover: 210 40% 98%;
-    --popover-foreground: 222 20% 18%;
-
-    --primary: 210 40% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 30% 96%;
-    --secondary-foreground: 222 20% 18%;
-
-    --muted: 210 20% 96%;
-    --muted-foreground: 215 16% 47%;
-
-    --accent: 210 30% 95%;
-    --accent-foreground: 222 20% 18%;
-
-    --destructive: 0 70% 65%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 20% 91.4%;
-    --input: 214.3 20% 91.4%;
-    --ring: 222.2 20% 45%;
-
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+ 
     --radius: 0.5rem;
-
-    --sidebar-background: 210 40% 98%;
-    --sidebar-foreground: 222 20% 18%;
-    --sidebar-primary: 210 40% 25%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 30% 95%;
-    --sidebar-accent-foreground: 222 20% 18%;
-    --sidebar-border: 214.3 20% 91.4%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    /* Feature section pastel colors */
-    --feature-bg-1: 152 60% 95%;
-    --feature-bg-2: 219 70% 95%;
-    --feature-bg-3: 262 60% 95%;
-    --feature-bg-4: 332 70% 95%;
-    --feature-bg-5: 28 80% 95%;
-    --feature-bg-6: 184 70% 95%;
   }
-
+ 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
+ 
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
+ 
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
+ 
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
+ 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-
+ 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-
+ 
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-
+ 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
+ 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-
-    /* Feature section dark pastel colors */
-    --feature-bg-1: 152 30% 15%;
-    --feature-bg-2: 219 30% 15%;
-    --feature-bg-3: 262 30% 15%;
-    --feature-bg-4: 332 30% 15%;
-    --feature-bg-5: 28 30% 15%;
-    --feature-bg-6: 184 30% 15%;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground font-roboto;
-  }
-  
-  /* Enhanced typography for AI responses */
-  .prose {
-    @apply text-base leading-relaxed;
-  }
-  
-  .prose h1 {
-    @apply text-2xl font-bold mb-4 mt-6 pb-2 border-b border-gray-200 text-blue-800;
-  }
-  
-  .prose h2 {
-    @apply text-xl font-semibold mb-3 mt-5 text-blue-700;
-  }
-  
-  .prose h3 {
-    @apply text-lg font-medium mb-2 mt-4 text-indigo-600;
-  }
-  
-  .prose h4 {
-    @apply text-base font-medium mb-2 mt-3 text-indigo-500;
-  }
-  
-  .prose p {
-    @apply mb-3 text-base leading-relaxed;
-  }
-  
-  .prose ul {
-    @apply my-3 ml-5 space-y-2 list-disc;
-  }
-  
-  .prose ol {
-    @apply my-3 ml-5 space-y-2 list-decimal;
-  }
-  
-  .prose li {
-    @apply mb-1 pl-1;
-  }
-  
-  .prose li::marker {
-    @apply text-blue-600 font-bold;
-  }
-  
-  .prose blockquote {
-    @apply border-l-4 border-blue-400 pl-4 italic my-4 bg-blue-50 py-3 pr-3 rounded-r text-gray-700;
-  }
-  
-  .prose code {
-    @apply bg-gray-100 px-1.5 py-0.5 rounded text-sm text-pink-600 font-mono;
-  }
-  
-  .prose pre {
-    @apply bg-gray-100 p-3 rounded-md my-4 overflow-x-auto text-sm font-mono shadow-sm;
-  }
-  
-  .prose table {
-    @apply min-w-full border-collapse my-4 shadow-sm;
-  }
-  
-  .prose th {
-    @apply bg-gray-100 px-4 py-2 text-left font-semibold border border-gray-300 text-gray-700;
-  }
-  
-  .prose td {
-    @apply px-4 py-2 border border-gray-300;
-  }
-  
-  .prose hr {
-    @apply my-6 border-t border-gray-300;
-  }
-  
-  .prose strong {
-    @apply font-semibold text-gray-900;
-  }
-  
-  .prose em {
-    @apply italic text-gray-800;
-  }
-  
-  .prose a {
-    @apply text-blue-600 underline hover:text-blue-800 font-medium;
-  }
-  
-  /* Citation styling as circles */
-  .citation-circle {
-    @apply inline-flex items-center justify-center h-5 w-5 text-xs font-medium rounded-full bg-blue-600 text-white hover:bg-blue-800 cursor-pointer transition-colors;
-    text-decoration: none !important;
-  }
-  
-  .citation-circle:focus {
-    @apply outline-none ring-2 ring-blue-300;
-  }
-  
-  /* New class for AI message container */
-  .ai-message {
-    @apply bg-gray-50 border border-gray-100 shadow-sm rounded-lg p-4 max-w-[95%] relative;
-  }
-  
-  .ai-message-content {
-    @apply prose max-w-none;
-  }
-
-  /* Feature section color classes */
-  .feature-bg-1 {
-    @apply bg-[hsl(var(--feature-bg-1))];
-  }
-  .feature-bg-2 {
-    @apply bg-[hsl(var(--feature-bg-2))];
-  }
-  .feature-bg-3 {
-    @apply bg-[hsl(var(--feature-bg-3))];
-  }
-  .feature-bg-4 {
-    @apply bg-[hsl(var(--feature-bg-4))];
-  }
-  .feature-bg-5 {
-    @apply bg-[hsl(var(--feature-bg-5))];
-  }
-  .feature-bg-6 {
-    @apply bg-[hsl(var(--feature-bg-6))];
-  }
-
-  /* Beta tag */
-  .beta-tag {
-    @apply bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium;
+    @apply bg-background text-foreground;
   }
 }

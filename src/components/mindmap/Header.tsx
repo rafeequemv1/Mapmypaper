@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FileText,
   Download,
@@ -9,7 +9,7 @@ import {
   Upload,
   FileIcon,
   Braces,
-  GitBranch
+  Home
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -140,11 +140,18 @@ const Header = ({
       <div className="flex items-center justify-between">
         {/* Left side - Logo with Beta tag */}
         <div className="flex items-center gap-2">
-          <PaperLogo size="sm" />
-          <div className="flex items-center">
-            <h1 className="text-lg font-bold">mapmypaper</h1>
-            <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
-          </div>
+          <Link to="/" className="flex items-center gap-1">
+            <PaperLogo size="sm" />
+            <div className="flex items-center">
+              <h1 className="text-lg font-bold">mapmypaper</h1>
+              <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
+            </div>
+          </Link>
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="ml-1 h-8 w-8 p-0">
+              <Home className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
         
         {/* Center - Main Button Group */}
@@ -183,15 +190,6 @@ const Header = ({
           >
             <Braces className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Mind Map</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            onClick={() => openVisualization("flowchart")} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <GitBranch className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
         </div>
         
