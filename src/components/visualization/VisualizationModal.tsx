@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, RefreshCw, ZoomIn, ZoomOut, Move } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { VisualizationType } from "@/hooks/use-visualization";
 
 // Initialize mermaid with colorful theme settings
@@ -15,13 +15,13 @@ mermaid.initialize({
   securityLevel: "loose",
   fontFamily: "Inter, sans-serif",
   themeVariables: {
-    // Rich colorful theme variables
-    primaryColor: "#8B5CF6", // Vivid Purple
+    // Colorful theme variables for mindmap and flowchart
+    primaryColor: "#8B5CF6", // Purple
     primaryTextColor: "#ffffff",
     primaryBorderColor: "#7C3AED",
     lineColor: "#8B5CF6",
-    secondaryColor: "#F97316", // Bright Orange
-    tertiaryColor: "#0EA5E9", // Ocean Blue
+    secondaryColor: "#F97316", // Orange
+    tertiaryColor: "#3B82F6", // Blue
     // Mindmap specific colors
     nodeBorder: "#7C3AED",
     mainBkg: "#F9F7FF",
@@ -65,16 +65,37 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
   const [activeTab, setActiveTab] = useState<"preview" | "syntax">("preview");
   const [renderKey, setRenderKey] = useState(0);
   const mermaidRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
-  const [panEnabled, setPanEnabled] = useState(false);
-  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
   // Custom theme for mindmap to make it more colorful
   const applyCustomTheme = () => {
     if (visualizationType === "mindmap") {
       // Define a colorful mindmap theme
+      const colorfulMindmapTheme = {
+        "mindmap": {
+          // Colors from the purple palette with additional vibrant colors
+          "nodeColors": [
+            "#8B5CF6", // Purple
+            "#F97316", // Orange
+            "#3B82F6", // Blue
+            "#EC4899", // Pink
+            "#10B981", // Green
+            "#6366F1", // Indigo
+            "#EF4444", // Red
+            "#F59E0B", // Amber
+            "#14B8A6", // Teal
+            "#8B5CF6", // Purple (repeated)
+            "#F97316", // Orange (repeated)
+            "#3B82F6", // Blue (repeated)
+          ],
+          "fontSize": "16px",
+          "fontFamily": "Inter, sans-serif",
+          "curve": "basis",
+          "border": "2px solid",
+          "padding": "24px",
+          "useMaxWidth": "false"
+        }
+      };
+      
       const style = document.createElement('style');
       style.setAttribute('id', 'mermaid-mindmap-custom-theme');
       style.innerHTML = `
@@ -165,63 +186,6 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
     }
   }, [mermaidSyntax, isOpen, activeTab, renderKey, visualizationType]);
   
-  // Apply zoom and pan transformations
-  useEffect(() => {
-    if (mermaidRef.current) {
-      const svgElement = mermaidRef.current.querySelector('svg');
-      if (svgElement) {
-        const contentElement = svgElement.querySelector('g');
-        if (contentElement) {
-          contentElement.style.transform = `scale(${zoom}) translate(${panPosition.x}px, ${panPosition.y}px)`;
-          contentElement.style.transformOrigin = 'center';
-          contentElement.style.transition = isDragging ? 'none' : 'transform 0.2s';
-        }
-      }
-    }
-  }, [zoom, panPosition, isDragging]);
-  
-  // Handle mouse events for panning
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (panEnabled) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX, y: e.clientY });
-    }
-  };
-  
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging && panEnabled) {
-      const dx = (e.clientX - dragStart.x) / zoom;
-      const dy = (e.clientY - dragStart.y) / zoom;
-      setPanPosition(prev => ({ 
-        x: prev.x + dx, 
-        y: prev.y + dy 
-      }));
-      setDragStart({ x: e.clientX, y: e.clientY });
-    }
-  };
-  
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-  
-  // Zoom controls
-  const zoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.1, 3));
-  };
-  
-  const zoomOut = () => {
-    setZoom(prev => Math.max(prev - 0.1, 0.5));
-  };
-  
-  const togglePan = () => {
-    setPanEnabled(!panEnabled);
-  };
-  
-  const resetView = () => {
-    setZoom(1);
-    setPanPosition({ x: 0, y: 0 });
-  };
-  
   // Handle syntax change
   const handleSyntaxChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onSyntaxChange(e.target.value);
@@ -256,7 +220,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-screen-xl w-[95vw] h-[90vh] max-h-[90vh] flex flex-col overflow-hidden p-4">
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] max-h-[90vh] flex flex-col overflow-hidden p-4">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -273,47 +237,6 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
             </TabsList>
             
             <div className="flex items-center gap-2">
-              {activeTab === "preview" && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={zoomIn}
-                    title="Zoom In"
-                  >
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={zoomOut}
-                    title="Zoom Out"
-                  >
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button 
-                    variant={panEnabled ? "default" : "outline"}
-                    size="sm" 
-                    onClick={togglePan}
-                    title="Pan Mode"
-                    className={panEnabled ? "bg-blue-100" : ""}
-                  >
-                    <Move className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={resetView}
-                    title="Reset View"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-              
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -333,6 +256,15 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                 <Download className="h-4 w-4 mr-2" />
                 Download SVG
               </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={refreshDiagram}
+                disabled={activeTab !== "preview"}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           
@@ -348,15 +280,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                 </div>
               </div>
             ) : mermaidSyntax ? (
-              <div 
-                ref={mermaidRef} 
-                className="mermaid-container overflow-auto h-full w-full"
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                style={{ cursor: panEnabled ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
-              ></div>
+              <div ref={mermaidRef} className="mermaid-container overflow-auto h-full w-full"></div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
                 No {visualizationType} diagram available. Click Regenerate to create one.

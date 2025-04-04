@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,8 +8,8 @@ import {
   FileJson,
   Upload,
   FileIcon,
-  GitBranch, // Used for flowchart icon
-  Network // Used for mindmap icon
+  Braces,
+  GitBranch
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -170,29 +169,29 @@ const Header = ({
           
           <Button 
             variant="ghost" 
-            onClick={() => openVisualization('mindmap')} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <Network className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Mindmap</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            onClick={() => openVisualization('flowchart')} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <GitBranch className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Flowchart</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
             onClick={() => setShowSummary(true)} 
             className="flex items-center gap-1 text-black h-8 px-3"
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            onClick={() => openVisualization("mindmap")} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <Braces className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Mind Map</span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            onClick={() => openVisualization("flowchart")} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
         </div>
         
