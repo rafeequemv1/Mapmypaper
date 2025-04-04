@@ -77,7 +77,7 @@ const UserMenu = () => {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 bg-white border shadow-md z-50">
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-0.5">
             <p className="text-sm font-medium">{displayName}</p>

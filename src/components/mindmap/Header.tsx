@@ -8,7 +8,9 @@ import {
   Image,
   FileJson,
   Upload,
-  FileIcon
+  FileIcon,
+  Flowchart,
+  Braces
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +24,7 @@ import {
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
 import PaperLogo from "@/components/PaperLogo";
+import { useVisualizationContext } from "@/contexts/VisualizationContext";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -43,6 +46,7 @@ const Header = ({
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { openVisualization } = useVisualizationContext();
   
   // Handle export as PNG
   const handleExportPNG = () => {
@@ -172,6 +176,24 @@ const Header = ({
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
+          
+          <Button 
+            variant="ghost" 
+            onClick={() => openVisualization("mindmap")} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <Braces className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Mind Map</span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            onClick={() => openVisualization("flowchart")} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <Flowchart className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Flowchart</span>
+          </Button>
         </div>
         
         {/* Right side - Action buttons and User Menu */}
@@ -186,7 +208,7 @@ const Header = ({
                 <Download className="h-3.5 w-3.5 text-black" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 bg-white border shadow-md z-50">
               <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
                 <Image className="h-4 w-4" />
                 <span>Export as SVG</span>

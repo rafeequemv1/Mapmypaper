@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Upload, ExternalLink } from "lucide-react";
+import { Upload, ExternalLink, Braces, Flowchart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import PaperLogo from "@/components/PaperLogo";
@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import UserMenu from "@/components/UserMenu";
 import { trackPdfUpload, trackFeatureUsage, trackMindMapGeneration, trackEvent } from "@/utils/analytics";
 import StatsDisplay from "@/components/StatsDisplay";
+import { useVisualizationContext } from "@/contexts/VisualizationContext";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const PdfUpload = () => {
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pdfSize, setPdfSize] = useState<number>(0);
+  const { openVisualization } = useVisualizationContext();
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -217,6 +219,30 @@ const PdfUpload = () => {
           <div className="flex items-center gap-4">
             <a href="#about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">About</a>
             <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Features</a>
+            
+            {selectedFile && (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => openVisualization("mindmap")}
+                  className="flex items-center gap-1"
+                >
+                  <Braces className="h-4 w-4" />
+                  <span className="text-sm">Mind Map</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => openVisualization("flowchart")}
+                  className="flex items-center gap-1"
+                >
+                  <Flowchart className="h-4 w-4" />
+                  <span className="text-sm">Flowchart</span>
+                </Button>
+              </>
+            )}
+            
             <UserMenu />
           </div>
         </div>
