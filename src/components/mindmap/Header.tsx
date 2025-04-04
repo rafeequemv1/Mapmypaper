@@ -191,7 +191,7 @@ const Header = ({
                 <span className="hidden md:inline text-sm">Visualize</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-48">
+            <DropdownMenuContent align="center" className="w-48 bg-white border shadow-md z-50">
               <DropdownMenuItem onClick={() => handleVisualizationSelect("flowchart")} className="cursor-pointer">
                 Flowchart
               </DropdownMenuItem>
@@ -226,7 +226,7 @@ const Header = ({
                 <Download className="h-3.5 w-3.5 text-black" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 bg-white border shadow-md z-50">
               <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
                 <Image className="h-4 w-4" />
                 <span>Export as SVG</span>
