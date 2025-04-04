@@ -229,13 +229,8 @@ const PdfUpload = () => {
             <PaperLogo size="lg" />
             <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl">
-            Transform academic papers into visual knowledge maps. Read research papers faster, save time, 
-            increase comprehension, and boost retention with our AI-powered visualization tools.
-          </p>
-          <p className="mt-4 text-sm text-gray-500 max-w-xl mx-auto">
-            Perfect for visual learners, researchers, scientists, and students who want to quickly grasp and remember complex information.
-          </p>
+          <p className="text-lg text-gray-600 max-w-2xl">Read research papers faster, save time, increase comprehension, and boost retention with this AI-powered mindmap and chatbot</p>
+          
           
           {/* Statistics Display */}
           <StatsDisplay className="mt-8 mb-6" />

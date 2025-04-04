@@ -54,7 +54,7 @@ const StatsDisplay = ({
           <Skeleton className="h-6 w-24 mx-auto" />
         </div> : error ? <div className="text-sm text-muted-foreground">
           {error}
-        </div> : stats ? <div className="flex gap-4 justify-center items-center">
+        </div> : stats ? <div className="flex gap-4 justify-center items-cente">
           <div>
             
             
