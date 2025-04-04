@@ -33,9 +33,13 @@ export function useVisualization() {
       return;
     }
     
-    // Always generate a visualization when opening the modal
-    // This removes the need to click the regenerate button
-    generateVisualization(type);
+    // If we have saved syntax for this type, use it, otherwise generate
+    if (savedSyntax[type]) {
+      setMermaidSyntax(savedSyntax[type]);
+    } else {
+      // Automatically generate the visualization
+      generateVisualization(type);
+    }
   };
   
   const generateVisualization = async (type: VisualizationType) => {
