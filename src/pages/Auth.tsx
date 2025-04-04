@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import PaperLogo from "@/components/PaperLogo";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import { FcGoogle } from "react-icons/fc";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<"sign_in" | "sign_up">("sign_in");
   const navigate = useNavigate();
@@ -29,7 +31,7 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
-    if (!email || !password) {
+    if (!email || !password || (type === "sign_up" && !name)) {
       toast({
         title: "Missing fields",
         description: "Please fill in all fields.",
@@ -56,6 +58,7 @@ const Auth = () => {
           password,
           options: {
             data: {
+              full_name: name,
               email: email,
             },
           },
@@ -68,6 +71,28 @@ const Auth = () => {
       }
       setEmail("");
       setPassword("");
+      setName("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
     } catch (error: any) {
       toast({
         title: "Error",
@@ -126,6 +151,19 @@ const Auth = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {type === "sign_up" && (
+              <div>
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  type="text"
+                  id="name"
+                  placeholder="Enter your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            )}
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -158,6 +196,25 @@ const Auth = () => {
               {loading ? "Loading..." : type === "sign_in" ? "Sign In" : "Sign Up"}
             </Button>
           </form>
+
+          <div className="relative my-6">
+            <Separator />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-gray-500">
+              OR
+            </span>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full"
+            size="lg"
+          >
+            <FcGoogle className="mr-2 h-5 w-5" />
+            Continue with Google
+          </Button>
 
           <div className="mt-4 text-center">
             <button
