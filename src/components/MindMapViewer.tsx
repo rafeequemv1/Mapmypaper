@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -185,6 +186,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [summary, setSummary] = useState<string>('');
   const [showTempMessage, setShowTempMessage] = useState(false);
   const { toast } = useToast();
+  const [scale, setScale] = useState(0.7);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -546,8 +548,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       // Scale the mind map to fit better (slightly zoomed out)
       setTimeout(() => {
-        mind.scale(0.7); // Set to smaller initial scale (decreased from 0.8)
+        mind.scale(0.65); // Set to smaller initial scale (decreased from 0.7)
         mind.toCenter(); // Center the mind map
+        setScale(0.65);
       }, 100);
       
       // Enable debug mode for better troubleshooting
@@ -700,4 +703,93 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     if (!nodeData) return;
     
     // Get all text from node and its children
-    const
+    const getAllText = (node: any): string => {
+      let text = node.topic || '';
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => {
+          text += ' ' + getAllText(child);
+        });
+      }
+      
+      return text;
+    };
+    
+    const nodeText = getAllText(nodeData);
+    
+    // Set summary
+    setSummary(nodeText);
+    setShowSummary(true);
+    
+    // If text explanation is requested, send it to parent
+    if (onExplainText) {
+      onExplainText(nodeText);
+    }
+    
+    // Open chat if requested
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+  };
+
+  // Zoom in functionality
+  const handleZoomIn = () => {
+    if (mindMapRef.current) {
+      const newScale = Math.min(scale + 0.1, 2.0);
+      mindMapRef.current.scale(newScale);
+      setScale(newScale);
+    }
+  };
+
+  // Zoom out functionality
+  const handleZoomOut = () => {
+    if (mindMapRef.current) {
+      const newScale = Math.max(scale - 0.1, 0.3);
+      mindMapRef.current.scale(newScale);
+      setScale(newScale);
+    }
+  };
+
+  // Reset view functionality
+  const handleResetView = () => {
+    if (mindMapRef.current) {
+      mindMapRef.current.scale(0.65);
+      mindMapRef.current.toCenter();
+      setScale(0.65);
+    }
+  };
+
+  return (
+    <div className="relative h-full w-full overflow-hidden">
+      {/* Mind Map Container */}
+      <div 
+        ref={containerRef} 
+        className="mind-map-container h-full w-full overflow-hidden"
+      ></div>
+      
+      {/* Zoom Controls */}
+      <div className="absolute top-4 right-4 flex gap-2 bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-md z-10">
+        <Button variant="outline" size="icon" onClick={handleZoomIn} title="Zoom In">
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" onClick={handleZoomOut} title="Zoom Out">
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" onClick={handleResetView} title="Reset View">
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      {/* Temporary Instruction Message */}
+      {showTempMessage && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg z-10 animate-fade-in pointer-events-none max-w-md">
+          <p className="text-center text-sm font-medium">
+            <span className="font-bold">Pro Tip:</span> Right-click on nodes for options. Right-click and drag to pan the mind map.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;

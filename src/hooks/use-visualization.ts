@@ -47,6 +47,7 @@ export function useVisualization() {
       }
       
       console.log(`Generating ${type} visualization...`);
+      // Update prompt to request formatted responses with bullet points, headlines, and citations
       const syntax = await generateMermaidDiagram(type, pdfText);
       
       // Save the syntax for future use

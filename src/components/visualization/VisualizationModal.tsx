@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -167,8 +168,8 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
               
               // Add viewBox if it doesn't exist for better scaling
               if (!svgElement.getAttribute('viewBox')) {
-                const width = svgElement.getAttribute('width') || '800';
-                const height = svgElement.getAttribute('height') || '600';
+                const width = svgElement.getAttribute('width') || '1200';
+                const height = svgElement.getAttribute('height') || '800';
                 svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
               }
               
@@ -186,7 +187,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                   if (viewBox && viewBox.length === 4) {
                     const vbWidth = parseFloat(viewBox[2]);
                     const vbHeight = parseFloat(viewBox[3]);
-                    const scale = Math.min(containerWidth / vbWidth, containerHeight / vbHeight);
+                    const scale = Math.min(containerWidth / vbWidth, containerHeight / vbHeight) * 1.2; // Increase scale by 20%
                     
                     // Apply transform scale and translation for centering
                     const g = svgElement.querySelector('g');
@@ -248,7 +249,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
       <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] flex flex-col overflow-hidden p-4">
-        <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         
