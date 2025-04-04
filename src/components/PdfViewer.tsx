@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -876,3 +877,91 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           <div className="flex flex-col items-center justify-center h-full bg-red-50 p-6 text-center">
             <div className="bg-red-100 text-red-500 font-medium mb-4 p-4 rounded-md">
               {loadError}
+            </div>
+          </div>
+        ) : (
+          <ScrollArea className="flex-1 relative overflow-hidden">
+            {/* Selection box for area selection mode */}
+            <div
+              ref={selectionBoxRef}
+              className="absolute pointer-events-none border-2 border-blue-500 bg-blue-200 bg-opacity-30 rounded-sm z-10"
+              style={{ display: 'none' }}
+            ></div>
+            
+            {/* PDF Document */}
+            <Document
+              file={pdfData}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              className="flex flex-col items-center py-4 min-h-full"
+            >
+              {Array.from(new Array(numPages), (_, index) => (
+                <div 
+                  key={`page-${index + 1}`}
+                  ref={setPageRef(index)}
+                  className="mb-4 relative bg-white shadow-md"
+                  onMouseDown={(e) => handleAreaSelectionMouseDown(e, index)}
+                  onMouseMove={handleAreaSelectionMouseMove}
+                  onMouseUp={handleAreaSelectionMouseUp}
+                >
+                  <Page
+                    key={`page-content-${index + 1}`}
+                    pageNumber={index + 1}
+                    width={getOptimalPageWidth()}
+                    scale={scale}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                    onRenderSuccess={onPageRenderSuccess}
+                    onMouseUp={handleDocumentMouseUp}
+                    className="relative"
+                  />
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                    {index + 1} / {numPages}
+                  </div>
+                </div>
+              ))}
+            </Document>
+          </ScrollArea>
+        )}
+        
+        {/* Text selection tooltip */}
+        {showExplainTooltip && selectionPosition && (
+          <div
+            className="fixed bg-white rounded-md shadow-lg p-2 z-50 flex items-center space-x-2"
+            style={{
+              left: `${selectionPosition.x}px`,
+              top: `${selectionPosition.y}px`,
+              transform: 'translate(-50%, -100%)'
+            }}
+            data-explain-tooltip
+          >
+            <Button size="sm" onClick={handleExplain} className="text-xs py-1">
+              Explain
+            </Button>
+          </div>
+        )}
+        
+        {/* Image selection tooltip */}
+        {showImageExplainTooltip && selectedAreaPosition && (
+          <div
+            className="fixed bg-white rounded-md shadow-lg p-2 z-50 flex items-center space-x-2"
+            style={{
+              left: `${selectedAreaPosition.x}px`,
+              top: `${selectedAreaPosition.y}px`,
+              transform: 'translate(-50%, -100%)'
+            }}
+            data-image-explain-tooltip
+          >
+            <Button size="sm" onClick={handleExplainImage} className="text-xs py-1">
+              Explain Selected Area
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
