@@ -37,6 +37,82 @@ const initDB = (): Promise<IDBDatabase> => {
 };
 
 /**
+ * Process and store a PDF file
+ * @param file The PDF file to store
+ * @returns Promise that resolves when storage is complete
+ */
+export const storePDFInStorage = async (file: File): Promise<void> => {
+  try {
+    console.log(`Processing PDF file: ${file.name}, size: ${file.size} bytes`);
+    
+    // Read the file as a base64 string
+    const base64Data = await readFileAsBase64(file);
+    
+    // Store the file text in session storage for processing
+    try {
+      const text = await extractPdfText(file);
+      sessionStorage.setItem('pdfText', text);
+    } catch (error) {
+      console.error('Error extracting PDF text:', error);
+    }
+    
+    // Store the PDF data in IndexedDB
+    await storePDF(base64Data);
+    
+    console.log('PDF stored successfully');
+  } catch (error) {
+    console.error('Error in storePDFInStorage:', error);
+    throw error;
+  }
+};
+
+/**
+ * Read a file as a Base64 string
+ * @param file The file to read
+ * @returns Promise that resolves with the Base64 data
+ */
+const readFileAsBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result);
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Failed to read the file'));
+    };
+    
+    reader.readAsDataURL(file);
+  });
+};
+
+/**
+ * Extract text from a PDF file
+ * @param file The PDF file
+ * @returns Promise that resolves with the extracted text
+ */
+const extractPdfText = async (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = () => {
+      // For now, just return a simple placeholder
+      // In a real implementation, this would use pdf.js or another library
+      // to extract actual text from the PDF
+      resolve(`Text extracted from ${file.name}`);
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Failed to extract text from PDF'));
+    };
+    
+    reader.readAsText(file);
+  });
+};
+
+/**
  * Store PDF data in IndexedDB
  * @param pdfData Base64 string representation of the PDF
  * @returns Promise that resolves when storage is complete
