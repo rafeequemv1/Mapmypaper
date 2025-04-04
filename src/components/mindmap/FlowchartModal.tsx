@@ -51,6 +51,13 @@ const FlowchartModal: React.FC<FlowchartModalProps> = ({
     }
   }, [open, flowchartSyntax]);
 
+  // Auto-generate flowchart when modal opens and PDF is available
+  useEffect(() => {
+    if (open && isPdfLoaded && !isGenerating) {
+      handleGenerateFromPaper();
+    }
+  }, [open, isPdfLoaded]);
+
   // Check if PDF content is available
   const checkPdfAvailability = async () => {
     const hasPdf = await isPdfAvailable();
@@ -136,7 +143,7 @@ const FlowchartModal: React.FC<FlowchartModalProps> = ({
                     <Loader className="h-3 w-3 mr-1 animate-spin" />
                     Analyzing...
                   </>
-                ) : "Generate from Paper"}
+                ) : "Regenerate"}
               </Button>
             </div>
             <Textarea 
