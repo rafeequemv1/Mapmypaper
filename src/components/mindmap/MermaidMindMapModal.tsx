@@ -56,6 +56,25 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
     }
   }, []);
   
+  // Function to render the mindmap
+  const renderMindmap = () => {
+    if (!mermaidContainerRef.current || !open) return;
+    
+    try {
+      console.log("Rendering mindmap with syntax length:", mermaidSyntax.length);
+      
+      // Clear the container and set new content
+      mermaidContainerRef.current.innerHTML = '';
+      mermaidContainerRef.current.className = 'mermaid';
+      mermaidContainerRef.current.textContent = mermaidSyntax;
+      
+      // Force mermaid to process the content
+      mermaid.contentLoaded();
+    } catch (error) {
+      console.error("Error rendering mermaid diagram:", error);
+    }
+  };
+  
   // Re-render mermaid diagram whenever syntax changes or modal opens
   useEffect(() => {
     if (open) {
@@ -63,17 +82,8 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
       
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
-        try {
-          if (mermaidContainerRef.current) {
-            mermaidContainerRef.current.innerHTML = '';
-            mermaidContainerRef.current.className = 'mermaid';
-            mermaidContainerRef.current.textContent = mermaidSyntax;
-            mermaid.contentLoaded();
-          }
-        } catch (error) {
-          console.error("Error rendering mermaid:", error);
-        }
-      }, 100);
+        renderMindmap();
+      }, 200);
       
       return () => clearTimeout(timer);
     }
@@ -117,15 +127,10 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
           description: "Successfully created mindmap from your paper content."
         });
         
-        // Force re-render of the mermaid diagram after a short delay
+        // Force re-render of the mermaid diagram after setting new syntax
         setTimeout(() => {
-          if (mermaidContainerRef.current) {
-            mermaidContainerRef.current.innerHTML = '';
-            mermaidContainerRef.current.className = 'mermaid';
-            mermaidContainerRef.current.textContent = generatedMindmap;
-            mermaid.contentLoaded();
-          }
-        }, 200);
+          renderMindmap();
+        }, 300);
       } else {
         toast({
           title: "Generation issue",
@@ -194,7 +199,7 @@ const MermaidMindMapModal: React.FC<MermaidMindMapModalProps> = ({
           <div className="w-full md:w-3/5 border rounded-md p-4 overflow-auto bg-white">
             <p className="text-sm text-muted-foreground mb-2">Preview</p>
             <div className="mermaid-container overflow-auto">
-              <div ref={mermaidContainerRef} className="mermaid">{mermaidSyntax}</div>
+              <div ref={mermaidContainerRef} className="mermaid"></div>
             </div>
           </div>
         </div>
