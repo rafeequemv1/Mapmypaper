@@ -11,7 +11,6 @@ import { storePDF } from "@/utils/pdfStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import UserMenu from "@/components/UserMenu";
 import { trackPdfUpload, trackFeatureUsage, trackMindMapGeneration, trackEvent } from "@/utils/analytics";
-import StatsDisplay from "@/components/StatsDisplay";
 import { useVisualizationContext } from "@/contexts/VisualizationContext";
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -224,18 +223,15 @@ const PdfUpload = () => {
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="text-center mb-6 mt-12">
-          <div className="flex items-center justify-center gap-4 mb-6">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-4 mb-4">
             <PaperLogo size="lg" />
             <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl">Read research papers faster, save time, increase comprehension, and boost retention with this AI-powered mindmap and chatbot</p>
-          
-          {/* Statistics Display */}
-          <StatsDisplay className="mt-8 mb-4" />
+          <p className="text-lg text-gray-600 max-w-2xl mb-6">Read research papers faster, save time, increase comprehension, and boost retention with this AI-powered mindmap and chatbot</p>
         </div>
         
-        {/* PDF Upload Box - moved closer to the text above */}
+        {/* PDF Upload Box - placed directly below the text */}
         <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
           {/* Dropzone */}
           <div className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"} cursor-pointer flex flex-col items-center justify-center gap-4`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}>
