@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -12,10 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, User, Settings, LogOut } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const UserMenu = () => {
   const { user, profile, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const getInitials = (name: string) => {
     return name
@@ -27,9 +29,27 @@ const UserMenu = () => {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out",
+      });
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast({
+        variant: "destructive",
+        title: "Sign out failed",
+        description: "There was a problem signing you out",
+      });
+    }
   };
+
+  // Debug authentication state
+  useEffect(() => {
+    console.log("Auth state:", { user, profile, isLoading });
+  }, [user, profile, isLoading]);
 
   if (isLoading) {
     return (
