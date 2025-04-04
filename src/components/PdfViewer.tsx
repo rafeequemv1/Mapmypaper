@@ -1,21 +1,20 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, Camera } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import html2canvas from 'html2canvas';
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
-  onAreaSelected?: (imageDataUrl: string) => void;
   onPdfLoaded?: () => void;
   renderTooltipContent?: () => React.ReactNode;
 }
@@ -24,22 +23,8 @@ interface PdfViewerHandle {
   scrollToPage: (pageNumber: number) => void;
 }
 
-// Define selection point interface for better type safety
-interface SelectionPoint {
-  x: number;
-  y: number;
-}
-
-// Define selection rectangle interface for better type safety
-interface SelectionRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onAreaSelected, onPdfLoaded, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -52,11 +37,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const { toast } = useToast();
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
-    const [isAreaSelectionMode, setIsAreaSelectionMode] = useState<boolean>(false);
-    const [selectionStart, setSelectionStart] = useState<SelectionPoint | null>(null);
-    const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
-    const selectionOverlayRef = useRef<HTMLDivElement | null>(null);
-    const [isDrawing, setIsDrawing] = useState<boolean>(false);
 
     useEffect(() => {
       try {
@@ -84,159 +64,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [toast]);
 
-    // Improved area selection capture with better error handling and debugging
-    const captureSelectedArea = () => {
-      if (!selectionRect || !pdfContainerRef.current) {
-        console.error("Cannot capture: missing selection rectangle or container reference");
-        toast({
-          title: "Capture failed",
-          description: "Invalid selection area. Please try drawing the rectangle again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const viewportElement = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (!viewportElement) {
-        console.error("Cannot capture: viewport element not found");
-        toast({
-          title: "Capture failed",
-          description: "PDF viewer element not found. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Show a capturing toast
-      toast({
-        title: "Capturing area...",
-        description: "Please wait while we process the selection.",
-      });
-      
-      console.log("Starting area capture process with html2canvas", {
-        selection: selectionRect,
-        viewportElement: viewportElement
-      });
-      
-      // Use requestAnimationFrame for better rendering timing
-      requestAnimationFrame(() => {
-        performCapture(viewportElement as HTMLElement, selectionRect);
-      });
-    };
-
-    const performCapture = async (element: HTMLElement, rect: SelectionRect) => {
-      try {
-        console.log("Starting html2canvas with scale:", window.devicePixelRatio || 2);
-        
-        const canvas = await html2canvas(element, {
-          scale: window.devicePixelRatio || 2,
-          logging: true,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          imageTimeout: 15000, // Extend timeout for large PDFs
-        });
-        
-        console.log("Canvas capture complete", {
-          canvasWidth: canvas.width,
-          canvasHeight: canvas.height,
-          selectionRect: rect
-        });
-        
-        // Get canvas context
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          throw new Error("Failed to get canvas context");
-        }
-        
-        // Ensure selection rectangle values are valid
-        if (rect.width <= 0 || rect.height <= 0) {
-          throw new Error("Invalid selection dimensions");
-        }
-        
-        // Use device pixel ratio for accurate scaling
-        const ratio = window.devicePixelRatio || 1;
-        
-        // Calculate selection coordinates adjusted for device pixel ratio
-        const sx = Math.round(rect.x * ratio);
-        const sy = Math.round(rect.y * ratio);
-        const sw = Math.round(rect.width * ratio);
-        const sh = Math.round(rect.height * ratio);
-        
-        console.log("Cropping with pixel ratio adjustment", {
-          ratio,
-          adjusted: { sx, sy, sw, sh },
-          original: rect
-        });
-        
-        // Create a new canvas for just the selection
-        const croppedCanvas = document.createElement('canvas');
-        croppedCanvas.width = sw;
-        croppedCanvas.height = sh;
-        const croppedCtx = croppedCanvas.getContext('2d');
-        
-        if (!croppedCtx) {
-          throw new Error("Failed to get cropped canvas context");
-        }
-        
-        // Draw only the selected area to the new canvas
-        croppedCtx.drawImage(
-          canvas, 
-          sx, 
-          sy, 
-          sw, 
-          sh,
-          0, 
-          0, 
-          sw, 
-          sh
-        );
-        
-        // Convert to data URL - force JPEG for smaller size to avoid storage quota issues
-        const dataUrl = croppedCanvas.toDataURL('image/jpeg', 0.85);
-        console.log("Data URL generated successfully", {
-          length: dataUrl.length,
-          preview: dataUrl.substring(0, 50) + "...",
-          type: dataUrl.split(';')[0]
-        });
-        
-        if (dataUrl.length < 100) {
-          throw new Error("Generated image is too small or empty");
-        }
-        
-        // Send to parent component
-        if (onAreaSelected) {
-          console.log("Calling onAreaSelected callback with image data length:", dataUrl.length);
-          onAreaSelected(dataUrl);
-          
-          // Clear selection and exit selection mode
-          setSelectionRect(null);
-          setSelectionStart(null);
-          setIsAreaSelectionMode(false);
-          setIsDrawing(false);
-          
-          toast({
-            title: "Area captured",
-            description: "The selected area has been captured and sent for explanation.",
-          });
-        } else {
-          console.error("onAreaSelected callback not provided");
-          throw new Error("Cannot process image: callback not found");
-        }
-      } catch (err) {
-        console.error("Error in capture process:", err);
-        toast({
-          title: "Capture failed",
-          description: "Failed to capture the selected area: " + (err as Error).message,
-          variant: "destructive",
-        });
-      }
-    };
-
-    // Handle text selection - modified to respect area selection mode
+    // Handle text selection
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (isAreaSelectionMode) return; // Skip if we're in area selection mode
-      
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "" && onTextSelected) {
         const text = selection.toString().trim();
@@ -245,94 +74,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         if (text.length > 2) {
           onTextSelected(text);
         }
-      }
-    };
-
-    // Area selection handlers - improved for better UX
-    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAreaSelectionMode) return;
-      
-      // Prevent default to avoid text selection
-      e.preventDefault();
-      
-      setIsDrawing(true);
-      
-      // Get viewport element and its scroll position
-      const viewportElement = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-      if (!viewportElement) return;
-      
-      const containerRect = viewportElement.getBoundingClientRect();
-      const scrollTop = viewportElement.scrollTop;
-      
-      // Calculate position relative to viewport accounting for scroll
-      const x = e.clientX - containerRect.left;
-      const y = e.clientY - containerRect.top + scrollTop;
-      
-      console.log("Selection started at", { x, y, scrollTop });
-      
-      setSelectionStart({ x, y });
-      setSelectionRect({ x, y, width: 0, height: 0 });
-      
-      // Add no-select class to body to prevent text selection
-      document.body.classList.add('no-select');
-    };
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAreaSelectionMode || !selectionStart || !isDrawing) return;
-      
-      // Get viewport element
-      const viewportElement = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-      if (!viewportElement) return;
-      
-      const containerRect = viewportElement.getBoundingClientRect();
-      const scrollTop = viewportElement.scrollTop;
-      
-      // Calculate position relative to viewport accounting for scroll
-      const currentX = e.clientX - containerRect.left;
-      const currentY = e.clientY - containerRect.top + scrollTop;
-      
-      setSelectionRect({
-        x: Math.min(selectionStart.x, currentX),
-        y: Math.min(selectionStart.y, currentY),
-        width: Math.abs(currentX - selectionStart.x),
-        height: Math.abs(currentY - selectionStart.y)
-      });
-    };
-
-    const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAreaSelectionMode) return;
-      
-      setIsDrawing(false);
-      
-      // Remove no-select class from body
-      document.body.classList.remove('no-select');
-      
-      // Keep selection rectangle visible if it has meaningful dimensions
-      if (!selectionRect || selectionRect.width < 5 || selectionRect.height < 5) {
-        setSelectionRect(null);
-      }
-    };
-
-    const cancelAreaSelection = () => {
-      setSelectionRect(null);
-      setSelectionStart(null);
-      setIsAreaSelectionMode(false);
-      setIsDrawing(false);
-      
-      // Remove no-select class from body
-      document.body.classList.remove('no-select');
-    };
-
-    // Toggle area selection mode
-    const toggleAreaSelectionMode = () => {
-      if (isAreaSelectionMode) {
-        cancelAreaSelection();
-      } else {
-        setIsAreaSelectionMode(true);
-        toast({
-          title: "Area selection mode",
-          description: "Click and drag to select an area of the PDF.",
-        });
       }
     };
 
@@ -571,23 +312,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         window.removeEventListener('scrollToPdfPage', handleScrollToPdfPage);
       };
     }, [numPages]);
-    
-    // Add global CSS for preventing text selection during area selection
-    useEffect(() => {
-      const style = document.createElement('style');
-      style.innerHTML = `
-        .no-select {
-          user-select: none !important;
-          -webkit-user-select: none !important;
-          -moz-user-select: none !important;
-        }
-      `;
-      document.head.appendChild(style);
-      
-      return () => {
-        document.body.classList.remove('no-select');
-      };
-    }, []);
 
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
@@ -625,22 +349,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               <RotateCw className="h-3.5 w-3.5" />
             </Button>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={isAreaSelectionMode ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-7 w-7 text-black"
-                  onClick={toggleAreaSelectionMode}
-                  title={isAreaSelectionMode ? "Cancel Area Selection" : "Select Area"}
-                >
-                  <Camera className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {isAreaSelectionMode ? "Cancel area selection" : "Select area for explanation"}
-              </TooltipContent>
-            </Tooltip>
           </div>
           
           {/* Search Input */}
@@ -697,13 +405,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         {pdfData ? (
           <ScrollArea className="flex-1" ref={pdfContainerRef}>
             <div 
-              className={`flex flex-col items-center py-4 relative ${isAreaSelectionMode ? 'cursor-crosshair' : ''}`}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={(e) => {
-                handleMouseUp(e);
-                handleDocumentMouseUp(e);
-              }}
+              className="flex flex-col items-center py-4 relative"
+              onMouseUp={handleDocumentMouseUp}
             >
               <Document
                 file={pdfData}
@@ -740,53 +443,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   </div>
                 ))}
               </Document>
-              
-              {/* Selection overlay with improved styling */}
-              {selectionRect && (
-                <div 
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${selectionRect.x}px`,
-                    top: `${selectionRect.y}px`,
-                    width: `${selectionRect.width}px`,
-                    height: `${selectionRect.height}px`,
-                    border: '2px dashed #9b87f5', 
-                    backgroundColor: 'rgba(155, 135, 245, 0.15)',
-                    zIndex: 10,
-                  }}
-                  ref={selectionOverlayRef}
-                />
-              )}
-              
-              {/* Capture buttons - positioned outside the overlay with pointer-events enabled */}
-              {selectionRect && selectionRect.width > 5 && selectionRect.height > 5 && !isDrawing && (
-                <div
-                  className="absolute bg-white rounded-md shadow-md p-2 flex gap-2 pointer-events-auto"
-                  style={{
-                    left: `${selectionRect.x + selectionRect.width / 2}px`,
-                    top: `${selectionRect.y + selectionRect.height + 8}px`,
-                    transform: 'translateX(-50%)',
-                    zIndex: 11,
-                  }}
-                >
-                  <Button 
-                    size="sm" 
-                    variant="default"
-                    onClick={captureSelectedArea}
-                    className="pointer-events-auto bg-purple-500 hover:bg-purple-600"
-                  >
-                    Explain
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={cancelAreaSelection}
-                    className="pointer-events-auto"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
             </div>
           </ScrollArea>
         ) : (
