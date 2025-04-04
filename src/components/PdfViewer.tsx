@@ -54,8 +54,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     
     // Area selection states
     const [isAreaSelectionMode, setIsAreaSelectionMode] = useState(false);
-    const [selectionStart, setSelectionStart] = useState<{x: number, y: number, pageIndex?: number} | null>(null);
-    const [selectionEnd, setSelectionEnd] = useState<{x: number, y: number, pageIndex?: number} | null>(null);
+    const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
+    const [selectionEnd, setSelectionEnd] = useState<{x: number, y: number} | null>(null);
     const [isSelecting, setIsSelecting] = useState(false);
     const [selectedAreaPosition, setSelectedAreaPosition] = useState<{x: number, y: number} | null>(null);
     const [showImageExplainTooltip, setShowImageExplainTooltip] = useState(false);
@@ -332,8 +332,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Modified area selection mouse handlers to work on all pages
-    const handleAreaSelectionMouseDown = (e: React.MouseEvent<HTMLDivElement>, pageIndex?: number) => {
+    // Improved area selection mouse handlers
+    const handleAreaSelectionMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!isAreaSelectionMode || e.button !== 0) return;
       
       // Get the correct container element
@@ -343,33 +343,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       const rect = viewport.getBoundingClientRect();
       const scrollTop = viewport.scrollTop || 0;
       
-      // Find which page the selection starts on if not provided
-      let currentPageIndex = pageIndex;
-      if (currentPageIndex === undefined) {
-        // Find the page element containing the click
-        for (let i = 0; i < pagesRef.current.length; i++) {
-          const pageEl = pagesRef.current[i];
-          if (pageEl) {
-            const pageRect = pageEl.getBoundingClientRect();
-            if (
-              e.clientY >= pageRect.top && 
-              e.clientY <= pageRect.bottom
-            ) {
-              currentPageIndex = i;
-              break;
-            }
-          }
-        }
-      }
-      
       // Store selection start coordinates relative to the viewport
-      // and include the page index
       setSelectionStart({
         x: e.clientX - rect.left,
-        y: (e.clientY - rect.top) + scrollTop,
-        pageIndex: currentPageIndex
+        y: (e.clientY - rect.top) + scrollTop
       });
-      
       setIsSelecting(true);
       
       // Initialize selection box
@@ -395,11 +373,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top + scrollTop;
       
-      // Store the end coordinates with the same page or updated page
       setSelectionEnd({
         x: currentX,
-        y: currentY,
-        pageIndex: selectionStart.pageIndex
+        y: currentY
       });
       
       // Update selection box
@@ -431,8 +407,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       
       setSelectionEnd({
         x: currentX,
-        y: currentY,
-        pageIndex: selectionStart.pageIndex
+        y: currentY
       });
       
       setIsSelecting(false);
@@ -878,82 +853,145 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div className="bg-red-100 text-red-500 font-medium mb-4 p-4 rounded-md">
               {loadError}
             </div>
-          </div>
-        ) : (
-          <ScrollArea className="flex-1 relative overflow-hidden">
-            {/* Selection box for area selection mode */}
-            <div
-              ref={selectionBoxRef}
-              className="absolute pointer-events-none border-2 border-blue-500 bg-blue-200 bg-opacity-30 rounded-sm z-10"
-              style={{ display: 'none' }}
-            ></div>
-            
-            {/* PDF Document */}
-            <Document
-              file={pdfData}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              className="flex flex-col items-center py-4 min-h-full"
+            <div className="text-gray-600 mb-6">
+              If you were expecting a PDF to be available, try uploading it again.
+            </div>
+            <Button 
+              onClick={refreshPdfData} 
+              variant="outline" 
+              className="flex items-center gap-2"
             >
-              {Array.from(new Array(numPages), (_, index) => (
-                <div 
-                  key={`page-${index + 1}`}
-                  ref={setPageRef(index)}
-                  className="mb-4 relative bg-white shadow-md"
-                  onMouseDown={(e) => handleAreaSelectionMouseDown(e, index)}
-                  onMouseMove={handleAreaSelectionMouseMove}
-                  onMouseUp={handleAreaSelectionMouseUp}
-                >
-                  <Page
-                    key={`page-content-${index + 1}`}
-                    pageNumber={index + 1}
-                    width={getOptimalPageWidth()}
-                    scale={scale}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                    onRenderSuccess={onPageRenderSuccess}
-                    onMouseUp={handleDocumentMouseUp}
-                    className="relative"
-                  />
-                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                    {index + 1} / {numPages}
-                  </div>
-                </div>
-              ))}
-            </Document>
-          </ScrollArea>
-        )}
-        
-        {/* Text selection tooltip */}
-        {showExplainTooltip && selectionPosition && (
-          <div
-            className="fixed bg-white rounded-md shadow-lg p-2 z-50 flex items-center space-x-2"
-            style={{
-              left: `${selectionPosition.x}px`,
-              top: `${selectionPosition.y}px`,
-              transform: 'translate(-50%, -100%)'
-            }}
-            data-explain-tooltip
-          >
-            <Button size="sm" onClick={handleExplain} className="text-xs py-1">
-              Explain
+              <RefreshCw className="h-4 w-4" />
+              <span>Try Again</span>
             </Button>
           </div>
-        )}
-        
-        {/* Image selection tooltip */}
-        {showImageExplainTooltip && selectedAreaPosition && (
-          <div
-            className="fixed bg-white rounded-md shadow-lg p-2 z-50 flex items-center space-x-2"
-            style={{
-              left: `${selectedAreaPosition.x}px`,
-              top: `${selectedAreaPosition.y}px`,
-              transform: 'translate(-50%, -100%)'
-            }}
-            data-image-explain-tooltip
-          >
-            <Button size="sm" onClick={handleExplainImage} className="text-xs py-1">
-              Explain Selected Area
+        ) : pdfData ? (
+          <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
+            {/* Floating Explain Tooltip for Text */}
+            {showExplainTooltip && selectionPosition && (
+              <div
+                className="absolute z-50 bg-white border rounded-md shadow-md px-3 py-2 flex items-center gap-2"
+                style={{
+                  left: `${selectionPosition.x}px`,
+                  top: `${selectionPosition.y}px`,
+                  transform: 'translate(-50%, -100%)',
+                }}
+                data-explain-tooltip
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-blue-600 hover:text-blue-800"
+                  onClick={handleExplain}
+                >
+                  Explain This
+                </Button>
+              </div>
+            )}
+            
+            {/* Floating Explain Tooltip for Image Selection */}
+            {showImageExplainTooltip && selectedAreaPosition && (
+              <div
+                className="absolute z-50 bg-white border rounded-md shadow-md px-3 py-2 flex items-center gap-2"
+                style={{
+                  left: `${selectedAreaPosition.x}px`,
+                  top: `${selectedAreaPosition.y}px`,
+                  transform: 'translate(-50%, -100%)',
+                }}
+                data-image-explain-tooltip
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-blue-600 hover:text-blue-800"
+                  onClick={handleExplainImage}
+                >
+                  Explain This Area
+                </Button>
+              </div>
+            )}
+            
+            {/* Selection overlay for area selection */}
+            <div
+              ref={selectionBoxRef}
+              className="absolute border-2 border-blue-500 bg-blue-100 bg-opacity-20 pointer-events-none"
+              style={{
+                display: 'none',
+                zIndex: 20
+              }}
+            />
+            
+            {/* PDF Document */}
+            <div 
+              className="flex justify-center p-4"
+              onMouseDown={handleAreaSelectionMouseDown}
+              onMouseMove={handleAreaSelectionMouseMove}
+              onMouseUp={handleAreaSelectionMouseUp}
+              onMouseLeave={isSelecting ? handleAreaSelectionMouseUp : undefined}
+            >
+              <Document
+                file={pdfData}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
+                loading={
+                  <div className="flex justify-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                      <Skeleton className="h-6 w-32" />
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-6 w-40" />
+                    </div>
+                  </div>
+                }
+                error={
+                  <div className="flex justify-center py-12 text-red-500">
+                    Failed to load PDF. Please check the file and try again.
+                  </div>
+                }
+              >
+                {Array.from(new Array(numPages), (el, index) => (
+                  <div 
+                    key={`page_${index + 1}`}
+                    className="mb-8 shadow-md rounded-md overflow-hidden"
+                    ref={setPageRef(index)}
+                  >
+                    <Page
+                      pageNumber={index + 1}
+                      width={getOptimalPageWidth()}
+                      scale={scale}
+                      onRenderSuccess={onPageRenderSuccess}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      onMouseUp={handleDocumentMouseUp}
+                      loading={
+                        <div className="h-[600px] flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <Skeleton className="h-6 w-32" />
+                            <Skeleton className="h-6 w-48" />
+                          </div>
+                        </div>
+                      }
+                      className="bg-white"
+                    />
+                    <div className="text-center py-2 bg-white text-gray-500 text-sm border-t">
+                      Page {index + 1} of {numPages}
+                    </div>
+                  </div>
+                ))}
+              </Document>
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full py-12">
+            <div className="text-center text-gray-500 mb-6">
+              No PDF document found. Please upload a document.
+            </div>
+            <Button 
+              onClick={refreshPdfData} 
+              variant="outline" 
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Check Again</span>
             </Button>
           </div>
         )}
