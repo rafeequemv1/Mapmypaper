@@ -353,7 +353,7 @@ export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfT
     
     if (type === "mindmap") {
       prompt = `
-      Analyze the following academic paper/document and create a Mermaid.js mindmap diagram to visualize its key concepts and structure.
+      Analyze the following academic paper/document and create a colorful Mermaid.js mindmap diagram to visualize its key concepts and structure.
       
       Guidelines for creating the mindmap:
       1. Use the paper's title as the root node
@@ -363,6 +363,7 @@ export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfT
       5. Use meaningful, concise node labels (max 5-7 words per node)
       6. Include actual specific data points from the paper (numbers, percentages, findings)
       7. Limit to 3-4 levels of depth for readability
+      8. Include appropriate colors to make the mindmap visually appealing
       
       Return only the Mermaid.js mindmap syntax without any other text. Here's an example of the syntax format:
       
@@ -370,23 +371,25 @@ export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfT
       mindmap
         root((Paper Title))
           Introduction
-            Background
-            Research Gap
-            Objectives
-          Methodology
+            Background:::green
+            Research Gap:::blue
+            Objectives:::purple
+          Methodology:::yellow
             Study Design
             Data Collection
             Analysis Methods
-          Results
+          Results:::red
             Key Finding 1
             Key Finding 2
-          Discussion
+          Discussion:::orange
             Implications
             Limitations
-          Conclusion
+          Conclusion:::pink
             Summary
             Future Work
       \`\`\`
+      
+      Use the syntax ":::color" after nodes to specify colors. You can use: green, blue, purple, orange, yellow, red, pink
       
       Here's the document text to analyze (it may be truncated):
       ${pdfText.slice(0, 15000)}
@@ -395,7 +398,7 @@ export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfT
       `;
     } else if (type === "flowchart") {
       prompt = `
-      Analyze the following academic paper/document and create a Mermaid.js flowchart to visualize the key process, methodology, or workflow described in the paper.
+      Analyze the following academic paper/document and create a colorful Mermaid.js flowchart to visualize the key process, methodology, or workflow described in the paper.
       
       Guidelines for creating the flowchart:
       1. Focus on the main process, methodology, or experimental workflow described in the paper
@@ -404,6 +407,7 @@ export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfT
       4. Keep the flowchart readable and logical
       5. Use directional flow that makes sense for the process
       6. Include 10-20 nodes for an appropriate level of detail
+      7. Add colors to make the diagram visually appealing and to group related steps
       
       Return only the Mermaid.js flowchart syntax without any other text. Here's an example of the syntax format:
       
@@ -415,6 +419,17 @@ export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfT
           C --> E[Next Step]
           D --> E
           E --> F[End]
+          
+          classDef green fill:#d1fa9c,stroke:#82c91e,stroke-width:2px;
+          classDef blue fill:#a5d8ff,stroke:#339af0,stroke-width:2px;
+          classDef orange fill:#ffd8a8,stroke:#fd7e14,stroke-width:2px;
+          classDef red fill:#ffc9c9,stroke:#fa5252,stroke-width:2px;
+          classDef yellow fill:#ffec99,stroke:#fcc419,stroke-width:2px;
+          
+          class A,F green
+          class B blue
+          class C,D orange
+          class E yellow
       \`\`\`
       
       Here's the document text to analyze (it may be truncated):

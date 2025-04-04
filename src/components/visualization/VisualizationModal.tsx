@@ -8,12 +8,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Download, RefreshCw } from "lucide-react";
 import { VisualizationType } from "@/hooks/use-visualization";
 
-// Initialize mermaid
+// Initialize mermaid with colorful theme
 mermaid.initialize({
   startOnLoad: true,
-  theme: "neutral",
-  securityLevel: "loose",
+  theme: "forest",
+  themeVariables: {
+    primaryColor: "#9b87f5",
+    primaryTextColor: "#fff",
+    primaryBorderColor: "#7E69AB",
+    lineColor: "#6E59A5",
+    secondaryColor: "#D6BCFA",
+    tertiaryColor: "#E5DEFF"
+  },
   fontFamily: "Inter, sans-serif",
+  securityLevel: "loose",
 });
 
 interface VisualizationModalProps {
