@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -244,7 +243,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
     URL.revokeObjectURL(url);
   };
   
-  const title = "Mind Map Visualization";
+  const title = "Treemap Visualization";
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose} modal={true}>

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -8,7 +9,7 @@ import {
   FileJson,
   Upload,
   FileIcon,
-  Braces,
+  Palette,
   Home
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -188,8 +189,8 @@ const Header = ({
             onClick={() => openVisualization("mindmap")} 
             className="flex items-center gap-1 text-black h-8 px-3"
           >
-            <Braces className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Mind Map</span>
+            <Palette className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Treemap</span>
           </Button>
         </div>
         

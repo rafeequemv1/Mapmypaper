@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -187,6 +186,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [showTempMessage, setShowTempMessage] = useState(false);
   const { toast } = useToast();
   const [scale, setScale] = useState(0.7);
+  const [layoutDirection, setLayoutDirection] = useState<0 | 1 | 2>(1); // 0: left, 1: right, 2: both sides
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -759,6 +759,40 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   };
 
+  // Change layout direction
+  const changeLayoutDirection = (direction: 0 | 1 | 2) => {
+    if (mindMapRef.current) {
+      // Update the direction for all top-level nodes
+      const data = mindMapRef.current.getData();
+      if (data.nodeData && data.nodeData.children) {
+        data.nodeData.children.forEach((child: any) => {
+          child.direction = direction === 2 
+            ? (child.direction === 0 ? 0 : 1) // Keep current direction if bidirectional
+            : direction; // Set to specified direction otherwise
+        });
+        
+        mindMapRef.current.getOptions().direction = direction;
+        mindMapRef.current.init(data);
+        setLayoutDirection(direction);
+        
+        // Re-center and scale after direction change
+        setTimeout(() => {
+          mindMapRef.current?.scale(scale);
+          mindMapRef.current?.toCenter();
+        }, 100);
+        
+        toast({
+          title: "Layout Changed",
+          description: direction === 0 
+            ? "Left-side layout applied" 
+            : direction === 1 
+              ? "Right-side layout applied" 
+              : "Bidirectional layout applied"
+        });
+      }
+    }
+  };
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       {/* Mind Map Container */}
@@ -767,17 +801,49 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         className="mind-map-container h-full w-full overflow-hidden"
       ></div>
       
-      {/* Zoom Controls */}
-      <div className="absolute top-4 right-4 flex gap-2 bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-md z-10">
-        <Button variant="outline" size="icon" onClick={handleZoomIn} title="Zoom In">
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" onClick={handleZoomOut} title="Zoom Out">
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" onClick={handleResetView} title="Reset View">
-          <RotateCcw className="h-4 w-4" />
-        </Button>
+      {/* Zoom and Layout Controls */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-md flex gap-2">
+          <Button variant="outline" size="icon" onClick={handleZoomIn} title="Zoom In">
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={handleZoomOut} title="Zoom Out">
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={handleResetView} title="Reset View">
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-md flex gap-2">
+          <Button 
+            variant={layoutDirection === 0 ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => changeLayoutDirection(0)} 
+            title="Left-side Layout"
+            className="h-8 w-8 p-0 flex items-center justify-center"
+          >
+            <div className="transform rotate-180">➡</div>
+          </Button>
+          <Button 
+            variant={layoutDirection === 1 ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => changeLayoutDirection(1)} 
+            title="Right-side Layout"
+            className="h-8 w-8 p-0 flex items-center justify-center"
+          >
+            ➡
+          </Button>
+          <Button 
+            variant={layoutDirection === 2 ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => changeLayoutDirection(2)} 
+            title="Bidirectional Layout"
+            className="h-8 w-8 p-0 flex items-center justify-center"
+          >
+            ↔
+          </Button>
+        </div>
       </div>
       
       {/* Temporary Instruction Message */}
