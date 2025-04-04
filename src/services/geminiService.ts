@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -810,4 +811,10 @@ const cleanMindmapSyntax = (code: string): string => {
     
     return validLines.join('\n');
   } catch (error) {
-    console.error("Error cleaning mindmap syntax:", error
+    console.error("Error cleaning mindmap syntax:", error);
+    return `mindmap
+      root((Error))
+        Syntax Cleaning Failed
+          Please try again`;
+  }
+};
