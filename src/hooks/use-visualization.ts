@@ -95,6 +95,26 @@ export function useVisualization() {
         validatedSyntax = validatedSyntax.replace(/-{2,}>/g, '-->');
         validatedSyntax = validatedSyntax.replace(/<-{2,}/g, '<--');
         
+        // Fix any spaces at the beginning of lines
+        validatedSyntax = validatedSyntax.replace(/^\s+/gm, '');
+        
+        // Make sure nodes are defined before they're used in connections
+        // Extract all node definitions and connections
+        const nodeDefinitions = new Set<string>();
+        const connections: string[] = [];
+        
+        validatedSyntax.split('\n').forEach(line => {
+          const definitionMatch = line.match(/^\s*([A-Za-z0-9_]+)\s*(\[|\(|\{)/);
+          if (definitionMatch) {
+            nodeDefinitions.add(definitionMatch[1]);
+          }
+          
+          const connectionMatch = line.match(/^\s*([A-Za-z0-9_]+)\s*-->/);
+          if (connectionMatch) {
+            connections.push(line);
+          }
+        });
+        
         console.log("Applied flowchart syntax fixes");
       }
       
