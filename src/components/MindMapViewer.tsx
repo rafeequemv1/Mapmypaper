@@ -808,7 +808,23 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   // Handle reset layout
   const handleResetLayout = () => {
     if (mindMapRef.current) {
-      mindMapRef.current.resetLayout();
+      // Since resetLayout() is not available in the MindElixirInstance type,
+      // we'll use a combination of methods to achieve the same effect:
+      // 1. Center the mind map using setTranslate
+      // 2. Reset the scale to 1
+      if (mindMapRef.current.container) {
+        // Get the container dimensions
+        const container = mindMapRef.current.container;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // Center the mind map in the container
+        mindMapRef.current.setTranslate(containerWidth / 2, containerHeight / 2);
+        
+        // Reset the scale to 1
+        mindMapRef.current.scale(1, true); // Set the second parameter to true to set absolute scale
+      }
+      
       toast({
         title: "Layout Reset",
         description: "Mind map layout has been reset",
