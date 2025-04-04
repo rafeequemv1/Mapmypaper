@@ -165,7 +165,7 @@ classDef success fill:#bfb,stroke:#3a3,stroke-width:1px,color:#050`
               <p className="font-semibold">Syntax Tips:</p>
               <ul className="list-disc pl-4 mt-1 space-y-1">
                 <li>Indentation defines hierarchy (children indented more than parents)</li>
-                <li>Node shapes: default (text), circle: ((text)), square: [text], rounded: (text), hexagon: {{text}}</li>
+                <li>Node shapes: default (text), circle: ((text)), square: [text], rounded: (text), hexagon: {"{{text}}"})</li>
                 <li>Apply styling with <code>:::classname</code> after node text</li>
                 <li>Use built-in classes: important, primary, secondary, success</li>
                 <li>Class definitions must be at the root level (not indented)</li>
