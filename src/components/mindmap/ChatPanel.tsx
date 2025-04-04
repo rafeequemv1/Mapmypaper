@@ -96,6 +96,11 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
   useEffect(() => {
     const processExplainImage = async () => {
       if (explainImage && !processingExplainImage) {
+        console.log("ChatPanel: Starting image processing", {
+          imageDataLength: explainImage.length,
+          isDataUrl: explainImage.startsWith('data:image/')
+        });
+        
         setProcessingExplainImage(true);
         
         // Add user message with the selected area image
@@ -109,9 +114,14 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
         setIsTyping(true);
         
         try {
-          console.log("ChatPanel: Processing image analysis with Gemini");
+          console.log("ChatPanel: Calling Gemini API for image analysis");
           // Call enhanced Gemini API with the image
           const response = await analyzeImageWithGemini(explainImage);
+          
+          console.log("ChatPanel: Received Gemini API response", {
+            responseLength: response.length,
+            preview: response.substring(0, 50) + "..."
+          });
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);

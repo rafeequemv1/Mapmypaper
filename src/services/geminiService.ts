@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -229,7 +228,16 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
 // Enhanced function to analyze images with Gemini vision capabilities
 export const analyzeImageWithGemini = async (imageData: string, pdfText?: string): Promise<string> => {
   try {
-    console.log("Analyzing image with Gemini, image data length:", imageData?.length);
+    console.log("Starting to analyze image with Gemini, image data length:", imageData?.length);
+    
+    if (!imageData || imageData.length < 100 || !imageData.startsWith('data:image/')) {
+      console.error("Invalid image data provided to analyzeImageWithGemini:", {
+        present: !!imageData,
+        length: imageData?.length || 0,
+        validFormat: imageData?.startsWith('data:image/') || false
+      });
+      return "I couldn't analyze this image. The image data appears to be invalid or missing. Please try selecting an area again.";
+    }
     
     // Use context from stored PDF text if not provided
     const pdfContext = pdfText || (sessionStorage.getItem('pdfText') 
@@ -245,9 +253,15 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
     // Remove data URL prefix if present (e.g., "data:image/png;base64,")
     if (base64Image.includes('base64,')) {
       base64Image = imageData.split(',')[1] || imageData;
+      console.log("Extracted base64 data without prefix, length:", base64Image.length);
     }
     
-    console.log("Prepared base64 image length:", base64Image.length);
+    if (base64Image.length < 100) {
+      console.error("Base64 image data is too short after processing:", base64Image.length);
+      return "The captured image data appears to be corrupted or empty. Please try selecting an area again.";
+    }
+    
+    console.log("Preparing to send image to Gemini API");
     
     const promptText = `
       You are an AI research assistant helping a user understand content from an academic PDF. 
@@ -266,7 +280,7 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
       ${pdfContext}
     `;
     
-    console.log("Sending prompt to Gemini for image analysis");
+    console.log("Creating content parts for Gemini API request");
     
     // Create the properly typed content parts array
     const contentParts: Part[] = [];
@@ -284,17 +298,24 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
       }
     });
     
+    console.log("Sending request to Gemini API");
+    
     // Generate content with the image
     const result = await model.generateContent(contentParts);
+    console.log("Received response from Gemini API");
+    
     const response = await result.response;
     const generatedText = response.text();
     
-    console.log("Received response from Gemini:", generatedText.substring(0, 100) + "...");
+    console.log("Processed Gemini response:", {
+      length: generatedText.length,
+      preview: generatedText.substring(0, 100) + "..."
+    });
     
     return generatedText;
   } catch (error) {
     console.error("Gemini API vision error:", error);
-    return "Sorry, I encountered an error while analyzing the image. Please try again. Error: " + (error as Error).message;
+    return "Sorry, I encountered an error while analyzing the image: " + (error as Error).message + ". Please try again with a different selection.";
   }
 };
 
@@ -789,10 +810,4 @@ const cleanMindmapSyntax = (code: string): string => {
     
     return validLines.join('\n');
   } catch (error) {
-    console.error("Error cleaning mindmap syntax:", error);
-    return `mindmap
-      root((Error))
-        Syntax Cleaning Failed
-          Please try again`;
-  }
-};
+    console.error("Error cleaning mindmap syntax:", error

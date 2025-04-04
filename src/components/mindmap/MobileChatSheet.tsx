@@ -52,6 +52,11 @@ const MobileChatSheet = ({
   useEffect(() => {
     const processExplainImage = async () => {
       if (explainImage && !processingExplainImage && isSheetOpen) {
+        console.log("MobileChatSheet: Starting image processing", {
+          imageDataLength: explainImage.length,
+          isDataUrl: explainImage.startsWith('data:image/')
+        });
+        
         setProcessingExplainImage(true);
         
         // Add user message with the selected area image
@@ -65,9 +70,14 @@ const MobileChatSheet = ({
         setIsTyping(true);
         
         try {
-          console.log("MobileChatSheet: Processing image analysis with Gemini");
+          console.log("MobileChatSheet: Calling Gemini API for image analysis");
           // Call AI with the image using the enhanced function
           const response = await analyzeImageWithGemini(explainImage);
+          
+          console.log("MobileChatSheet: Received Gemini API response", {
+            responseLength: response.length,
+            preview: response.substring(0, 50) + "..."
+          });
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);

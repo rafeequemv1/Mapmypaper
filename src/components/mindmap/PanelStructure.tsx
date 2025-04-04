@@ -31,10 +31,14 @@ const PanelStructure = ({
   const [selectedImageArea, setSelectedImageArea] = useState<string | null>(null);
   const { toast } = useToast();
   
-  // Add debugging for image selection process
+  // Enhanced debugging for image selection process
   useEffect(() => {
     if (selectedImageArea) {
-      console.log("PanelStructure: Image area state updated, length:", selectedImageArea.length);
+      console.log("PanelStructure: Image area state updated", {
+        length: selectedImageArea.length,
+        isDataUrl: selectedImageArea.startsWith('data:image/'),
+        preview: selectedImageArea.substring(0, 50) + '...'
+      });
     }
   }, [selectedImageArea]);
 
@@ -46,7 +50,12 @@ const PanelStructure = ({
   };
 
   const handleAreaSelected = (imageDataUrl: string) => {
-    console.log("Area selected in PanelStructure, image length:", imageDataUrl.length);
+    console.log("PanelStructure: Area selected received", {
+      received: !!imageDataUrl,
+      length: imageDataUrl?.length || 0,
+      isDataUrl: imageDataUrl?.startsWith('data:image/'),
+      preview: imageDataUrl ? imageDataUrl.substring(0, 50) + '...' : 'none'
+    });
     
     // Validate the image data before setting state
     if (imageDataUrl && imageDataUrl.startsWith('data:image/') && imageDataUrl.length > 100) {
@@ -57,18 +66,30 @@ const PanelStructure = ({
         description: "Sending to AI for analysis...",
       });
       
-      // Ensure chat panel is open when an area is selected
+      // Force chat panel to open when an area is selected
       if (!showChat) {
         console.log("Opening chat panel for image analysis");
         toggleChat();
       }
+      
+      // Small delay to ensure state is updated properly
+      setTimeout(() => {
+        // Double check if image data is still available after state update
+        console.log("Image data verification after state update:", {
+          inState: !!selectedImageArea,
+          justSet: !!imageDataUrl,
+          chatIsOpen: showChat
+        });
+      }, 100);
     } else {
-      console.error("Invalid image data received:", 
-        imageDataUrl ? `Length: ${imageDataUrl.length}, Prefix: ${imageDataUrl.substring(0, 20)}...` : "undefined");
+      console.error("Invalid image data received:", {
+        length: imageDataUrl?.length || 0,
+        prefix: imageDataUrl ? imageDataUrl.substring(0, 20) + '...' : 'undefined'
+      });
       
       toast({
         title: "Image capture failed",
-        description: "The selected area could not be processed.",
+        description: "The selected area could not be processed. Please try again.",
         variant: "destructive"
       });
     }
