@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Upload, ExternalLink, Braces, GitBranch, BrainCircuit, MessageSquare, FileDown, Clock, BarChart2, Lock, ChevronRight } from "lucide-react";
+import { Upload, ExternalLink, Braces, GitBranch, BrainCircuit, MessageSquare, FileDown, Clock, BarChart2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import PaperLogo from "@/components/PaperLogo";
@@ -180,10 +180,10 @@ const PdfUpload = () => {
       // Track successful mind map generation
       trackMindMapGeneration(selectedFile.name);
       
-      // Navigate to the mind map view
+      // Navigate to the mind map view with right-click instruction
       toast({
         title: "Success",
-        description: "Mind map generated successfully!",
+        description: "Mind map generated successfully! Use right-click and drag to navigate the mind map.",
       });
       navigate("/mindmap");
     } catch (error) {
@@ -275,7 +275,7 @@ const PdfUpload = () => {
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         <div className="text-center mb-8 mt-6">
           <div className="flex flex-col items-center justify-center gap-2 mb-4">
-            <span className="beta-tag mb-2">BETA</span>
+            <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full mb-2">BETA</span>
             <div className="flex items-center gap-4">
               <PaperLogo size="lg" />
               <h1 className="text-4xl font-bold text-foreground">mapmypaper</h1>
@@ -316,12 +316,6 @@ const PdfUpload = () => {
               <p className="text-lg font-medium">Drag and drop your PDF here</p>
               <p className="text-muted-foreground">or select a file from your computer</p>
             </div>
-          </div>
-          
-          {/* Security message */}
-          <div className="flex items-center gap-2 bg-blue-50/50 p-3 rounded-md mb-6 text-xs text-blue-800">
-            <Lock className="h-4 w-4" />
-            <p>Your documents are secure and never shared with third parties</p>
           </div>
           
           {/* Selected File Info with size warning if needed */}
