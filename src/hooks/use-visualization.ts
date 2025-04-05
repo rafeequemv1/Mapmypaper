@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { generateMermaidDiagram } from "@/services/geminiService";
 
-export type VisualizationType = "mindmap";
+export type VisualizationType = "mindmap" | "flowchart";
 
 export function useVisualization() {
   const { toast } = useToast();
@@ -12,7 +12,8 @@ export function useVisualization() {
   const [mermaidSyntax, setMermaidSyntax] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [savedSyntax, setSavedSyntax] = useState<Record<VisualizationType, string>>({
-    mindmap: ""
+    mindmap: "",
+    flowchart: ""
   });
 
   const openModal = async (type: VisualizationType) => {

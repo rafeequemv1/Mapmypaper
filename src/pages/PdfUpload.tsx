@@ -228,17 +228,7 @@ const PdfUpload = () => {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => {
-                    try {
-                      openVisualization("mindmap"); 
-                    } catch (err) {
-                      toast({
-                        title: "Visualization not available",
-                        description: "Please try again after uploading a PDF",
-                        variant: "destructive"
-                      });
-                    }
-                  }}
+                  onClick={() => openVisualization("mindmap")}
                   className="flex items-center gap-1"
                 >
                   <Braces className="h-4 w-4" />
@@ -247,17 +237,7 @@ const PdfUpload = () => {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => {
-                    try {
-                      openVisualization("mindmap");
-                    } catch (err) {
-                      toast({
-                        title: "Visualization not available",
-                        description: "Please try again after uploading a PDF",
-                        variant: "destructive"
-                      });
-                    }
-                  }}
+                  onClick={() => openVisualization("mindmap")}
                   className="flex items-center gap-1"
                 >
                   <GitBranch className="h-4 w-4" />

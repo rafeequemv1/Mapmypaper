@@ -7,7 +7,6 @@ interface VisualizationContextType {
   openVisualization: (type: VisualizationType) => void;
 }
 
-// Create the context with a default value that throws a helpful error message
 const VisualizationContext = createContext<VisualizationContextType | undefined>(undefined);
 
 export const useVisualizationContext = () => {

@@ -8,7 +8,7 @@ import {
   FileJson,
   Upload,
   FileIcon,
-  Palette,
+  Braces,
   Home
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,27 +45,7 @@ const Header = ({
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
   const navigate = useNavigate();
-  
-  // Safely access visualization context, providing fallback for pages where it's not available
-  const visualizationContext = React.useContext(React.createContext<{ openVisualization: (type: string) => void }>({
-    openVisualization: () => {
-      toast({
-        title: "Visualization not available",
-        description: "Visualization features are not available on this page",
-        variant: "destructive"
-      });
-    }
-  }));
-  
-  // Try to get the actual visualization context if available
-  try {
-    const { openVisualization } = useVisualizationContext();
-    // If we get here, the context is available, so update our local reference
-    visualizationContext.openVisualization = openVisualization;
-  } catch (error) {
-    // Context not available, keep using the fallback
-    console.log("Visualization context not available in this component, using fallback");
-  }
+  const { openVisualization } = useVisualizationContext();
   
   // Handle export as PNG
   const handleExportPNG = () => {
@@ -205,10 +185,10 @@ const Header = ({
           
           <Button 
             variant="ghost" 
-            onClick={() => visualizationContext.openVisualization("mindmap")} 
+            onClick={() => openVisualization("mindmap")} 
             className="flex items-center gap-1 text-black h-8 px-3"
           >
-            <Palette className="h-3.5 w-3.5" />
+            <Braces className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Treemap</span>
           </Button>
         </div>
