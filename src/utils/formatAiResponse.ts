@@ -1,8 +1,7 @@
-
 /**
  * Formats AI responses with enhanced typography and structure
  * Converts markdown syntax to properly styled HTML and adds citation support
- * Optimized for concise, simplified responses with bullet points and headlines
+ * Optimized for concise, simplified responses
  */
 export const formatAIResponse = (content: string): string => {
   // Add relevant emojis based on content
@@ -80,13 +79,6 @@ export const formatAIResponse = (content: string): string => {
     }
   );
   
-  // Enhance bullet point formatting for better readability
-  formattedContent = formattedContent
-    // Format lists with improved styling - handle bullet points with more prominence
-    .replace(/^\* (.*$)/gim, '<ul class="my-2 ml-4 list-disc"><li class="mb-2 text-sm font-medium">$1</li></ul>')
-    .replace(/^- (.*$)/gim, '<ul class="my-2 ml-4 list-disc"><li class="mb-2 text-sm font-medium">$1</li></ul>')
-    .replace(/^(\d+)\. (.*$)/gim, '<ol class="my-2 ml-4 list-decimal"><li class="mb-2 text-sm font-medium" value="$1">$2</li></ol>')
-  
   // Replace markdown headers with concise styling
   formattedContent = formattedContent
     // Format main headers with more prominent styling and blue color
@@ -99,6 +91,11 @@ export const formatAIResponse = (content: string): string => {
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em class="italic text-gray-800">$1</em>')
     .replace(/~~(.*?)~~/g, '<del class="line-through text-gray-500">$1</del>')
+    
+    // Format lists with improved styling
+    .replace(/^\* (.*$)/gim, '<ul class="my-2 ml-4 list-disc"><li class="mb-1 text-sm">$1</li></ul>')
+    .replace(/^- (.*$)/gim, '<ul class="my-2 ml-4 list-disc"><li class="mb-1 text-sm">$1</li></ul>')
+    .replace(/^(\d+)\. (.*$)/gim, '<ol class="my-2 ml-4 list-decimal"><li class="mb-1 text-sm" value="$1">$2</li></ol>')
     
     // Format code blocks with improved styling
     .replace(/```(.+?)```/gs, '<pre class="bg-gray-100 p-2 rounded-md my-2 overflow-x-auto text-xs font-mono shadow-sm border border-gray-200">$1</pre>')
@@ -123,7 +120,7 @@ export const formatAIResponse = (content: string): string => {
   // Make the formatting cleaner and even more minimal
   formattedContent = formattedContent
     .replace(/<p>/g, '<p class="mb-2 text-sm leading-relaxed">')
-    .replace(/<li>/g, '<li class="mb-2 text-sm font-medium">');
+    .replace(/<li>/g, '<li class="mb-1 text-sm">');
 
   // Wrap the result in a paragraph if it doesn't start with an HTML tag
   if (!formattedContent.startsWith('<')) {

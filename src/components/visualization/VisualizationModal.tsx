@@ -1,11 +1,10 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw, X } from "lucide-react";
 import { VisualizationType } from "@/hooks/use-visualization";
 
 // Initialize mermaid with colorful theme settings
@@ -168,8 +167,8 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
               
               // Add viewBox if it doesn't exist for better scaling
               if (!svgElement.getAttribute('viewBox')) {
-                const width = svgElement.getAttribute('width') || '1200';
-                const height = svgElement.getAttribute('height') || '800';
+                const width = svgElement.getAttribute('width') || '800';
+                const height = svgElement.getAttribute('height') || '600';
                 svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
               }
               
@@ -187,7 +186,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
                   if (viewBox && viewBox.length === 4) {
                     const vbWidth = parseFloat(viewBox[2]);
                     const vbHeight = parseFloat(viewBox[3]);
-                    const scale = Math.min(containerWidth / vbWidth, containerHeight / vbHeight) * 1.2; // Increase scale by 20%
+                    const scale = Math.min(containerWidth / vbWidth, containerHeight / vbHeight);
                     
                     // Apply transform scale and translation for centering
                     const g = svgElement.querySelector('g');
@@ -244,13 +243,16 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
     URL.revokeObjectURL(url);
   };
   
-  const title = visualizationType === "mindmap" ? "Mind Map Visualization" : "Flowchart Visualization";
+  const title = "Mind Map Visualization";
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
       <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] flex flex-col overflow-hidden p-4">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>{title}</DialogTitle>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
         
         <Tabs 
@@ -304,7 +306,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
               <div className="flex items-center justify-center h-full">
                 <div className="flex flex-col items-center gap-2">
                   <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
-                  <p>Generating visualization...</p>
+                  <p>Generating mindmap...</p>
                 </div>
               </div>
             ) : mermaidSyntax ? (
@@ -314,7 +316,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
               ></div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
-                No visualization diagram available. Click Regenerate to create one.
+                No mindmap diagram available. Click Regenerate to create one.
               </div>
             )}
           </TabsContent>
@@ -324,13 +326,13 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
             className="flex-1 overflow-hidden flex flex-col"
           >
             <p className="text-sm text-gray-500 mb-2">
-              Edit the Mermaid syntax below to customize your {visualizationType} diagram:
+              Edit the Mermaid syntax below to customize your mindmap diagram:
             </p>
             <Textarea 
               value={mermaidSyntax} 
               onChange={handleSyntaxChange}
               className="flex-1 font-mono text-sm resize-none overflow-auto"
-              placeholder={`Enter your ${visualizationType} syntax here...`}
+              placeholder="Enter your mindmap syntax here..."
               disabled={isGenerating}
             />
           </TabsContent>

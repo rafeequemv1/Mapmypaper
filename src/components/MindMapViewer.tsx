@@ -1,10 +1,11 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RotateCcw, AlignLeft, AlignRight, AlignVerticalJustifyCenter } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { FileText } from "lucide-react";
 
 interface MindMapViewerProps {
@@ -185,11 +186,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [summary, setSummary] = useState<string>('');
   const [showTempMessage, setShowTempMessage] = useState(false);
   const { toast } = useToast();
-  const [scale, setScale] = useState(0.7);
-  const [direction, setDirection] = useState<0 | 1 | 2>(1); // 0: left, 1: right, 2: both sides
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
+      // Initialize the mind map only once when it's generated
+      
       // Define a enhanced colorful theme based on the Catppuccin Theme
       const colorfulTheme = {
         name: 'Catppuccin',
@@ -349,7 +350,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         const observer = new MutationObserver((mutations) => {
           mutations.forEach(mutation => {
             if (mutation.addedNodes.length) {
-              Array.from(mutation.addedNodes).forEach(node => {
+              mutation.addedNodes.forEach(node => {
                 if (node instanceof HTMLElement) {
                   // Style panel/node menu appeared - ensure it's visible
                   if (node.classList.contains('mind-elixir-style-panel') || 
@@ -548,9 +549,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       // Scale the mind map to fit better (slightly zoomed out)
       setTimeout(() => {
-        mind.scale(0.65); // Set to smaller initial scale (decreased from 0.7)
+        mind.scale(0.7); // Set to smaller initial scale (decreased from 0.8)
         mind.toCenter(); // Center the mind map
-        setScale(0.65);
       }, 100);
       
       // Enable debug mode for better troubleshooting
@@ -598,7 +598,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.addedNodes.length > 0) {
-            Array.from(mutation.addedNodes).forEach((node) => {
+            mutation.addedNodes.forEach((node) => {
               if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
                 node.addEventListener('click', () => {
                   // Node is clicked - let Mind Elixir handle it
@@ -698,195 +698,105 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
-  // Function to change the map direction/alignment
-  const changeMapDirection = (newDirection: 0 | 1 | 2) => {
-    if (!mindMapRef.current) return;
-    
-    // Update direction state
-    setDirection(newDirection);
-    
-    try {
-      // Update direction in mind map instance
-      mindMapRef.current.direction = newDirection;
-      
-      // Rerender the mind map with new direction
-      mindMapRef.current.refresh();
-      
-      // After refresh, update the scale and center
-      setTimeout(() => {
-        if (mindMapRef.current) {
-          mindMapRef.current.toCenter();
-          mindMapRef.current.scale(scale);
-        }
-      }, 100);
-      
-      // Show toast to confirm direction change
-      const directionNames = ["Left", "Right", "Bidirectional"];
-      toast({
-        title: "Layout Changed",
-        description: `Mind map layout changed to ${directionNames[newDirection]}`,
-      });
-    } catch (error) {
-      console.error("Error changing map direction:", error);
-      toast({
-        title: "Error",
-        description: "Failed to change mind map layout",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {
     if (!nodeData) return;
     
     // Get all text from node and its children
-    const extractNodeText = (node: any): string => {
+    const getNodeText = (node: any): string => {
       let text = node.topic || '';
-      
       if (node.children && node.children.length > 0) {
-        node.children.forEach((child: any) => {
-          text += ' ' + extractNodeText(child);
-        });
+        const childrenText = node.children.map((child: any) => getNodeText(child)).join(' ');
+        text += ' ' + childrenText;
       }
-      
       return text;
     };
     
-    const nodeText = extractNodeText(nodeData);
+    // Generate a simple summary from node text
+    const nodeText = getNodeText(nodeData);
     
-    // Show a temporary message that we're generating a summary
-    toast({
-      title: "Generating summary...",
-      description: "Analyzing the selected branch of your mind map."
-    });
+    // Show summary message
+    setSummary(nodeText);
+    setShowSummary(true);
     
-    // Call the parent component with the text to explain
+    // If there's a callback for explaining text, use it
     if (onExplainText) {
       onExplainText(nodeText);
     }
     
-    // Request to open the chat panel if it's not already open
+    // Open the chat panel if requested
     if (onRequestOpenChat) {
       onRequestOpenChat();
     }
   };
-
+  
+  // Function to handle zoom in
+  const handleZoomIn = () => {
+    if (mindMapRef.current) {
+      const currentScale = mindMapRef.current.scaleVal;
+      mindMapRef.current.scale(currentScale + 0.1);
+    }
+  };
+  
+  // Function to handle zoom out
+  const handleZoomOut = () => {
+    if (mindMapRef.current) {
+      const currentScale = mindMapRef.current.scaleVal;
+      // Don't allow zooming out too far
+      if (currentScale > 0.3) {
+        mindMapRef.current.scale(currentScale - 0.1);
+      }
+    }
+  };
+  
+  // Function to reset zoom and position
+  const handleReset = () => {
+    if (mindMapRef.current) {
+      mindMapRef.current.scale(0.7); // Reset to initial scale
+      mindMapRef.current.toCenter(); // Center the mind map
+    }
+  };
+  
   return (
-    <div className="relative w-full h-full overflow-hidden">
-      {/* Main mind map container */}
-      <div 
-        ref={containerRef} 
-        className="w-full h-full bg-white overflow-hidden"
-        style={{ visibility: isReady ? 'visible' : 'hidden' }}
-      />
-      
-      {/* Temporary right-click and pan instruction message */}
-      {showTempMessage && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm border border-purple-200 rounded-lg shadow-lg px-6 py-3 text-sm text-center z-50 max-w-md">
-          <p className="font-medium text-purple-800 mb-1">Mind Map Controls</p>
-          <p className="text-gray-600">
-            <strong>Right-click</strong> nodes for more options. <strong>Click and drag</strong> the background to pan.
-          </p>
-        </div>
-      )}
-      
-      {/* Layout controls */}
-      <div className="absolute bottom-6 left-6 flex bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-200 overflow-hidden">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className={`p-2 h-10 rounded-none hover:bg-gray-100 ${direction === 0 ? 'bg-purple-100' : ''}`}
-          onClick={() => changeMapDirection(0)}
-          title="Align Left"
-        >
-          <AlignLeft className="h-5 w-5" />
-        </Button>
-        <div className="w-px h-full bg-gray-200"></div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className={`p-2 h-10 rounded-none hover:bg-gray-100 ${direction === 2 ? 'bg-purple-100' : ''}`}
-          onClick={() => changeMapDirection(2)}
-          title="Bidirectional"
-        >
-          <AlignVerticalJustifyCenter className="h-5 w-5" />
-        </Button>
-        <div className="w-px h-full bg-gray-200"></div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className={`p-2 h-10 rounded-none hover:bg-gray-100 ${direction === 1 ? 'bg-purple-100' : ''}`}
-          onClick={() => changeMapDirection(1)}
-          title="Align Right"
-        >
-          <AlignRight className="h-5 w-5" />
-        </Button>
-      </div>
-      
+    <div className="relative w-full h-full flex flex-col">
       {/* Zoom controls */}
-      <div className="absolute bottom-6 right-6 flex flex-col bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-200 overflow-hidden">
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-md shadow-md">
         <Button 
           variant="ghost" 
-          size="sm" 
-          className="p-2 h-10 rounded-none hover:bg-gray-100"
-          onClick={() => {
-            if (mindMapRef.current) {
-              const newScale = scale + 0.1;
-              mindMapRef.current.scale(newScale);
-              setScale(newScale);
-            }
-          }}
+          size="icon" 
+          onClick={handleZoomIn}
           title="Zoom In"
         >
-          <ZoomIn className="h-5 w-5" />
+          <ZoomIn size={18} />
         </Button>
-        <div className="h-px bg-gray-200 w-full"></div>
         <Button 
           variant="ghost" 
-          size="sm" 
-          className="p-2 h-10 rounded-none hover:bg-gray-100"
-          onClick={() => {
-            if (mindMapRef.current) {
-              const newScale = Math.max(0.3, scale - 0.1);
-              mindMapRef.current.scale(newScale);
-              setScale(newScale);
-            }
-          }}
+          size="icon" 
+          onClick={handleZoomOut}
           title="Zoom Out"
         >
-          <ZoomOut className="h-5 w-5" />
+          <ZoomOut size={18} />
         </Button>
-        <div className="h-px bg-gray-200 w-full"></div>
         <Button 
           variant="ghost" 
-          size="sm" 
-          className="p-2 h-10 rounded-none hover:bg-gray-100"
-          onClick={() => {
-            if (mindMapRef.current) {
-              mindMapRef.current.toCenter();
-              mindMapRef.current.scale(0.65);
-              setScale(0.65);
-            }
-          }}
+          size="icon" 
+          onClick={handleReset}
           title="Reset View"
         >
-          <RotateCcw className="h-5 w-5" />
+          <RotateCcw size={18} />
         </Button>
       </div>
       
-      {/* Summary dialog */}
-      {showSummary && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-auto">
-            <h3 className="text-lg font-medium mb-4">Summary</h3>
-            <div className="prose prose-purple max-w-none">
-              {summary}
-            </div>
-            <div className="mt-6 flex justify-end">
-              <Button onClick={() => setShowSummary(false)}>Close</Button>
-            </div>
-          </div>
+      {/* Mind map container */}
+      <div 
+        ref={containerRef} 
+        className="flex-1 h-full w-full overflow-hidden"
+      ></div>
+      
+      {/* Temporary message for map controls */}
+      {showTempMessage && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-sm animate-fade-in-out z-10 whitespace-nowrap">
+          Right-click on nodes for options • Click and drag to pan the map
         </div>
       )}
     </div>
