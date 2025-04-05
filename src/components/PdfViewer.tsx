@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, HelpCircle, RefreshCw, Crop } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Skeleton } from "./ui/skeleton";
@@ -11,9 +11,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useRef as useStateRef } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { retrievePDF } from "@/utils/pdfStorage";
-import html2canvas from "html2canvas";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -21,7 +19,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
-  onImageSelected?: (imageData: string) => void;
   renderTooltipContent?: () => React.ReactNode;
 }
 
@@ -30,7 +27,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, onImageSelected, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -40,7 +37,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [showSearch, setShowSearch] = useState<boolean>(false);
     const pdfContainerRef = useRef<HTMLDivElement>(null);
     const pagesRef = useRef<(HTMLDivElement | null)[]>([]);
-    const selectionBoxRef = useRef<HTMLDivElement | null>(null);
     const { toast } = useToast();
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
@@ -52,17 +48,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [selectionPosition, setSelectionPosition] = useState<{x: number, y: number} | null>(null);
     const [showExplainTooltip, setShowExplainTooltip] = useState(false);
     
-    // Area selection states
-    const [isAreaSelectionMode, setIsAreaSelectionMode] = useState(false);
-    const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
-    const [selectionEnd, setSelectionEnd] = useState<{x: number, y: number} | null>(null);
-    const [isSelecting, setIsSelecting] = useState(false);
-    const [selectedAreaPosition, setSelectedAreaPosition] = useState<{x: number, y: number} | null>(null);
-    const [showImageExplainTooltip, setShowImageExplainTooltip] = useState(false);
-    
     // Store the onTextSelected callback in a ref to avoid stale closures
     const onTextSelectedRef = useStateRef(onTextSelected);
-    const onImageSelectedRef = useStateRef(onImageSelected);
 
     const refreshPdfData = async () => {
       setIsLoading(true);
@@ -137,9 +124,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Handle text selection
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-      // Skip if we're in area selection mode
-      if (isAreaSelectionMode) return;
-      
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "") {
         const text = selection.toString().trim();
@@ -184,16 +168,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             }
           }
         }
-        
-        // Also handle image tooltip clicks
-        if (showImageExplainTooltip && selectedAreaPosition) {
-          // Check if the click is within the tooltip
-          const tooltipElement = document.querySelector('[data-image-explain-tooltip]');
-          if (tooltipElement && !tooltipElement.contains(e.target as Node)) {
-            setShowImageExplainTooltip(false);
-            setSelectedAreaPosition(null);
-          }
-        }
       };
       
       document.addEventListener('mousedown', handleDocumentClick);
@@ -201,7 +175,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return () => {
         document.removeEventListener('mousedown', handleDocumentClick);
       };
-    }, [showExplainTooltip, selectionPosition, showImageExplainTooltip, selectedAreaPosition]);
+    }, [showExplainTooltip, selectionPosition]);
     
     // Function to handle explain button click for text
     const handleExplain = () => {
@@ -209,234 +183,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         onTextSelectedRef.current(selectedText);
         setShowExplainTooltip(false);
         setSelectionPosition(null);
-      }
-    };
-    
-    // Improved function to handle explain button click for images
-    const handleExplainImage = async () => {
-      if (!selectionStart || !selectionEnd || !onImageSelectedRef.current) return;
-      
-      try {
-        // Use the document element as the capture target
-        const viewport = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-        if (!viewport) {
-          console.error("Could not find PDF viewport");
-          return;
-        }
-        
-        // Get the scroll position
-        const scrollTop = viewport.scrollTop || 0;
-        
-        // Calculate selection area in document coordinates
-        const left = Math.min(selectionStart.x, selectionEnd.x);
-        const top = Math.min(selectionStart.y, selectionEnd.y);
-        const width = Math.abs(selectionStart.x - selectionEnd.x);
-        const height = Math.abs(selectionStart.y - selectionEnd.y);
-        
-        // Ensure minimum selection size
-        if (width < 10 || height < 10) {
-          toast({
-            title: "Selection Too Small",
-            description: "Please select a larger area to explain.",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        // Create a temporary div to position over the selected area
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = `${left}px`;
-        tempDiv.style.top = `${top}px`;
-        tempDiv.style.width = `${width}px`;
-        tempDiv.style.height = `${height}px`;
-        tempDiv.style.backgroundColor = 'transparent';
-        tempDiv.style.border = '2px solid transparent';
-        tempDiv.style.zIndex = '-1';
-        
-        // Add to document, capture, then remove
-        document.body.appendChild(tempDiv);
-        
-        // Create full page screenshot
-        const documentElement = document.documentElement;
-        const canvas = await html2canvas(documentElement, {
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          ignoreElements: (element) => {
-            // Ignore elements that are not part of the PDF content
-            return !element.closest('[data-radix-scroll-area-viewport]') && 
-                   !element.closest('.react-pdf__Document') &&
-                   element !== tempDiv;
-          }
-        });
-        
-        // Create a new canvas for the cropped selection
-        const croppedCanvas = document.createElement('canvas');
-        croppedCanvas.width = width;
-        croppedCanvas.height = height;
-        const ctx = croppedCanvas.getContext('2d');
-        
-        if (ctx) {
-          // Calculate the absolute position of the selection in the screenshot
-          const rect = tempDiv.getBoundingClientRect();
-          const canvasLeft = rect.left;
-          const canvasTop = rect.top;
-          
-          // Draw only the selected portion to the new canvas
-          ctx.drawImage(
-            canvas, 
-            canvasLeft, 
-            canvasTop, 
-            width, 
-            height, 
-            0, 
-            0, 
-            width, 
-            height
-          );
-          
-          // Convert to base64 data URL
-          const imageData = croppedCanvas.toDataURL('image/png');
-          
-          // Remove the temporary div
-          document.body.removeChild(tempDiv);
-          
-          // Pass to parent component
-          onImageSelectedRef.current(imageData);
-          
-          // Hide tooltip
-          setShowImageExplainTooltip(false);
-          setSelectedAreaPosition(null);
-          
-          // Exit selection mode
-          setIsAreaSelectionMode(false);
-          
-          // Cleanup
-          if (selectionBoxRef.current) {
-            selectionBoxRef.current.style.display = 'none';
-          }
-          
-          toast({
-            title: "Image Area Selected",
-            description: "Analyzing the selected area...",
-          });
-        }
-      } catch (error) {
-        console.error("Error capturing selection area:", error);
-        toast({
-          title: "Selection Failed",
-          description: "Could not capture the selected area. Please try again.",
-          variant: "destructive"
-        });
-      }
-    };
-
-    // Improved area selection mouse handlers
-    const handleAreaSelectionMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAreaSelectionMode || e.button !== 0) return;
-      
-      // Get the correct container element
-      const viewport = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-      if (!viewport) return;
-      
-      const rect = viewport.getBoundingClientRect();
-      const scrollTop = viewport.scrollTop || 0;
-      
-      // Store selection start coordinates relative to the viewport
-      setSelectionStart({
-        x: e.clientX - rect.left,
-        y: (e.clientY - rect.top) + scrollTop
-      });
-      setIsSelecting(true);
-      
-      // Initialize selection box
-      if (selectionBoxRef.current) {
-        selectionBoxRef.current.style.display = 'block';
-        selectionBoxRef.current.style.left = `${e.clientX - rect.left}px`;
-        selectionBoxRef.current.style.top = `${e.clientY - rect.top + scrollTop}px`;
-        selectionBoxRef.current.style.width = '0px';
-        selectionBoxRef.current.style.height = '0px';
-      }
-    };
-    
-    const handleAreaSelectionMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAreaSelectionMode || !isSelecting || !selectionStart) return;
-      
-      // Get the correct container element
-      const viewport = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-      if (!viewport) return;
-      
-      const rect = viewport.getBoundingClientRect();
-      const scrollTop = viewport.scrollTop || 0;
-      
-      const currentX = e.clientX - rect.left;
-      const currentY = e.clientY - rect.top + scrollTop;
-      
-      setSelectionEnd({
-        x: currentX,
-        y: currentY
-      });
-      
-      // Update selection box
-      if (selectionBoxRef.current) {
-        const left = Math.min(selectionStart.x, currentX);
-        const top = Math.min(selectionStart.y, currentY);
-        const width = Math.abs(selectionStart.x - currentX);
-        const height = Math.abs(selectionStart.y - currentY);
-        
-        selectionBoxRef.current.style.left = `${left}px`;
-        selectionBoxRef.current.style.top = `${top}px`;
-        selectionBoxRef.current.style.width = `${width}px`;
-        selectionBoxRef.current.style.height = `${height}px`;
-      }
-    };
-    
-    const handleAreaSelectionMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAreaSelectionMode || !isSelecting || !selectionStart) return;
-      
-      // Get the correct container element
-      const viewport = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-      if (!viewport) return;
-      
-      const rect = viewport.getBoundingClientRect();
-      const scrollTop = viewport.scrollTop || 0;
-      
-      const currentX = e.clientX - rect.left;
-      const currentY = e.clientY - rect.top + scrollTop;
-      
-      setSelectionEnd({
-        x: currentX,
-        y: currentY
-      });
-      
-      setIsSelecting(false);
-      
-      // Check if the selection has a reasonable size
-      if (Math.abs(selectionStart.x - currentX) > 10 && Math.abs(selectionStart.y - currentY) > 10) {
-        // Position explain tooltip near the selection
-        const tooltipX = (selectionStart.x + currentX) / 2;
-        const tooltipY = Math.min(selectionStart.y, currentY) - 10;
-        
-        setSelectedAreaPosition({
-          x: tooltipX,
-          y: tooltipY
-        });
-        
-        setShowImageExplainTooltip(true);
-      } else {
-        // Selection too small, reset
-        toast({
-          title: "Selection Too Small",
-          description: "Please select a larger area to explain.",
-          variant: "destructive"
-        });
-        
-        if (selectionBoxRef.current) {
-          selectionBoxRef.current.style.display = 'none';
-        }
-        setSelectionStart(null);
-        setSelectionEnd(null);
       }
     };
 
@@ -612,30 +358,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
-    // Updated toggle area selection mode with better feedback
-    const toggleAreaSelectionMode = () => {
-      const newMode = !isAreaSelectionMode;
-      setIsAreaSelectionMode(newMode);
-      
-      // Reset selection state when toggling
-      if (!newMode && selectionBoxRef.current) {
-        selectionBoxRef.current.style.display = 'none';
-      }
-      
-      setSelectionStart(null);
-      setSelectionEnd(null);
-      setIsSelecting(false);
-      setShowImageExplainTooltip(false);
-      
-      // Only show toast when enabling
-      if (newMode) {
-        toast({
-          title: "Area Selection Mode Enabled",
-          description: "Click and drag anywhere on the PDF to select an area to explain",
-        });
-      }
-    };
-
     // Page scrolling functionality
     const scrollToPage = (pageNumber: number) => {
       if (pageNumber < 1 || pageNumber > numPages) {
@@ -730,17 +452,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
           
-          {/* Area Selection Toggle Button */}
-          <Button 
-            variant={isAreaSelectionMode ? "secondary" : "ghost"}
-            size="icon" 
-            className={`h-7 w-7 ${isAreaSelectionMode ? 'bg-blue-100' : 'text-black'}`}
-            onClick={toggleAreaSelectionMode}
-            title={isAreaSelectionMode ? "Exit Area Selection Mode" : "Enter Area Selection Mode"}
-          >
-            <Crop className="h-3.5 w-3.5" />
-          </Button>
-          
           {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-1">
             <Button 
@@ -828,14 +539,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             </div>
           )}
-          
-          {/* Selected Mode Indicator */}
-          {isAreaSelectionMode && (
-            <div className="text-xs font-medium text-blue-600 ml-auto mr-2 flex items-center gap-1">
-              <Crop className="h-3 w-3" />
-              <span>Area Selection Mode</span>
-            </div>
-          )}
         </div>
 
         {/* PDF Content with full width */}
@@ -889,46 +592,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             )}
             
-            {/* Floating Explain Tooltip for Image Selection */}
-            {showImageExplainTooltip && selectedAreaPosition && (
-              <div
-                className="absolute z-50 bg-white border rounded-md shadow-md px-3 py-2 flex items-center gap-2"
-                style={{
-                  left: `${selectedAreaPosition.x}px`,
-                  top: `${selectedAreaPosition.y}px`,
-                  transform: 'translate(-50%, -100%)',
-                }}
-                data-image-explain-tooltip
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-blue-600 hover:text-blue-800"
-                  onClick={handleExplainImage}
-                >
-                  Explain This Area
-                </Button>
-              </div>
-            )}
-            
-            {/* Selection overlay for area selection */}
-            <div
-              ref={selectionBoxRef}
-              className="absolute border-2 border-blue-500 bg-blue-100 bg-opacity-20 pointer-events-none"
-              style={{
-                display: 'none',
-                zIndex: 20
-              }}
-            />
-            
             {/* PDF Document */}
-            <div 
-              className="flex justify-center p-4"
-              onMouseDown={handleAreaSelectionMouseDown}
-              onMouseMove={handleAreaSelectionMouseMove}
-              onMouseUp={handleAreaSelectionMouseUp}
-              onMouseLeave={isSelecting ? handleAreaSelectionMouseUp : undefined}
-            >
+            <div className="flex justify-center p-4">
               <Document
                 file={pdfData}
                 onLoadSuccess={onDocumentLoadSuccess}
