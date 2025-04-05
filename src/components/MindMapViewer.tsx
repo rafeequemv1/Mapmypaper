@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -187,6 +186,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [showTempMessage, setShowTempMessage] = useState(false);
   const { toast } = useToast();
   const [scale, setScale] = useState(0.7);
+  const [layoutDirection, setLayoutDirection] = useState<0 | 1 | 2>(1); // 0: left, 1: right, 2: both sides
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -700,76 +700,156 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
 
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {
-    // Implementation of node summary generation
-    console.log("Generating summary for node:", nodeData.topic);
-    // You can implement this function to generate a summary based on node data
-    // For example, using AI to summarize the content of a node and its children
+    if (!nodeData) return;
+    
+    // Get all text from node and its children
+    const getAllText = (node: any): string => {
+      let text = node.topic || '';
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => {
+          text += ' ' + getAllText(child);
+        });
+      }
+      
+      return text;
+    };
+    
+    const nodeText = getAllText(nodeData);
+    
+    // Set summary
+    setSummary(nodeText);
+    setShowSummary(true);
+    
+    // If text explanation is requested, send it to parent
+    if (onExplainText) {
+      onExplainText(nodeText);
+    }
+    
+    // Open chat if requested
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+  };
+
+  // Zoom in functionality
+  const handleZoomIn = () => {
+    if (mindMapRef.current) {
+      const newScale = Math.min(scale + 0.1, 2.0);
+      mindMapRef.current.scale(newScale);
+      setScale(newScale);
+    }
+  };
+
+  // Zoom out functionality
+  const handleZoomOut = () => {
+    if (mindMapRef.current) {
+      const newScale = Math.max(scale - 0.1, 0.3);
+      mindMapRef.current.scale(newScale);
+      setScale(newScale);
+    }
+  };
+
+  // Reset view functionality
+  const handleResetView = () => {
+    if (mindMapRef.current) {
+      mindMapRef.current.scale(0.65);
+      mindMapRef.current.toCenter();
+      setScale(0.65);
+    }
+  };
+
+  // Change layout direction
+  const changeLayoutDirection = (direction: 0 | 1 | 2) => {
+    if (mindMapRef.current) {
+      // Update the direction for all top-level nodes
+      const data = mindMapRef.current.getData();
+      if (data.nodeData && data.nodeData.children) {
+        data.nodeData.children.forEach((child: any) => {
+          child.direction = direction === 2 
+            ? (child.direction === 0 ? 0 : 1) // Keep current direction if bidirectional
+            : direction; // Set to specified direction otherwise
+        });
+        
+        mindMapRef.current.init(data);
+        setLayoutDirection(direction);
+        
+        // Re-center and scale after direction change
+        setTimeout(() => {
+          mindMapRef.current?.scale(scale);
+          mindMapRef.current?.toCenter();
+        }, 100);
+        
+        toast({
+          title: "Layout Changed",
+          description: direction === 0 
+            ? "Left-side layout applied" 
+            : direction === 1 
+              ? "Right-side layout applied" 
+              : "Bidirectional layout applied"
+        });
+      }
+    }
   };
 
   return (
-    <div className="min-h-full flex flex-col relative">
-      {/* Main Mind Map Canvas */}
+    <div className="relative h-full w-full overflow-hidden">
+      {/* Mind Map Container */}
       <div 
         ref={containerRef} 
-        className="flex-1 w-full"
-        style={{ minHeight: '400px' }}
+        className="mind-map-container h-full w-full overflow-hidden"
       ></div>
       
-      {/* Zoom Controls - Only shown when mind map is ready */}
-      {isReady && (
-        <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-md">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 w-8 p-0 bg-white"
-            onClick={() => {
-              if (mindMapRef.current) {
-                const newScale = Math.min(scale + 0.1, 1.5);
-                mindMapRef.current.scale(newScale);
-                setScale(newScale);
-              }
-            }}
-          >
+      {/* Zoom and Layout Controls */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-md flex gap-2">
+          <Button variant="outline" size="icon" onClick={handleZoomIn} title="Zoom In">
             <ZoomIn className="h-4 w-4" />
           </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 w-8 p-0 bg-white"
-            onClick={() => {
-              if (mindMapRef.current) {
-                const newScale = Math.max(scale - 0.1, 0.3);
-                mindMapRef.current.scale(newScale);
-                setScale(newScale);
-              }
-            }}
-          >
+          <Button variant="outline" size="icon" onClick={handleZoomOut} title="Zoom Out">
             <ZoomOut className="h-4 w-4" />
           </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 w-8 p-0 bg-white"
-            onClick={() => {
-              if (mindMapRef.current) {
-                mindMapRef.current.scale(0.65);
-                mindMapRef.current.toCenter();
-                setScale(0.65);
-              }
-            }}
-          >
+          <Button variant="outline" size="icon" onClick={handleResetView} title="Reset View">
             <RotateCcw className="h-4 w-4" />
           </Button>
         </div>
-      )}
+        
+        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-md flex gap-2">
+          <Button 
+            variant={layoutDirection === 0 ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => changeLayoutDirection(0)} 
+            title="Left-side Layout"
+            className="h-8 w-8 p-0 flex items-center justify-center"
+          >
+            <div className="transform rotate-180">➡</div>
+          </Button>
+          <Button 
+            variant={layoutDirection === 1 ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => changeLayoutDirection(1)} 
+            title="Right-side Layout"
+            className="h-8 w-8 p-0 flex items-center justify-center"
+          >
+            ➡
+          </Button>
+          <Button 
+            variant={layoutDirection === 2 ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => changeLayoutDirection(2)} 
+            title="Bidirectional Layout"
+            className="h-8 w-8 p-0 flex items-center justify-center"
+          >
+            ↔
+          </Button>
+        </div>
+      </div>
       
-      {/* Temporary message for first-time users */}
+      {/* Temporary Instruction Message */}
       {showTempMessage && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded-md shadow-md max-w-md text-center animate-fade-in-down">
-          <p className="text-sm font-medium">
-            Right-click and drag to move around. Right-click on any node for more options.
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg z-10 animate-fade-in pointer-events-none max-w-md">
+          <p className="text-center text-sm font-medium">
+            <span className="font-bold">Pro Tip:</span> Right-click on nodes for options. Right-click and drag to pan the mind map.
           </p>
         </div>
       )}

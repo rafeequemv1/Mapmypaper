@@ -7,13 +7,15 @@ interface VisualizationContextType {
   openVisualization: (type: VisualizationType) => void;
 }
 
-// Create the context with a default value
-const VisualizationContext = createContext<VisualizationContextType>({
-  openVisualization: () => console.warn("VisualizationProvider not mounted yet")
-});
+// Create the context with a default value that throws a helpful error message
+const VisualizationContext = createContext<VisualizationContextType | undefined>(undefined);
 
 export const useVisualizationContext = () => {
-  return useContext(VisualizationContext);
+  const context = useContext(VisualizationContext);
+  if (!context) {
+    throw new Error("useVisualizationContext must be used within a VisualizationProvider");
+  }
+  return context;
 };
 
 export const VisualizationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
