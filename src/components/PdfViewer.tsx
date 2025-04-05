@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +57,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const captureAreaRef = useRef<HTMLDivElement | null>(null);
     const [showCaptureTooltip, setShowCaptureTooltip] = useState(false);
     const [captureTooltipPosition, setCaptureTooltipPosition] = useState<{x: number, y: number} | null>(null);
+    const [isDrawingSelection, setIsDrawingSelection] = useState(false);
+    const selectionStartPoint = useRef<{x: number, y: number} | null>(null);
     
     // Store the onTextSelected callback in a ref to avoid stale closures
     const onTextSelectedRef = useStateRef(onTextSelected);
@@ -171,6 +172,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       
       canvasRef.current = canvas;
       
+      // Add event listeners for mouse interactions to enable click and drag
+      containerElement.addEventListener('mousedown', handleMouseDown);
+      containerElement.addEventListener('mousemove', handleMouseMove);
+      containerElement.addEventListener('mouseup', handleMouseUp);
+      
       // Add window resize handler to adjust canvas size
       const handleResize = () => {
         if (canvasRef.current) {
@@ -186,11 +192,127 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       // Return cleanup function
       return () => {
         window.removeEventListener('resize', handleResize);
+        containerElement.removeEventListener('mousedown', handleMouseDown);
+        containerElement.removeEventListener('mousemove', handleMouseMove);
+        containerElement.removeEventListener('mouseup', handleMouseUp);
         if (canvasRef.current) {
           canvasRef.current.dispose();
           canvasElement.remove();
         }
       };
+    };
+
+    // Mouse down handler - start drawing rectangle
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!isSelectingArea || !canvasRef.current) return;
+      
+      // Prevent the default behavior
+      e.preventDefault();
+      
+      // Remove any existing selection rectangle
+      if (selectionRef.current) {
+        canvasRef.current.remove(selectionRef.current);
+        selectionRef.current = null;
+      }
+      
+      // Hide capture tooltip if visible
+      setShowCaptureTooltip(false);
+      
+      // Get the mouse position relative to the canvas container
+      const containerRect = captureAreaRef.current!.getBoundingClientRect();
+      const x = e.clientX - containerRect.left;
+      const y = e.clientY - containerRect.top;
+      
+      // Store the starting point
+      selectionStartPoint.current = { x, y };
+      
+      // Create a new rectangle at the starting point
+      const rect = new fabric.Rect({
+        left: x,
+        top: y,
+        width: 0,
+        height: 0,
+        fill: 'rgba(66, 153, 225, 0.3)',
+        stroke: '#3182CE',
+        strokeWidth: 2,
+        strokeDashArray: [5, 5],
+        selectable: false
+      });
+      
+      selectionRef.current = rect;
+      canvasRef.current.add(rect);
+      
+      // Set drawing state to true
+      setIsDrawingSelection(true);
+    };
+
+    // Mouse move handler - update rectangle size
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isSelectingArea || !isDrawingSelection || !canvasRef.current || !selectionRef.current || !selectionStartPoint.current) return;
+      
+      // Get the current mouse position
+      const containerRect = captureAreaRef.current!.getBoundingClientRect();
+      const x = e.clientX - containerRect.left;
+      const y = e.clientY - containerRect.top;
+      
+      // Calculate width and height
+      const width = Math.abs(x - selectionStartPoint.current.x);
+      const height = Math.abs(y - selectionStartPoint.current.y);
+      
+      // Calculate top-left position (handle dragging in any direction)
+      const left = Math.min(x, selectionStartPoint.current.x);
+      const top = Math.min(y, selectionStartPoint.current.y);
+      
+      // Update the rectangle
+      selectionRef.current.set({
+        left,
+        top,
+        width,
+        height
+      });
+      
+      canvasRef.current.renderAll();
+    };
+
+    // Mouse up handler - finish drawing rectangle
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!isSelectingArea || !isDrawingSelection || !canvasRef.current || !selectionRef.current) return;
+      
+      // Set drawing state to false
+      setIsDrawingSelection(false);
+      
+      // Make sure we have a valid selection (not just a click)
+      const minSize = 10; // Minimum size in pixels to be considered a valid selection
+      
+      if (selectionRef.current.width! < minSize || selectionRef.current.height! < minSize) {
+        // Invalid selection, remove it
+        canvasRef.current.remove(selectionRef.current);
+        selectionRef.current = null;
+        return;
+      }
+      
+      // Make the rectangle selectable and modifiable
+      selectionRef.current.set({
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        lockRotation: true,
+        transparentCorners: false,
+        cornerColor: '#3182CE',
+        cornerStyle: 'circle',
+        cornerSize: 6
+      });
+      
+      canvasRef.current.setActiveObject(selectionRef.current);
+      canvasRef.current.renderAll();
+      
+      // Show the capture tooltip
+      const rect = selectionRef.current;
+      setCaptureTooltipPosition({
+        x: rect.left! + rect.width! / 2,
+        y: rect.top! - 10,
+      });
+      setShowCaptureTooltip(true);
     };
 
     // Start area selection
@@ -206,62 +328,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       // Initialize canvas if not already done
       const cleanup = initSelectCanvas();
       
-      if (!canvasRef.current || !captureAreaRef.current) return;
-      
-      const canvas = canvasRef.current;
-      
-      // Create selection rectangle
-      const rect = new fabric.Rect({
-        width: 100,
-        height: 100,
-        left: canvas.width / 2 - 50,
-        top: canvas.height / 2 - 50,
-        fill: 'rgba(66, 153, 225, 0.3)',
-        stroke: '#3182CE',
-        strokeWidth: 2,
-        strokeDashArray: [5, 5],
-        selectable: true,
-        hasRotatingPoint: false,
-        lockRotation: true,
-        transparentCorners: false,
-        cornerColor: '#3182CE',
-        cornerStyle: 'circle',
-        cornerSize: 10,
-      });
-      
-      selectionRef.current = rect;
-      canvas.add(rect);
-      canvas.setActiveObject(rect);
-      
-      // Add capture button when selection is complete
-      rect.on('modified', () => {
-        if (!canvas || !rect) return;
-        
-        const pointer = canvas.getPointer(canvas.upperCanvasEl);
-        
-        setCaptureTooltipPosition({
-          x: rect.left! + rect.width! / 2,
-          y: rect.top! - 20,
-        });
-        
-        setShowCaptureTooltip(true);
-      });
-      
-      // Enable direct manipulation
-      canvas.selection = true;
-      
-      // Show initial tooltip
-      setTimeout(() => {
-        setCaptureTooltipPosition({
-          x: rect.left! + rect.width! / 2,
-          y: rect.top! - 20,
-        });
-        setShowCaptureTooltip(true);
-      }, 100);
-      
       toast({
         title: "Area Selection Mode",
-        description: "Resize and position the box, then click 'Capture & Explain'",
+        description: "Click and drag to select an area, then click 'Capture & Explain'",
       });
       
       return cleanup;
@@ -282,9 +351,16 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         if (canvasElement) {
           canvasElement.remove();
         }
+        
+        // Remove event listeners
+        captureAreaRef.current.removeEventListener('mousedown', handleMouseDown);
+        captureAreaRef.current.removeEventListener('mousemove', handleMouseMove);
+        captureAreaRef.current.removeEventListener('mouseup', handleMouseUp);
       }
       
       selectionRef.current = null;
+      selectionStartPoint.current = null;
+      setIsDrawingSelection(false);
     };
 
     // Capture the selected area
@@ -302,7 +378,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const canvas = canvasRef.current;
         const rect = selectionRef.current;
         
-        // Get the scaled rectangle coordinates
+        // Get the rectangle coordinates
         const left = rect.left!;
         const top = rect.top!;
         const width = rect.width! * rect.scaleX!;
@@ -836,65 +912,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         className="pdf-page"
                         onRenderSuccess={onPageRenderSuccess}
                         loading={
-                          <Skeleton className="h-96 w-full bg-gray-200" />
-                        }
-                      />
-                    </div>
-                  ))}
-                </Document>
-                
-                {/* Text Selection Tooltip */}
-                {showExplainTooltip && selectionPosition && (
-                  <div 
-                    className="absolute bg-white shadow-lg rounded-lg p-2 z-50 flex flex-col items-center"
-                    style={{
-                      left: `${selectionPosition.x}px`,
-                      top: `${selectionPosition.y}px`,
-                      transform: 'translate(-50%, -100%)'
-                    }}
-                    data-explain-tooltip
-                  >
-                    <Button 
-                      size="sm" 
-                      variant="default" 
-                      className="text-xs py-1 px-2 h-7"
-                      onClick={handleExplain}
-                    >
-                      Explain Text
-                    </Button>
-                  </div>
-                )}
-                
-                {/* Area Selection Tooltip */}
-                {showCaptureTooltip && captureTooltipPosition && (
-                  <div 
-                    className="absolute bg-white shadow-lg rounded-lg p-2 z-50 flex flex-col items-center"
-                    style={{
-                      left: `${captureTooltipPosition.x}px`,
-                      top: `${captureTooltipPosition.y}px`,
-                      transform: 'translate(-50%, -100%)'
-                    }}
-                    data-capture-tooltip
-                  >
-                    <Button 
-                      size="sm" 
-                      variant="default" 
-                      className="text-xs py-1 px-2 h-7"
-                      onClick={captureSelectedAreaAndExplain}
-                    >
-                      Capture & Explain
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+                          <Skeleton className="h-96 w-full bg
