@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -244,7 +243,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
     URL.revokeObjectURL(url);
   };
   
-  const title = visualizationType === "mindmap" ? "Mind Map Visualization" : "Flowchart Visualization";
+  const title = "Treemap Visualization";
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
@@ -304,7 +303,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
               <div className="flex items-center justify-center h-full">
                 <div className="flex flex-col items-center gap-2">
                   <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
-                  <p>Generating visualization...</p>
+                  <p>Generating mindmap...</p>
                 </div>
               </div>
             ) : mermaidSyntax ? (
@@ -314,7 +313,7 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
               ></div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
-                No visualization diagram available. Click Regenerate to create one.
+                No mindmap diagram available. Click Regenerate to create one.
               </div>
             )}
           </TabsContent>
@@ -324,13 +323,13 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
             className="flex-1 overflow-hidden flex flex-col"
           >
             <p className="text-sm text-gray-500 mb-2">
-              Edit the Mermaid syntax below to customize your {visualizationType} diagram:
+              Edit the Mermaid syntax below to customize your mindmap diagram:
             </p>
             <Textarea 
               value={mermaidSyntax} 
               onChange={handleSyntaxChange}
               className="flex-1 font-mono text-sm resize-none overflow-auto"
-              placeholder={`Enter your ${visualizationType} syntax here...`}
+              placeholder="Enter your mindmap syntax here..."
               disabled={isGenerating}
             />
           </TabsContent>
