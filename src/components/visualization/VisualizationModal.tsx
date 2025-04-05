@@ -243,13 +243,23 @@ const VisualizationModal: React.FC<VisualizationModalProps> = ({
     URL.revokeObjectURL(url);
   };
   
-  const title = "Mind Map Visualization";
+  // Get the title based on visualization type
+  const getTitle = () => {
+    switch (visualizationType) {
+      case "mindmap":
+        return "Mind Map Visualization";
+      case "flowchart":
+        return "Flowchart Visualization";
+      default:
+        return "Visualization";
+    }
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
       <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] flex flex-col overflow-hidden p-4">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{getTitle()}</DialogTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
