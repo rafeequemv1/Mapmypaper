@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -6,6 +7,7 @@ import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 import { retrievePDF } from "@/utils/pdfStorage";
 import { Loader } from "lucide-react";
+import { VisualizationProvider } from "@/contexts/VisualizationContext";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -217,34 +219,36 @@ const MindMap = () => {
 
   return (
     <div ref={containerRef} className="h-screen flex flex-col overflow-hidden">
-      {/* Header with all icons */}
-      <Header 
-        togglePdf={togglePdf}
-        toggleChat={toggleChat}
-        setShowSummary={setShowSummary}
-        isPdfActive={showPdf && pdfAvailable}
-        isChatActive={showChat}
-        mindMap={mindMap}
-      />
-
-      {/* Main Content - Panels for PDF, MindMap, and Chat */}
-      <div className="flex-1 overflow-hidden">
-        <PanelStructure 
-          showPdf={showPdf && pdfAvailable}
-          showChat={showChat}
-          toggleChat={toggleChat}
+      {/* Wrap Header with VisualizationProvider */}
+      <VisualizationProvider>
+        <Header 
           togglePdf={togglePdf}
-          onMindMapReady={handleMindMapReady}
-          explainText={explainText}
-          onExplainText={handleExplainText}
+          toggleChat={toggleChat}
+          setShowSummary={setShowSummary}
+          isPdfActive={showPdf && pdfAvailable}
+          isChatActive={showChat}
+          mindMap={mindMap}
         />
-      </div>
-      
-      {/* Modals */}
-      <SummaryModal
-        open={showSummary}
-        onOpenChange={setShowSummary}
-      />
+
+        {/* Main Content - Panels for PDF, MindMap, and Chat */}
+        <div className="flex-1 overflow-hidden">
+          <PanelStructure 
+            showPdf={showPdf && pdfAvailable}
+            showChat={showChat}
+            toggleChat={toggleChat}
+            togglePdf={togglePdf}
+            onMindMapReady={handleMindMapReady}
+            explainText={explainText}
+            onExplainText={handleExplainText}
+          />
+        </div>
+        
+        {/* Modals */}
+        <SummaryModal
+          open={showSummary}
+          onOpenChange={setShowSummary}
+        />
+      </VisualizationProvider>
     </div>
   );
 };
