@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -698,4 +699,82 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   // Function to generate summaries for nodes and their children
-  const generateNodeSummary = (nodeData: any
+  const generateNodeSummary = (nodeData: any) => {
+    // Implementation of node summary generation
+    console.log("Generating summary for node:", nodeData.topic);
+    // You can implement this function to generate a summary based on node data
+    // For example, using AI to summarize the content of a node and its children
+  };
+
+  return (
+    <div className="min-h-full flex flex-col relative">
+      {/* Main Mind Map Canvas */}
+      <div 
+        ref={containerRef} 
+        className="flex-1 w-full"
+        style={{ minHeight: '400px' }}
+      ></div>
+      
+      {/* Zoom Controls - Only shown when mind map is ready */}
+      {isReady && (
+        <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-md">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 w-8 p-0 bg-white"
+            onClick={() => {
+              if (mindMapRef.current) {
+                const newScale = Math.min(scale + 0.1, 1.5);
+                mindMapRef.current.scale(newScale);
+                setScale(newScale);
+              }
+            }}
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 w-8 p-0 bg-white"
+            onClick={() => {
+              if (mindMapRef.current) {
+                const newScale = Math.max(scale - 0.1, 0.3);
+                mindMapRef.current.scale(newScale);
+                setScale(newScale);
+              }
+            }}
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 w-8 p-0 bg-white"
+            onClick={() => {
+              if (mindMapRef.current) {
+                mindMapRef.current.scale(0.65);
+                mindMapRef.current.toCenter();
+                setScale(0.65);
+              }
+            }}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      
+      {/* Temporary message for first-time users */}
+      {showTempMessage && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded-md shadow-md max-w-md text-center animate-fade-in-down">
+          <p className="text-sm font-medium">
+            Right-click and drag to move around. Right-click on any node for more options.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
