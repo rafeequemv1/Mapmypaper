@@ -31,8 +31,11 @@ if (typeof window !== 'undefined') {
   });
 }
 
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+// Use the correct non-null assertion and ensure we find the element
+const container = document.getElementById('root');
+if (!container) throw new Error('Failed to find the root element');
+const root = createRoot(container);
+
+root.render(
+  <App />
 );
