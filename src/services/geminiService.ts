@@ -1,8 +1,8 @@
-
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
 // Initialize the Google Generative AI with the API key
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+// Use import.meta.env instead of process.env for Vite
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "");
 
 // Get the model (using Gemini Pro)
 const model = genAI.getGenerativeModel({
