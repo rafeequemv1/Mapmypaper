@@ -9,8 +9,7 @@ import {
   Upload,
   FileIcon,
   Braces,
-  Home,
-  GitBranch
+  Home
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -191,15 +190,6 @@ const Header = ({
           >
             <Braces className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Mind Map</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            onClick={() => openVisualization("flowchart")} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <GitBranch className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
         </div>
         
