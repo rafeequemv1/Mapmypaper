@@ -30,44 +30,41 @@ const queryClient = new QueryClient({
   }
 });
 
-// Make sure to create the QueryClient outside of the component
 const App = () => (
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <VisualizationProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <div className="relative">
-              <BrowserRouter>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/" element={<PdfUpload />} />
-                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                  <Route path="/terms-of-service" element={<TermsOfService />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/pricing" element={<Pricing />} />
-                  
-                  {/* Protected routes */}
-                  <Route element={<RequireAuth />}>
-                    <Route path="/mindmap" element={<MindMap />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </Route>
-                  
-                  {/* Catch-all route */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </div>
-          </TooltipProvider>
-        </VisualizationProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  </React.StrictMode>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <VisualizationProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <div className="relative">
+            <BrowserRouter>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<PdfUpload />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/pricing" element={<Pricing />} />
+                
+                {/* Protected routes */}
+                <Route element={<RequireAuth />}>
+                  <Route path="/mindmap" element={<MindMap />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
+                
+                {/* Catch-all route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </div>
+        </TooltipProvider>
+      </VisualizationProvider>
+    </AuthProvider>
+  </QueryClientProvider>
 );
 
 export default App;
