@@ -33,6 +33,7 @@ const PanelStructure = ({
   const [pdfKey, setPdfKey] = useState(Date.now());
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(true);
+  const [explainImage, setExplainImage] = useState<string | null>(null);
   
   // Check for PDF availability when component mounts
   useEffect(() => {
@@ -85,6 +86,16 @@ const PanelStructure = ({
       pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
     }
   };
+  
+  const handleImageSelected = (imageData: string) => {
+    console.log("Image area selected in PDF, data length:", imageData.length);
+    setExplainImage(imageData);
+    
+    // Automatically open chat panel when an image is selected for explanation
+    if (!showChat) {
+      toggleChat();
+    }
+  };
 
   return (
     <div className="h-full w-full flex">
@@ -96,6 +107,7 @@ const PanelStructure = ({
               key={pdfKey} // Add key to force remount when changed
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
+              onImageSelected={handleImageSelected}
               onPdfLoaded={handlePdfLoaded}
             />
           </TooltipProvider>
@@ -117,6 +129,7 @@ const PanelStructure = ({
           <ChatPanel
             toggleChat={toggleChat}
             explainText={explainText}
+            explainImage={explainImage}
             onExplainText={onExplainText}
             onScrollToPdfPosition={handleScrollToPdfPosition}
           />
