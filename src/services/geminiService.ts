@@ -1,7 +1,8 @@
 
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+// Use a constant for the API key that can be set from different sources
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyDoE4S_6WfVCT3ehMww23aJL7ItwXygrhM';
 
 // Helper function to check if API key is valid
 const validateApiKey = () => {
