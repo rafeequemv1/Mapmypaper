@@ -158,7 +158,7 @@ const Header = ({
   return (
     <header className="bg-white border-b py-2 px-4">
       <div className="flex items-center justify-between">
-        {/* Left side - Logo with Beta tag */}
+        {/* Left side - Logo with Beta tag as text in capsule */}
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-1">
             <PaperLogo size="sm" />
