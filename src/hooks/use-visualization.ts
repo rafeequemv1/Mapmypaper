@@ -1,19 +1,19 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { generateMermaidDiagram } from "@/services/geminiService";
+import { generateVisualizationContent } from "@/services/geminiService";
 
-export type VisualizationType = "mindmap" | "flowchart";
+export type VisualizationType = "text" | "summary";
 
 export function useVisualization() {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [visualizationType, setVisualizationType] = useState<VisualizationType>("mindmap");
+  const [visualizationType, setVisualizationType] = useState<VisualizationType>("text");
   const [mermaidSyntax, setMermaidSyntax] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [savedSyntax, setSavedSyntax] = useState<Record<VisualizationType, string>>({
-    mindmap: "",
-    flowchart: ""
+    text: "",
+    summary: ""
   });
 
   const openModal = async (type: VisualizationType) => {
@@ -34,7 +34,6 @@ export function useVisualization() {
     }
     
     // Always generate a visualization when opening the modal
-    // This removes the need to click the regenerate button
     generateVisualization(type);
   };
   
@@ -48,15 +47,15 @@ export function useVisualization() {
       }
       
       console.log(`Generating ${type} visualization...`);
-      const syntax = await generateMermaidDiagram(type, pdfText);
+      const content = await generateVisualizationContent(type, pdfText);
       
       // Save the syntax for future use
       setSavedSyntax(prev => ({
         ...prev,
-        [type]: syntax
+        [type]: content
       }));
       
-      setMermaidSyntax(syntax);
+      setMermaidSyntax(content);
       
       toast({
         title: "Visualization generated",
