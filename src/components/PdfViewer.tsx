@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -912,4 +913,65 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         className="pdf-page"
                         onRenderSuccess={onPageRenderSuccess}
                         loading={
-                          <Skeleton className="h-96 w-full bg
+                          <Skeleton className="h-96 w-full bg-gray-200" />
+                        }
+                      />
+                    </div>
+                  ))}
+                </Document>
+                
+                {/* Tooltip for text selection */}
+                {showExplainTooltip && selectionPosition && (
+                  <div 
+                    className="absolute z-50 bg-white shadow-lg rounded-md px-3 py-2 border border-gray-200"
+                    style={{
+                      left: `${selectionPosition.x}px`,
+                      top: `${selectionPosition.y - 40}px`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                    data-explain-tooltip
+                  >
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      onClick={handleExplain}
+                      className="text-xs"
+                    >
+                      Explain Selection
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Tooltip for area capture */}
+                {showCaptureTooltip && captureTooltipPosition && (
+                  <div 
+                    className="absolute z-50 bg-white shadow-lg rounded-md px-3 py-2 border border-gray-200"
+                    style={{
+                      left: `${captureTooltipPosition.x}px`,
+                      top: `${captureTooltipPosition.y - 40}px`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                    data-capture-tooltip
+                  >
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      onClick={captureSelectedAreaAndExplain}
+                      className="text-xs"
+                    >
+                      Capture & Explain
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
