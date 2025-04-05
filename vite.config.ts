@@ -20,9 +20,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Define environment variables that will be available on the client
-  define: {
-    // Ensure environment variables are exposed to the client
-    'import.meta.env.VITE_GOOGLE_API_KEY': JSON.stringify(process.env.VITE_GOOGLE_API_KEY || '')
-  }
 }));
