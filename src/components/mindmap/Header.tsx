@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -46,7 +45,27 @@ const Header = ({
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { openVisualization } = useVisualizationContext();
+  
+  // Safely access visualization context, providing fallback for pages where it's not available
+  const visualizationContext = React.useContext(React.createContext<{ openVisualization: (type: string) => void }>({
+    openVisualization: () => {
+      toast({
+        title: "Visualization not available",
+        description: "Visualization features are not available on this page",
+        variant: "destructive"
+      });
+    }
+  }));
+  
+  // Try to get the actual visualization context if available
+  try {
+    const { openVisualization } = useVisualizationContext();
+    // If we get here, the context is available, so update our local reference
+    visualizationContext.openVisualization = openVisualization;
+  } catch (error) {
+    // Context not available, keep using the fallback
+    console.log("Visualization context not available in this component, using fallback");
+  }
   
   // Handle export as PNG
   const handleExportPNG = () => {
@@ -186,7 +205,7 @@ const Header = ({
           
           <Button 
             variant="ghost" 
-            onClick={() => openVisualization("mindmap")} 
+            onClick={() => visualizationContext.openVisualization("mindmap")} 
             className="flex items-center gap-1 text-black h-8 px-3"
           >
             <Palette className="h-3.5 w-3.5" />

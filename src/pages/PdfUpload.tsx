@@ -228,21 +228,40 @@ const PdfUpload = () => {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => openVisualization("mindmap")}
+                  onClick={() => {
+                    try {
+                      openVisualization("mindmap"); 
+                    } catch (err) {
+                      toast({
+                        title: "Visualization not available",
+                        description: "Please try again after uploading a PDF",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
                   className="flex items-center gap-1"
                 >
                   <Braces className="h-4 w-4" />
                   <span className="text-sm">Mind Map</span>
                 </Button>
-                {/* Fix: Change "flowchart" to "mindmap" since that's the only acceptable value */}
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => openVisualization("mindmap")}
+                  onClick={() => {
+                    try {
+                      openVisualization("mindmap");
+                    } catch (err) {
+                      toast({
+                        title: "Visualization not available",
+                        description: "Please try again after uploading a PDF",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
                   className="flex items-center gap-1"
                 >
                   <GitBranch className="h-4 w-4" />
-                  <span className="text-sm">Flowchart</span>
+                  <span className="text-sm">Treemap</span>
                 </Button>
               </>
             )}
