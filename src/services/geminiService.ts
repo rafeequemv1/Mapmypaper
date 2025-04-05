@@ -22,7 +22,8 @@ export const generateMermaidDiagram = async (
     
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Update to use gemini-1.5-pro model instead of gemini-pro
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     // Create a prompt based on the visualization type
     let prompt = "";
@@ -82,7 +83,8 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Update to use gemini-1.5-pro model instead of gemini-pro
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     // Create prompt for mind map generation
     const prompt = `Based on the following text from a PDF document, generate a JSON structure for a mind map. 
@@ -152,7 +154,8 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Update to use gemini-1.5-pro model instead of gemini-pro
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     // Create prompt for chat
     const prompt = `You are a helpful research assistant. Your task is to answer questions about the following paper. 
@@ -185,7 +188,8 @@ export const analyzeImageWithGemini = async (imageData: string): Promise<string>
     
     // Initialize Gemini with vision capabilities
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+    // Update to use gemini-1.5-pro-vision model for image analysis
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
 
     // Prepare image data for Gemini API
     // The imageData is expected to be a base64 data URL (e.g., data:image/png;base64,...)
@@ -226,7 +230,8 @@ export const generateStructuredSummary = async (): Promise<any> => {
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Update to use gemini-1.5-pro model instead of gemini-pro
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     // Create prompt for structured summary
     const prompt = `Generate a comprehensive structured summary of the following academic paper. 
