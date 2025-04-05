@@ -13,19 +13,23 @@ import UserMenu from "@/components/UserMenu";
 import { trackPdfUpload, trackFeatureUsage, trackMindMapGeneration, trackEvent } from "@/utils/analytics";
 import { useVisualizationContext } from "@/contexts/VisualizationContext";
 import Footer from "@/components/Footer";
-
 const PdfUpload = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pdfSize, setPdfSize] = useState<number>(0);
-  const { openVisualization } = useVisualizationContext();
-
+  const {
+    openVisualization
+  } = useVisualizationContext();
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -35,12 +39,10 @@ const PdfUpload = () => {
       setDragActive(false);
     }
   }, []);
-
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type === "application/pdf") {
@@ -49,12 +51,11 @@ const PdfUpload = () => {
         toast({
           title: "Invalid file type",
           description: "Please upload a PDF file",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     }
   }, [toast]);
-
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -64,35 +65,31 @@ const PdfUpload = () => {
         toast({
           title: "Invalid file type",
           description: "Please upload a PDF file",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     }
   }, [toast]);
-  
   const handleFileSelection = useCallback((file: File) => {
     setSelectedFile(file);
     setPdfSize(file.size);
-    
     const sizeMB = (file.size / 1024 / 1024).toFixed(2);
     const sizeWarning = parseFloat(sizeMB) > 15;
-    
+
     // Track the PDF upload event with more details
     trackPdfUpload(file.name, file.size);
-    
     toast({
       title: "PDF uploaded successfully",
       description: `File: ${file.name}${sizeWarning ? " (Large file, processing may take longer)" : ""}`,
-      variant: sizeWarning ? "warning" : "default",
+      variant: sizeWarning ? "warning" : "default"
     });
   }, [toast]);
-  
   const handleGenerateMindmap = useCallback(async () => {
     if (!selectedFile) {
       toast({
         title: "No file selected",
         description: "Please upload a PDF file first",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -101,7 +98,7 @@ const PdfUpload = () => {
     if (!user) {
       toast({
         title: "Authentication required",
-        description: "Please sign in to generate a mind map",
+        description: "Please sign in to generate a mind map"
       });
       // Store a flag in sessionStorage to indicate we should return to mindmap generation
       sessionStorage.setItem('pendingPdfProcessing', 'true');
@@ -113,22 +110,19 @@ const PdfUpload = () => {
       navigate("/auth");
       return;
     }
-
     setIsProcessing(true);
     setExtractionError(null);
-    
     toast({
       title: "Processing PDF",
-      description: "Extracting text and generating mind map...",
+      description: "Extracting text and generating mind map..."
     });
-
     try {
       // First, read the PDF as DataURL for viewing later
       const reader = new FileReader();
-      
+
       // Set up a promise for the file reading
       const readerPromise = new Promise<string>((resolve, reject) => {
-        reader.onload = (e) => {
+        reader.onload = e => {
           try {
             const base64data = e.target?.result as string;
             if (!base64data) {
@@ -142,72 +136,67 @@ const PdfUpload = () => {
         };
         reader.onerror = () => reject(new Error("Error reading file"));
       });
-      
+
       // Start reading the file
       reader.readAsDataURL(selectedFile);
-      
+
       // Wait for the file to be read and store it
       const base64data = await readerPromise;
       console.log("PDF loaded, storing data...");
-      
+
       // Store in both IndexedDB and SessionStorage (for backwards compatibility)
       await storePDF(base64data);
-      
+
       // Also set a marker in SessionStorage that will be used for quick availability checks
       try {
         sessionStorage.setItem('pdfAvailable', 'true');
       } catch (e) {
         console.warn('Could not set pdfAvailable marker in sessionStorage, but IndexedDB storage succeeded');
       }
-      
       console.log("PDF data stored successfully");
-      
+
       // Extract text from PDF
       console.log("Extracting text from PDF...");
       const extractedText = await PdfToText(selectedFile);
-      
       if (!extractedText || typeof extractedText !== 'string' || extractedText.trim() === '') {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
-      
+
       // Process the text with Gemini to generate mind map data
       console.log("Generating mind map...");
       const mindMapData = await generateMindMapFromText(extractedText);
-      
+
       // Store the generated mind map data in sessionStorage
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
-      
+
       // Track successful mind map generation
       trackMindMapGeneration(selectedFile.name);
-      
+
       // Navigate to the mind map view
       toast({
         title: "Success",
-        description: "Mind map generated successfully!",
+        description: "Mind map generated successfully!"
       });
       navigate("/mindmap");
     } catch (error) {
       console.error("Error processing PDF:", error);
       setExtractionError(error instanceof Error ? error.message : "Failed to process PDF");
-      
+
       // Track error event
       trackEvent('mindmap_generation_error', {
         error_message: error instanceof Error ? error.message : "Unknown error",
         pdf_name: selectedFile.name,
         pdf_size: selectedFile.size
       });
-      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to process PDF",
-        variant: "destructive",
+        variant: "destructive"
       });
       setIsProcessing(false);
     }
   }, [selectedFile, navigate, toast, user]);
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
+  return <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="w-full bg-card shadow-sm py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -223,28 +212,16 @@ const PdfUpload = () => {
             <Link to="/pricing" className="text-sm text-foreground/80 hover:text-foreground transition-colors">Pricing</Link>
             <Link to="/contact" className="text-sm text-foreground/80 hover:text-foreground transition-colors">Contact</Link>
             
-            {selectedFile && (
-              <>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => openVisualization("mindmap")}
-                  className="flex items-center gap-1"
-                >
+            {selectedFile && <>
+                <Button variant="ghost" size="sm" onClick={() => openVisualization("mindmap")} className="flex items-center gap-1">
                   <Braces className="h-4 w-4" />
                   <span className="text-sm">Mind Map</span>
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => openVisualization("flowchart")}
-                  className="flex items-center gap-1"
-                >
+                <Button variant="ghost" size="sm" onClick={() => openVisualization("flowchart")} className="flex items-center gap-1">
                   <GitBranch className="h-4 w-4" />
                   <span className="text-sm">Flowchart</span>
                 </Button>
-              </>
-            )}
+              </>}
             
             <UserMenu />
           </div>
@@ -274,23 +251,8 @@ const PdfUpload = () => {
         {/* PDF Upload Box */}
         <div className="w-full max-w-md bg-card rounded-lg shadow-sm p-8">
           {/* Dropzone */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${
-              dragActive ? "border-primary bg-primary/5" : "border-border"
-            } cursor-pointer flex flex-col items-center justify-center gap-4`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={handleFileChange}
-            />
+          <div className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${dragActive ? "border-primary bg-primary/5" : "border-border"} cursor-pointer flex flex-col items-center justify-center gap-4`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}>
+            <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
             <Upload className="h-12 w-12 text-muted-foreground" />
             <div className="text-center">
               <p className="text-lg font-medium">Drag and drop your PDF here</p>
@@ -299,39 +261,25 @@ const PdfUpload = () => {
           </div>
           
           {/* Security message */}
-          <div className="flex items-center gap-2 bg-blue-50/50 p-3 rounded-md mb-6 text-xs text-blue-800">
-            <Lock className="h-4 w-4" />
-            <p>Your documents are secure and never shared with third parties</p>
-          </div>
+          
           
           {/* Selected File Info with size warning if needed */}
-          {selectedFile && (
-            <div className={`p-4 ${pdfSize > 15 * 1024 * 1024 ? 'bg-amber-50/50' : 'bg-secondary/50'} rounded-lg flex items-center justify-between mb-6`}>
+          {selectedFile && <div className={`p-4 ${pdfSize > 15 * 1024 * 1024 ? 'bg-amber-50/50' : 'bg-secondary/50'} rounded-lg flex items-center justify-between mb-6`}>
               <p className="font-medium truncate">{selectedFile.name}</p>
               <div className="flex flex-col items-end">
                 <p className="text-sm text-muted-foreground">
                   {(pdfSize / 1024 / 1024).toFixed(2)} MB
                 </p>
-                {pdfSize > 15 * 1024 * 1024 && (
-                  <p className="text-xs text-amber-600 mt-1">Large file - processing may take longer</p>
-                )}
+                {pdfSize > 15 * 1024 * 1024 && <p className="text-xs text-amber-600 mt-1">Large file - processing may take longer</p>}
               </div>
-            </div>
-          )}
+            </div>}
           
           {/* Generate Button */}
-          <Button 
-            onClick={handleGenerateMindmap} 
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
-            disabled={!selectedFile || isProcessing}
-            size="lg"
-          >
+          <Button onClick={handleGenerateMindmap} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={!selectedFile || isProcessing} size="lg">
             {isProcessing ? "Processing..." : "Generate Mind Map"}
           </Button>
           
-          {extractionError && (
-            <p className="text-destructive text-sm mt-4">{extractionError}</p>
-          )}
+          {extractionError && <p className="text-destructive text-sm mt-4">{extractionError}</p>}
         </div>
       </div>
       
@@ -395,23 +343,15 @@ const PdfUpload = () => {
               MapMyPaper is designed for researchers, students, and academics who need to process large volumes of complex information efficiently.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                size="lg"
-                onClick={() => {
-                  if (fileInputRef.current) {
-                    fileInputRef.current.click();
-                  }
-                }}
-              >
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" size="lg" onClick={() => {
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }}>
                 Try It Now
               </Button>
               <Link to="/pricing">
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="lg" className="flex items-center gap-2">
                   View Pricing <ChevronRight className="h-4 w-4" />
                 </Button>
               </Link>
@@ -454,8 +394,6 @@ const PdfUpload = () => {
       </div>
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default PdfUpload;
