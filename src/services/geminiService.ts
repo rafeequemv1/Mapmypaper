@@ -3,12 +3,22 @@ import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
+// Helper function to check if API key is valid
+const validateApiKey = () => {
+  if (!GEMINI_API_KEY) {
+    throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+  }
+};
+
 // Add or update the generateMermaidDiagram function to handle different visualization types
 export const generateMermaidDiagram = async (
   type: "mindmap" | "flowchart",
   pdfText: string
 ): Promise<string> => {
   try {
+    // Validate API key
+    validateApiKey();
+    
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
@@ -66,6 +76,9 @@ export const generateMermaidDiagram = async (
 // Add function to generate mind map data from PDF text
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
+    // Validate API key
+    validateApiKey();
+    
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
@@ -127,6 +140,9 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
 // Add function to chat with Gemini about the PDF content
 export const chatWithGeminiAboutPdf = async (message: string): Promise<string> => {
   try {
+    // Validate API key
+    validateApiKey();
+    
     // Get PDF text from session storage
     const pdfText = sessionStorage.getItem('pdfText');
     if (!pdfText) {
@@ -163,6 +179,9 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
 // Add function to analyze image with Gemini
 export const analyzeImageWithGemini = async (imageData: string): Promise<string> => {
   try {
+    // Validate API key
+    validateApiKey();
+    
     // Initialize Gemini with vision capabilities
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
@@ -195,6 +214,9 @@ export const analyzeImageWithGemini = async (imageData: string): Promise<string>
 // Add function to generate structured summary of the PDF
 export const generateStructuredSummary = async (): Promise<any> => {
   try {
+    // Validate API key
+    validateApiKey();
+    
     // Get PDF text from session storage
     const pdfText = sessionStorage.getItem('pdfText');
     if (!pdfText) {
