@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { generateVisualizationContent } from "@/services/geminiService";
 
-export type VisualizationType = "text" | "summary";
+export type VisualizationType = "text" | "summary" | "mindmap" | "flowchart";
 
 export function useVisualization() {
   const { toast } = useToast();
@@ -13,7 +13,9 @@ export function useVisualization() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [savedSyntax, setSavedSyntax] = useState<Record<VisualizationType, string>>({
     text: "",
-    summary: ""
+    summary: "",
+    mindmap: "",
+    flowchart: ""
   });
 
   const openModal = async (type: VisualizationType) => {
