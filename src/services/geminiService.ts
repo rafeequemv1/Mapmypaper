@@ -5,9 +5,21 @@ export async function generateVisualizationContent(
   pdfText: string
 ): Promise<string> {
   try {
+    console.log(`Generating ${type} visualization from PDF text of length ${pdfText.length}...`);
+    
     // For mindmap and flowchart, extract key concepts and structure them
     if (type === "mindmap" || type === "flowchart") {
-      const concepts = extractConcepts(pdfText);
+      // Enhanced extraction for better mind maps
+      const concepts = extractEnhancedConcepts(pdfText);
+      console.log(`Extracted ${concepts.length} concepts for ${type}`);
+      
+      // Also store the mind map data in session storage for direct use
+      if (type === "mindmap") {
+        const mindMapData = generateEnhancedMindMapData(concepts, pdfText);
+        // Store for retrieval by MindMapViewer
+        sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
+      }
+      
       return formatStructuredContent(concepts, type);
     } else if (type === "text") {
       return `Generated text content from PDF:
@@ -26,33 +38,105 @@ This is the text extracted from your PDF.`;
   }
 }
 
-// Extract key concepts from PDF text
-function extractConcepts(pdfText: string): string[] {
-  // Simple extraction of potential key concepts
-  const lines = pdfText.split(/\n+/);
-  const concepts = [];
+// Enhanced extraction of key concepts from PDF text
+function extractEnhancedConcepts(pdfText: string): string[] {
+  console.log("Starting enhanced concept extraction...");
   
-  // Extract potential titles and important phrases
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    
-    // Skip empty lines and very long paragraphs
-    if (trimmedLine.length === 0 || trimmedLine.length > 200) continue;
-    
-    // Identify potential headings or important points
-    if (
-      trimmedLine.endsWith('.') || 
-      trimmedLine.length < 100 ||
-      /^[A-Z][^.!?]*$/.test(trimmedLine) || // Capitalized phrases
-      /^[0-9]+\./.test(trimmedLine) || // Numbered points
-      /^(Introduction|Method|Results|Discussion|Conclusion|Abstract)/i.test(trimmedLine)
-    ) {
-      concepts.push(trimmedLine);
+  // If text is too short, return early with basic concepts
+  if (pdfText.length < 100) {
+    console.warn("PDF text is too short for concept extraction");
+    return ["Title", "Introduction", "Methods", "Results", "Discussion", "Conclusion"];
+  }
+  
+  // Split by different delimiters to identify sections
+  const sections: string[] = [];
+  
+  // First try to split by common section headers
+  const sectionRegex = /\b(Abstract|Introduction|Background|Methods|Results|Discussion|Conclusion|References)\b/gi;
+  const sectionMatches = [...pdfText.matchAll(sectionRegex)];
+  
+  if (sectionMatches.length > 2) {
+    // We found reasonable section headers, use them
+    sectionMatches.forEach(match => {
+      sections.push(match[0]);
+    });
+  }
+  
+  // Extract sentences from the text
+  const sentences = pdfText.match(/[^.!?]+[.!?]+/g) || [];
+  const concepts: string[] = [];
+  
+  // Add section headers first
+  sections.forEach(section => {
+    concepts.push(section);
+  });
+  
+  // Add title (first non-empty line) if we can find it
+  const lines = pdfText.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length > 0) {
+    const potentialTitle = lines[0].trim();
+    if (potentialTitle.length < 150 && !concepts.includes(potentialTitle)) {
+      concepts.unshift(potentialTitle); // Add title at the beginning
     }
   }
   
-  // Limit concepts to a reasonable number
-  return concepts.slice(0, 25);
+  // Extract key sentences based on position and content
+  for (let i = 0; i < Math.min(sentences.length, 300); i++) {
+    const sentence = sentences[i].trim();
+    
+    // Skip if too long or too short
+    if (sentence.length > 200 || sentence.length < 10) continue;
+    
+    // Look for important indicator words
+    const isImportant = 
+      sentence.includes("key") || 
+      sentence.includes("important") || 
+      sentence.includes("significant") ||
+      sentence.includes("conclusion") || 
+      sentence.includes("finding") ||
+      sentence.includes("demonstrate") ||
+      sentence.includes("evidence") ||
+      sentence.includes("observation") ||
+      sentence.includes("research") ||
+      sentence.includes("study") ||
+      sentence.includes("analysis") ||
+      sentence.includes("method");
+      
+    // Check if it might be a good concept for the mindmap
+    if (
+      isImportant ||
+      (sentence.length < 150 && i < 20) || // Earlier sentences are often more important
+      (i % 30 === 0) // Take periodic samples from the text
+    ) {
+      // Format the sentence to be more concise
+      const conceptSentence = formatSentenceForConcept(sentence);
+      if (!concepts.includes(conceptSentence)) {
+        concepts.push(conceptSentence);
+      }
+    }
+  }
+  
+  // Limit concepts to a reasonable number (increased from 25 to 40)
+  console.log(`Found ${concepts.length} concepts, filtering to top 40`);
+  return concepts.slice(0, 40);
+}
+
+// Format a sentence to be more concise for a mind map
+function formatSentenceForConcept(sentence: string): string {
+  // Remove extra spaces and limit length
+  let formatted = sentence.replace(/\s+/g, ' ').trim();
+  
+  // If it's too long, truncate it
+  if (formatted.length > 100) {
+    formatted = formatted.substring(0, 97) + '...';
+  }
+  
+  // Ensure it ends with proper punctuation
+  if (!formatted.endsWith('.') && !formatted.endsWith('!') && !formatted.endsWith('?')) {
+    formatted += '.';
+  }
+  
+  return formatted;
 }
 
 // Generate summary from PDF text
@@ -118,6 +202,51 @@ function formatStructuredContent(concepts: string[], type: "mindmap" | "flowchar
   }
   
   return result;
+}
+
+// Enhanced mind map data generation
+function generateEnhancedMindMapData(concepts: string[], pdfText: string): any {
+  console.log("Generating enhanced mind map data...");
+  
+  // Create a mind map structure with the extracted concepts
+  const categories = categorizeForMindMap(concepts);
+  
+  // Create the root node with the paper title
+  const mindMapData = {
+    nodeData: {
+      id: "root",
+      topic: concepts[0] || "Paper Title",
+      root: true,
+      children: []
+    }
+  };
+  
+  // Add categories as main branches
+  let i = 1;
+  Object.entries(categories).forEach(([category, items]) => {
+    if (items.length === 0) return;
+    
+    const categoryNode = {
+      id: `${i}`,
+      topic: category,
+      direction: i <= 3 ? 0 : 1, // Split directions for balance
+      children: [] as any[]
+    };
+    
+    // Add items as children
+    items.forEach((item, j) => {
+      categoryNode.children.push({
+        id: `${i}-${j+1}`,
+        topic: item.length > 50 ? item.substring(0, 50) + "..." : item
+      });
+    });
+    
+    mindMapData.nodeData.children.push(categoryNode);
+    i++;
+  });
+  
+  console.log("Mind map data generated successfully");
+  return mindMapData;
 }
 
 // Categorize concepts for mind map
@@ -304,42 +433,25 @@ function extractSection(text: string, keywords: string[]): string {
 
 export async function generateMindMapFromText(text: string): Promise<any> {
   try {
-    const concepts = extractConcepts(text);
-    const categories = categorizeForMindMap(concepts);
+    console.log("generateMindMapFromText called with text length:", text?.length);
+    if (!text || text.length === 0) {
+      console.error("Empty text provided to generateMindMapFromText");
+      throw new Error("No text content provided for mind map generation");
+    }
     
-    // Create a mind map structure compatible with mind-elixir
-    const mindMapData = {
-      nodeData: {
-        id: "root",
-        topic: concepts[0] || "Paper Title",
-        root: true,
-        children: []
-      }
-    };
+    // Store the PDF text in session storage
+    try {
+      sessionStorage.setItem('pdfText', text);
+    } catch (e) {
+      console.warn("Failed to store PDF text in session storage:", e);
+    }
     
-    // Add categories as main branches
-    let i = 1;
-    Object.entries(categories).forEach(([category, items]) => {
-      if (items.length === 0) return;
-      
-      const categoryNode = {
-        id: `${i}`,
-        topic: category,
-        direction: i <= 3 ? 0 : 1, // Split directions for balance
-        children: [] as any[]
-      };
-      
-      // Add items as children
-      items.forEach((item, j) => {
-        categoryNode.children.push({
-          id: `${i}-${j+1}`,
-          topic: item.length > 50 ? item.substring(0, 50) + "..." : item
-        });
-      });
-      
-      mindMapData.nodeData.children.push(categoryNode);
-      i++;
-    });
+    // Extract concepts for the mind map
+    const concepts = extractEnhancedConcepts(text);
+    console.log(`Extracted ${concepts.length} concepts for mind map`);
+    
+    // Generate the mind map data structure
+    const mindMapData = generateEnhancedMindMapData(concepts, text);
     
     return mindMapData;
   } catch (error) {
