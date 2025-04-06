@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
-import PanelStructure from "@/components/PanelStructure";
+import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,9 @@ import { Loader } from "lucide-react";
 import { VisualizationProvider } from "@/contexts/VisualizationContext";
 
 const MindMap = () => {
+  const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
+  const [pdfAvailable, setPdfAvailable] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
@@ -31,6 +34,7 @@ const MindMap = () => {
         
         console.log("PDF check on mount - available:", hasPdfData, "PDF data length:", pdfData ? pdfData.length : 0);
         
+        setPdfAvailable(hasPdfData);
         setPdfLoadAttempted(true);
         
         if (!hasPdfData) {
@@ -45,8 +49,13 @@ const MindMap = () => {
             window.location.href = "/";
           }, 2000);
         }
+        
+        // Keep PDF panel visible if data is available
+        setShowPdf(hasPdfData);
       } catch (error) {
         console.error("Error checking PDF availability:", error);
+        setPdfAvailable(false);
+        setShowPdf(false);
         setPdfLoadAttempted(true);
       } finally {
         setIsLoading(false);
@@ -56,6 +65,29 @@ const MindMap = () => {
     // Execute PDF check immediately
     checkPdfAvailability();
   }, [toast]);
+
+  const togglePdf = useCallback(() => {
+    console.log("Toggle PDF clicked. Current state:", showPdf);
+    
+    // Only toggle if PDF is available
+    if (pdfAvailable) {
+      setShowPdf(prev => !prev);
+    } else {
+      toast({
+        title: "No PDF Found",
+        description: "Please upload a PDF document first",
+        variant: "destructive",
+      });
+    }
+  }, [showPdf, pdfAvailable, toast]);
+
+  const toggleChat = useCallback(() => {
+    setShowChat(prev => !prev);
+  }, []);
+  
+  const toggleSummary = useCallback(() => {
+    setShowSummary(prev => !prev);
+  }, []);
 
   const handleExplainText = useCallback((text: string) => {
     // Prevent duplicate text explanation
@@ -70,7 +102,11 @@ const MindMap = () => {
     setTimeout(() => {
       setTextExplainProcessed(false);
     }, 500);
-  }, [explainText, textExplainProcessed]);
+    
+    if (!showChat) {
+      setShowChat(true);
+    }
+  }, [showChat, explainText, textExplainProcessed]);
 
   const handleMindMapReady = useCallback((mindMap: MindElixirInstance) => {
     // Set up the mind map instance with proper line breaks for nodes
@@ -186,13 +222,21 @@ const MindMap = () => {
       {/* Wrap Header with VisualizationProvider */}
       <VisualizationProvider>
         <Header 
+          togglePdf={togglePdf}
+          toggleChat={toggleChat}
           setShowSummary={setShowSummary}
+          isPdfActive={showPdf && pdfAvailable}
+          isChatActive={showChat}
           mindMap={mindMap}
         />
 
-        {/* Main Content - Split view with PDF on left, Chat on right */}
+        {/* Main Content - Panels for PDF, MindMap, and Chat */}
         <div className="flex-1 overflow-hidden">
           <PanelStructure 
+            showPdf={showPdf && pdfAvailable}
+            showChat={showChat}
+            toggleChat={toggleChat}
+            togglePdf={togglePdf}
             onMindMapReady={handleMindMapReady}
             explainText={explainText}
             onExplainText={handleExplainText}

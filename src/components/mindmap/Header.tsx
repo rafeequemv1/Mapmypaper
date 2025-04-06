@@ -1,9 +1,9 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FileText,
   Download,
+  MessageSquare,
   Image,
   FileJson,
   Upload,
@@ -26,12 +26,20 @@ import PaperLogo from "@/components/PaperLogo";
 import { useVisualizationContext } from "@/contexts/VisualizationContext";
 
 interface HeaderProps {
+  togglePdf: () => void;
+  toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  isPdfActive: boolean;
+  isChatActive: boolean;
   mindMap: MindElixirInstance | null;
 }
 
 const Header = ({ 
+  togglePdf, 
+  toggleChat, 
   setShowSummary,
+  isPdfActive,
+  isChatActive,
   mindMap
 }: HeaderProps) => {
   const [fileName, setFileName] = useState("mindmap");
@@ -148,6 +156,24 @@ const Header = ({
         
         {/* Center - Main Button Group */}
         <div className="flex items-center gap-2 md:gap-3 absolute left-1/2 transform -translate-x-1/2">
+          <Button 
+            variant={isPdfActive ? "default" : "ghost"} 
+            onClick={togglePdf} 
+            className={`flex items-center gap-1 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">PDF</span>
+          </Button>
+          
+          <Button 
+            variant={isChatActive ? "default" : "ghost"} 
+            onClick={toggleChat} 
+            className={`flex items-center gap-1 ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Chat</span>
+          </Button>
+          
           <Button 
             variant="ghost" 
             onClick={() => setShowSummary(true)} 

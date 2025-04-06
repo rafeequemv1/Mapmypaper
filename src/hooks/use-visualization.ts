@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { generateMermaidDiagram } from "@/services/geminiService";
@@ -32,13 +33,8 @@ export function useVisualization() {
       return;
     }
     
-    // If we already have generated syntax for this type, use it
-    if (savedSyntax[type]) {
-      setMermaidSyntax(savedSyntax[type]);
-      return;
-    }
-    
-    // Otherwise generate a new visualization
+    // Always generate a visualization when opening the modal
+    // This removes the need to click the regenerate button
     generateVisualization(type);
   };
   

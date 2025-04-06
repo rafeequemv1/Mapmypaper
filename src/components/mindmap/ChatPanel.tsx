@@ -1,251 +1,402 @@
-
-import React, { useState, useRef, useEffect } from "react";
-import { sendPrompt } from "@/services/geminiService";
+import { useState, useEffect, useRef } from "react";
+import { MessageSquare, X, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Settings, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { formatAiResponse } from "@/utils/formatAiResponse";
-import { chatExampleQuestions } from "@/utils/chatExampleQuestions";
-import { useQueryClient } from "@tanstack/react-query";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
+import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import { getWelcomeMessage, getContextualQuestions } from "@/utils/chatExampleQuestions";
 
 interface ChatPanelProps {
-  explainText: string;
-  onExplainText: (text: string) => void;
-  onScrollToPdfPosition: (position: string) => void;
+  toggleChat: () => void;
+  explainText?: string;
+  explainImage?: string;
+  onScrollToPdfPosition?: (position: string) => void;
+  onExplainText?: (text: string) => void;
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({
-  explainText,
-  onExplainText,
-  onScrollToPdfPosition
-}) => {
-  const [prompt, setPrompt] = useState("");
-  const [chatHistory, setChatHistory] = useState<{ role: "user" | "bot", content: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition }: ChatPanelProps) => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [showExamples, setShowExamples] = useState(true);
-
-  // Scroll to bottom of chat when messages are added
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
+    { role: 'assistant', content: getWelcomeMessage(), isHtml: true }
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
+  const [processingExplainText, setProcessingExplainText] = useState(false);
+  const [processingExplainImage, setProcessingExplainImage] = useState(false);
+  const [contextQuestions, setContextQuestions] = useState<string[]>([]);
+  
+  // Initial load of contextual questions
   useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chatHistory]);
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!prompt.trim() && !explainText) return;
-    
-    // Use explainText if available, otherwise use the prompt from the textarea
-    const promptToSend = explainText || prompt;
-    
-    // Add user message to chat
-    setChatHistory(prev => [...prev, { role: "user", content: promptToSend }]);
-    
-    // Reset inputs
-    setPrompt("");
-    onExplainText("");
-    
-    // Hide examples once user interacts
-    setShowExamples(false);
-    
-    try {
-      setIsLoading(true);
-      
-      // Get PDF text from session storage
-      const pdfText = sessionStorage.getItem("pdfText");
-      if (!pdfText) {
-        throw new Error("PDF text not found. Please upload a PDF first.");
+    // Get contextual questions based on document content
+    setContextQuestions(getContextualQuestions());
+  }, []);
+  
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
+    }
+  }, [messages]);
+
+  // Process text to explain when it changes
+  useEffect(() => {
+    const processExplainText = async () => {
+      if (explainText && !processingExplainText) {
+        setProcessingExplainText(true);
+        
+        // Add user message with the selected text
+        setMessages(prev => [...prev, { role: 'user', content: `Please explain this text in detail with page citations: "${explainText}"` }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          // Enhanced prompt to encourage complete sentences and page citations
+          const response = await chatWithGeminiAboutPdf(
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
+          );
+          
+          // Hide typing indicator and add AI response with formatting
+          setIsTyping(false);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: formatAIResponse(response),
+              isHtml: true 
+            }
+          ]);
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("Chat error:", error);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: "Sorry, I encountered an error explaining that. Please try again." 
+            }
+          ]);
+          
+          toast({
+            title: "Explanation Error",
+            description: "Failed to get an explanation from the AI.",
+            variant: "destructive"
+          });
+        } finally {
+          setProcessingExplainText(false);
+        }
+      }
+    };
+    
+    processExplainText();
+  }, [explainText, toast]);
+
+  // Process image to explain when it changes
+  useEffect(() => {
+    const processExplainImage = async () => {
+      if (explainImage && !processingExplainImage) {
+        console.log("ChatPanel: Starting image processing", {
+          imageDataLength: explainImage.length,
+          isDataUrl: explainImage.startsWith('data:image/')
+        });
+        
+        setProcessingExplainImage(true);
+        
+        // Add user message with the selected area image
+        setMessages(prev => [...prev, { 
+          role: 'user', 
+          content: "Please explain this selected area from the document:", 
+          image: explainImage 
+        }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          console.log("ChatPanel: Calling Gemini API for image analysis");
+          // Call enhanced Gemini API with the image
+          const response = await analyzeImageWithGemini(explainImage);
+          
+          console.log("ChatPanel: Received Gemini API response", {
+            responseLength: response.length,
+            preview: response.substring(0, 50) + "..."
+          });
+          
+          // Hide typing indicator and add AI response with formatting
+          setIsTyping(false);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: formatAIResponse(response),
+              isHtml: true 
+            }
+          ]);
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("Image analysis error:", error);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: "Sorry, I encountered an error analyzing that image. Please try again." 
+            }
+          ]);
+          
+          toast({
+            title: "Image Analysis Error",
+            description: "Failed to analyze the selected area.",
+            variant: "destructive"
+          });
+        } finally {
+          setProcessingExplainImage(false);
+        }
+      }
+    };
+    
+    processExplainImage();
+  }, [explainImage, toast]);
+
+  // Activate citations in messages when they are rendered
+  useEffect(() => {
+    // Use a longer timeout to ensure the DOM is fully rendered
+    const activationTimeout = setTimeout(() => {
+      const messageContainers = document.querySelectorAll('.ai-message-content');
       
-      // Send prompt to AI service
-      const response = await sendPrompt(promptToSend, pdfText);
+      messageContainers.forEach(container => {
+        activateCitations(container as HTMLElement, (citation) => {
+          console.log("Desktop Citation clicked:", citation);
+          if (onScrollToPdfPosition) {
+            // Directly invoke the scroll function with sufficient delay to ensure proper handling
+            onScrollToPdfPosition(citation);
+          }
+        });
+      });
+    }, 200); // Increased timeout for more reliable activation
+    
+    return () => clearTimeout(activationTimeout);
+  }, [messages, onScrollToPdfPosition]);
+
+  // Add a function to handle clicking on example questions
+  const handleExampleQuestionClick = (question: string) => {
+    setInputValue(question);
+    // Focus the textarea
+    const textarea = document.querySelector(".chat-input") as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.focus();
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (inputValue.trim()) {
+      // Add user message
+      const userMessage = inputValue.trim();
+      setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
       
-      // Format the AI response
-      const formattedResponse = formatAiResponse(response);
+      // Clear input
+      setInputValue('');
       
-      // Add bot response to chat
-      setChatHistory(prev => [...prev, { role: "bot", content: formattedResponse }]);
-    } catch (error) {
-      console.error("Error sending prompt:", error);
+      // Show typing indicator
+      setIsTyping(true);
+      
+      try {
+        // Use the enhanced research-focused prompt from geminiService
+        const response = await chatWithGeminiAboutPdf(userMessage);
+        
+        // Hide typing indicator and add AI response with enhanced formatting
+        setIsTyping(false);
+        setMessages(prev => [
+          ...prev, 
+          { 
+            role: 'assistant', 
+            content: formatAIResponse(response),
+            isHtml: true 
+          }
+        ]);
+      } catch (error) {
+        // Handle errors
+        setIsTyping(false);
+        console.error("Chat error:", error);
+        setMessages(prev => [
+          ...prev, 
+          { 
+            role: 'assistant', 
+            content: "Sorry, I encountered an error. Please try again." 
+          }
+        ]);
+        
+        toast({
+          title: "Chat Error",
+          description: "Failed to get a response from the AI.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const copyToClipboard = (text: string, messageId: number) => {
+    // Strip HTML tags for copying plain text
+    const plainText = text.replace(/<[^>]*>?/gm, '');
+    
+    navigator.clipboard.writeText(plainText).then(() => {
+      setCopiedMessageId(messageId);
+      
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred while processing your request",
-        variant: "destructive",
+        title: "Copied to clipboard",
+        description: "Message content has been copied",
+        duration: 2000,
       });
       
-      // Add error message to chat
-      setChatHistory(prev => [...prev, { 
-        role: "bot", 
-        content: "Sorry, I encountered an error while processing your request. Please try again." 
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle textarea height adjustment
-  const handleTextareaInput = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
-    }
-  };
-
-  // Handle enter key to submit form (with shift+enter for new line)
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  };
-
-  // Extract PDF page references and make them clickable
-  const processMessageWithPageLinks = (content: string) => {
-    // Regular expression to match "page X" pattern
-    const pageRegex = /page\s+(\d+)/gi;
-    
-    // Split the content by page references
-    const parts = content.split(pageRegex);
-    
-    if (parts.length <= 1) return content;
-    
-    // Build the result with clickable links
-    const result: React.ReactNode[] = [];
-    
-    for (let i = 0; i < parts.length; i++) {
-      result.push(parts[i]);
+      // Reset the copied icon after 2 seconds
+      setTimeout(() => {
+        setCopiedMessageId(null);
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
       
-      // After each part (except the last one), add a page link
-      if (i < parts.length - 1 && i % 2 === 0) {
-        const pageNum = parts[i + 1];
-        result.push(
-          <button
-            key={`page-${i}-${pageNum}`}
-            onClick={() => onScrollToPdfPosition(`page${pageNum}`)}
-            className="text-blue-600 hover:underline font-medium"
-          >
-            page {pageNum}
-          </button>
-        );
-        // Skip the page number part since we've handled it
-        i++;
-      }
-    }
-    
-    return result;
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive"
+      });
+    });
   };
-  
-  // Handle clicking an example question
-  const handleExampleClick = (question: string) => {
-    setPrompt(question);
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      handleTextareaInput();
-    }
-  };
-
-  // Effect to handle explainText changes
-  useEffect(() => {
-    if (explainText && !isLoading) {
-      // When text is selected from PDF, replace the current prompt
-      setPrompt(`Explain this: "${explainText}"`);
-      handleTextareaInput();
-    }
-  }, [explainText, isLoading]);
 
   return (
     <div className="flex flex-col h-full border-l">
-      <div className="p-3 border-b bg-white flex items-center justify-between">
-        <h2 className="font-semibold text-gray-700">Chat</h2>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-1">
-          <Settings className="h-4 w-4" />
+      {/* Chat panel header */}
+      <div className="flex items-center justify-between p-3 border-b bg-white">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          <h3 className="font-medium text-sm">Research Assistant</h3>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={toggleChat}
+        >
+          <X className="h-4 w-4" />
         </Button>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50" style={{ scrollBehavior: "smooth" }}>
-        {chatHistory.length === 0 && showExamples && (
-          <div className="space-y-4 mt-2">
-            <p className="text-gray-600 text-sm">Ask questions about your PDF:</p>
-            
-            <div className="grid gap-2">
-              {chatExampleQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  className="text-left p-2 bg-white border rounded-lg text-sm hover:bg-gray-50 transition-colors"
-                  onClick={() => handleExampleClick(question)}
-                >
-                  {question}
-                </button>
-              ))}
+      {/* Chat messages area with enhanced styling for better scrollable citations */}
+      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+        <div className="flex flex-col gap-4">
+          {messages.map((message, i) => (
+            <div key={i} className="group relative">
+              <div 
+                className={`rounded-lg p-4 ${
+                  message.role === 'user' 
+                    ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
+                    : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
+                }`}
+              >
+                {/* Display attached image if present */}
+                {message.image && (
+                  <div className="mb-2">
+                    <img 
+                      src={message.image} 
+                      alt="Selected area" 
+                      className="max-w-full rounded-md border border-gray-200"
+                      style={{ maxHeight: '300px' }} 
+                    />
+                  </div>
+                )}
+                
+                {message.isHtml ? (
+                  <div 
+                    className="ai-message-content overflow-auto" 
+                    dangerouslySetInnerHTML={{ __html: message.content }} 
+                  />
+                ) : (
+                  message.content
+                )}
+                
+                {/* Example questions buttons - only show for first welcome message */}
+                {message.role === 'assistant' && i === 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {contextQuestions.slice(0, 5).map((question, idx) => (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs bg-white border-gray-200 hover:bg-gray-50 text-left justify-start"
+                        onClick={() => handleExampleQuestionClick(question)}
+                      >
+                        {question.length > 30 ? question.substring(0, 27) + '...' : question}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                
+                {message.role === 'assistant' && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => copyToClipboard(message.content, i)}
+                  >
+                    {copiedMessageId === i ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-        
-        {chatHistory.map((message, index) => (
-          <div 
-            key={index} 
-            className={`mb-4 ${message.role === "user" ? "ml-6" : "mr-6"}`}
-          >
-            <div 
-              className={`p-3 rounded-xl ${
-                message.role === "user" 
-                  ? "bg-blue-500 text-white ml-auto rounded-tr-none" 
-                  : "bg-white border rounded-tl-none"
-              }`}
-              style={{ maxWidth: "85%" }}
-            >
-              {message.role === "user" 
-                ? message.content 
-                : processMessageWithPageLinks(message.content)}
+          ))}
+          
+          {isTyping && (
+            <div className="ai-message bg-gray-50 border border-gray-100 shadow-sm rounded-lg p-4">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '400ms' }}></div>
+              </div>
             </div>
-          </div>
-        ))}
-        
-        {isLoading && (
-          <div className="mb-4 mr-6">
-            <div className="p-3 rounded-xl bg-white border rounded-tl-none inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-              <span className="text-gray-500">Thinking...</span>
-            </div>
-          </div>
-        )}
-        
-        <div ref={chatEndRef} />
-      </div>
+          )}
+        </div>
+      </ScrollArea>
       
-      <form onSubmit={handleSubmit} className="p-3 border-t bg-white">
-        <div className="flex items-end gap-2">
+      {/* Input area */}
+      <div className="p-3 border-t bg-white">
+        <div className="flex gap-2">
           <Textarea
-            ref={textareaRef}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onInput={handleTextareaInput}
+            className="flex-1 min-h-10 max-h-32 resize-none chat-input"
+            placeholder="Ask about the document..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="resize-none min-h-[40px] max-h-[120px] py-2"
-            placeholder="Ask a question about your PDF..."
-            disabled={isLoading}
           />
           <Button 
-            type="submit" 
-            size="icon" 
-            className="h-10 w-10 shrink-0 bg-blue-500 hover:bg-blue-600 text-white"
-            disabled={isLoading || (!prompt.trim() && !explainText)}
+            className="shrink-0" 
+            size="sm" 
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim()}
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            Send
           </Button>
         </div>
-      </form>
+      </div>
     </div>
   );
 };
