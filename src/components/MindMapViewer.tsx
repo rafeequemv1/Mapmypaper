@@ -1,11 +1,8 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { FileText } from "lucide-react";
 
 interface MindMapViewerProps {
@@ -730,63 +727,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     }
   };
   
-  // Function to handle zoom in
-  const handleZoomIn = () => {
-    if (mindMapRef.current) {
-      const currentScale = mindMapRef.current.scaleVal;
-      mindMapRef.current.scale(currentScale + 0.1);
-    }
-  };
-  
-  // Function to handle zoom out
-  const handleZoomOut = () => {
-    if (mindMapRef.current) {
-      const currentScale = mindMapRef.current.scaleVal;
-      // Don't allow zooming out too far
-      if (currentScale > 0.3) {
-        mindMapRef.current.scale(currentScale - 0.1);
-      }
-    }
-  };
-  
-  // Function to reset zoom and position
-  const handleReset = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.scale(0.7); // Reset to initial scale
-      mindMapRef.current.toCenter(); // Center the mind map
-    }
-  };
-  
   return (
     <div className="relative w-full h-full flex flex-col">
-      {/* Zoom controls */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-md shadow-md">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleZoomIn}
-          title="Zoom In"
-        >
-          <ZoomIn size={18} />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleZoomOut}
-          title="Zoom Out"
-        >
-          <ZoomOut size={18} />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleReset}
-          title="Reset View"
-        >
-          <RotateCcw size={18} />
-        </Button>
-      </div>
-      
       {/* Mind map container */}
       <div 
         ref={containerRef} 
