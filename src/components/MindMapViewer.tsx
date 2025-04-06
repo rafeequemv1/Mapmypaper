@@ -344,7 +344,55 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Create mind map instance
       const mind = new MindElixir(options);
       
-      // Add custom styles to node-menu and style-panel elements when they appear
+      // Enhanced function to make style panels visible
+      const ensureStylePanelVisibility = () => {
+        // Create a global click event handler
+        document.addEventListener('click', function(e) {
+          // Short delay to let Mind Elixir process the click first
+          setTimeout(() => {
+            const stylePanels = document.querySelectorAll('.mind-elixir-style-panel, .node-style-panel, .style-wrap, [data-name="mind-elixir-style-panel"]');
+            stylePanels.forEach(panel => {
+              if (panel instanceof HTMLElement) {
+                panel.style.display = 'block';
+                panel.style.visibility = 'visible';
+                panel.style.opacity = '1';
+                panel.style.zIndex = '10000';
+                panel.style.pointerEvents = 'auto';
+                
+                // Check if panel is out of viewport and adjust position if needed
+                const rect = panel.getBoundingClientRect();
+                if (rect.right > window.innerWidth) {
+                  panel.style.left = (window.innerWidth - rect.width - 20) + 'px';
+                }
+                if (rect.bottom > window.innerHeight) {
+                  panel.style.top = (window.innerHeight - rect.height - 20) + 'px';
+                }
+              }
+            });
+          }, 50);
+        });
+        
+        // Fix menu/panel positions when window is resized
+        window.addEventListener('resize', () => {
+          const elements = document.querySelectorAll('.mind-elixir-node-menu, .mind-elixir-contextmenu, .mind-elixir-style-panel, .node-style-panel, .style-wrap');
+          elements.forEach(el => {
+            if (el instanceof HTMLElement) {
+              const rect = el.getBoundingClientRect();
+              if (rect.right > window.innerWidth) {
+                el.style.left = (window.innerWidth - rect.width - 20) + 'px';
+              }
+              if (rect.bottom > window.innerHeight) {
+                el.style.top = (window.innerHeight - rect.height - 20) + 'px';
+              }
+            }
+          });
+        });
+      };
+      
+      // Call the enhanced function immediately
+      ensureStylePanelVisibility();
+      
+      // Add observer for style panel appearances
       const observeStylePanel = () => {
         const observer = new MutationObserver((mutations) => {
           mutations.forEach(mutation => {
@@ -355,23 +403,27 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
                   if (node.classList.contains('mind-elixir-style-panel') || 
                       node.classList.contains('node-style-panel') ||
                       node.classList.contains('style-wrap') ||
-                      node.classList.contains('mind-elixir-node-menu')) {
+                      node.classList.contains('mind-elixir-node-menu') ||
+                      node.getAttribute('data-name') === 'mind-elixir-style-panel') {
                     
-                    node.style.display = 'block';
-                    node.style.visibility = 'visible';
-                    node.style.opacity = '1';
-                    node.style.zIndex = '9999';
+                    // Force visibility with !important styles
+                    node.style.cssText = `
+                      display: block !important;
+                      visibility: visible !important;
+                      opacity: 1 !important;
+                      z-index: 10000 !important;
+                      pointer-events: auto !important;
+                      position: fixed !important;
+                    `;
                     
                     // Ensure the panel stays in view
-                    setTimeout(() => {
-                      const rect = node.getBoundingClientRect();
-                      if (rect.right > window.innerWidth) {
-                        node.style.left = (window.innerWidth - rect.width - 20) + 'px';
-                      }
-                      if (rect.bottom > window.innerHeight) {
-                        node.style.top = (window.innerHeight - rect.height - 20) + 'px';
-                      }
-                    }, 0);
+                    const rect = node.getBoundingClientRect();
+                    if (rect.right > window.innerWidth) {
+                      node.style.left = (window.innerWidth - rect.width - 20) + 'px';
+                    }
+                    if (rect.bottom > window.innerHeight) {
+                      node.style.top = (window.innerHeight - rect.height - 20) + 'px';
+                    }
                   }
                 }
               });
@@ -382,7 +434,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         // Start observing the body for any style panel additions
         observer.observe(document.body, { 
           childList: true, 
-          subtree: true 
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style', 'class']
         });
         
         return observer;
@@ -557,25 +611,81 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       // Enhanced clickability for nodes with style panel support
       if (containerRef.current) {
-        const topicElements = containerRef.current.querySelectorAll('.mind-elixir-topic');
-        topicElements.forEach((element) => {
-          element.addEventListener('click', (e) => {
-            // Node is clicked - no need to call any additional methods
-            if (mind.currentNode && mind.currentNode.nodeObj) {
-              console.log('Node clicked:', mind.currentNode.nodeObj.topic);
-              
-              // Force style panel visibility after a short delay
-              setTimeout(() => {
-                const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
-                if (stylePanel && stylePanel instanceof HTMLElement) {
-                  stylePanel.style.display = 'block';
-                  stylePanel.style.visibility = 'visible';
-                  stylePanel.style.opacity = '1';
+        const enhanceNodeClickability = () => {
+          const topicElements = containerRef.current?.querySelectorAll('.mind-elixir-topic');
+          topicElements?.forEach((element) => {
+            element.addEventListener('click', () => {
+              if (mind.currentNode && mind.currentNode.nodeObj) {
+                console.log('Node clicked:', mind.currentNode.nodeObj.topic);
+                
+                // Force style panel visibility
+                setTimeout(() => {
+                  const stylePanels = document.querySelectorAll('.mind-elixir-style-panel, .node-style-panel, .style-wrap, [data-name="mind-elixir-style-panel"]');
+                  stylePanels.forEach(panel => {
+                    if (panel instanceof HTMLElement) {
+                      panel.style.cssText = `
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        z-index: 10000 !important;
+                        pointer-events: auto !important;
+                      `;
+                    }
+                  });
+                }, 50);
+              }
+            });
+          });
+        };
+        
+        // Initialize and periodically check for new nodes
+        enhanceNodeClickability();
+        const clickabilityInterval = setInterval(enhanceNodeClickability, 1000);
+        
+        // Add observer for node additions to ensure they're properly initialized
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length > 0) {
+              mutation.addedNodes.forEach((node) => {
+                if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
+                  node.addEventListener('click', () => {
+                    // Node is clicked - let Mind Elixir handle it
+                    if (mind.currentNode && mind.currentNode.nodeObj) {
+                      console.log('New node clicked:', mind.currentNode.nodeObj.topic);
+                      
+                      // Force style panel visibility
+                      setTimeout(() => {
+                        const stylePanels = document.querySelectorAll('.mind-elixir-style-panel, .node-style-panel, .style-wrap, [data-name="mind-elixir-style-panel"]');
+                        stylePanels.forEach(panel => {
+                          if (panel instanceof HTMLElement) {
+                            panel.style.cssText = `
+                              display: block !important;
+                              visibility: visible !important;
+                              opacity: 1 !important;
+                              z-index: 10000 !important;
+                              pointer-events: auto !important;
+                            `;
+                          }
+                        });
+                      }, 50);
+                    }
+                  });
                 }
-              }, 100);
+              });
             }
           });
         });
+        
+        if (containerRef.current) {
+          observer.observe(containerRef.current, { childList: true, subtree: true });
+        }
+        
+        // Cleanup function
+        return () => {
+          clearInterval(clickabilityInterval);
+          styleObserver.disconnect();
+          observer.disconnect();
+        };
       }
       
       // Add event listeners for node selection to ensure style panel visibility
@@ -584,36 +694,20 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         
         // Ensure style panels appear
         setTimeout(() => {
-          const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
-          if (stylePanel && stylePanel instanceof HTMLElement) {
-            stylePanel.style.display = 'block';
-            stylePanel.style.visibility = 'visible';
-            stylePanel.style.opacity = '1';
-          }
-        }, 100);
+          const stylePanels = document.querySelectorAll('.mind-elixir-style-panel, .node-style-panel, .style-wrap, [data-name="mind-elixir-style-panel"]');
+          stylePanels.forEach(panel => {
+            if (panel instanceof HTMLElement) {
+              panel.style.cssText = `
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                z-index: 10000 !important;
+                pointer-events: auto !important;
+              `;
+            }
+          });
+        }, 50);
       });
-      
-      // Add observer for node additions to ensure they're properly initialized
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.addedNodes.length > 0) {
-            mutation.addedNodes.forEach((node) => {
-              if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
-                node.addEventListener('click', () => {
-                  // Node is clicked - let Mind Elixir handle it
-                  if (mind.currentNode && mind.currentNode.nodeObj) {
-                    console.log('New node clicked:', mind.currentNode.nodeObj.topic);
-                  }
-                });
-              }
-            });
-          }
-        });
-      });
-      
-      if (containerRef.current) {
-        observer.observe(containerRef.current, { childList: true, subtree: true });
-      }
       
       // Enhance connection lines with arrows and colors from theme
       const enhanceConnectionLines = () => {
@@ -688,12 +782,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       setTimeout(() => {
         setIsReady(true);
       }, 300);
-      
-      // Cleanup function
-      return () => {
-        styleObserver.disconnect();
-        observer.disconnect();
-      };
     }
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
