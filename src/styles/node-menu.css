@@ -1,64 +1,211 @@
 
-/* Node Menu Styles */
+/* Basic styles for the node menu */
 .mind-elixir-node-menu {
   position: absolute;
-  z-index: 10;
-  background-color: #ffffff;
-  border-radius: 5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
   padding: 8px 0;
-  min-width: 120px;
+  border-radius: 6px;
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
   user-select: none;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  display: block !important;
 }
 
-.mind-elixir-node-menu div {
-  padding: 8px 12px;
+.mind-elixir-node-menu button {
+  display: block;
+  padding: 8px 15px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
   cursor: pointer;
   font-size: 14px;
   color: #333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  transition: background-color 0.2s;
 }
 
-.mind-elixir-node-menu div:hover {
-  background-color: #f5f5f5;
+.mind-elixir-node-menu button:hover {
+  background-color: #f0f0f0;
 }
 
-.mind-elixir-node-menu div svg {
+.mind-elixir-node-menu hr {
+  margin: 6px 0;
+  border: none;
+  border-top: 1px solid #e8e8e8;
+}
+
+/* Style for node contextmenu */
+.mind-elixir-contextmenu {
+  position: fixed !important;
+  z-index: 9999 !important;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  user-select: none;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  display: block !important;
+}
+
+.mind-elixir-contextmenu-item {
+  padding: 8px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.mind-elixir-contextmenu-item:hover {
+  background-color: #f0f0f0;
+}
+
+/* Custom menu item icons */
+.mind-elixir-node-menu button i,
+.mind-elixir-contextmenu-item i {
+  margin-right: 8px;
+  font-size: 14px;
   width: 16px;
-  height: 16px;
+  text-align: center;
+  display: inline-block;
 }
 
-.mind-elixir-style-panel {
-  position: absolute;
-  z-index: 10;
-  background-color: #ffffff;
-  border-radius: 5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+/* Ensure the menu is visible and on top of other elements */
+.mind-elixir-node-menu,
+.mind-elixir-contextmenu {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  transform: none !important;
+}
+
+/* Style adjustments for the node menu */
+.mind-elixir-node-menu {
   padding: 10px;
-  user-select: none;
+  width: 220px;
 }
 
-.node-style-panel {
-  position: absolute;
-  z-index: 10;
-  background-color: #ffffff;
-  border-radius: 5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  padding: 10px;
-  user-select: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+/* Style for the node style panel */
+.mind-elixir-style-panel,
+.node-style-panel,
 .style-wrap {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   position: absolute;
-  z-index: 10;
-  background-color: #ffffff;
-  border-radius: 5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  padding: 10px;
+  z-index: 9999;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  width: 220px;
+}
+
+.mind-elixir-style-panel input,
+.mind-elixir-style-panel select,
+.node-style-panel input,
+.node-style-panel select,
+.style-wrap input,
+.style-wrap select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.mind-elixir-style-panel label,
+.node-style-panel label,
+.style-wrap label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Force style panels to appear */
+[data-type="style-panel"],
+.mind-elixir-style-panel,
+.mind-elixir-style-container,
+.node-style-panel,
+.style-wrap {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Additional styles to ensure node style panel is visible */
+.mind-elixir-node-menu[style*="display: none"],
+.mind-elixir-contextmenu[style*="display: none"],
+.mind-elixir-style-panel[style*="display: none"],
+.node-style-panel[style*="display: none"],
+.style-wrap[style*="display: none"] {
+  display: block !important;
+}
+
+/* Remove all resizable sliders */
+.resizer {
+  display: none !important;
+}
+
+/* Disable text selection in the mind map to avoid conflicts with right-clicking */
+.map-container, 
+.map-container * {
   user-select: none;
+}
+
+/* Add positioning context to mind map nodes */
+.me-node {
+  position: relative !important;
+}
+
+/* Ensure the contextmenu is visible above all other elements */
+.mind-elixir-contextmenu,
+.mind-elixir-node-menu,
+.mind-elixir-style-panel,
+.node-style-panel,
+.style-wrap {
+  pointer-events: auto !important;
+}
+
+/* Fix for context menu positioning */
+.react-flow__node, 
+.react-flow__edge,
+.me-node {
+  position: relative;
+}
+
+/* Fix for Radix UI context menu positioning and z-index */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important; 
+}
+
+.mindElixirBox,
+.map-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Position the context menu properly with high z-index */
+[data-state="open"].mindElixirBox .mind-elixir-node-menu,
+[data-state="open"].mindElixirBox .mind-elixir-contextmenu,
+[data-state="open"].mindElixirBox .mind-elixir-style-panel,
+.mindElixirBox .mind-elixir-node-menu,
+.mindElixirBox .mind-elixir-contextmenu,
+.mindElixirBox .mind-elixir-style-panel,
+.mindElixirBox .node-style-panel,
+.mindElixirBox .style-wrap {
+  z-index: 9999 !important;
+  position: fixed !important;
+  display: block !important;
+}
+
+/* Hide the resize handles */
+.resizable-handle {
+  display: none !important;
 }
