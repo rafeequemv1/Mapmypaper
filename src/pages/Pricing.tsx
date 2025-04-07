@@ -59,7 +59,7 @@ const Pricing = () => {
               title="Premium Plan"
               description="For researchers and professionals"
               price="$6.99"
-              priceId="price_your_stripe_price_id"
+              priceId="price_1NnypzSJVa5DWIui3KPxEDk6"
               popular={true}
               buttonText="Upgrade Now"
               features={[

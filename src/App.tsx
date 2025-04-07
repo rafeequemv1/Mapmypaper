@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { VisualizationProvider } from "@/contexts/VisualizationContext";
 import RequireAuth from "@/components/RequireAuth";
+import { supabase } from "@/integrations/supabase/client";
 import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
@@ -30,6 +31,11 @@ const queryClient = new QueryClient({
     }
   }
 });
+
+// Set Supabase client in window for edge functions to use
+if (typeof window !== 'undefined') {
+  window.supabaseClient = supabase;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
