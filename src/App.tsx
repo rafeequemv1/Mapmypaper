@@ -19,6 +19,7 @@ import TermsOfService from "./pages/TermsOfService";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
 import Pricing from "./pages/Pricing";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -48,6 +49,7 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/payment-success" element={<PaymentSuccess />} />
                 
                 {/* Protected routes */}
                 <Route element={<RequireAuth />}>

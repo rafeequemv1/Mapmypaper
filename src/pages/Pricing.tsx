@@ -3,9 +3,9 @@ import React from 'react';
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/PageHeader";
 import Footer from "@/components/Footer";
-import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import PricingCard from "@/components/PricingCard";
 
 const Pricing = () => {
   return (
@@ -36,96 +36,42 @@ const Pricing = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {/* Free Plan */}
-            <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-              <div className="p-6">
-                <h3 className="text-lg font-semibold mb-2">Free Plan</h3>
-                <p className="text-foreground/70 text-sm mb-6">Perfect for casual users and students</p>
-                
-                <div className="mb-6">
-                  <span className="text-3xl font-bold">$0</span>
-                  <span className="text-foreground/70">/month</span>
-                </div>
-                
-                <Button className="w-full mb-6" variant="outline">
-                  Get Started
-                </Button>
-                
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Process 2 PDFs per day</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Basic mind map generation</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Limited AI chat assistant</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>PNG export only</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Community support</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <PricingCard
+              title="Free Plan"
+              description="Perfect for casual users and students"
+              price="$0"
+              priceId=""
+              isFree={true}
+              buttonText="Get Started"
+              features={[
+                { text: "Process 2 PDFs per day", included: true },
+                { text: "Basic mind map generation", included: true },
+                { text: "Limited AI chat assistant", included: true },
+                { text: "PNG export only", included: true },
+                { text: "Community support", included: true },
+                { text: "Advanced features", included: false },
+                { text: "Multiple visualizations", included: false },
+              ]}
+            />
             
             {/* Premium Plan */}
-            <div className="bg-card border border-primary/30 rounded-lg shadow-sm overflow-hidden relative">
-              <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs py-1 px-3 rounded-bl">
-                Most Popular
-              </div>
-              
-              <div className="p-6">
-                <h3 className="text-lg font-semibold mb-2">Premium Plan</h3>
-                <p className="text-foreground/70 text-sm mb-6">For researchers and professionals</p>
-                
-                <div className="mb-6">
-                  <span className="text-3xl font-bold">$6.99</span>
-                  <span className="text-foreground/70">/month</span>
-                </div>
-                
-                <Button className="w-full mb-6">
-                  Upgrade Now
-                </Button>
-                
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span><strong>Unlimited</strong> PDF processing</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Advanced mind map generation</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Unlimited AI chat assistant</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Multiple export formats (PNG, PDF, SVG)</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Priority email support</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Flowchart & treemap visualizations</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Collaborative sharing</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <PricingCard
+              title="Premium Plan"
+              description="For researchers and professionals"
+              price="$6.99"
+              priceId="price_your_stripe_price_id"
+              popular={true}
+              buttonText="Upgrade Now"
+              features={[
+                { text: "Unlimited PDF processing", included: true },
+                { text: "Advanced mind map generation", included: true },
+                { text: "Unlimited AI chat assistant", included: true },
+                { text: "Multiple export formats (PNG, PDF, SVG)", included: true },
+                { text: "Priority email support", included: true },
+                { text: "Flowchart & treemap visualizations", included: true },
+                { text: "Collaborative sharing", included: true },
+              ]}
+            />
           </div>
           
           {/* FAQ Section */}
@@ -157,7 +103,7 @@ const Pricing = () => {
               <div>
                 <h3 className="font-medium mb-2">What payment methods do you accept?</h3>
                 <p className="text-foreground/70 text-sm">
-                  We accept all major credit cards, debit cards, and digital wallets including Google Pay, Apple Pay, and PayPal.
+                  We accept all major credit cards, debit cards, and digital wallets including Google Pay, Apple Pay, and PayPal through our secure Stripe payment system.
                 </p>
               </div>
             </div>
