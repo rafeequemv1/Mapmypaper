@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react({
-      plugins: [['@swc/plugin-emotion', {}]],
+      plugins: mode === 'production' ? undefined : [['@swc/plugin-emotion', {}]],
     }),
     mode === 'development' &&
     componentTagger(),
