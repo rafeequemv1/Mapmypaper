@@ -1,4 +1,3 @@
-
 /**
  * PDF Storage utility - Uses IndexedDB for storing large PDF files
  * more reliably than sessionStorage
@@ -9,6 +8,7 @@ const DB_NAME = 'pdfStorageDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'pdfFiles';
 const PDF_KEY = 'currentPdf';
+const IMAGES_KEY = 'pdfImages';
 
 // Initialize the database
 const initDB = (): Promise<IDBDatabase> => {
@@ -230,6 +230,85 @@ export const isPdfAvailable = async (): Promise<boolean> => {
   } catch (error) {
     console.error('Error checking PDF availability:', error);
     return false;
+  }
+};
+
+/**
+ * Store PDF images in IndexedDB
+ * @param images Array of image data URLs
+ * @returns Promise that resolves when storage is complete
+ */
+export const storePdfImages = async (images: string[]): Promise<void> => {
+  try {
+    console.log('Storing PDF images in IndexedDB, count:', images.length);
+    
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    // Store as a single object with id as key
+    const storeRequest = store.put({
+      id: IMAGES_KEY,
+      data: images,
+      timestamp: Date.now()
+    });
+    
+    return new Promise((resolve, reject) => {
+      storeRequest.onsuccess = () => {
+        console.log('PDF images successfully stored in IndexedDB');
+        resolve();
+      };
+      
+      storeRequest.onerror = (event) => {
+        console.error('Error storing PDF images:', event);
+        reject('Failed to store PDF images: Database error');
+      };
+      
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Error in storePdfImages:', error);
+    throw new Error(`Failed to store PDF images: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+/**
+ * Retrieve PDF images from IndexedDB
+ * @returns Promise that resolves with array of image data URLs
+ */
+export const retrievePdfImages = async (): Promise<string[]> => {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const getRequest = store.get(IMAGES_KEY);
+    
+    return new Promise((resolve, reject) => {
+      getRequest.onsuccess = () => {
+        const result = getRequest.result;
+        if (result) {
+          console.log('PDF images retrieved from IndexedDB, count:', result.data.length);
+          resolve(result.data);
+        } else {
+          console.log('No PDF images found in IndexedDB');
+          resolve([]);
+        }
+      };
+      
+      getRequest.onerror = (event) => {
+        console.error('Error retrieving PDF images:', event);
+        reject('Failed to retrieve PDF images: Database error');
+      };
+      
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Error in retrievePdfImages:', error);
+    return [];
   }
 };
 

@@ -4,7 +4,8 @@ import React, { createContext, useContext, useState } from "react";
 interface VisualizerModalContextType {
   isOpen: boolean;
   visualizationType: string;
-  openModal: (type: string) => void;
+  imageData?: string[];
+  openModal: (type: string, imageData?: string[]) => void;
   closeModal: () => void;
 }
 
@@ -13,14 +14,18 @@ const VisualizerModalContext = createContext<VisualizerModalContextType | undefi
 export function VisualizerModalProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [visualizationType, setVisualizationType] = useState("");
+  const [imageData, setImageData] = useState<string[] | undefined>(undefined);
 
-  const openModal = (type: string) => {
+  const openModal = (type: string, images?: string[]) => {
     setVisualizationType(type);
+    setImageData(images);
     setIsOpen(true);
   };
 
   const closeModal = () => {
     setIsOpen(false);
+    // Clear image data when closing the modal
+    setImageData(undefined);
   };
 
   return (
@@ -28,6 +33,7 @@ export function VisualizerModalProvider({ children }: { children: React.ReactNod
       value={{
         isOpen,
         visualizationType,
+        imageData,
         openModal,
         closeModal
       }}

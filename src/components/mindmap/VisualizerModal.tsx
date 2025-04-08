@@ -12,6 +12,7 @@ import {
 import { useVisualizerModal } from "@/hooks/use-visualizer-modal";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { extractImagesFromPdf, extractImagesSimple } from "@/utils/pdfImageExtractor";
 
 // Initialize mermaid
 mermaid.initialize({
@@ -21,21 +22,33 @@ mermaid.initialize({
 });
 
 const VisualizerModal = () => {
-  const { isVisualizerModalOpen, visualizationType, closeVisualizerModal } = useVisualizerModal();
+  const { isVisualizerModalOpen, visualizationType, imageData, closeVisualizerModal } = useVisualizerModal();
   const [isLoading, setIsLoading] = useState(false);
   const [diagramId] = useState(`diagram-${Math.random().toString(36).substring(2, 11)}`);
   const [diagramDefinition, setDiagramDefinition] = useState("");
+  const [extractedImages, setExtractedImages] = useState<string[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isVisualizerModalOpen) {
-      generateDiagram();
+      if (visualizationType === 'images' && imageData) {
+        // If images are provided directly, use them
+        setExtractedImages(imageData);
+        setIsLoading(false);
+      } else if (visualizationType === 'images') {
+        // Extract images from PDF
+        handleImageExtraction();
+      } else {
+        // Generate other diagram types
+        generateDiagram();
+      }
     }
-  }, [isVisualizerModalOpen, visualizationType]);
+  }, [isVisualizerModalOpen, visualizationType, imageData]);
 
   useEffect(() => {
-    if (diagramDefinition && containerRef.current) {
+    if (diagramDefinition && containerRef.current && visualizationType !== 'images') {
       try {
         mermaid.render(diagramId, diagramDefinition).then(({ svg }) => {
           if (containerRef.current) {
@@ -52,6 +65,59 @@ const VisualizerModal = () => {
       }
     }
   }, [diagramDefinition, diagramId]);
+
+  const handleImageExtraction = async () => {
+    setIsLoading(true);
+    try {
+      // Get PDF text content
+      const pdfData = await retrievePDF();
+      
+      if (!pdfData) {
+        toast({
+          title: "No PDF Data",
+          description: "Please upload a PDF document first",
+          variant: "destructive",
+        });
+        closeVisualizerModal();
+        setIsLoading(false);
+        return;
+      }
+      
+      // First try with the complex extractor
+      let images = await extractImagesFromPdf(pdfData);
+      
+      // If that doesn't work, try the simple method
+      if (images.length === 0) {
+        console.log("Trying alternative image extraction method");
+        images = await extractImagesSimple(pdfData);
+      }
+      
+      if (images.length === 0) {
+        toast({
+          title: "No Images Found",
+          description: "No images could be extracted from this PDF",
+          variant: "warning",
+        });
+      } else {
+        toast({
+          title: "Images Extracted",
+          description: `Found ${images.length} images in the PDF`,
+        });
+      }
+      
+      setExtractedImages(images);
+      setCurrentImageIndex(0);
+    } catch (error) {
+      console.error("Error extracting images:", error);
+      toast({
+        title: "Extraction Error",
+        description: "Failed to extract images from the PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const generateDiagram = async () => {
     setIsLoading(true);
@@ -106,6 +172,42 @@ const VisualizerModal = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Image navigation functions
+  const nextImage = () => {
+    if (extractedImages.length > 0) {
+      setCurrentImageIndex((prevIndex) => 
+        prevIndex === extractedImages.length - 1 ? 0 : prevIndex + 1
+      );
+    }
+  };
+
+  const prevImage = () => {
+    if (extractedImages.length > 0) {
+      setCurrentImageIndex((prevIndex) => 
+        prevIndex === 0 ? extractedImages.length - 1 : prevIndex - 1
+      );
+    }
+  };
+
+  // Function to handle image selection for mind map
+  const addImageToMindMap = () => {
+    if (extractedImages.length > 0) {
+      const imageDataUrl = extractedImages[currentImageIndex];
+      
+      // Store in session storage for use in mind map
+      const storedImages = JSON.parse(sessionStorage.getItem('mindMapImages') || '[]');
+      storedImages.push(imageDataUrl);
+      sessionStorage.setItem('mindMapImages', JSON.stringify(storedImages));
+      
+      toast({
+        title: "Image Added",
+        description: "Image has been added to the mind map library",
+      });
+      
+      closeVisualizerModal();
     }
   };
 
@@ -312,7 +414,9 @@ const VisualizerModal = () => {
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
-            {visualizationType.charAt(0).toUpperCase() + visualizationType.slice(1)} Visualization
+            {visualizationType === 'images' 
+              ? 'PDF Images' 
+              : `${visualizationType.charAt(0).toUpperCase() + visualizationType.slice(1)} Visualization`}
           </DialogTitle>
           <Button 
             variant="ghost" 
@@ -328,6 +432,61 @@ const VisualizerModal = () => {
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            </div>
+          ) : visualizationType === 'images' ? (
+            <div className="h-full w-full flex flex-col items-center justify-center">
+              {extractedImages.length > 0 ? (
+                <>
+                  <div className="flex-1 flex items-center justify-center w-full">
+                    <img 
+                      src={extractedImages[currentImageIndex]} 
+                      alt={`PDF Image ${currentImageIndex + 1}`} 
+                      className="max-h-[70vh] max-w-full object-contain"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between w-full mt-4">
+                    <span className="text-sm text-gray-500">
+                      Image {currentImageIndex + 1} of {extractedImages.length}
+                    </span>
+                    
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={prevImage}>
+                        Previous
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={nextImage}>
+                        Next
+                      </Button>
+                      <Button variant="default" size="sm" onClick={addImageToMindMap}>
+                        Add to Mind Map
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Thumbnails gallery */}
+                  <div className="w-full mt-4 flex gap-2 overflow-x-auto py-2">
+                    {extractedImages.map((img, index) => (
+                      <div 
+                        key={index}
+                        className={`w-16 h-16 flex-shrink-0 cursor-pointer border-2 ${
+                          index === currentImageIndex ? 'border-primary' : 'border-transparent'
+                        }`}
+                        onClick={() => setCurrentImageIndex(index)}
+                      >
+                        <img 
+                          src={img} 
+                          alt={`Thumbnail ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center">
+                  <p className="text-gray-500">No images found in the PDF</p>
+                </div>
+              )}
             </div>
           ) : (
             <div ref={containerRef} className="h-full w-full flex items-center justify-center overflow-auto">
