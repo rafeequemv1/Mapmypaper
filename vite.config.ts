@@ -51,6 +51,19 @@ export default defineConfig(({ mode }) => ({
     commonjsOptions: {
       include: [/node_modules/],
       extensions: ['.js', '.ts', '.tsx'],
+    },
+    // Add rollup options to improve compatibility with different Vite versions
+    rollupOptions: {
+      // Ensure external dependencies are correctly handled
+      external: [],
+      output: {
+        // Improve chunk naming for better caching
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        },
+      }
     }
   }
 }));
