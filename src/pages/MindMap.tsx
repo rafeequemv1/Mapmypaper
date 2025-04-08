@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
+import VisualizerModal from "@/components/mindmap/VisualizerModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 import { retrievePDF } from "@/utils/pdfStorage";
@@ -245,6 +246,9 @@ const MindMap = () => {
         open={showSummary}
         onOpenChange={setShowSummary}
       />
+      
+      {/* Visualizer Modal */}
+      <VisualizerModal />
     </div>
   );
 };

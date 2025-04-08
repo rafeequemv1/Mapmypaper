@@ -6,12 +6,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { VisualizationProvider } from "@/contexts/VisualizationContext";
 import RequireAuth from "@/components/RequireAuth";
 import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import { VisualizerModalProvider } from "./contexts/VisualizerModalContext";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -26,7 +26,7 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <VisualizationProvider>
+      <VisualizerModalProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -48,7 +48,7 @@ const App = () => (
             </BrowserRouter>
           </div>
         </TooltipProvider>
-      </VisualizationProvider>
+      </VisualizerModalProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

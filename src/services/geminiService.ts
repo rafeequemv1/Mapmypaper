@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -335,107 +336,6 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
   } catch (error) {
     console.error("Gemini API vision error:", error);
     return "Sorry, I encountered an error while analyzing the image: " + (error as Error).message + ". Please try again with a different selection.";
-  }
-};
-
-// Generate Mermaid diagram syntax from PDF content
-export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfText: string): Promise<string> => {
-  try {
-    if (!pdfText || pdfText.trim() === '') {
-      throw new Error("No PDF content available. Please upload a PDF first.");
-    }
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    // Create appropriate prompt based on visualization type
-    let prompt = "";
-    
-    if (type === "mindmap") {
-      prompt = `
-      Analyze the following academic paper/document and create a Mermaid.js mindmap diagram to visualize its key concepts and structure.
-      
-      Guidelines for creating the mindmap:
-      1. Use the paper's title as the root node
-      2. Create branches for major sections like Introduction, Methodology, Results, Discussion, etc.
-      3. Add subnodes for key concepts, findings, and important details
-      4. Keep the structure balanced and readable
-      5. Use meaningful, concise node labels (max 5-7 words per node)
-      6. Include actual specific data points from the paper (numbers, percentages, findings)
-      7. Limit to 3-4 levels of depth for readability
-      
-      Return only the Mermaid.js mindmap syntax without any other text. Here's an example of the syntax format:
-      
-      \`\`\`mermaid
-      mindmap
-        root((Paper Title))
-          Introduction
-            Background
-            Research Gap
-            Objectives
-          Methodology
-            Study Design
-            Data Collection
-            Analysis Methods
-          Results
-            Key Finding 1
-            Key Finding 2
-          Discussion
-            Implications
-            Limitations
-          Conclusion
-            Summary
-            Future Work
-      \`\`\`
-      
-      Here's the document text to analyze (it may be truncated):
-      ${pdfText.slice(0, 15000)}
-      
-      Return ONLY the complete Mermaid.js syntax without any other explanation.
-      `;
-    } else if (type === "flowchart") {
-      prompt = `
-      Analyze the following academic paper/document and create a Mermaid.js flowchart to visualize the key process, methodology, or workflow described in the paper.
-      
-      Guidelines for creating the flowchart:
-      1. Focus on the main process, methodology, or experimental workflow described in the paper
-      2. Use proper flowchart conventions with start/end points, process steps, decision nodes
-      3. Include descriptive labels for each step that reflect the actual content
-      4. Keep the flowchart readable and logical
-      5. Use directional flow that makes sense for the process
-      6. Include 10-20 nodes for an appropriate level of detail
-      
-      Return only the Mermaid.js flowchart syntax without any other text. Here's an example of the syntax format:
-      
-      \`\`\`mermaid
-      flowchart TD
-          A[Start] --> B{Decision}
-          B -->|Option 1| C[Process 1]
-          B -->|Option 2| D[Process 2]
-          C --> E[Next Step]
-          D --> E
-          E --> F[End]
-      \`\`\`
-      
-      Here's the document text to analyze (it may be truncated):
-      ${pdfText.slice(0, 15000)}
-      
-      Return ONLY the complete Mermaid.js syntax without any other explanation.
-      `;
-    }
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Extract the mermaid code block from the response
-    const mermaidMatch = text.match(/```(?:mermaid)?\s*([\s\S]*?)```/) || text.match(/(mindmap|flowchart[\s\S]*)/);
-    const mermaidSyntax = mermaidMatch ? mermaidMatch[1].trim() : text.trim();
-    
-    return mermaidSyntax;
-  } catch (error) {
-    console.error("Gemini API diagram generation error:", error);
-    throw error;
   }
 };
 
