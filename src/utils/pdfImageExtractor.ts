@@ -77,9 +77,22 @@ export async function extractImagesFromPdf(pdfData: string): Promise<string[]> {
  */
 async function extractImageDataFromPage(page: PDFPageProxy, imgName: string): Promise<string> {
   try {
-    // Get the image objects from the page
-    const objs = await page.objs.all;
-    const imgObj = objs[imgName];
+    // Use getOperatorList and commonObjs instead of deprecated objs.all
+    const commonObjs = page.commonObjs;
+    
+    // Check if the image exists in commonObjs
+    if (!commonObjs.has(imgName)) {
+      // Try to fetch the object if it's not already cached
+      try {
+        await commonObjs.get(imgName);
+      } catch (e) {
+        console.error("Could not fetch image object:", e);
+        return '';
+      }
+    }
+    
+    // Get the image object
+    const imgObj = await commonObjs.get(imgName);
     
     if (!imgObj || !imgObj.data) {
       return '';
