@@ -1,26 +1,16 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { VisualizationProvider } from "@/contexts/VisualizationContext";
 import RequireAuth from "@/components/RequireAuth";
-import { supabase } from "@/integrations/supabase/client";
 import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import Contact from "./pages/Contact";
-import About from "./pages/About";
-import Pricing from "./pages/Pricing";
-import PaymentSuccess from "./pages/PaymentSuccess";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -32,45 +22,29 @@ const queryClient = new QueryClient({
   }
 });
 
-// Set Supabase client in window for edge functions to use
-if (typeof window !== 'undefined') {
-  window.supabaseClient = supabase;
-}
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <VisualizationProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <div className="relative">
-            <BrowserRouter>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/auth" element={<Auth />} />
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <div className="relative">
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              
+              {/* Protected routes */}
+              <Route element={<RequireAuth />}>
                 <Route path="/" element={<PdfUpload />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms-of-service" element={<TermsOfService />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/payment-success" element={<PaymentSuccess />} />
-                
-                {/* Protected routes */}
-                <Route element={<RequireAuth />}>
-                  <Route path="/mindmap" element={<MindMap />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/settings" element={<Settings />} />
-                </Route>
-                
-                {/* Catch-all route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </div>
-        </TooltipProvider>
-      </VisualizationProvider>
+                <Route path="/mindmap" element={<MindMap />} />
+              </Route>
+              
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </div>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

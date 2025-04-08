@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -194,35 +195,34 @@ export const chatWithGeminiAboutPdf = async (message: string): Promise<string> =
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    // Conversational, concise system prompt
+    // Enhanced research-focused system prompt
     const prompt = `
-    You are a conversational research assistant helping with a PDF document. 
-    The user has asked: "${message}"
+    You are a helpful, conversational, and research-savvy assistant for a PDF document. 
+    The user has the following question or request: "${message}"
     
     Here's the content from their research paper (it may be truncated):
     ${pdfText.slice(0, 15000)}
     
-    ## Communication Guidelines:
-    - Be conversational and concise - users want short answers unless they ask for details
-    - Sound like a helpful colleague, not a formal summarizer
-    - Keep responses brief (3-5 sentences) unless detailed explanation is requested
-    - Use a friendly, casual tone while maintaining academic accuracy
-    - Only structure responses with headings when answering complex questions
-    - Use emojis occasionally to keep the conversation engaging 👍
+    ## Communication Style Guidelines:
+    - Communicate like an experienced PhD student or postdoc mentoring a junior researcher
+    - Be friendly, professional, and slightly informal when appropriate
+    - Show genuine interest in the user's understanding
+    - End responses with a light follow-up question to maintain natural conversation
     
-    ## Response Format:
-    - Default to short, direct answers addressing exactly what was asked
-    - Use bullet points for clarity when listing multiple items
-    - Include citations when referring to specific content: [citation:pageX]
-    - Mention figure/table numbers naturally: "Figure 3 shows..." or "In Table 2..."
+    ## Response Structure:
+    - Use headings (# for main headings, ## for subheadings) to organize your response
+    - Use bullet points (* or -) and numbered lists (1., 2., etc.) for clarity
+    - Include citations pointing to specific sections, figures, tables, or equations in the format [citation:pageX]
+    - When referencing figures, tables or equations, use exact formatting like "Figure 3" or "Table 2" or "Equation 1"
     
-    ## When responding:
-    - Avoid summarizing the entire paper unless specifically asked
-    - Focus precisely on the user's question
-    - If you don't know, say so briefly
-    - End with a short follow-up question only when appropriate
+    ## Content Handling:
+    - You can discuss any aspect of the paper: introduction, methods, results, discussion, conclusion
+    - You can explain figures, tables, equations, and supplementary information
+    - You can summarize sections, compare different parts, and suggest interpretations
+    - If the PDF seems poorly formatted, acknowledge this but still try to help
+    - When citing specific locations, confirm with phrases like "I've highlighted Figure 3 for you ⬇️"
     
-    Remember: Be concise, friendly, and focus on directly answering what was asked.
+    Be concise but thorough, and add helpful emoji where appropriate to make your response engaging.
     `;
     
     const result = await model.generateContent(prompt);
@@ -338,107 +338,6 @@ export const analyzeImageWithGemini = async (imageData: string, pdfText?: string
   }
 };
 
-// Generate Mermaid diagram syntax from PDF content
-export const generateMermaidDiagram = async (type: "mindmap" | "flowchart", pdfText: string): Promise<string> => {
-  try {
-    if (!pdfText || pdfText.trim() === '') {
-      throw new Error("No PDF content available. Please upload a PDF first.");
-    }
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    // Create appropriate prompt based on visualization type
-    let prompt = "";
-    
-    if (type === "mindmap") {
-      prompt = `
-      Analyze the following academic paper/document and create a Mermaid.js mindmap diagram to visualize its key concepts and structure.
-      
-      Guidelines for creating the mindmap:
-      1. Use the paper's title as the root node
-      2. Create branches for major sections like Introduction, Methodology, Results, Discussion, etc.
-      3. Add subnodes for key concepts, findings, and important details
-      4. Keep the structure balanced and readable
-      5. Use meaningful, concise node labels (max 5-7 words per node)
-      6. Include actual specific data points from the paper (numbers, percentages, findings)
-      7. Limit to 3-4 levels of depth for readability
-      
-      Return only the Mermaid.js mindmap syntax without any other text. Here's an example of the syntax format:
-      
-      \`\`\`mermaid
-      mindmap
-        root((Paper Title))
-          Introduction
-            Background
-            Research Gap
-            Objectives
-          Methodology
-            Study Design
-            Data Collection
-            Analysis Methods
-          Results
-            Key Finding 1
-            Key Finding 2
-          Discussion
-            Implications
-            Limitations
-          Conclusion
-            Summary
-            Future Work
-      \`\`\`
-      
-      Here's the document text to analyze (it may be truncated):
-      ${pdfText.slice(0, 15000)}
-      
-      Return ONLY the complete Mermaid.js syntax without any other explanation.
-      `;
-    } else if (type === "flowchart") {
-      prompt = `
-      Analyze the following academic paper/document and create a Mermaid.js flowchart to visualize the key process, methodology, or workflow described in the paper.
-      
-      Guidelines for creating the flowchart:
-      1. Focus on the main process, methodology, or experimental workflow described in the paper
-      2. Use proper flowchart conventions with start/end points, process steps, decision nodes
-      3. Include descriptive labels for each step that reflect the actual content
-      4. Keep the flowchart readable and logical
-      5. Use directional flow that makes sense for the process
-      6. Include 10-20 nodes for an appropriate level of detail
-      
-      Return only the Mermaid.js flowchart syntax without any other text. Here's an example of the syntax format:
-      
-      \`\`\`mermaid
-      flowchart TD
-          A[Start] --> B{Decision}
-          B -->|Option 1| C[Process 1]
-          B -->|Option 2| D[Process 2]
-          C --> E[Next Step]
-          D --> E
-          E --> F[End]
-      \`\`\`
-      
-      Here's the document text to analyze (it may be truncated):
-      ${pdfText.slice(0, 15000)}
-      
-      Return ONLY the complete Mermaid.js syntax without any other explanation.
-      `;
-    }
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Extract the mermaid code block from the response
-    const mermaidMatch = text.match(/```(?:mermaid)?\s*([\s\S]*?)```/) || text.match(/(mindmap|flowchart[\s\S]*)/);
-    const mermaidSyntax = mermaidMatch ? mermaidMatch[1].trim() : text.trim();
-    
-    return mermaidSyntax;
-  } catch (error) {
-    console.error("Gemini API diagram generation error:", error);
-    throw error;
-  }
-};
-
 // Enhanced function to generate structured summaries from PDF content
 export const generateStructuredSummary = async (): Promise<Record<string, string>> => {
   try {
@@ -501,5 +400,439 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
   } catch (error) {
     console.error("Gemini API summary generation error:", error);
     throw error;
+  }
+};
+
+// New function to generate flowchart from PDF content
+export const generateFlowchartFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `flowchart TD
+        A[Error] --> B[No PDF Content]
+        B --> C[Please upload a PDF first]`;
+    }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+    Create a simple, valid Mermaid flowchart based on this document text.
+    
+    CRITICAL MERMAID SYNTAX RULES:
+    1. Start with 'flowchart TD'
+    2. Nodes MUST have this format: A[Text] or A(Text) or A{Text} - no exceptions
+    3. Node IDs MUST be simple alphanumeric: A, B, C1, process1 (NO special chars or hyphens)
+    4. Connections MUST use EXACTLY TWO dashes: A --> B (not A->B or A---->B)
+    5. Each line should define ONE connection or ONE node
+    6. Max 12 nodes total
+    7. For labels on arrows: A -->|Label text| B (use single pipes)
+    8. Never use semicolons (;) in node text or connections
+    9. EXTREMELY IMPORTANT: Never use hyphens (-) in node text. Replace ALL hyphens with spaces or underscores.
+    10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
+    11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
+    
+    EXAMPLE CORRECT SYNTAX:
+    flowchart TD
+      A[Start] --> B{Decision}
+      B -->|Yes| C[Process One]
+      B -->|No| D[Process Two]
+      C --> E[End]
+      D --> E
+    
+    Here's the document text:
+    ${pdfText.slice(0, 8000)}
+    
+    Generate ONLY valid Mermaid flowchart code, nothing else.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    
+    // Remove markdown code blocks if present
+    const mermaidCode = text
+      .replace(/```mermaid\s?/g, "")
+      .replace(/```\s?/g, "")
+      .trim();
+    
+    return cleanMermaidSyntax(mermaidCode);
+  } catch (error) {
+    console.error("Gemini API flowchart generation error:", error);
+    return `flowchart TD
+      A[Error] --> B[Failed to generate flowchart]
+      B --> C[Please try again]`;
+  }
+};
+
+// Helper function to clean and fix common Mermaid syntax issues
+const cleanMermaidSyntax = (code: string): string => {
+  if (!code || !code.trim()) {
+    return `flowchart TD
+      A[Error] --> B[Empty flowchart]
+      B --> C[Please try again]`;
+  }
+
+  try {
+    // Ensure the code starts with flowchart directive
+    let cleaned = code.trim();
+    if (!cleaned.startsWith("flowchart")) {
+      cleaned = "flowchart TD\n" + cleaned;
+    }
+
+    // Process line by line to ensure each line is valid
+    const lines = cleaned.split('\n');
+    const validLines: string[] = [];
+    
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      
+      // Skip empty lines and keep comments
+      if (trimmedLine === '' || trimmedLine.startsWith('%')) {
+        validLines.push(line);
+        return;
+      }
+      
+      // Keep flowchart directive
+      if (trimmedLine.startsWith('flowchart') || 
+          trimmedLine.startsWith('subgraph') || 
+          trimmedLine === 'end') {
+        validLines.push(line);
+        return;
+      }
+      
+      // Fix arrow syntax: ensure exactly two dashes
+      let fixedLine = line;
+      
+      // Replace arrows with more or fewer than 2 dashes
+      fixedLine = fixedLine.replace(/([A-Za-z0-9_]+)\s*-+>\s*([A-Za-z0-9_]+)/g, "$1 --> $2");
+      
+      // Fix arrows with labels too
+      fixedLine = fixedLine.replace(/([A-Za-z0-9_]+)\s*-+>\s*\|([^|]*)\|\s*([A-Za-z0-9_]+)/g, "$1 -->|$2| $3");
+      
+      // Fix node IDs with hyphens by replacing with underscores
+      fixedLine = fixedLine.replace(/\b([A-Za-z0-9]+)-([A-Za-z0-9]+)\b(?!\]|\)|\})/g, "$1_$2");
+      
+      // Fix date ranges in node text by replacing hyphens with underscores
+      // Look for patterns like [text (1871-2020) text] and replace with [text (1871_2020) text]
+      fixedLine = fixedLine.replace(/\[([^\]]*?)(\d{4})-(\d{4})([^\]]*?)\]/g, '[$1$2_$3$4]');
+      fixedLine = fixedLine.replace(/\(([^\)]*)(\d{4})-(\d{4})([^\)]*)\)/g, '($1$2_$3$4)');
+      fixedLine = fixedLine.replace(/\{([^\}]*)(\d{4})-(\d{4})([^\}]*)\}/g, '{$1$2_$3$4}');
+      
+      // Replace all remaining hyphens inside node text with spaces or underscores
+      // Handle square brackets []
+      fixedLine = fixedLine.replace(/\[([^\]]*)-([^\]]*)\]/g, function(match, p1, p2) {
+        return '[' + p1 + ' ' + p2 + ']';
+      });
+      
+      // Handle parentheses ()
+      fixedLine = fixedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
+        return '(' + p1 + ' ' + p2 + ')';
+      });
+      
+      // Handle curly braces {}
+      fixedLine = fixedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
+        return '{' + p1 + ' ' + p2 + '}';
+      });
+      
+      // Fix nodes without brackets by adding them
+      const nodeDefinitionRegex = /^([A-Za-z0-9_]+)\s+\[([^\]]+)\]/;
+      const nodeWithoutBrackets = /^([A-Za-z0-9_]+)(\s+)(?!\[|\(|\{)(.*?)(\s*-->|\s*$)/;
+      
+      if (nodeWithoutBrackets.test(fixedLine)) {
+        fixedLine = fixedLine.replace(nodeWithoutBrackets, "$1$2[$3]$4");
+      }
+      
+      // Remove semicolons which can cause issues
+      fixedLine = fixedLine.replace(/;/g, "");
+      
+      validLines.push(fixedLine);
+    });
+    
+    // Validate: ensure there's at least one connection (arrow)
+    const hasConnections = validLines.some(line => line.includes('-->'));
+    
+    if (!hasConnections) {
+      console.warn("No connections found in flowchart, adding default connection");
+      validLines.push("A[Start] --> B[End]");
+    }
+    
+    return validLines.join('\n');
+  } catch (error) {
+    console.error("Error cleaning Mermaid syntax:", error);
+    return `flowchart TD
+      A[Error] --> B[Syntax Cleaning Failed]
+      B --> C[Please try again]`;
+  }
+};
+
+// New function to generate sequence diagram from PDF content
+export const generateSequenceDiagramFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `sequenceDiagram
+        participant Error
+        participant User
+        
+        Error->>User: No PDF Content
+        User->>Error: Please upload a PDF first`;
+    }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+    Create a valid Mermaid sequence diagram based on this research document text. 
+    The sequence diagram should visualize the methodology, experimental procedures, or workflow described in the document.
+    
+    CRITICAL MERMAID SYNTAX RULES:
+    1. Start with 'sequenceDiagram'
+    2. Participants defined with 'participant Name'
+    3. Messages between participants use: ParticipantA->>ParticipantB: Message text 
+    4. For activation/deactivation use: activate/deactivate ParticipantName
+    5. For notes: Note right/left of ParticipantName: Note text
+    6. Keep it simple with max 6-8 participants
+    7. Focus on the key steps in the research methodology or experimental process
+    8. Don't use any special characters that might break the syntax
+    
+    EXAMPLE CORRECT SYNTAX:
+    sequenceDiagram
+      participant Researcher
+      participant Sample
+      participant Instrument
+      
+      Researcher->>Sample: Prepare
+      activate Sample
+      Sample->>Instrument: Analyze
+      Instrument->>Researcher: Return results
+      deactivate Sample
+      Note right of Researcher: Analyze data
+    
+    Here's the document text:
+    ${pdfText.slice(0, 8000)}
+    
+    Generate ONLY valid Mermaid sequence diagram code, nothing else.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    
+    // Remove markdown code blocks if present
+    const mermaidCode = text
+      .replace(/```mermaid\s?/g, "")
+      .replace(/```\s?/g, "")
+      .trim();
+    
+    return cleanSequenceDiagramSyntax(mermaidCode);
+  } catch (error) {
+    console.error("Gemini API sequence diagram generation error:", error);
+    return `sequenceDiagram
+      participant Error
+      participant System
+      
+      Error->>System: Failed to generate diagram
+      System->>Error: Please try again`;
+  }
+};
+
+// Helper function to clean and fix common sequence diagram syntax issues
+const cleanSequenceDiagramSyntax = (code: string): string => {
+  if (!code || !code.trim()) {
+    return `sequenceDiagram
+      participant Error
+      participant System
+      
+      Error->>System: Empty diagram
+      System->>Error: Please try again`;
+  }
+
+  try {
+    // Ensure the code starts with sequenceDiagram directive
+    let cleaned = code.trim();
+    if (!cleaned.startsWith("sequenceDiagram")) {
+      cleaned = "sequenceDiagram\n" + cleaned;
+    }
+
+    // Process line by line to ensure each line is valid
+    const lines = cleaned.split('\n');
+    const validLines: string[] = [];
+    
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      
+      // Skip empty lines and keep comments
+      if (trimmedLine === '' || trimmedLine.startsWith('%')) {
+        validLines.push(line);
+        return;
+      }
+      
+      // Keep sequenceDiagram directive
+      if (trimmedLine.startsWith('sequenceDiagram')) {
+        validLines.push(line);
+        return;
+      }
+      
+      // Fix arrow syntax if needed
+      let fixedLine = line;
+      
+      // Fix arrows with two dashes only
+      fixedLine = fixedLine.replace(/([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)/g, "$1->>$2");
+      
+      // Remove semicolons which can cause issues
+      fixedLine = fixedLine.replace(/;/g, "");
+      
+      validLines.push(fixedLine);
+    });
+    
+    return validLines.join('\n');
+  } catch (error) {
+    console.error("Error cleaning sequence diagram syntax:", error);
+    return `sequenceDiagram
+      participant Error
+      participant System
+      
+      Error->>System: Syntax Cleaning Failed
+      System->>Error: Please try again`;
+  }
+};
+
+// New function to generate mindmap from PDF content
+export const generateMindmapFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `mindmap
+        root((Error))
+          No PDF Content
+            Please upload a PDF first`;
+    }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+    Create a valid Mermaid mindmap based on this document text. 
+    
+    IMPORTANT: Use ACTUAL SPECIFIC content from the document, not generic labels.
+    
+    CRITICAL MERMAID SYNTAX RULES:
+    1. Start with 'mindmap'
+    2. Use proper indentation for hierarchy
+    3. Root node must use this exact syntax: root((Paper Title))
+    4. First level nodes use text on their own line with proper indentation
+    5. You can use these node styles:
+       - Regular text node (just text)
+       - Text in square brackets [Text]
+       - Text in parentheses (Text)
+       - Text in double parentheses ((Text))
+    6. Max 3 levels of hierarchy
+    7. Max 15 nodes total
+    8. AVOID special characters that might break syntax
+    9. NEVER use class declarations like "class node className"
+    
+    EXAMPLE CORRECT SYNTAX:
+    mindmap
+      root((Research on Machine Learning))
+        Introduction
+          Background on neural networks
+          Problem of overfitting data
+        Methodology
+          LSTM architecture used
+          Training on 50,000 examples
+        Results
+          93% accuracy achieved
+          Compared to 85% baseline
+    
+    Here's the document text:
+    ${pdfText.slice(0, 8000)}
+    
+    Generate ONLY valid Mermaid mindmap code with SPECIFIC content from the document, nothing else.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    
+    // Remove markdown code blocks if present
+    const mermaidCode = text
+      .replace(/```mermaid\s?/g, "")
+      .replace(/```\s?/g, "")
+      .trim();
+    
+    return cleanMindmapSyntax(mermaidCode);
+  } catch (error) {
+    console.error("Gemini API mindmap generation error:", error);
+    return `mindmap
+      root((Error))
+        Failed to generate mindmap
+          Please try again`;
+  }
+};
+
+// Helper function to clean and fix common Mermaid mindmap syntax issues
+const cleanMindmapSyntax = (code: string): string => {
+  if (!code || !code.trim()) {
+    return `mindmap
+      root((Error))
+        Empty mindmap
+          Please try again`;
+  }
+
+  try {
+    // Ensure the code starts with mindmap directive
+    let cleaned = code.trim();
+    if (!cleaned.startsWith("mindmap")) {
+      cleaned = "mindmap\n" + cleaned;
+    }
+
+    // Process line by line to ensure each line is valid
+    const lines = cleaned.split('\n');
+    const validLines: string[] = [];
+    
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      
+      // Skip empty lines and keep comments
+      if (trimmedLine === '' || trimmedLine.startsWith('%')) {
+        validLines.push(line);
+        return;
+      }
+      
+      // Keep mindmap directive
+      if (trimmedLine.startsWith('mindmap')) {
+        validLines.push(line);
+        return;
+      }
+      
+      // Remove semicolons which can cause issues
+      let fixedLine = line;
+      fixedLine = fixedLine.replace(/;/g, "");
+      
+      // Remove special characters that might break the syntax
+      fixedLine = fixedLine.replace(/[<>]/g, m => m === '<' ? '(' : ')');
+      
+      // CRITICAL: Remove class declarations that could cause errors
+      if (fixedLine.includes("class ")) {
+        fixedLine = fixedLine.split("class ")[0].trim();
+      }
+      
+      validLines.push(fixedLine);
+    });
+    
+    return validLines.join('\n');
+  } catch (error) {
+    console.error("Error cleaning mindmap syntax:", error);
+    return `mindmap
+      root((Error))
+        Syntax Cleaning Failed
+          Please try again`;
   }
 };

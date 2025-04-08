@@ -1,3 +1,4 @@
+
 /**
  * Formats AI responses with enhanced typography and structure
  * Converts markdown syntax to properly styled HTML and adds citation support
@@ -30,14 +31,15 @@ export const formatAIResponse = (content: string): string => {
   // First process the content with emojis
   let formattedContent = addEmojis(content);
   
-  // Process citations - format as small circular badges with just the page number in black circles
+  // Process citations - format as small circular badges with just the page number
+  // Check for valid page numbers based on document length (max 7 pages)
   formattedContent = formattedContent.replace(
     /\[citation:page(\d+)\]/g, 
     (match, pageNum) => {
       const pageNumber = parseInt(pageNum, 10);
       // Ensure page number is valid (assuming maximum 7 pages based on console logs)
       const validPageNumber = pageNumber > 0 && pageNumber <= 7 ? pageNumber : 1;
-      return `<span class="citation" data-citation="page${validPageNumber}" role="button" tabindex="0" title="Click to navigate to page ${validPageNumber}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-black text-white rounded-full text-xs font-semibold hover:bg-gray-800 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${validPageNumber}</sup></span>`;
+      return `<span class="citation" data-citation="page${validPageNumber}" role="button" tabindex="0" title="Click to navigate to page ${validPageNumber}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${validPageNumber}</sup></span>`;
     }
   );
   
@@ -60,7 +62,7 @@ export const formatAIResponse = (content: string): string => {
     }
   );
   
-  // Standard citation format as fallback - showing citation text in black circles
+  // Standard citation format as fallback - showing citation text in circles
   formattedContent = formattedContent.replace(
     /\[citation:([^\]]+)\]/g, 
     (match, citation) => {
@@ -71,21 +73,21 @@ export const formatAIResponse = (content: string): string => {
         const pageNumber = parseInt(pageNum, 10);
         // Ensure page number is valid (assuming maximum 7 pages based on console logs)
         const validPageNumber = pageNumber > 0 && pageNumber <= 7 ? pageNumber : 1;
-        return `<span class="citation" data-citation="page${validPageNumber}" role="button" tabindex="0" title="Click to navigate to page ${validPageNumber}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-black text-white rounded-full text-xs font-semibold hover:bg-gray-800 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${validPageNumber}</sup></span>`;
+        return `<span class="citation" data-citation="page${validPageNumber}" role="button" tabindex="0" title="Click to navigate to page ${validPageNumber}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${validPageNumber}</sup></span>`;
       }
       // If no page number found, just show the first few characters
       const shortCite = citation.length > 3 ? citation.substring(0, 3) : citation;
-      return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-black text-white rounded-full text-xs font-semibold hover:bg-gray-800 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${shortCite}</sup></span>`;
+      return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${shortCite}</sup></span>`;
     }
   );
   
   // Replace markdown headers with concise styling
   formattedContent = formattedContent
-    // Format main headers with more prominent styling and blue color
-    .replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold mb-3 mt-4 text-blue-600 pb-1 border-b border-blue-200">$1</h1>')
-    .replace(/^## (.*$)/gim, '<h2 class="text-lg font-semibold mb-2 mt-3 text-blue-600">$1</h2>')
-    .replace(/^### (.*$)/gim, '<h3 class="text-base font-medium mb-1 mt-2 text-blue-600">$1</h3>')
-    .replace(/^#### (.*$)/gim, '<h4 class="text-sm font-medium mb-1 mt-1.5 text-blue-600">$1</h4>')
+    // Format main headers with more prominent styling
+    .replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold mb-3 mt-4 text-primary-800 pb-1 border-b border-primary-200">$1</h1>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-lg font-semibold mb-2 mt-3 text-primary-700">$1</h2>')
+    .replace(/^### (.*$)/gim, '<h3 class="text-base font-medium mb-1 mt-2 text-indigo-600">$1</h3>')
+    .replace(/^#### (.*$)/gim, '<h4 class="text-sm font-medium mb-1 mt-1.5 text-indigo-500">$1</h4>')
     
     // Format bold, italics and strikethrough with better styling
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
@@ -108,7 +110,7 @@ export const formatAIResponse = (content: string): string => {
     .replace(/^\s*$(?:\r\n?|\n)/gm, '</p><p class="mb-2 text-sm leading-relaxed">')
     
     // Format blockquotes with better styling
-    .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-blue-400 pl-3 italic my-2 bg-blue-50 py-2 text-sm text-gray-700 rounded-r-md">$1</blockquote>')
+    .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-primary/60 pl-3 italic my-2 bg-primary/5 py-2 text-sm text-gray-700 rounded-r-md">$1</blockquote>')
     
     // Format horizontal rules
     .replace(/^---$/gim, '<hr class="my-3 border-t border-gray-300" />')
@@ -140,7 +142,11 @@ export const formatAIResponse = (content: string): string => {
   return formattedContent;
 };
 
-// Enhanced activation of citations with better scrolling behavior
+/**
+ * Adds event listeners to citation elements in the message content
+ * @param container - The container element with citation elements
+ * @param onCitationClick - Callback function when a citation is clicked
+ */
 export const activateCitations = (container: HTMLElement, onCitationClick: (citation: string) => void): void => {
   const citations = container.querySelectorAll('.citation');
   
@@ -169,10 +175,10 @@ export const activateCitations = (container: HTMLElement, onCitationClick: (cita
           if (!isNaN(pageNumber)) {
             const validPageNumber = Math.min(Math.max(pageNumber, 1), 7);
             
-            // Create and dispatch custom event with page number for smoother scrolling
+            // Create and dispatch custom event with page number
             setTimeout(() => {
               const event = new CustomEvent('scrollToPdfPage', { 
-                detail: { pageNumber: validPageNumber, smooth: true }
+                detail: { pageNumber: validPageNumber }
               });
               window.dispatchEvent(event);
               console.log(`Dispatched scrollToPdfPage event with page: ${validPageNumber}`);

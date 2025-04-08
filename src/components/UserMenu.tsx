@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, User, Settings, LogOut, LogIn } from "lucide-react";
+import { Loader2, User, Settings, LogOut } from "lucide-react";
 
 const UserMenu = () => {
   const { user, profile, isLoading, signOut } = useAuth();
@@ -44,21 +44,15 @@ const UserMenu = () => {
       <Button
         variant="outline"
         size="sm"
-        className="h-8 flex items-center gap-1"
+        className="h-8"
         onClick={() => navigate("/auth")}
       >
-        <LogIn className="h-4 w-4" />
-        <span>Sign In</span>
+        Sign In
       </Button>
     );
   }
 
-  // Get user display name using multiple fallback options
-  const displayName = profile?.display_name || 
-                      user.user_metadata?.display_name || 
-                      user.user_metadata?.full_name || 
-                      user.email?.split("@")[0] || 
-                      "User";
+  const displayName = profile?.display_name || user.email?.split("@")[0] || "User";
 
   return (
     <DropdownMenu>
@@ -69,15 +63,11 @@ const UserMenu = () => {
           className="h-8 w-8 rounded-full p-0 overflow-hidden"
         >
           <Avatar className="h-8 w-8">
-            {user.user_metadata?.avatar_url ? (
-              <img src={user.user_metadata.avatar_url} alt={displayName} />
-            ) : (
-              <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
-            )}
+            <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 bg-white border shadow-md z-50">
+      <DropdownMenuContent align="end" className="w-56">
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-0.5">
             <p className="text-sm font-medium">{displayName}</p>
