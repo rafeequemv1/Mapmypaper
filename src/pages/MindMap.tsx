@@ -4,6 +4,8 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
+import { retrievePDF } from "@/utils/pdfStorage";
+import { Loader } from "lucide-react";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
@@ -14,32 +16,47 @@ const MindMap = () => {
   const [explainText, setExplainText] = useState<string>('');
   const { toast } = useToast();
   const [textExplainProcessed, setTextExplainProcessed] = useState(false);
+  const [pdfLoadAttempted, setPdfLoadAttempted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
     // Check for PDF data immediately when component mounts
-    const checkPdfAvailability = () => {
+    const checkPdfAvailability = async () => {
       try {
-        // Check if PDF data exists in either storage key
-        const pdfData = sessionStorage.getItem('pdfData') || sessionStorage.getItem('uploadedPdfData');
+        setIsLoading(true);
+        // Check if PDF data exists using our utility function that checks both IndexedDB and sessionStorage
+        const pdfData = await retrievePDF();
         const hasPdfData = !!pdfData;
         
         console.log("PDF check on mount - available:", hasPdfData, "PDF data length:", pdfData ? pdfData.length : 0);
         
         setPdfAvailable(hasPdfData);
+        setPdfLoadAttempted(true);
+        
+        if (!hasPdfData) {
+          // If no PDF is found, show a toast notification
+          toast({
+            title: "PDF Not Found",
+            description: "Please upload a PDF document first",
+            variant: "destructive",
+          });
+          // Redirect to upload page if no PDF data is available
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 2000);
+        }
         
         // Keep PDF panel visible if data is available
         setShowPdf(hasPdfData);
-        
-        // Ensure PDF data is stored with the consistent key name
-        if (sessionStorage.getItem('uploadedPdfData') && !sessionStorage.getItem('pdfData')) {
-          sessionStorage.setItem('pdfData', sessionStorage.getItem('uploadedPdfData')!);
-        }
       } catch (error) {
         console.error("Error checking PDF availability:", error);
         setPdfAvailable(false);
         setShowPdf(false);
+        setPdfLoadAttempted(true);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -48,8 +65,19 @@ const MindMap = () => {
   }, [toast]);
 
   const togglePdf = useCallback(() => {
-    setShowPdf(prev => !prev);
-  }, []);
+    console.log("Toggle PDF clicked. Current state:", showPdf);
+    
+    // Only toggle if PDF is available
+    if (pdfAvailable) {
+      setShowPdf(prev => !prev);
+    } else {
+      toast({
+        title: "No PDF Found",
+        description: "Please upload a PDF document first",
+        variant: "destructive",
+      });
+    }
+  }, [showPdf, pdfAvailable, toast]);
 
   const toggleChat = useCallback(() => {
     setShowChat(prev => !prev);
@@ -174,6 +202,18 @@ const MindMap = () => {
     // Apply line breaks after a brief delay to ensure nodes are rendered
     setTimeout(applyLineBreaksToNodes, 200);
   }, []);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin mx-auto mb-4 text-gray-400" />
+          <p className="text-lg font-medium">Loading your document...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="h-screen flex flex-col overflow-hidden">

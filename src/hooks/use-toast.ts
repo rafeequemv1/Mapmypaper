@@ -139,6 +139,7 @@ function dispatch(action: Action) {
   })
 }
 
+// Updated type to include "warning" variant
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {

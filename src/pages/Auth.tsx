@@ -1,315 +1,305 @@
 
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import PaperLogo from "@/components/PaperLogo";
 import { Separator } from "@/components/ui/separator";
-
-// Define the form schema for login
-const loginFormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
-});
-
-// Define the form schema for signup with simplified fields
-const signupFormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
-  displayName: z.string().min(2, { message: "Display name must be at least 2 characters long" }),
-});
-
-type LoginFormValues = z.infer<typeof loginFormSchema>;
-type SignupFormValues = z.infer<typeof signupFormSchema>;
+import { supabase } from "@/integrations/supabase/client";
+import { FcGoogle } from "react-icons/fc";
 
 const Auth = () => {
-  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [type, setType] = useState<"sign_in" | "sign_up">("sign_in");
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Define login form
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
-  // Define signup form with simplified fields
-  const signupForm = useForm<SignupFormValues>({
-    resolver: zodResolver(signupFormSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      displayName: "",
-    },
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // Handle login submission
-  const onLoginSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
+    if (!email || !password || (type === "sign_up" && !name)) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all fields.",
+        variant: "destructive",
       });
+      setLoading(false);
+      return;
+    }
 
-      if (error) {
+    try {
+      if (type === "sign_in") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
         toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: error.message || "Failed to sign in with those credentials",
+          title: "Success",
+          description: "Signed in successfully!",
         });
       } else {
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+              email: email,
+            },
+          },
         });
-        navigate("/");
+        if (error) throw error;
+        toast({
+          title: "Success",
+          description: "Signed up successfully! Please check your email to verify your account.",
+        });
       }
-    } catch (error) {
+      setEmail("");
+      setPassword("");
+      setName("");
+    } catch (error: any) {
       toast({
+        title: "Error",
+        description: error.message,
         variant: "destructive",
-        title: "Login failed",
-        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Handle signup submission with simplified data
-  const onSignupSubmit = async (data: SignupFormValues) => {
-    setIsLoading(true);
+  const handleGoogleSignIn = async () => {
     try {
-      const { error } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
         options: {
-          data: {
-            display_name: data.displayName,
-          },
+          redirectTo: window.location.origin,
         },
       });
-
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Signup failed",
-          description: error.message || "Failed to create account",
-        });
-      } else {
-        toast({
-          title: "Signup successful",
-          description: "Please check your email to verify your account",
-        });
-        setActiveTab("login");
-      }
-    } catch (error) {
+      if (error) throw error;
+    } catch (error: any) {
       toast({
+        title: "Error",
+        description: error.message,
         variant: "destructive",
-        title: "Signup failed",
-        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    // Check if we were in the middle of processing a PDF
+    const pendingPdfProcessing = sessionStorage.getItem('pendingPdfProcessing');
+    
+    // If user is authenticated and we have a pending PDF processing
+    if (user && pendingPdfProcessing === 'true') {
+      // Clear the flag
+      sessionStorage.removeItem('pendingPdfProcessing');
+      
+      // Show toast notification to continue
+      toast({
+        title: "Continue to Mind Map",
+        description: "Now you can generate your mind map!",
+      });
+      
+      // Redirect back to home to continue PDF processing
+      navigate("/");
+    }
+  }, [user, navigate, toast]);
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-black text-white p-1.5 rounded-md">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </div>
-            <CardTitle>mapmypaper</CardTitle>
+    <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
+      {/* Header */}
+      <header className="w-full bg-white shadow-sm py-4 px-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <PaperLogo size="md" />
+            <h1 className="text-xl font-medium text-[#333]">mapmypaper</h1>
           </div>
-          <CardDescription>
-            Sign in to your account or create a new one
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as "login" | "signup")}
+          <div></div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
+          <div className="text-center mb-6">
+            <PaperLogo size="lg" />
+            <h1 className="text-2xl font-bold text-[#333]">{type === "sign_in" ? "Sign In" : "Create Account"}</h1>
+            <p className="text-gray-600 mt-2">
+              {type === "sign_in"
+                ? "Sign in to access your account"
+                : "Create an account to start mapping your papers"}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {type === "sign_up" && (
+              <div>
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  type="text"
+                  id="name"
+                  placeholder="Enter your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            )}
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                type="email"
+                id="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                type="password"
+                id="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-[#333] hover:bg-[#444] text-white"
+              disabled={loading}
+              size="lg"
+            >
+              {loading ? "Loading..." : type === "sign_in" ? "Sign In" : "Sign Up"}
+            </Button>
+          </form>
+
+          <div className="relative my-6">
+            <Separator />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-gray-500">
+              OR
+            </span>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full"
+            size="lg"
           >
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <Form {...loginForm}>
-                <form
-                  onSubmit={loginForm.handleSubmit(onLoginSubmit)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="your-email@example.com"
-                            type="email"
-                            autoComplete="email"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="••••••••"
-                            type="password"
-                            autoComplete="current-password"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Logging in..." : "Login"}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-            <TabsContent value="signup">
-              <Form {...signupForm}>
-                <form
-                  onSubmit={signupForm.handleSubmit(onSignupSubmit)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={signupForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="your-email@example.com"
-                            type="email"
-                            autoComplete="email"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signupForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="••••••••"
-                            type="password"
-                            autoComplete="new-password"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signupForm.control}
-                    name="displayName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="John Doe"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Creating account..." : "Create account"}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-        <CardFooter className="flex flex-col">
-          <Separator className="mb-4" />
-          <p className="text-sm text-center text-gray-500">
-            By creating an account, you agree to our Terms of Service and Privacy Policy
-          </p>
-        </CardFooter>
-      </Card>
+            <FcGoogle className="mr-2 h-5 w-5" />
+            Continue with Google
+          </Button>
+
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              onClick={() => setType(type === "sign_in" ? "sign_up" : "sign_in")}
+              disabled={loading}
+            >
+              {type === "sign_in"
+                ? "Don't have an account? Create one"
+                : "Already have an account? Sign in"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-8 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <PaperLogo size="sm" />
+                <h2 className="text-lg font-medium text-[#333]">mapmypaper</h2>
+              </div>
+              <p className="text-gray-600 text-sm">
+                Transform research papers into interactive mind maps for better comprehension and retention.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-medium mb-4">Links</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Home
+                  </a>
+                </li>
+                <li>
+                  <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="/auth" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Sign In
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-medium mb-4">Legal</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Contact
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <Separator className="my-6" />
+
+          <div className="text-center text-sm text-gray-500">
+            <p>© {new Date().getFullYear()} MapMyPaper. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

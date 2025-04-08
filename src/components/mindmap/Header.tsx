@@ -8,10 +8,11 @@ import {
   Image,
   FileJson,
   Upload,
+  FileIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsPDF } from "@/lib/export-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ import {
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
 import PaperLogo from "@/components/PaperLogo";
+import { useVisualizationContext } from "@/contexts/VisualizationContext";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -42,6 +44,7 @@ const Header = ({
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { openVisualization } = useVisualizationContext();
   
   // Handle export as PNG
   const handleExportPNG = () => {
@@ -67,6 +70,23 @@ const Header = ({
       toast({
         title: "Export successful",
         description: `Mind map exported as ${fileName}.svg`
+      });
+    } else {
+      toast({
+        title: "Export failed",
+        description: "Mind map instance not available",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Handle export as PDF
+  const handleExportPDF = () => {
+    if (mindMap) {
+      downloadMindMapAsPDF(mindMap, fileName);
+      toast({
+        title: "Export successful",
+        description: `Mind map exported as ${fileName}.pdf`
       });
     } else {
       toast({
@@ -168,7 +188,7 @@ const Header = ({
                 <Download className="h-3.5 w-3.5 text-black" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 bg-white border shadow-md z-50">
               <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
                 <Image className="h-4 w-4" />
                 <span>Export as SVG</span>
@@ -176,6 +196,10 @@ const Header = ({
               <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
                 <Image className="h-4 w-4" />
                 <span>Export as PNG</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF} className="flex items-center gap-2 cursor-pointer">
+                <FileIcon className="h-4 w-4" />
+                <span>Export as PDF</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
                 <FileJson className="h-4 w-4" />
