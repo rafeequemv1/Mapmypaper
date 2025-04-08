@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => ({
     react({
       plugins: mode === 'production' ? undefined : [['@swc/plugin-emotion', {}]],
     }),
+    // Only use componentTagger in development mode
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
@@ -22,4 +23,13 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Ensure build is compatible with Netlify environment
+    sourcemap: true,
+    // Avoid any potential dependency conflicts during build
+    commonjsOptions: {
+      include: [/node_modules/],
+      extensions: ['.js', '.ts', '.tsx'],
+    }
+  }
 }));
