@@ -8,8 +8,9 @@ let componentTagger;
 try {
   // Dynamically import the tagger to avoid build errors
   componentTagger = require("lovable-tagger").componentTagger;
-} catch (error) {
-  console.warn("Could not load lovable-tagger, skipping component tagging:", error.message);
+} catch (error: unknown) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  console.warn("Could not load lovable-tagger, skipping component tagging:", errorMessage);
   componentTagger = null;
 }
 
@@ -28,8 +29,9 @@ export default defineConfig(({ mode }) => ({
             // Try to require the plugin, if it fails, return an empty array
             require.resolve('@swc/plugin-emotion');
             return [['@swc/plugin-emotion', {}]];
-          } catch (e) {
-            console.warn('Could not load @swc/plugin-emotion, skipping:', e.message);
+          } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            console.warn('Could not load @swc/plugin-emotion, skipping:', errorMessage);
             return [];
           }
         })(),
