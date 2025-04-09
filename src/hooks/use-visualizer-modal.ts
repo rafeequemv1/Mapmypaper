@@ -4,17 +4,12 @@ import { useVisualizerModalContext } from "@/contexts/VisualizerModalContext";
 export const useVisualizerModal = () => {
   const { isOpen, visualizationType, imageData, openModal, closeModal } = useVisualizerModalContext();
 
-  // Ensure the modal is properly opened with the specified type
-  const handleOpenVisualizerModal = (type: string, images?: string[]) => {
-    // Log for debugging
-    console.log("Opening visualizer modal with type:", type);
-    if (images) {
-      console.log("Image data provided:", images.length, "images");
-    }
-    openModal(type, images);
+  // Simplified to focus on flowchart visualization
+  const handleOpenVisualizerModal = () => {
+    console.log("Opening flowchart visualizer modal");
+    openModal("flowchart");
   };
 
-  // Ensure proper cleanup when closing the modal
   const handleCloseVisualizerModal = () => {
     console.log("Closing visualizer modal");
     closeModal();
