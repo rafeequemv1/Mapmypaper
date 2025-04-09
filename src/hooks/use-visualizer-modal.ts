@@ -11,7 +11,17 @@ export const useVisualizerModal = () => {
     if (images) {
       console.log("Image data provided:", images.length, "images");
     }
-    openModal(type, images);
+    
+    // Make sure we start fresh - first close any existing modal before opening
+    if (isOpen) {
+      closeModal();
+      // Use a small timeout to ensure the previous modal is fully closed
+      setTimeout(() => {
+        openModal(type, images);
+      }, 10);
+    } else {
+      openModal(type, images);
+    }
   };
 
   // Ensure proper cleanup when closing the modal

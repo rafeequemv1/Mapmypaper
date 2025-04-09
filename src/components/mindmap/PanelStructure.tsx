@@ -99,18 +99,16 @@ const PanelStructure = ({
 
   return (
     <div className="h-full w-full flex">
-      {/* PDF Panel - Fixed to 40% width */}
-      {showPdf && (
-        <div className="h-full w-[40%] flex-shrink-0">
-          <TooltipProvider>
-            <PdfViewer 
-              key={pdfKey} // Add key to force remount when changed
-              ref={pdfViewerRef}
-              onTextSelected={onExplainText}
-              onImageSelected={handleImageSelected}
-              onPdfLoaded={handlePdfLoaded}
-            />
-          </TooltipProvider>
+      {/* Chat Panel - Fixed to 30% width - Now on LEFT side */}
+      {showChat && (
+        <div className="h-full w-[30%] flex-shrink-0">
+          <ChatPanel
+            toggleChat={toggleChat}
+            explainText={explainText}
+            explainImage={explainImage}
+            onExplainText={onExplainText}
+            onScrollToPdfPosition={handleScrollToPdfPosition}
+          />
         </div>
       )}
 
@@ -123,16 +121,18 @@ const PanelStructure = ({
         />
       </div>
 
-      {/* Chat Panel - Fixed to 30% width */}
-      {showChat && (
-        <div className="h-full w-[30%] flex-shrink-0">
-          <ChatPanel
-            toggleChat={toggleChat}
-            explainText={explainText}
-            explainImage={explainImage}
-            onExplainText={onExplainText}
-            onScrollToPdfPosition={handleScrollToPdfPosition}
-          />
+      {/* PDF Panel - Fixed to 40% width - Now on RIGHT side */}
+      {showPdf && (
+        <div className="h-full w-[40%] flex-shrink-0">
+          <TooltipProvider>
+            <PdfViewer 
+              key={pdfKey} // Add key to force remount when changed
+              ref={pdfViewerRef}
+              onTextSelected={onExplainText}
+              onImageSelected={handleImageSelected}
+              onPdfLoaded={handlePdfLoaded}
+            />
+          </TooltipProvider>
         </div>
       )}
 
