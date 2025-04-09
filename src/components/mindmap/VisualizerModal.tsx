@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { retrievePDF } from "@/utils/pdfStorage";
@@ -31,8 +30,15 @@ const VisualizerModal = () => {
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Reset state when modal opens or closes
   useEffect(() => {
-    if (isVisualizerModalOpen) {
+    if (!isVisualizerModalOpen) {
+      // Reset state when modal closes
+      setDiagramDefinition("");
+      setExtractedImages([]);
+      setCurrentImageIndex(0);
+      setIsLoading(false);
+    } else if (isVisualizerModalOpen) {
       if (visualizationType === 'images' && imageData) {
         // If images are provided directly, use them
         setExtractedImages(imageData);
@@ -50,11 +56,20 @@ const VisualizerModal = () => {
   useEffect(() => {
     if (diagramDefinition && containerRef.current && visualizationType !== 'images') {
       try {
-        mermaid.render(diagramId, diagramDefinition).then(({ svg }) => {
-          if (containerRef.current) {
-            containerRef.current.innerHTML = svg;
-          }
-        });
+        mermaid.render(diagramId, diagramDefinition)
+          .then(({ svg }) => {
+            if (containerRef.current) {
+              containerRef.current.innerHTML = svg;
+            }
+          })
+          .catch(error => {
+            console.error("Error rendering diagram:", error);
+            toast({
+              title: "Visualization Error",
+              description: "Failed to generate the diagram. Please try again.",
+              variant: "destructive",
+            });
+          });
       } catch (error) {
         console.error("Error rendering diagram:", error);
         toast({
@@ -64,7 +79,7 @@ const VisualizerModal = () => {
         });
       }
     }
-  }, [diagramDefinition, diagramId]);
+  }, [diagramDefinition, diagramId, toast, visualizationType]);
 
   const handleImageExtraction = async () => {
     setIsLoading(true);
@@ -409,10 +424,20 @@ const VisualizerModal = () => {
     return date.toISOString().split('T')[0];
   };
 
+  // Handle dialog close with escape key or outside click
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      closeVisualizerModal();
+    }
+  };
+
   return (
-    <Dialog open={isVisualizerModalOpen} onOpenChange={closeVisualizerModal}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-        <DialogHeader>
+    <Dialog open={isVisualizerModalOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-4xl h-[80vh] flex flex-col" onPointerDownOutside={(e) => {
+        // Prevent pointer down outside from triggering other elements
+        e.preventDefault();
+      }}>
+        <DialogHeader className="relative">
           <DialogTitle className="text-xl font-bold">
             {visualizationType === 'images' 
               ? 'PDF Images' 
@@ -422,7 +447,10 @@ const VisualizerModal = () => {
             variant="ghost" 
             size="sm" 
             className="absolute right-4 top-4" 
-            onClick={closeVisualizerModal}
+            onClick={(e) => {
+              e.stopPropagation();
+              closeVisualizerModal();
+            }}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -451,13 +479,34 @@ const VisualizerModal = () => {
                     </span>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={prevImage}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          prevImage();
+                        }}
+                      >
                         Previous
                       </Button>
-                      <Button variant="outline" size="sm" onClick={nextImage}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          nextImage();
+                        }}
+                      >
                         Next
                       </Button>
-                      <Button variant="default" size="sm" onClick={addImageToMindMap}>
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addImageToMindMap();
+                        }}
+                      >
                         Add to Mind Map
                       </Button>
                     </div>
@@ -471,7 +520,10 @@ const VisualizerModal = () => {
                         className={`w-16 h-16 flex-shrink-0 cursor-pointer border-2 ${
                           index === currentImageIndex ? 'border-primary' : 'border-transparent'
                         }`}
-                        onClick={() => setCurrentImageIndex(index)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex(index);
+                        }}
                       >
                         <img 
                           src={img} 

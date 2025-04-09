@@ -17,15 +17,23 @@ export function VisualizerModalProvider({ children }: { children: React.ReactNod
   const [imageData, setImageData] = useState<string[] | undefined>(undefined);
 
   const openModal = (type: string, images?: string[]) => {
+    // Only set open state after setting other properties
     setVisualizationType(type);
     setImageData(images);
-    setIsOpen(true);
+    setTimeout(() => {
+      setIsOpen(true);
+    }, 0);
   };
 
   const closeModal = () => {
+    // Close the modal first, then clean up data after a short delay
     setIsOpen(false);
-    // Clear image data when closing the modal
-    setImageData(undefined);
+    
+    // Use a small delay to ensure modal is fully closed before resetting state
+    setTimeout(() => {
+      setVisualizationType("");
+      setImageData(undefined);
+    }, 300);
   };
 
   return (

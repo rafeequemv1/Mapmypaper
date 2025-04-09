@@ -14,11 +14,17 @@ export const useVisualizerModal = () => {
     openModal(type, images);
   };
 
+  // Ensure proper cleanup when closing the modal
+  const handleCloseVisualizerModal = () => {
+    console.log("Closing visualizer modal");
+    closeModal();
+  };
+
   return {
     isVisualizerModalOpen: isOpen,
     visualizationType,
     imageData,
     openVisualizerModal: handleOpenVisualizerModal,
-    closeVisualizerModal: closeModal
+    closeVisualizerModal: handleCloseVisualizerModal
   };
 };
