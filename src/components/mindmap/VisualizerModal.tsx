@@ -13,7 +13,7 @@ import { useVisualizerModal } from "@/hooks/use-visualizer-modal";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
-// Initialize mermaid with a custom theme
+// Initialize mermaid with a more elegant, colorful theme
 mermaid.initialize({
   startOnLoad: true,
   theme: "default",
@@ -21,6 +21,7 @@ mermaid.initialize({
   flowchart: {
     curve: 'basis',
     diagramPadding: 8,
+    htmlLabels: true,
   },
   themeVariables: {
     primaryColor: "#F2FCE2",        // Soft Green
@@ -29,6 +30,9 @@ mermaid.initialize({
     lineColor: "#9DB5B2",           // Muted teal
     secondaryColor: "#FEF7CD",      // Soft Yellow
     tertiaryColor: "#FFDEE2",       // Soft Pink
+    noteBackgroundColor: "#E5DEFF", // Soft Purple
+    noteBorderColor: "#8B5CF6",     // Vivid Purple
+    edgeLabelBackground: "#FDE1D3", // Soft Peach
     fontSize: "16px"
   }
 });
@@ -107,10 +111,10 @@ const VisualizerModal = () => {
       }
       
       // Extract sections, keywords, and structure from the PDF
-      const { sections, keywords, relationships } = extractDocumentStructure(pdfData);
+      const { sections, keywords, concepts, title } = extractDocumentStructure(pdfData);
       
       // Generate enhanced flowchart with extracted data
-      const definition = generateEnhancedFlowchart(sections, keywords, relationships);
+      const definition = generateEnhancedFlowchart(title, sections, keywords, concepts);
       setDiagramDefinition(definition);
     } catch (error) {
       console.error("Error generating flowchart:", error);
@@ -126,28 +130,32 @@ const VisualizerModal = () => {
 
   // Extract document structure with more detailed analysis
   const extractDocumentStructure = (pdfText: string) => {
+    // Extract title
+    const title = extractTitle(pdfText);
+    
     // Extract sections with advanced pattern recognition
     const sections = extractSections(pdfText);
     
     // Extract keywords with frequency analysis
     const keywords = extractKeywords(pdfText);
     
-    // Identify relationships between sections and keywords
-    const relationships = identifyRelationships(sections, keywords, pdfText);
+    // Extract key concepts and findings
+    const concepts = extractKeyConcepts(pdfText);
     
-    return { sections, keywords, relationships };
+    return { title, sections, keywords, concepts };
   };
 
-  // Enhanced flowchart generation with colorful nodes and relationships
+  // Generate elegant, colorful flowchart with real content from the paper
   const generateEnhancedFlowchart = (
+    title: string,
     sections: Array<{title: string, content: string}>, 
     keywords: string[], 
-    relationships: Array<{from: string, to: string, type: string}>
+    concepts: string[]
   ) => {
-    // Color palette for section nodes
-    const sectionColors = [
+    // Pastel color palette for nodes
+    const nodeColors = [
       "F2FCE2", // Soft Green
-      "FEF7CD", // Soft Yellow
+      "FEF7CD", // Soft Yellow 
       "FEC6A1", // Soft Orange
       "E5DEFF", // Soft Purple
       "FFDEE2", // Soft Pink
@@ -156,54 +164,125 @@ const VisualizerModal = () => {
       "F1F0FB"  // Soft Gray
     ];
     
+    // Initialize flowchart
     let flowchart = `flowchart TD\n`;
+    
+    // Add custom styling classes
     flowchart += `    classDef default fill:#F2FCE2,stroke:#9DB5B2,stroke-width:1px,color:#555555,font-size:14px\n`;
     
     // Create classes for each color
-    sectionColors.forEach((color, index) => {
+    nodeColors.forEach((color, index) => {
       flowchart += `    classDef color${index} fill:#${color},stroke:#9DB5B2,stroke-width:1px,color:#555555,font-size:14px\n`;
     });
     
-    // Add title and main node
-    flowchart += `    title([Research Paper Analysis]):::color7\n`;
-    flowchart += `    title --> main[Main Content]\n`;
+    // Special styling for title and main nodes
+    flowchart += `    classDef titleStyle fill:#F1F0FB,stroke:#8B5CF6,stroke-width:2px,color:#555555,font-size:16px,font-weight:bold\n`;
+    flowchart += `    classDef mainStyle fill:#D3E4FD,stroke:#0EA5E9,stroke-width:1.5px,color:#555555,font-size:15px\n`;
+    flowchart += `    classDef conceptStyle fill:#FFDEE2,stroke:#D946EF,stroke-width:1px,color:#555555,font-size:14px\n`;
     
-    // Add nodes for each section with different colors
+    // Format paper title (truncate if too long)
+    const formattedTitle = title.length > 60 ? title.substring(0, 58) + "..." : title;
+    
+    // Add root node with actual paper title
+    flowchart += `    root([\"${escapeQuotes(formattedTitle)}\"]):::titleStyle\n`;
+    
+    // Add main content node
+    flowchart += `    main[\"Main Content\"]:::mainStyle\n`;
+    flowchart += `    root --> main\n`;
+    
+    // Add actual sections from the paper with different colors
+    let sectionNodes: string[] = [];
+    
     sections.forEach((section, index) => {
-      const nodeId = `section${index}`;
-      const colorClass = `color${index % sectionColors.length}`;
-      const sectionTitle = section.title.substring(0, 50) + (section.title.length > 50 ? "..." : "");
-      flowchart += `    main --> ${nodeId}["${sectionTitle}"]:::${colorClass}\n`;
+      if (!section.title || section.title.length < 3) return; // Skip invalid sections
       
-      // Add subsections if content is available
-      if (section.content) {
-        const contentSummary = summarizeContent(section.content);
-        if (contentSummary) {
-          flowchart += `    ${nodeId} --> ${nodeId}_content["${contentSummary}"]:::${colorClass}\n`;
+      const nodeId = `section${index}`;
+      sectionNodes.push(nodeId);
+      const colorClass = `color${index % nodeColors.length}`;
+      
+      // Format section title (truncate if too long)
+      const sectionTitle = section.title.length > 40 
+        ? section.title.substring(0, 38) + "..." 
+        : section.title;
+      
+      // Add section node
+      flowchart += `    ${nodeId}[\"${escapeQuotes(sectionTitle)}\"]:::${colorClass}\n`;
+      flowchart += `    main --> ${nodeId}\n`;
+      
+      // Extract key finding or content from the section
+      if (section.content && section.content.length > 10) {
+        const keyPoints = extractKeySentence(section.content);
+        if (keyPoints) {
+          const contentNodeId = `${nodeId}_content`;
+          flowchart += `    ${contentNodeId}[\"${escapeQuotes(keyPoints)}\"]:::${colorClass}\n`;
+          flowchart += `    ${nodeId} --> ${contentNodeId}\n`;
         }
       }
     });
     
-    // Add connections based on relationships
-    relationships.forEach((rel, index) => {
-      const fromNode = `section${sections.findIndex(s => s.title.includes(rel.from))}`;
-      const toNode = `section${sections.findIndex(s => s.title.includes(rel.to))}`;
+    // Add connections between sections (sequential flow)
+    for (let i = 0; i < sectionNodes.length - 1; i++) {
+      // Only connect sections that should logically flow
+      const isConnectable = shouldConnectSections(sections[i].title, sections[i+1].title);
       
-      // Only add valid relationships where both nodes exist
-      if (fromNode !== 'section-1' && toNode !== 'section-1') {
-        flowchart += `    ${fromNode} -.-> |${rel.type}| ${toNode}\n`;
+      if (isConnectable) {
+        const relationshipType = determineRelationship(sections[i].title, sections[i+1].title);
+        flowchart += `    ${sectionNodes[i]} -.-> |${relationshipType}| ${sectionNodes[i+1]}\n`;
       }
-    });
+    }
     
-    // Add key findings node with keywords
+    // Add key concepts node with actual concepts from the paper
+    if (concepts.length > 0) {
+      flowchart += `    concepts[\"Key Concepts\"]:::conceptStyle\n`;
+      flowchart += `    root --> concepts\n`;
+      
+      // Add actual concepts as nodes
+      concepts.slice(0, 5).forEach((concept, index) => {
+        const conceptNodeId = `concept${index}`;
+        const colorIndex = (index + 4) % nodeColors.length;
+        flowchart += `    ${conceptNodeId}[\"${escapeQuotes(concept)}\"]:::color${colorIndex}\n`;
+        flowchart += `    concepts --> ${conceptNodeId}\n`;
+      });
+    }
+    
+    // Add keywords node with actual keywords from the paper
     if (keywords.length > 0) {
-      flowchart += `    main --> keywords[Key Terms]:::color4\n`;
+      flowchart += `    keywords[\"Key Terms\"]:::color4\n`;
+      flowchart += `    root --> keywords\n`;
+      
+      // Add actual keywords from the paper
       keywords.slice(0, 5).forEach((keyword, index) => {
-        flowchart += `    keywords --> kw${index}["${keyword}"]:::color${(index + 4) % sectionColors.length}\n`;
+        const keywordNodeId = `kw${index}`;
+        const colorIndex = (index + 2) % nodeColors.length;
+        flowchart += `    ${keywordNodeId}[\"${escapeQuotes(keyword)}\"]:::color${colorIndex}\n`;
+        flowchart += `    keywords --> ${keywordNodeId}\n`;
       });
     }
     
     return flowchart;
+  };
+
+  // Helper function to escape quotes in strings for mermaid
+  const escapeQuotes = (text: string) => {
+    return text.replace(/"/g, '\\"');
+  };
+
+  // Helper function to extract title from PDF text
+  const extractTitle = (pdfText: string): string => {
+    const lines = pdfText.split('\n');
+    
+    // Look for the title in the first few non-empty lines
+    for (let i = 0; i < Math.min(15, lines.length); i++) {
+      const line = lines[i].trim();
+      
+      // Title criteria: not too short, not too long, not common headers
+      if (line.length > 15 && line.length < 200 && 
+          !/^(abstract|introduction|keywords|contents|chapter)/i.test(line)) {
+        return line;
+      }
+    }
+    
+    return "Research Paper Analysis";
   };
 
   // Helper function to extract sections from PDF text
@@ -225,10 +304,12 @@ const VisualizerModal = () => {
       /^(?:MATERIALS|Materials|MATERIALS AND METHODS)/i,
       /^(?:ANALYSIS|Analysis)/i,
       /^(?:FINDINGS|Findings)/i,
-      /^(?:FUTURE WORK|Future Work)/i
+      /^(?:FUTURE WORK|Future Work)/i,
+      /^(?:APPENDIX|Appendix)/i,
+      /^(?:\d+\.?\s+[A-Z][a-z]+)/  // Numbered sections like "1. Introduction"
     ];
     
-    // Look for potential section headers
+    // Look for section headers
     let currentSection = "";
     let currentContent = "";
     
@@ -243,14 +324,15 @@ const VisualizerModal = () => {
         (line.length < 100 && line.length > 3) &&
         (line.toUpperCase() === line || 
          sectionPatterns.some(pattern => pattern.test(line)) ||
-         /^\d+\.?\s+[A-Z]/.test(line));
+         /^\d+\.?\s+[A-Z]/.test(line) ||
+         /^[A-Z][a-z]+\s+[A-Z][a-z]+/.test(line));
       
       if (isSectionHeader) {
         // Save previous section before starting a new one
         if (currentSection) {
           sections.push({
             title: currentSection,
-            content: currentContent
+            content: currentContent.trim()
           });
         }
         
@@ -267,54 +349,79 @@ const VisualizerModal = () => {
     if (currentSection) {
       sections.push({
         title: currentSection,
-        content: currentContent
+        content: currentContent.trim()
       });
     }
     
     // If no sections found, create some generic ones based on content analysis
     if (sections.length < 3) {
-      // Try to extract a title
-      let title = extractTitle(pdfText);
+      // Try to extract a title (already done separately)
       
       // Create generic sections
-      sections.push({ title: "Introduction", content: extractIntroduction(pdfText) });
-      sections.push({ title: "Main Content", content: pdfText.substring(Math.floor(pdfText.length * 0.25), Math.floor(pdfText.length * 0.75)) });
-      sections.push({ title: "Conclusion", content: extractConclusion(pdfText) });
+      const firstThird = Math.floor(pdfText.length / 3);
+      const secondThird = firstThird * 2;
+      
+      sections.push({ title: "Introduction", content: pdfText.substring(0, firstThird) });
+      sections.push({ title: "Main Content", content: pdfText.substring(firstThird, secondThird) });
+      sections.push({ title: "Conclusion", content: pdfText.substring(secondThird) });
     }
     
     return sections;
   };
 
-  // Helper functions for document analysis
-  const extractTitle = (pdfText: string) => {
-    const lines = pdfText.split('\n');
-    // Usually the title is among the first few non-empty lines
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
-      if (lines[i].trim().length > 15 && !/^abstract|introduction|contents/i.test(lines[i])) {
-        return lines[i].trim();
+  // Helper function to extract key sentence from content
+  const extractKeySentence = (content: string): string => {
+    if (!content || content.length < 20) return "";
+    
+    // Split into sentences
+    const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
+    
+    // Look for sentences with key indicators
+    const keyIndicators = [
+      /significant/i, /important/i, /key/i, /main/i, /primary/i, 
+      /found that/i, /conclude/i, /results show/i, /demonstrates/i,
+      /\d+%/i, /increase/i, /decrease/i, /impact/i, /effect/i,
+      /p\s*<\s*0\.0\d+/i  // p-value
+    ];
+    
+    // First look for sentences with key indicators
+    for (const sentence of sentences) {
+      if (keyIndicators.some(pattern => pattern.test(sentence)) && 
+          sentence.length > 20 && sentence.length < 150) {
+        return sentence.trim();
       }
     }
-    return "Research Paper";
+    
+    // If no good indicator sentences, just take the first reasonable sentence
+    for (const sentence of sentences) {
+      if (sentence.length > 20 && sentence.length < 150) {
+        return sentence.trim();
+      }
+    }
+    
+    // Fallback to first 100 chars
+    return content.substring(0, 100).trim() + "...";
   };
 
-  const extractIntroduction = (pdfText: string) => {
-    // Simple extraction - get the first 15% of the document
-    return pdfText.substring(0, Math.floor(pdfText.length * 0.15));
-  };
-
-  const extractConclusion = (pdfText: string) => {
-    // Simple extraction - get the last 15% of the document
-    return pdfText.substring(Math.floor(pdfText.length * 0.85));
-  };
-
-  const summarizeContent = (content: string) => {
-    // Create a brief summary (first 50 chars)
-    if (!content || content.length < 10) return "";
-    return content.substring(0, 50).trim() + "...";
-  };
-
-  const extractKeywords = (pdfText: string) => {
-    // Simple keyword extraction - look for capitalized terms and frequent words
+  // Helper function to extract keywords from PDF text
+  const extractKeywords = (pdfText: string): string[] => {
+    // First try to find explicit keywords section
+    const keywordMatch = pdfText.match(/keywords?\s*:?\s*([^.;]*)[.;]/i) || 
+                        pdfText.match(/key\s+words?\s*:?\s*([^.;]*)[.;]/i);
+    
+    if (keywordMatch && keywordMatch[1]) {
+      const keywordText = keywordMatch[1].trim();
+      // Split by commas, semicolons, or 'and'
+      const explicitKeywords = keywordText.split(/[,;]\s*|\s+and\s+/i)
+        .map(k => k.trim())
+        .filter(k => k.length > 2 && k.length < 30);
+      
+      if (explicitKeywords.length >= 3) {
+        return explicitKeywords;
+      }
+    }
+    
+    // If explicit keywords not found, extract based on frequency and capitalization
     const words = pdfText.split(/\s+/);
     const wordCount: Record<string, number> = {};
     
@@ -347,52 +454,122 @@ const VisualizerModal = () => {
       potentialKeywords.push(...frequentWords);
     }
     
-    return [...new Set(potentialKeywords)].slice(0, 10);
+    return [...new Set(potentialKeywords)].slice(0, 8);
   };
 
-  const identifyRelationships = (
-    sections: Array<{title: string, content: string}>, 
-    keywords: string[], 
-    pdfText: string
-  ) => {
-    const relationships: Array<{from: string, to: string, type: string}> = [];
+  // Helper function to extract key concepts from the paper
+  const extractKeyConcepts = (pdfText: string): string[] => {
+    // Look for explicit statements of contribution or findings
+    const contributionPatterns = [
+      /(?:our|the main|key|primary)\s+contribution[s]?\s+(?:is|are|include[s]?)[^.]*\./gi,
+      /(?:we|this paper|this study|this research)\s+(?:demonstrate[s]?|show[s]?|find[s]?|present[s]?)[^.]*\./gi,
+      /(?:key|main|important|significant)\s+(?:finding[s]?|result[s]?|insight[s]?)[^.]*\./gi,
+      /(?:this|the)\s+(?:study|paper|research|work)\s+(?:addresses|solves|improves|enhances)[^.]*\./gi
+    ];
     
-    // Create some logical relationships between sections
-    for (let i = 0; i < sections.length - 1; i++) {
-      relationships.push({
-        from: sections[i].title,
-        to: sections[i + 1].title,
-        type: "leads to"
-      });
-    }
+    const concepts: string[] = [];
     
-    // Add some relationships based on content similarity
-    for (let i = 0; i < sections.length; i++) {
-      for (let j = i + 2; j < sections.length; j++) {
-        // Skip adjacent sections (already connected)
-        if (j === i + 1) continue;
+    // Extract sentences matching these patterns
+    for (const pattern of contributionPatterns) {
+      const matches = pdfText.match(pattern) || [];
+      for (const match of matches) {
+        // Extract the core concept from the sentence
+        let concept = match.trim();
         
-        // Check if sections share keywords or references
-        const fromContent = sections[i].content.toLowerCase();
-        const toContent = sections[j].content.toLowerCase();
+        // Remove common prefixes
+        concept = concept.replace(/^(?:our|the main|key|primary)\s+contribution[s]?\s+(?:is|are|include[s]?)\s+/i, '');
+        concept = concept.replace(/^(?:we|this paper|this study|this research)\s+(?:demonstrate[s]?|show[s]?|find[s]?|present[s]?)\s+/i, '');
+        concept = concept.replace(/^(?:key|main|important|significant)\s+(?:finding[s]?|result[s]?|insight[s]?)\s+(?:is|are|include[s]?)?\s+/i, '');
+        concept = concept.replace(/^(?:this|the)\s+(?:study|paper|research|work)\s+(?:addresses|solves|improves|enhances)\s+/i, '');
         
-        // Look for shared keywords
-        const sharedKeywords = keywords.filter(kw => 
-          fromContent.includes(kw.toLowerCase()) && 
-          toContent.includes(kw.toLowerCase())
-        );
+        // Truncate if too long
+        if (concept.length > 60) {
+          concept = concept.substring(0, 58) + "...";
+        }
         
-        if (sharedKeywords.length > 0) {
-          relationships.push({
-            from: sections[i].title,
-            to: sections[j].title,
-            type: "related"
-          });
+        // Add to list if not too short
+        if (concept.length > 10) {
+          concepts.push(concept);
         }
       }
     }
     
-    return relationships.slice(0, 8); // Limit to 8 relationships to avoid clutter
+    // If we couldn't find explicit concepts, generate some from section content
+    if (concepts.length < 3) {
+      const sections = extractSections(pdfText);
+      
+      // Extract from introduction and conclusion
+      const introSection = sections.find(s => /introduction/i.test(s.title));
+      const concSection = sections.find(s => /conclusion/i.test(s.title));
+      
+      if (introSection && introSection.content) {
+        const sentences = introSection.content.match(/[^.!?]+[.!?]+/g) || [];
+        // Look for goal/purpose statements
+        for (const sentence of sentences) {
+          if (/(?:goal|aim|purpose|objective|we propose|we present|we introduce)/i.test(sentence) && 
+              sentence.length > 20 && sentence.length < 150) {
+            concepts.push(sentence.trim());
+            break;
+          }
+        }
+      }
+      
+      if (concSection && concSection.content) {
+        const sentences = concSection.content.match(/[^.!?]+[.!?]+/g) || [];
+        // Look for summary statements
+        for (const sentence of sentences) {
+          if (/(?:in summary|to summarize|in conclusion|we have demonstrated|results show|we found)/i.test(sentence) && 
+              sentence.length > 20 && sentence.length < 150) {
+            concepts.push(sentence.trim());
+            break;
+          }
+        }
+      }
+    }
+    
+    // Ensure we have at least some concepts
+    if (concepts.length < 2) {
+      concepts.push("Main research focus of this paper");
+      concepts.push("Key methodology used in this study");
+      concepts.push("Central finding or conclusion");
+    }
+    
+    return [...new Set(concepts)].slice(0, 5);
+  };
+
+  // Helper function to determine if two sections should be connected
+  const shouldConnectSections = (section1Title: string, section2Title: string): boolean => {
+    // Define logical flows between sections
+    const logicalFlows: [RegExp, RegExp][] = [
+      [/abstract/i, /introduction/i],
+      [/introduction/i, /(?:background|literature|related work)/i],
+      [/(?:background|literature|related work)/i, /(?:methodology|methods|materials|approach)/i],
+      [/(?:methodology|methods|materials|approach)/i, /(?:results|findings|analysis)/i],
+      [/(?:results|findings|analysis)/i, /(?:discussion|interpretation)/i],
+      [/(?:discussion|interpretation)/i, /(?:conclusion|future work|limitations)/i],
+      [/(?:conclusion|future work|limitations)/i, /(?:references|bibliography)/i]
+    ];
+    
+    // Check if the sections follow a logical flow
+    return logicalFlows.some(([pattern1, pattern2]) => 
+      pattern1.test(section1Title) && pattern2.test(section2Title)
+    );
+  };
+
+  // Helper function to determine the relationship between two sections
+  const determineRelationship = (section1Title: string, section2Title: string): string => {
+    // Define specific relationships
+    if (/introduction/i.test(section1Title) && /methodology/i.test(section2Title)) {
+      return "leads to";
+    } else if (/methodology/i.test(section1Title) && /results/i.test(section2Title)) {
+      return "produces";
+    } else if (/results/i.test(section1Title) && /discussion/i.test(section2Title)) {
+      return "analyzed in";
+    } else if (/discussion/i.test(section1Title) && /conclusion/i.test(section2Title)) {
+      return "summarized in";
+    } else {
+      return "leads to";
+    }
   };
 
   // Handle dialog close with escape key or outside click
@@ -407,6 +584,7 @@ const VisualizerModal = () => {
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col" onPointerDownOutside={(e) => {
         // Prevent pointer down outside from triggering other elements
         e.preventDefault();
+        e.stopPropagation();
       }}>
         <DialogHeader className="relative">
           <DialogTitle className="text-xl font-bold">

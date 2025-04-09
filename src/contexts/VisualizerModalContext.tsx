@@ -17,7 +17,7 @@ export function VisualizerModalProvider({ children }: { children: React.ReactNod
   const [imageData, setImageData] = useState<string[] | undefined>(undefined);
 
   const openModal = (type: string, images?: string[]) => {
-    // Default to flowchart type for all visualizations
+    // Lock visualization to flowchart only
     setVisualizationType("flowchart");
     setImageData(images);
     
