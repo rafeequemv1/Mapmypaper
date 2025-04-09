@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -219,17 +218,17 @@ const MindMap = () => {
 
   return (
     <div ref={containerRef} className="h-screen flex flex-col overflow-hidden">
-      {/* Header with all icons - Note: passing isChatActive first */}
+      {/* Header with all icons */}
       <Header 
-        toggleChat={toggleChat}
         togglePdf={togglePdf}
+        toggleChat={toggleChat}
         setShowSummary={setShowSummary}
-        isChatActive={showChat}
         isPdfActive={showPdf && pdfAvailable}
+        isChatActive={showChat}
         mindMap={mindMap}
       />
 
-      {/* Main Content - Panels for Chat, MindMap, and PDF */}
+      {/* Main Content - Panels for PDF, MindMap, and Chat */}
       <div className="flex-1 overflow-hidden">
         <PanelStructure 
           showPdf={showPdf && pdfAvailable}
