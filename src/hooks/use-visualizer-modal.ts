@@ -4,7 +4,7 @@ import { useVisualizerModalContext } from "@/contexts/VisualizerModalContext";
 export const useVisualizerModal = () => {
   const { isOpen, visualizationType, imageData, openModal, closeModal } = useVisualizerModalContext();
 
-  // Focus only on flowchart visualization
+  // Since we're focusing only on flowchart visualization, we don't need to accept a type parameter
   const handleOpenVisualizerModal = () => {
     console.log("Opening flowchart visualizer modal");
     openModal("flowchart");

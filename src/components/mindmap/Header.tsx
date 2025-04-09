@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -135,11 +134,6 @@ const Header = ({
     }
   }, [toast]);
 
-  // Handle visualization selection
-  const handleVisualizationSelect = (type: string) => {
-    openVisualizerModal(type);
-  };
-  
   return (
     <header className="bg-white border-b py-2 px-4">
       <div className="flex items-center justify-between">
@@ -181,37 +175,15 @@ const Header = ({
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                className="flex items-center gap-1 text-black h-8 px-3"
-              >
-                <BarChart className="h-3.5 w-3.5" />
-                <span className="hidden md:inline text-sm">Visualize</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-48 bg-white border shadow-md z-50">
-              <DropdownMenuItem onClick={() => handleVisualizationSelect("flowchart")} className="cursor-pointer">
-                Flowchart
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleVisualizationSelect("sequence")} className="cursor-pointer">
-                Sequence Diagram
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleVisualizationSelect("class")} className="cursor-pointer">
-                Class Diagram
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleVisualizationSelect("gantt")} className="cursor-pointer">
-                Gantt Chart
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleVisualizationSelect("er")} className="cursor-pointer">
-                Entity Relationship
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleVisualizationSelect("pie")} className="cursor-pointer">
-                Pie Chart
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Modified visualize button to remove dropdown and just show flowchart */}
+          <Button 
+            variant="ghost" 
+            onClick={() => openVisualizerModal()} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <BarChart className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Visualize</span>
+          </Button>
         </div>
         
         {/* Right side - Action buttons and User Menu */}
