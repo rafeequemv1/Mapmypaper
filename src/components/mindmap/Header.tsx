@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,8 +8,7 @@ import {
   Image,
   FileJson,
   Upload,
-  FileIcon,
-  BarChart
+  FileIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +22,6 @@ import {
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
 import PaperLogo from "@/components/PaperLogo";
-import { useVisualizerModal } from "@/hooks/use-visualizer-modal";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -44,7 +43,6 @@ const Header = ({
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { openVisualizerModal } = useVisualizerModal();
   
   // Handle export as PNG
   const handleExportPNG = () => {
@@ -173,16 +171,6 @@ const Header = ({
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
-          </Button>
-          
-          {/* Modified visualize button to remove dropdown and just show flowchart */}
-          <Button 
-            variant="ghost" 
-            onClick={() => openVisualizerModal()} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <BarChart className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Visualize</span>
           </Button>
         </div>
         
