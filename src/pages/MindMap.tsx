@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
@@ -14,6 +15,7 @@ const MindMap = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
   const [explainText, setExplainText] = useState<string>('');
+  const [isMarkMapActive, setIsMarkMapActive] = useState(false);
   const { toast } = useToast();
   const [textExplainProcessed, setTextExplainProcessed] = useState(false);
   const [pdfLoadAttempted, setPdfLoadAttempted] = useState(false);
@@ -86,6 +88,21 @@ const MindMap = () => {
   const toggleSummary = useCallback(() => {
     setShowSummary(prev => !prev);
   }, []);
+  
+  const toggleMarkMap = useCallback(() => {
+    setIsMarkMapActive(prev => !prev);
+    if (!isMarkMapActive) {
+      toast({
+        title: "Markmap View Activated",
+        description: "Viewing mind map in Markmap format"
+      });
+    } else {
+      toast({
+        title: "Mind Elixir View Activated",
+        description: "Viewing mind map in Mind Elixir format"
+      });
+    }
+  }, [isMarkMapActive, toast]);
 
   const handleExplainText = useCallback((text: string) => {
     // Prevent duplicate text explanation
@@ -225,6 +242,8 @@ const MindMap = () => {
         isPdfActive={showPdf && pdfAvailable}
         isChatActive={showChat}
         mindMap={mindMap}
+        isMarkMapActive={isMarkMapActive}
+        toggleMarkMap={toggleMarkMap}
       />
 
       {/* Main Content - Panels for PDF, MindMap, and Chat */}
@@ -237,6 +256,7 @@ const MindMap = () => {
           onMindMapReady={handleMindMapReady}
           explainText={explainText}
           onExplainText={handleExplainText}
+          isMarkMapActive={isMarkMapActive}
         />
       </div>
       

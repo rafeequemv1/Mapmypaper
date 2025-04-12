@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,7 +7,8 @@ import {
   Image,
   FileJson,
   Upload,
-  FileIcon
+  FileIcon,
+  Map
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +30,8 @@ interface HeaderProps {
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
+  isMarkMapActive: boolean;
+  toggleMarkMap: () => void;
 }
 
 const Header = ({ 
@@ -38,7 +40,9 @@ const Header = ({
   setShowSummary,
   isPdfActive,
   isChatActive,
-  mindMap
+  mindMap,
+  isMarkMapActive,
+  toggleMarkMap
 }: HeaderProps) => {
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
@@ -171,6 +175,15 @@ const Header = ({
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
+          </Button>
+          
+          <Button 
+            variant={isMarkMapActive ? "default" : "ghost"} 
+            onClick={toggleMarkMap} 
+            className={`flex items-center gap-1 ${isMarkMapActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
+          >
+            <Map className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">MarkMap</span>
           </Button>
         </div>
         
