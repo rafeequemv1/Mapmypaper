@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { useVisualizerModal } from "@/hooks/use-visualizer-modal";
 import { useToast } from "@/hooks/use-toast";
@@ -38,21 +39,24 @@ mermaid.initialize({
 });
 
 const VisualizerModal = () => {
-  const { isVisualizerModalOpen, closeVisualizerModal } = useVisualizerModal();
+  const { isVisualizerModalOpen, closeVisualizerModal, imageData } = useVisualizerModal();
   const [isLoading, setIsLoading] = useState(false);
   const [diagramId] = useState(`diagram-${Math.random().toString(36).substring(2, 11)}`);
   const [diagramDefinition, setDiagramDefinition] = useState("");
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
+  const [renderAttempt, setRenderAttempt] = useState(0);
 
   // Generate and render the flowchart when modal opens
   useEffect(() => {
     if (isVisualizerModalOpen) {
+      console.log("Modal opened, generating flowchart");
       generateFlowchart();
     } else {
       // Reset state when modal closes
       setDiagramDefinition("");
       setIsLoading(false);
+      setRenderAttempt(0);
     }
   }, [isVisualizerModalOpen]);
 
@@ -60,8 +64,17 @@ const VisualizerModal = () => {
   useEffect(() => {
     if (diagramDefinition && containerRef.current) {
       try {
-        mermaid.render(diagramId, diagramDefinition)
-          .then(({ svg }) => {
+        console.log("Attempting to render mermaid diagram:", renderAttempt);
+        
+        const renderDiagram = async () => {
+          try {
+            // Force a clean render each time
+            if (containerRef.current) {
+              containerRef.current.innerHTML = '';
+            }
+            
+            const { svg } = await mermaid.render(diagramId, diagramDefinition);
+            
             if (containerRef.current) {
               containerRef.current.innerHTML = svg;
               
@@ -72,16 +85,31 @@ const VisualizerModal = () => {
                 svgElement.style.borderRadius = '8px';
                 svgElement.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.05)';
               }
+              
+              // Set loading to false once rendering is complete
+              setIsLoading(false);
             }
-          })
-          .catch(error => {
-            console.error("Error rendering diagram:", error);
-            toast({
-              title: "Visualization Error",
-              description: "Failed to generate the flowchart. Please try again.",
-              variant: "destructive",
-            });
-          });
+          } catch (error) {
+            console.error("Error in render attempt:", error);
+            
+            // Try again with a slight delay if we haven't tried too many times
+            if (renderAttempt < 3) {
+              setTimeout(() => {
+                setRenderAttempt(prev => prev + 1);
+              }, 500);
+            } else {
+              console.error("Failed to render diagram after multiple attempts");
+              toast({
+                title: "Visualization Error",
+                description: "Failed to generate the flowchart. Please try again.",
+                variant: "destructive",
+              });
+              setIsLoading(false);
+            }
+          }
+        };
+        
+        renderDiagram();
       } catch (error) {
         console.error("Error rendering diagram:", error);
         toast({
@@ -89,9 +117,10 @@ const VisualizerModal = () => {
           description: "Failed to generate the flowchart. Please try again.",
           variant: "destructive",
         });
+        setIsLoading(false);
       }
     }
-  }, [diagramDefinition, diagramId, toast]);
+  }, [diagramDefinition, diagramId, renderAttempt, toast]);
 
   const generateFlowchart = async () => {
     setIsLoading(true);
@@ -110,12 +139,19 @@ const VisualizerModal = () => {
         return;
       }
       
+      console.log("PDF data retrieved, extracting structure");
+      
       // Extract sections, keywords, and structure from the PDF
       const { sections, keywords, concepts, title } = extractDocumentStructure(pdfData);
       
       // Generate enhanced flowchart with extracted data
       const definition = generateEnhancedFlowchart(title, sections, keywords, concepts);
-      setDiagramDefinition(definition);
+      console.log("Flowchart definition generated, setting to state");
+      
+      // Create slight delay to ensure DOM is ready
+      setTimeout(() => {
+        setDiagramDefinition(definition);
+      }, 100);
     } catch (error) {
       console.error("Error generating flowchart:", error);
       toast({
@@ -123,7 +159,6 @@ const VisualizerModal = () => {
         description: "Failed to generate the flowchart. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -590,6 +625,9 @@ const VisualizerModal = () => {
           <DialogTitle className="text-xl font-bold">
             Document Structure Flowchart
           </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Visualizing the structure and key points of your document
+          </DialogDescription>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -605,8 +643,9 @@ const VisualizerModal = () => {
         
         <div className="flex-1 overflow-auto p-6 mt-4 bg-gray-50 rounded-md">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            <div className="flex flex-col items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
+              <p className="text-sm text-gray-500">Generating document structure visualization...</p>
             </div>
           ) : (
             <div ref={containerRef} className="h-full w-full flex items-center justify-center overflow-auto p-4 bg-white rounded-lg shadow-sm">

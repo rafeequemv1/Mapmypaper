@@ -17,24 +17,25 @@ export function VisualizerModalProvider({ children }: { children: React.ReactNod
   const [imageData, setImageData] = useState<string[] | undefined>(undefined);
 
   const openModal = (type: string, images?: string[]) => {
-    // Lock visualization to flowchart only
+    // Set data first, then open modal
     setVisualizationType("flowchart");
     setImageData(images);
     
-    // Use a small delay to ensure state is set before opening modal
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure state is set before opening modal
+    requestAnimationFrame(() => {
       setIsOpen(true);
-    }, 10);
+    });
   };
 
   const closeModal = () => {
     // Close the modal first, then clean up data
     setIsOpen(false);
     
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure modal is closed before cleaning up data
+    requestAnimationFrame(() => {
       setVisualizationType("");
       setImageData(undefined);
-    }, 300);
+    });
   };
 
   return (
