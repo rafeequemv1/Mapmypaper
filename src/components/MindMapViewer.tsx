@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -238,6 +237,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         },
         theme: colorfulTheme,
         autoFit: true,
+        // Set a custom scale to reduce the initial size by 25%
+        scale: 0.75, // Added this line to make the mindmap 25% smaller by default
         // Add custom style to nodes based on their level and content
         beforeRender: (node: any, tpc: HTMLElement, level: number) => {
           // Get branch color from palette based on branch position
@@ -674,6 +675,15 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Set a timeout to ensure the mind map is rendered before scaling
       setTimeout(() => {
         setIsReady(true);
+        
+        // Additional adjustment to ensure proper scaling after initialization
+        if (mind && mind.container) {
+          // Apply the scale with a slight delay to ensure everything is loaded
+          setTimeout(() => {
+            mind.scaleMap(0.75);
+            mind.move2Center();
+          }, 200);
+        }
       }, 300);
       
       // Cleanup function
@@ -689,103 +699,4 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     if (!nodeData) return;
     
     // Generate a simple summary from the node hierarchy
-    let summaryText = `## Summary of "${nodeData.topic}"\n\n`;
-    
-    // Helper function to extract node topics and build a hierarchical summary
-    const extractTopics = (node: any, level: number = 0) => {
-      if (!node) return '';
-      
-      // Replace emojis and extra whitespace
-      const cleanTopic = (topic: string) => {
-        return topic.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]\s?/g, '').trim();
-      };
-      
-      let result = '';
-      const indent = '  '.repeat(level);
-      
-      if (node.topic) {
-        result += `${indent}- ${cleanTopic(node.topic)}\n`;
-      }
-      
-      if (node.children && node.children.length > 0) {
-        node.children.forEach((child: any) => {
-          result += extractTopics(child, level + 1);
-        });
-      }
-      
-      return result;
-    };
-    
-    // Generate the hierarchical summary
-    summaryText += extractTopics(nodeData);
-    
-    // Add a conclusion
-    summaryText += `\n## Key Points\n\n`;
-    summaryText += `This branch of the mind map contains ${countNodes(nodeData)} nodes in total.\n`;
-    
-    // Display the summary
-    setSummary(summaryText);
-    setShowSummary(true);
-    
-    toast({
-      title: "Summary Generated",
-      description: `Summary for "${nodeData.topic}" is ready to view.`,
-      duration: 3000,
-    });
-  };
-  
-  // Helper function to count nodes in a branch
-  const countNodes = (node: any): number => {
-    if (!node) return 0;
-    
-    let count = 1; // Count the current node
-    
-    if (node.children && node.children.length > 0) {
-      node.children.forEach((child: any) => {
-        count += countNodes(child);
-      });
-    }
-    
-    return count;
-  };
-  
-  // Close the summary panel
-  const closeSummary = () => {
-    setShowSummary(false);
-  };
-
-  if (!isMapGenerated) {
-    return null;
-  }
-
-  return (
-    <div className="w-full h-full flex-1 flex flex-col">
-      {showSummary && (
-        <div className="absolute top-0 right-0 bottom-0 w-80 bg-white z-10 shadow-lg flex flex-col">
-          <div className="bg-primary p-3 text-white flex justify-between items-center">
-            <h3 className="font-medium">Mind Map Summary</h3>
-            <Button variant="ghost" size="sm" onClick={closeSummary} className="text-white">
-              Close
-            </Button>
-          </div>
-          <div className="p-4 overflow-auto flex-1">
-            <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
-          </div>
-        </div>
-      )}
-      
-      <div className="w-full h-full overflow-hidden relative">
-        <div 
-          ref={containerRef} 
-          className="w-full h-full" 
-          style={{ 
-            background: `linear-gradient(90deg, #F9F7FF 0%, #E5DEFF 100%)`,
-            transition: 'background-color 0.5s ease'
-          }}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default MindMapViewer;
+    let summaryText = `## Summary of "${nodeData.topic}"\n
