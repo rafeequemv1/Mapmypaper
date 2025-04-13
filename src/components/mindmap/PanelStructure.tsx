@@ -7,6 +7,7 @@ import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { retrievePDF } from "@/utils/pdfStorage";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -34,6 +35,7 @@ const PanelStructure = ({
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(true);
   const [explainImage, setExplainImage] = useState<string | null>(null);
+  const isMobile = useIsMobile();
   
   // Check for PDF availability when component mounts
   useEffect(() => {
