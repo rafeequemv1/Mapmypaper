@@ -1,0 +1,22 @@
+
+/* Styles for mind map nodes with images */
+.me-image-node {
+  padding: 2px;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.me-image-node img {
+  display: block;
+  max-width: 200px;
+  max-height: 150px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* Handle image node selection */
+.mind-elixir .selected .me-image-node {
+  box-shadow: 0 0 0 2px #4f46e5;
+}
