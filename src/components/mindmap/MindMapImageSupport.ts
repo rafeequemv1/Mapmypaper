@@ -42,8 +42,11 @@ export const addImageToMindMap = (mindMap: MindElixirInstance, imageData: string
     const parentId = targetNode.id;
     
     // Add the child node with the correct API
-    // Type casting to any to work around type system limitations
-    mindMap.addChild(parentId, { topic: 'Figure' } as any);
+    // Create a topic object as required by the API
+    const topicObj = { topic: 'Figure' };
+    
+    // Add the child node properly using type assertions to work around library type issues
+    mindMap.addChild(parentId, topicObj as any);
     
     // Get the newly created node
     const allNodes = getAllNodes(mindMap);
