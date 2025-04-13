@@ -54,6 +54,7 @@
     "input-otp": "^1.2.4",
     "jspdf": "^3.0.1",
     "lucide-react": "^0.462.0",
+    "markmap-lib": "^0.18.11",
     "markmap-view": "^0.15.5",
     "mermaid": "^11.6.0",
     "mind-elixir": "^4.4.2",

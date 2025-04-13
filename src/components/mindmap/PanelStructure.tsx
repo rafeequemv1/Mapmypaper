@@ -62,7 +62,6 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
         <div className={`${numPanels === 3 ? 'w-1/3' : numPanels === 2 ? 'w-1/2' : 'w-full'} h-full border-r`}>
           {pdfData ? (
             <PdfViewer 
-              pdfData={pdfData} 
               onExplainText={onExplainText}
             />
           ) : (
@@ -90,16 +89,18 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
       {/* Chat Panel - Desktop */}
       {!isMobile && showChat && (
         <div className={`${numPanels === 3 ? 'w-1/3' : numPanels === 2 ? 'w-1/2' : 'w-full'} h-full border-l`}>
-          <ChatPanel explainText={explainText} />
+          <ChatPanel 
+            explainText={explainText} 
+            toggleChat={toggleChat}
+          />
         </div>
       )}
       
       {/* Mobile Chat Sheet */}
       {isMobile && (
         <MobileChatSheet 
-          isOpen={showChat} 
-          onClose={toggleChat} 
           explainText={explainText}
+          onScrollToPdfPosition={() => {}}
         />
       )}
     </div>
