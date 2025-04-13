@@ -42,12 +42,11 @@ export const addImageToMindMap = (mindMap: MindElixirInstance, imageData: string
     const parentId = targetNode.id;
     
     // Add the child node with the correct API
-    // We need to cast the string to any to bypass the type check
-    mindMap.addChild('Figure' as any, parentId);
+    // Type casting to any to work around type system limitations
+    mindMap.addChild(parentId, { topic: 'Figure' } as any);
     
     // Get the newly created node
-    // To accommodate the API, we need to access nodes differently
-    const allNodes = mindMap.nodeData ? [mindMap.nodeData, ...(mindMap.nodeData.children || [])] : [];
+    const allNodes = getAllNodes(mindMap);
     
     // Find the node we just created (usually the last child of the parent)
     const children = targetNode.children || [];
@@ -59,8 +58,7 @@ export const addImageToMindMap = (mindMap: MindElixirInstance, imageData: string
     }
     
     if (lastAddedNode) {
-      // Update the node properties directly - don't use updateNodeStyle
-      // as it doesn't exist in this version of the API
+      // Update the node properties directly
       lastAddedNode.id = nodeId;
       lastAddedNode.topicHTML = nodeTopicHTML;
       
