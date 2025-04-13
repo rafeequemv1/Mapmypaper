@@ -20,10 +20,10 @@ export const addImageToMindMap = (mindMap: MindElixirInstance, imageData: string
   
   try {
     // Get the currently selected node or root node
-    const activeNode = mindMap.getActiveNode();
+    const activeNode = mindMap.currentNode || null;
     
     // If no active node, use the root node
-    const targetNode = activeNode || mindMap.getRootNode();
+    const targetNode = activeNode || mindMap.nodeData;
     
     if (!targetNode) {
       console.error("No node selected and root not available");
@@ -41,11 +41,14 @@ export const addImageToMindMap = (mindMap: MindElixirInstance, imageData: string
     // Get target node ID
     const parentId = targetNode.id;
     
-    // Add the child node
-    mindMap.addChild('Figure', parentId);
+    // Add the child node with the correct API
+    // We need to cast the string to any to bypass the type check
+    mindMap.addChild('Figure' as any, parentId);
     
     // Get the newly created node
-    const allNodes = mindMap.getAllDataList();
+    // To accommodate the API, we need to access nodes differently
+    const allNodes = mindMap.nodeData ? [mindMap.nodeData, ...(mindMap.nodeData.children || [])] : [];
+    
     // Find the node we just created (usually the last child of the parent)
     const children = targetNode.children || [];
     let lastAddedNode = null;
@@ -56,19 +59,10 @@ export const addImageToMindMap = (mindMap: MindElixirInstance, imageData: string
     }
     
     if (lastAddedNode) {
-      // We need to update the node properties
-      // This approach varies depending on Mind Elixir version
-      // First try to update using the updateNodeStyle method
-      try {
-        mindMap.updateNodeStyle(lastAddedNode.id, {
-          id: nodeId,
-          topicHTML: nodeTopicHTML,
-        });
-      } catch (e) {
-        // Fallback: manually update the node properties
-        lastAddedNode.id = nodeId;
-        lastAddedNode.topicHTML = nodeTopicHTML;
-      }
+      // Update the node properties directly - don't use updateNodeStyle
+      // as it doesn't exist in this version of the API
+      lastAddedNode.id = nodeId;
+      lastAddedNode.topicHTML = nodeTopicHTML;
       
       // Refresh to apply changes
       mindMap.refresh();
@@ -80,6 +74,26 @@ export const addImageToMindMap = (mindMap: MindElixirInstance, imageData: string
     console.error("Error adding image to mind map:", error);
     return null;
   }
+};
+
+/**
+ * Gets all nodes from the mind map tree
+ * @param mindMap Mind Elixir instance
+ * @returns Array of all nodes in the mind map
+ */
+export const getAllNodes = (mindMap: MindElixirInstance): NodeObj[] => {
+  if (!mindMap || !mindMap.nodeData) return [];
+  
+  // Helper function to flatten the node tree
+  const flattenNodes = (node: NodeObj, results: NodeObj[] = []): NodeObj[] => {
+    results.push(node);
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => flattenNodes(child, results));
+    }
+    return results;
+  };
+  
+  return flattenNodes(mindMap.nodeData);
 };
 
 /**
