@@ -19,7 +19,8 @@ export const addImageToMindMap = (mindMap: any, imageData: string): string | nul
   
   try {
     // Get the currently selected node or root node
-    const selectedNode = mindMap.getSelectedNode() || mindMap.root;
+    const selectedNode = mindMap.getSelectedNode() || 
+                         mindMap.getAllDataNodeRef()['root'];
     
     if (!selectedNode) {
       console.error("No node selected and root not available");
@@ -34,17 +35,17 @@ export const addImageToMindMap = (mindMap: any, imageData: string): string | nul
       </div>
     `;
     
-    // Add the node to the selected node
-    const newNode = mindMap.addChildNode(selectedNode, {
+    // Add the node to the selected node using standard API
+    const newNode = {
       topic: 'Figure', 
       id: nodeId,
       topicHTML: nodeTopicHTML,
       expanded: true,
       direction: selectedNode.direction || 'right'
-    });
+    };
     
-    // Select the new node
-    mindMap.selectNode(newNode);
+    // Add the child node
+    mindMap.insertNode(selectedNode, newNode.topic, newNode);
     
     return nodeId;
   } catch (error) {
@@ -54,19 +55,36 @@ export const addImageToMindMap = (mindMap: any, imageData: string): string | nul
 };
 
 /**
- * Adds methods to the MindMapViewer component reference
- * @param mindMapRef React ref object for the mind map component
- * @param mindMapInstance Mind Elixir instance
+ * Extends the MindElixir instance with image support methods
+ * @param mindMapInstance The Mind Elixir instance to extend
  */
-export const extendMindMapWithImageSupport = (
-  mindMapRef: React.MutableRefObject<MindMapImageActions | null>,
-  mindMapInstance: any
-): void => {
-  if (!mindMapRef || !mindMapInstance) return;
+export const extendMindMapWithImageSupport = (mindMapInstance: any): void => {
+  if (!mindMapInstance) return;
   
-  mindMapRef.current = {
-    addImage: (imageData: string) => {
-      addImageToMindMap(mindMapInstance, imageData);
+  // Add custom method for image support
+  mindMapInstance.addImageToNode = (node: any, imageData: string) => {
+    if (!node) return null;
+    
+    // Create image HTML
+    const imageHTML = `
+      <div class="me-image-node">
+        <img src="${imageData}" style="max-width: 200px; max-height: 150px;" />
+      </div>
+    `;
+    
+    // Update node with image 
+    // If node already has HTML content, add the image to it
+    if (node.topicHTML) {
+      node.topicHTML += imageHTML;
+    } else {
+      // Store original text and add image
+      const originalText = node.topic || '';
+      node.topicHTML = `<div>${originalText}</div>${imageHTML}`;
     }
+    
+    // Trigger a node update event to refresh the UI
+    mindMapInstance.refresh();
+    
+    return node.id;
   };
 };

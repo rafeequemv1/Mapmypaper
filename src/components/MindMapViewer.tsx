@@ -55,7 +55,9 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
     mindElixir.init();
     
     // Extend with image support
-    extendMindMapWithImageSupport(mindElixir);
+    if (mindElixir) {
+      extendMindMapWithImageSupport(mindElixir);
+    }
     
     // Save to ref
     mindElixirRef.current = mindElixir;
@@ -65,7 +67,7 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
     }
 
     // Handle node selection
-    mindElixir.bus.addListener('select', (node: any) => {
+    mindElixir.bus.addListener('selectNode', (node: any) => {
       if (node && node.id) {
         setSelectedNodeId(node.id);
       }
@@ -78,8 +80,8 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
 
     return () => {
       if (mindElixirRef.current) {
-        // Clean up the mind map instance
-        mindElixirRef.current.removeEvents();
+        // Remove event listeners
+        mindElixirRef.current.bus.removeAllListeners();
         mindElixirRef.current = null;
       }
     };
@@ -89,26 +91,40 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
   useImperativeHandle(ref, () => ({
     scrollToNode: (nodeId: string) => {
       if (mindElixirRef.current) {
-        const node = mindElixirRef.current.selectNodeById(nodeId);
-        if (node) {
-          // Scroll to the node (additional logic could be added here)
-          node.focus();
+        // Find node by ID first
+        const nodes = mindElixirRef.current.getAllDataNodeRef();
+        const targetNode = nodes[nodeId];
+        
+        if (targetNode) {
+          // Select the node to focus on it
+          mindElixirRef.current.selectNode(targetNode);
         }
       }
     },
     addImage: (imageData: string) => {
       if (mindElixirRef.current) {
         // Get selected node or root node
+        const nodes = mindElixirRef.current.getAllDataNodeRef();
         const targetNode = selectedNodeId 
-          ? mindElixirRef.current.getNodeById(selectedNodeId) 
-          : mindElixirRef.current.getNodeById('root');
+          ? nodes[selectedNodeId] 
+          : nodes['root'];
         
-        if (targetNode && mindElixirRef.current.addImageToNode) {
-          mindElixirRef.current.addImageToNode(targetNode, imageData);
-          toast({
-            title: "Image Added",
-            description: "Figure has been added to the mind map",
-          });
+        if (targetNode && mindElixirRef.current) {
+          // Access our custom method from the extended instance
+          const customMindMap = mindElixirRef.current as any;
+          if (customMindMap.addImageToNode) {
+            customMindMap.addImageToNode(targetNode, imageData);
+            toast({
+              title: "Image Added",
+              description: "Figure has been added to the mind map",
+            });
+          } else {
+            toast({
+              title: "Cannot Add Image",
+              description: "Image support not properly initialized",
+              variant: "destructive",
+            });
+          }
         } else {
           toast({
             title: "Cannot Add Image",
@@ -123,7 +139,8 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
   // Handle node explanation request
   const handleExplainNode = () => {
     if (selectedNodeId && mindElixirRef.current && onExplainText) {
-      const node = mindElixirRef.current.getNodeById(selectedNodeId);
+      const nodes = mindElixirRef.current.getAllDataNodeRef();
+      const node = nodes[selectedNodeId];
       if (node && node.topic) {
         onExplainText(node.topic);
       }
@@ -133,31 +150,44 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
   // Context menu actions
   const handleCopy = () => {
     if (mindElixirRef.current && selectedNodeId) {
-      mindElixirRef.current.copyNode();
+      // Use the command API
+      mindElixirRef.current.execCommand('COPY');
     }
   };
 
   const handlePaste = () => {
     if (mindElixirRef.current && selectedNodeId) {
-      mindElixirRef.current.pasteNode();
+      // Use the command API
+      mindElixirRef.current.execCommand('PASTE');
     }
   };
 
   const handleDelete = () => {
     if (mindElixirRef.current && selectedNodeId) {
-      mindElixirRef.current.removeNode();
+      // Use the command API
+      mindElixirRef.current.execCommand('REMOVE_NODE');
     }
   };
 
   const handleAddChild = () => {
     if (mindElixirRef.current && selectedNodeId) {
-      mindElixirRef.current.insertSibling();
+      // Get the selected node reference
+      const nodes = mindElixirRef.current.getAllDataNodeRef();
+      const node = nodes[selectedNodeId];
+      if (node) {
+        mindElixirRef.current.insertNode(node, 'New Child');
+      }
     }
   };
 
   const handleAddSibling = () => {
     if (mindElixirRef.current && selectedNodeId) {
-      mindElixirRef.current.insertSibling();
+      // Get the selected node reference
+      const nodes = mindElixirRef.current.getAllDataNodeRef();
+      const node = nodes[selectedNodeId];
+      if (node) {
+        mindElixirRef.current.insertSiblingNode(node, 'New Sibling');
+      }
     }
   };
 
