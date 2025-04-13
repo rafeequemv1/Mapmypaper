@@ -1,12 +1,11 @@
 
-import React, { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
-import MarkMapViewer from "@/components/mindmap/MarkMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
-import { useMobileView } from "@/hooks/use-mobile";
-import { MindElixirInstance } from "mind-elixir";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { retrievePDF } from "@/utils/pdfStorage";
 
 interface PanelStructureProps {
@@ -14,13 +13,12 @@ interface PanelStructureProps {
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady: (mindMap: MindElixirInstance) => void;
+  onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
-  isMarkMapActive: boolean;
 }
 
-const PanelStructure: React.FC<PanelStructureProps> = ({
+const PanelStructure = ({
   showPdf,
   showChat,
   toggleChat,
@@ -28,81 +26,120 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
   onMindMapReady,
   explainText,
   onExplainText,
-  isMarkMapActive
-}) => {
-  const isMobile = useMobileView();
-  const [mindMap, setMindMap] = useState<MindElixirInstance | null>(null);
-  const [pdfData, setPdfData] = useState<string | null>(null);
+}: PanelStructureProps) => {
+  const isMapGenerated = true;
+  const pdfViewerRef = useRef(null);
+  const { toast } = useToast();
+  const [pdfKey, setPdfKey] = useState(Date.now());
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [loadingPdf, setLoadingPdf] = useState(true);
+  const [explainImage, setExplainImage] = useState<string | null>(null);
   
-  // Load PDF data when component mounts
+  // Check for PDF availability when component mounts
   useEffect(() => {
-    const loadPdfData = async () => {
-      const data = await retrievePDF();
-      setPdfData(data || null);
+    const checkPdfAvailability = async () => {
+      try {
+        console.log("Checking for PDF data in storage...");
+        setLoadingPdf(true);
+        
+        // Try to retrieve PDF from IndexedDB (which will also check session storage)
+        const pdfData = await retrievePDF();
+        
+        if (pdfData) {
+          console.log("Found PDF data in storage, length:", pdfData.length);
+          // Update the key to force component remount
+          setPdfKey(Date.now());
+          setPdfLoaded(true);
+          console.log("PDF refreshed to avoid cache issues");
+        } else {
+          console.log("No PDF data found in storage");
+          toast({
+            title: "No PDF Found",
+            description: "Please upload a PDF document first",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error checking PDF availability:", error);
+        toast({
+          title: "Error Loading PDF",
+          description: "There was a problem loading your PDF. Please try uploading it again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingPdf(false);
+      }
     };
     
-    loadPdfData();
-  }, []);
+    // Run check with a slight delay to ensure storage is checked after navigation
+    checkPdfAvailability();
+  }, [toast]);
   
-  // Handle mind map initialization
-  const handleMindMapReady = (mindMap: MindElixirInstance) => {
-    setMindMap(mindMap);
-    if (onMindMapReady) {
-      onMindMapReady(mindMap);
+  const handlePdfLoaded = () => {
+    console.log("PDF loaded successfully");
+    setPdfLoaded(true);
+  };
+  
+  const handleScrollToPdfPosition = (position: string) => {
+    if (pdfViewerRef.current) {
+      // @ts-ignore - we know this method exists
+      pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
     }
   };
   
-  // Determine layout based on visible panels
-  const numPanels = (showPdf ? 1 : 0) + (showChat ? 1 : 0) + 1; // Always show the mindmap
-  
+  const handleImageSelected = (imageData: string) => {
+    console.log("Image area selected in PDF, data length:", imageData.length);
+    setExplainImage(imageData);
+    
+    // Automatically open chat panel when an image is selected for explanation
+    if (!showChat) {
+      toggleChat();
+    }
+  };
+
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* PDF Panel */}
+    <div className="h-full w-full flex">
+      {/* PDF Panel - Fixed to 40% width */}
       {showPdf && (
-        <div className={`${numPanels === 3 ? 'w-1/3' : numPanels === 2 ? 'w-1/2' : 'w-full'} h-full border-r`}>
-          {pdfData ? (
+        <div className="h-full w-[40%] flex-shrink-0">
+          <TooltipProvider>
             <PdfViewer 
-              onExplainText={onExplainText}
+              key={pdfKey} // Add key to force remount when changed
+              ref={pdfViewerRef}
+              onTextSelected={onExplainText}
+              onImageSelected={handleImageSelected}
+              onPdfLoaded={handlePdfLoaded}
             />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-gray-500">No PDF loaded</p>
-            </div>
-          )}
+          </TooltipProvider>
         </div>
       )}
-      
-      {/* Mind Map Panel */}
-      <div className={`${numPanels === 3 ? 'w-1/3' : numPanels === 2 ? 'w-1/2' : 'w-full'} h-full relative`}>
-        {isMarkMapActive ? (
-          <MarkMapViewer mindMap={mindMap} />
-        ) : (
-          <MindMapViewer 
-            isMapGenerated={true} 
-            onMindMapReady={handleMindMapReady}
-            onExplainText={onExplainText}
-            onRequestOpenChat={toggleChat}
-          />
-        )}
-      </div>
-      
-      {/* Chat Panel - Desktop */}
-      {!isMobile && showChat && (
-        <div className={`${numPanels === 3 ? 'w-1/3' : numPanels === 2 ? 'w-1/2' : 'w-full'} h-full border-l`}>
-          <ChatPanel 
-            explainText={explainText} 
-            toggleChat={toggleChat}
-          />
-        </div>
-      )}
-      
-      {/* Mobile Chat Sheet */}
-      {isMobile && (
-        <MobileChatSheet 
-          explainText={explainText}
-          onScrollToPdfPosition={() => {}}
+
+      {/* Mind Map Panel - Takes up remaining space */}
+      <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
+        <MindMapViewer
+          isMapGenerated={isMapGenerated}
+          onMindMapReady={onMindMapReady}
+          onExplainText={onExplainText}
         />
+      </div>
+
+      {/* Chat Panel - Fixed to 30% width */}
+      {showChat && (
+        <div className="h-full w-[30%] flex-shrink-0">
+          <ChatPanel
+            toggleChat={toggleChat}
+            explainText={explainText}
+            explainImage={explainImage}
+            onExplainText={onExplainText}
+            onScrollToPdfPosition={handleScrollToPdfPosition}
+          />
+        </div>
       )}
+
+      {/* Mobile Chat Sheet */}
+      <MobileChatSheet 
+        onScrollToPdfPosition={handleScrollToPdfPosition}
+      />
     </div>
   );
 };
