@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import MindElixir, { type MindElixirInstance } from "mind-elixir";
-import { MindMapImageActions, extendMindMapWithImageSupport } from "./mindmap/MindMapImageSupport";
+import { MindMapImageActions, extendMindMapWithImageSupport, addImageToMindMap } from "./mindmap/MindMapImageSupport";
 import "../styles/mind-map-image.css";
 import MindMapContextMenu from "./mindmap/MindMapContextMenu";
 import { useToast } from "@/hooks/use-toast";
@@ -31,17 +31,32 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Create a default node structure
+    const defaultData = {
+      nodeData: {
+        id: 'root',
+        topic: 'Paper Structure',
+        root: true,
+        children: []
+      }
+    };
+
+    // Get data from session storage or use default
+    let data = defaultData;
+    try {
+      const storedData = sessionStorage.getItem('mindMapData');
+      if (storedData) {
+        data = JSON.parse(storedData);
+      }
+    } catch (error) {
+      console.error("Error parsing mind map data:", error);
+      // Continue with default data on error
+    }
+
     const options = {
       el: containerRef.current,
       direction: MindElixir.SIDE,
-      data: {
-        nodeData: {
-          id: 'root',
-          topic: 'Paper Structure',
-          root: true,
-          children: []
-        }
-      },
+      data: data,
       draggable: true,
       contextMenu: false, // Disable default context menu as we're using our own
       allowUndo: true,
@@ -81,7 +96,8 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
     return () => {
       if (mindElixirRef.current) {
         // Remove event listeners
-        mindElixirRef.current.bus.removeAllListeners();
+        mindElixirRef.current.bus.removeListener('selectNode', () => {});
+        mindElixirRef.current.bus.removeListener('unselectNode', () => {});
         mindElixirRef.current = null;
       }
     };
@@ -91,9 +107,8 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
   useImperativeHandle(ref, () => ({
     scrollToNode: (nodeId: string) => {
       if (mindElixirRef.current) {
-        // Find node by ID first
-        const nodes = mindElixirRef.current.getAllDataNodeRef();
-        const targetNode = nodes[nodeId];
+        // Find node by ID
+        const targetNode = mindElixirRef.current.nodeData.find((node: any) => node.id === nodeId);
         
         if (targetNode) {
           // Select the node to focus on it
@@ -104,27 +119,17 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
     addImage: (imageData: string) => {
       if (mindElixirRef.current) {
         // Get selected node or root node
-        const nodes = mindElixirRef.current.getAllDataNodeRef();
         const targetNode = selectedNodeId 
-          ? nodes[selectedNodeId] 
-          : nodes['root'];
+          ? mindElixirRef.current.nodeData.find((node: any) => node.id === selectedNodeId)
+          : mindElixirRef.current.nodeData.find((node: any) => node.id === 'root');
         
         if (targetNode && mindElixirRef.current) {
-          // Access our custom method from the extended instance
-          const customMindMap = mindElixirRef.current as any;
-          if (customMindMap.addImageToNode) {
-            customMindMap.addImageToNode(targetNode, imageData);
-            toast({
-              title: "Image Added",
-              description: "Figure has been added to the mind map",
-            });
-          } else {
-            toast({
-              title: "Cannot Add Image",
-              description: "Image support not properly initialized",
-              variant: "destructive",
-            });
-          }
+          // Use the custom method from MindMapImageSupport.ts
+          addImageToMindMap(mindElixirRef.current, imageData);
+          toast({
+            title: "Image Added",
+            description: "Figure has been added to the mind map",
+          });
         } else {
           toast({
             title: "Cannot Add Image",
@@ -139,8 +144,7 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
   // Handle node explanation request
   const handleExplainNode = () => {
     if (selectedNodeId && mindElixirRef.current && onExplainText) {
-      const nodes = mindElixirRef.current.getAllDataNodeRef();
-      const node = nodes[selectedNodeId];
+      const node = mindElixirRef.current.nodeData.find((node: any) => node.id === selectedNodeId);
       if (node && node.topic) {
         onExplainText(node.topic);
       }
@@ -150,32 +154,28 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
   // Context menu actions
   const handleCopy = () => {
     if (mindElixirRef.current && selectedNodeId) {
-      // Use the command API
-      mindElixirRef.current.execCommand('COPY');
+      mindElixirRef.current.copyNode();
     }
   };
 
   const handlePaste = () => {
     if (mindElixirRef.current && selectedNodeId) {
-      // Use the command API
-      mindElixirRef.current.execCommand('PASTE');
+      mindElixirRef.current.paste();
     }
   };
 
   const handleDelete = () => {
     if (mindElixirRef.current && selectedNodeId) {
-      // Use the command API
-      mindElixirRef.current.execCommand('REMOVE_NODE');
+      mindElixirRef.current.removeNode();
     }
   };
 
   const handleAddChild = () => {
     if (mindElixirRef.current && selectedNodeId) {
       // Get the selected node reference
-      const nodes = mindElixirRef.current.getAllDataNodeRef();
-      const node = nodes[selectedNodeId];
+      const node = mindElixirRef.current.nodeData.find((node: any) => node.id === selectedNodeId);
       if (node) {
-        mindElixirRef.current.insertNode(node, 'New Child');
+        mindElixirRef.current.addChild('New Child');
       }
     }
   };
@@ -183,10 +183,9 @@ const MindMapViewer = forwardRef<MindMapViewerHandle, MindMapViewerProps>(({
   const handleAddSibling = () => {
     if (mindElixirRef.current && selectedNodeId) {
       // Get the selected node reference
-      const nodes = mindElixirRef.current.getAllDataNodeRef();
-      const node = nodes[selectedNodeId];
+      const node = mindElixirRef.current.nodeData.find((node: any) => node.id === selectedNodeId);
       if (node) {
-        mindElixirRef.current.insertSiblingNode(node, 'New Sibling');
+        mindElixirRef.current.insertSibling(node, 'New Sibling');
       }
     }
   };
