@@ -3,6 +3,7 @@
  * Extension for Mind Elixir to add image support
  * This utility file provides functions to add images to mind map nodes
  */
+import { MindElixirInstance, NodeObj } from "mind-elixir";
 
 export interface MindMapImageActions {
   addImage: (imageData: string) => void;
@@ -14,15 +15,17 @@ export interface MindMapImageActions {
  * @param imageData Base64 image data
  * @returns The created node ID
  */
-export const addImageToMindMap = (mindMap: any, imageData: string): string | null => {
+export const addImageToMindMap = (mindMap: MindElixirInstance, imageData: string): string | null => {
   if (!mindMap) return null;
   
   try {
     // Get the currently selected node or root node
-    const selectedNode = mindMap.getActiveNode() || 
-                         mindMap.nodeData.find((node: any) => node.id === 'root');
+    const activeNode = mindMap.getActiveNode();
     
-    if (!selectedNode) {
+    // If no active node, use the root node
+    const targetNode = activeNode || mindMap.getRootNode();
+    
+    if (!targetNode) {
       console.error("No node selected and root not available");
       return null;
     }
@@ -35,22 +38,44 @@ export const addImageToMindMap = (mindMap: any, imageData: string): string | nul
       </div>
     `;
     
-    // Add the node using standard Mind Elixir API
-    mindMap.addChild('Figure');
+    // Get target node ID
+    const parentId = targetNode.id;
     
-    // Get the newly created node and update it with our HTML
-    const nodes = mindMap.nodeData;
-    const lastAddedNode = nodes[nodes.length - 1]; // Usually the last added node
+    // Add the child node
+    mindMap.addChild('Figure', parentId);
+    
+    // Get the newly created node
+    const allNodes = mindMap.getAllDataList();
+    // Find the node we just created (usually the last child of the parent)
+    const children = targetNode.children || [];
+    let lastAddedNode = null;
+    
+    if (children.length > 0) {
+      const lastChildId = children[children.length - 1].id;
+      lastAddedNode = allNodes.find((node: NodeObj) => node.id === lastChildId);
+    }
     
     if (lastAddedNode) {
-      lastAddedNode.id = nodeId;
-      lastAddedNode.topicHTML = nodeTopicHTML;
+      // We need to update the node properties
+      // This approach varies depending on Mind Elixir version
+      // First try to update using the updateNodeStyle method
+      try {
+        mindMap.updateNodeStyle(lastAddedNode.id, {
+          id: nodeId,
+          topicHTML: nodeTopicHTML,
+        });
+      } catch (e) {
+        // Fallback: manually update the node properties
+        lastAddedNode.id = nodeId;
+        lastAddedNode.topicHTML = nodeTopicHTML;
+      }
       
       // Refresh to apply changes
       mindMap.refresh();
+      return nodeId;
     }
     
-    return nodeId;
+    return null;
   } catch (error) {
     console.error("Error adding image to mind map:", error);
     return null;
@@ -61,14 +86,14 @@ export const addImageToMindMap = (mindMap: any, imageData: string): string | nul
  * Extends the MindElixir instance with image support methods
  * @param mindMapInstance The Mind Elixir instance to extend
  */
-export const extendMindMapWithImageSupport = (mindMapInstance: any): void => {
+export const extendMindMapWithImageSupport = (mindMapInstance: MindElixirInstance): void => {
   if (!mindMapInstance) return;
   
   // We'll use MindElixir's native API and only add custom methods if needed
   // This approach avoids type errors with the official API
   
   // Example of extending with a custom method if needed:
-  mindMapInstance.addImageToSelectedNode = (imageData: string) => {
+  (mindMapInstance as any).addImageToSelectedNode = (imageData: string) => {
     return addImageToMindMap(mindMapInstance, imageData);
   };
 };
