@@ -177,7 +177,6 @@ const PanelStructure = ({
             <PdfViewer 
               key={pdfKey}
               ref={pdfViewerRef}
-              onTextSelected={onExplainText}
               onImageSelected={handleImageSelected}
               onPdfLoaded={handlePdfLoaded}
             />
@@ -189,10 +188,16 @@ const PanelStructure = ({
       <div className="h-full" style={{ width: getMindMapPanelWidth() }}>
         <div className="h-full relative">
           <MindMapViewer
-            ref={mindMapRef}
             isMapGenerated={isMapGenerated}
-            onMindMapReady={onMindMapReady}
-            onExplainText={onExplainText}
+            onMindMapReady={(instance: any) => {
+              onMindMapReady(instance);
+              mindMapRef.current = { addImage: (imageData: string) => {
+                if (instance) {
+                  // Logic to add image to mind map would be here
+                  console.log("Adding image to mind map");
+                }
+              }};
+            }}
           />
           
           {/* Figures toggle button */}
