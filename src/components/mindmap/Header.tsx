@@ -8,8 +8,7 @@ import {
   Image,
   FileJson,
   Upload,
-  FileIcon,
-  GitBranch
+  FileIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +27,6 @@ interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
@@ -38,7 +36,6 @@ const Header = ({
   togglePdf, 
   toggleChat, 
   setShowSummary,
-  setShowFlowchart,
   isPdfActive,
   isChatActive,
   mindMap
@@ -174,15 +171,6 @@ const Header = ({
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            onClick={() => setShowFlowchart(true)} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <GitBranch className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Flowchart</span>
           </Button>
         </div>
         

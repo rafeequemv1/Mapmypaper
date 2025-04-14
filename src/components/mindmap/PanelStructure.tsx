@@ -4,13 +4,10 @@ import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
-import ExtractedFiguresPanel from "@/components/mindmap/ExtractedFiguresPanel";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { retrievePDF } from "@/utils/pdfStorage";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
-import { Images } from "lucide-react";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -39,11 +36,8 @@ const PanelStructure = ({
   const [loadingPdf, setLoadingPdf] = useState(true);
   const [explainImage, setExplainImage] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const [showFigures, setShowFigures] = useState(false);
-  const [extractedFigures, setExtractedFigures] = useState<{ imageData: string; pageNumber: number }[]>([]);
-  const mindMapRef = useRef<any>(null);
   
-  // Check for PDF availability and extract figures when component mounts
+  // Check for PDF availability when component mounts
   useEffect(() => {
     const checkPdfAvailability = async () => {
       try {
@@ -59,13 +53,6 @@ const PanelStructure = ({
           setPdfKey(Date.now());
           setPdfLoaded(true);
           console.log("PDF refreshed to avoid cache issues");
-          
-          // Check if figures are already stored in session storage
-          const storedFigures = sessionStorage.getItem('extractedFigures');
-          if (storedFigures) {
-            setExtractedFigures(JSON.parse(storedFigures));
-            console.log("Loaded extracted figures from session storage");
-          }
         } else {
           console.log("No PDF data found in storage");
           toast({
@@ -112,71 +99,16 @@ const PanelStructure = ({
     }
   };
 
-  const handleAddImageToMindMap = (imageData: string) => {
-    if (mindMapRef.current && mindMapRef.current.addImage) {
-      mindMapRef.current.addImage(imageData);
-      toast({
-        title: "Image Added",
-        description: "Figure has been added to the mind map",
-      });
-    } else {
-      toast({
-        title: "Cannot Add Image",
-        description: "Mind map is not ready or does not support images",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const toggleFiguresPanel = () => {
-    setShowFigures(!showFigures);
-  };
-
-  // Calculate the width for each panel based on what's visible
-  const getPdfPanelWidth = () => {
-    if (!showPdf) return "0%";
-    if (showChat) {
-      if (showFigures) return "30%";
-      return "40%";
-    }
-    if (showFigures) return "40%";
-    return "40%";
-  };
-
-  const getMindMapPanelWidth = () => {
-    if (showPdf) {
-      if (showChat) {
-        if (showFigures) return "20%";
-        return "30%";
-      }
-      if (showFigures) return "30%";
-      return "60%";
-    }
-    if (showChat) {
-      if (showFigures) return "40%";
-      return "70%";
-    }
-    if (showFigures) return "70%";
-    return "100%";
-  };
-
-  const getChatPanelWidth = () => {
-    return showChat ? "30%" : "0%";
-  };
-
-  const getFiguresPanelWidth = () => {
-    return showFigures ? "20%" : "0%";
-  };
-
   return (
     <div className="h-full w-full flex">
-      {/* PDF Panel */}
+      {/* PDF Panel - Fixed to 40% width */}
       {showPdf && (
-        <div className="h-full" style={{ width: getPdfPanelWidth(), flexShrink: 0 }}>
+        <div className="h-full w-[40%] flex-shrink-0">
           <TooltipProvider>
             <PdfViewer 
-              key={pdfKey}
+              key={pdfKey} // Add key to force remount when changed
               ref={pdfViewerRef}
+              onTextSelected={onExplainText}
               onImageSelected={handleImageSelected}
               onPdfLoaded={handlePdfLoaded}
             />
@@ -184,48 +116,18 @@ const PanelStructure = ({
         </div>
       )}
 
-      {/* Mind Map Panel */}
-      <div className="h-full" style={{ width: getMindMapPanelWidth() }}>
-        <div className="h-full relative">
-          <MindMapViewer
-            isMapGenerated={isMapGenerated}
-            onMindMapReady={(instance: any) => {
-              onMindMapReady(instance);
-              mindMapRef.current = { addImage: (imageData: string) => {
-                if (instance) {
-                  // Logic to add image to mind map would be here
-                  console.log("Adding image to mind map");
-                }
-              }};
-            }}
-          />
-          
-          {/* Figures toggle button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="absolute top-2 right-2 z-10"
-            onClick={toggleFiguresPanel}
-          >
-            <Images className="h-4 w-4 mr-1" />
-            {showFigures ? "Hide Figures" : "Show Figures"}
-          </Button>
-        </div>
+      {/* Mind Map Panel - Takes up remaining space */}
+      <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
+        <MindMapViewer
+          isMapGenerated={isMapGenerated}
+          onMindMapReady={onMindMapReady}
+          onExplainText={onExplainText}
+        />
       </div>
 
-      {/* Extracted Figures Panel */}
-      {showFigures && (
-        <div className="h-full border-l" style={{ width: getFiguresPanelWidth(), flexShrink: 0 }}>
-          <ExtractedFiguresPanel 
-            figures={extractedFigures} 
-            onAddToMindMap={handleAddImageToMindMap} 
-          />
-        </div>
-      )}
-
-      {/* Chat Panel */}
+      {/* Chat Panel - Fixed to 30% width */}
       {showChat && (
-        <div className="h-full border-l" style={{ width: getChatPanelWidth(), flexShrink: 0 }}>
+        <div className="h-full w-[30%] flex-shrink-0">
           <ChatPanel
             toggleChat={toggleChat}
             explainText={explainText}

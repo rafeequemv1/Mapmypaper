@@ -1,3 +1,4 @@
+
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 
@@ -50,18 +51,8 @@ export async function extractImagesFromPdf(pdfData: string): Promise<string[]> {
             // Get image object data
             const imgData = await extractImageDataFromPage(page, imgName);
             if (imgData) {
-              // Filter out small images that are likely icons or logos
-              const img = new Image();
-              img.src = imgData;
-              await new Promise((resolve) => {
-                img.onload = resolve;
-              });
-              
-              // Only keep images larger than 100x100 pixels
-              if (img.width > 100 && img.height > 100) {
-                imagesList.push(imgData);
-                console.log(`Extracted figure from page ${pageNum}, size: ${img.width}x${img.height}`);
-              }
+              imagesList.push(imgData);
+              console.log(`Extracted image from page ${pageNum}`);
             }
           } catch (err) {
             console.error(`Error extracting image from page ${pageNum}:`, err);
@@ -70,7 +61,7 @@ export async function extractImagesFromPdf(pdfData: string): Promise<string[]> {
       }
     }
     
-    console.log(`Total figures extracted: ${imagesList.length}`);
+    console.log(`Total images extracted: ${imagesList.length}`);
     return imagesList;
   } catch (error) {
     console.error("Error extracting images from PDF:", error);
@@ -142,11 +133,11 @@ async function extractImageDataFromPage(page: PDFPageProxy, imgName: string): Pr
 }
 
 /**
- * Render pages to extract figures more reliably
+ * Alternative approach to extract images using a simpler method
  * @param pdfData Base64 string of PDF data
  * @returns Promise resolving to array of image data URLs
  */
-export async function extractFiguresFromPdf(pdfData: string): Promise<{imageData: string, pageNumber: number}[]> {
+export async function extractImagesSimple(pdfData: string): Promise<string[]> {
   try {
     // Convert base64 to array buffer
     const binaryString = window.atob(pdfData.replace(/^data:application\/pdf;base64,/, ''));
@@ -161,10 +152,10 @@ export async function extractFiguresFromPdf(pdfData: string): Promise<{imageData
     const loadingTask = pdfjsLib.getDocument({ data: bytes.buffer });
     const pdf = await loadingTask.promise;
     
-    const figures: {imageData: string, pageNumber: number}[] = [];
+    const images: string[] = [];
     
-    // Process each page to render and extract figures
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    // Process each page to render as image
+    for (let pageNum = 1; pageNum <= Math.min(pdf.numPages, 10); pageNum++) {
       const page = await pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: 1.5 });
       
@@ -184,14 +175,12 @@ export async function extractFiguresFromPdf(pdfData: string): Promise<{imageData
       
       // Get image data URL from canvas
       const imageData = canvas.toDataURL('image/png');
-      
-      // Add to figures array with page number
-      figures.push({ imageData, pageNumber: pageNum });
+      images.push(imageData);
     }
     
-    return figures;
+    return images;
   } catch (error) {
-    console.error("Error in extracting figures:", error);
+    console.error("Error in simple image extraction:", error);
     return [];
   }
 }

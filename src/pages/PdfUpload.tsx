@@ -1,11 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Upload, ExternalLink, Images } from "lucide-react";
+import { Upload, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { generateMindMapFromText } from "@/services/geminiService";
 import PaperLogo from "@/components/PaperLogo";
 import { Separator } from "@/components/ui/separator";
@@ -13,22 +11,17 @@ import { storePDF } from "@/utils/pdfStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import UserMenu from "@/components/UserMenu";
 import { trackPdfUpload, trackFeatureUsage, trackMindMapGeneration, trackEvent } from "@/utils/analytics";
-import { extractFiguresFromPdf } from "@/utils/pdfImageExtractor";
 
 const PdfUpload = () => {
-  
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pdfSize, setPdfSize] = useState<number>(0);
-  const [extractFigures, setExtractFigures] = useState<boolean>(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user } = useAuth();
-
-  
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -52,7 +45,7 @@ const PdfUpload = () => {
       } else {
         toast({
           title: "Invalid file type",
-          description: "Please upload a PDF document",
+          description: "Please upload a PDF file",
           variant: "destructive",
         });
       }
@@ -123,7 +116,7 @@ const PdfUpload = () => {
     
     toast({
       title: "Processing PDF",
-      description: `Extracting ${extractFigures ? "text, figures" : "text"} and generating mind map...`,
+      description: "Extracting text and generating mind map...",
     });
 
     try {
@@ -181,32 +174,6 @@ const PdfUpload = () => {
       // Store the generated mind map data in sessionStorage
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
       
-      // If figure extraction is enabled, extract and store them
-      if (extractFigures) {
-        toast({
-          title: "Extracting Figures",
-          description: "This may take a moment for larger documents...",
-        });
-        
-        console.log("Extracting figures from PDF...");
-        const figures = await extractFiguresFromPdf(base64data);
-        
-        if (figures && figures.length > 0) {
-          console.log(`Extracted ${figures.length} figures from PDF`);
-          sessionStorage.setItem('extractedFigures', JSON.stringify(figures));
-          toast({
-            title: "Figures Extracted",
-            description: `Successfully extracted ${figures.length} figures from the PDF`,
-          });
-        } else {
-          console.log("No figures found in the PDF");
-          sessionStorage.removeItem('extractedFigures');
-        }
-      } else {
-        // Clean up any previously stored figures
-        sessionStorage.removeItem('extractedFigures');
-      }
-      
       // Track successful mind map generation
       trackMindMapGeneration(selectedFile.name);
       
@@ -234,11 +201,11 @@ const PdfUpload = () => {
       });
       setIsProcessing(false);
     }
-  }, [selectedFile, navigate, toast, user, extractFigures]);
+  }, [selectedFile, navigate, toast, user]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
-      
+      {/* Header */}
       <header className="w-full bg-white shadow-sm py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -311,22 +278,6 @@ const PdfUpload = () => {
               </div>
             </div>
           )}
-          
-          {/* Extract Figures Option */}
-          <div className="flex items-center space-x-2 mb-4">
-            <Checkbox 
-              id="extractFigures" 
-              checked={extractFigures} 
-              onCheckedChange={(checked) => setExtractFigures(checked as boolean)}
-            />
-            <Label 
-              htmlFor="extractFigures" 
-              className="flex items-center cursor-pointer"
-            >
-              <Images className="h-4 w-4 mr-1" />
-              Extract figures from PDF
-            </Label>
-          </div>
           
           {/* Generate Button */}
           <Button 
