@@ -1,6 +1,7 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfViewer from "@/components/PdfViewer";
-import MindMapViewer, { type MindMapViewerHandle } from "@/components/MindMapViewer";
+import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import ExtractedFiguresPanel from "@/components/mindmap/ExtractedFiguresPanel";
@@ -10,14 +11,13 @@ import { retrievePDF } from "@/utils/pdfStorage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Images } from "lucide-react";
-import { MindElixirInstance } from "mind-elixir";
 
 interface PanelStructureProps {
   showPdf: boolean;
   showChat: boolean;
   toggleChat: () => void;
   togglePdf: () => void;
-  onMindMapReady: (mindMap: MindElixirInstance) => void;
+  onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
 }
@@ -41,7 +41,7 @@ const PanelStructure = ({
   const isMobile = useIsMobile();
   const [showFigures, setShowFigures] = useState(false);
   const [extractedFigures, setExtractedFigures] = useState<{ imageData: string; pageNumber: number }[]>([]);
-  const mindMapRef = useRef<MindMapViewerHandle>(null);
+  const mindMapRef = useRef<any>(null);
   
   // Check for PDF availability and extract figures when component mounts
   useEffect(() => {
@@ -188,10 +188,16 @@ const PanelStructure = ({
       <div className="h-full" style={{ width: getMindMapPanelWidth() }}>
         <div className="h-full relative">
           <MindMapViewer
-            ref={mindMapRef}
             isMapGenerated={isMapGenerated}
-            onMindMapReady={onMindMapReady}
-            onExplainText={onExplainText}
+            onMindMapReady={(instance: any) => {
+              onMindMapReady(instance);
+              mindMapRef.current = { addImage: (imageData: string) => {
+                if (instance) {
+                  // Logic to add image to mind map would be here
+                  console.log("Adding image to mind map");
+                }
+              }};
+            }}
           />
           
           {/* Figures toggle button */}
