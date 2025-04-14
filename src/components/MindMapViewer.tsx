@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -681,8 +682,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           // Apply the scale with a slight delay to ensure everything is loaded
           setTimeout(() => {
             // Use type assertion to access the methods that exist at runtime but aren't in the TypeScript type
-            (mind as any).scaleMap(0.4); // Reduced from 0.75 to 0.4
-            (mind as any).move2Center();
+            (mind as any).scale(0.4); // Use scale method instead of scaleMap
+            (mind as any).toCenter(); // Use toCenter method instead of move2Center
           }, 200);
         }
       }, 300);
@@ -696,4 +697,46 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   // Function to generate summaries for nodes and their children
-  const generateNodeSummary = (nodeData:
+  const generateNodeSummary = (nodeData: any) => {
+    // Implementation for generating node summary
+    console.log("Generate summary for node:", nodeData);
+    
+    // Show a toast notification to inform users about the summary generation
+    toast({
+      title: "Summary Generation",
+      description: "This feature is under development.",
+      duration: 3000,
+    });
+  };
+
+  return (
+    <div 
+      ref={containerRef} 
+      className="w-full h-full flex justify-center items-center bg-white/80 rounded-lg overflow-hidden shadow-sm"
+    >
+      {!isReady && (
+        <div className="flex flex-col items-center justify-center p-8">
+          <span className="loader"></span>
+          <p className="mt-4 text-center text-gray-600">Loading your mind map...</p>
+        </div>
+      )}
+      
+      {showSummary && summary && (
+        <div className="absolute bottom-4 right-4 p-4 bg-white rounded-lg shadow-lg z-50 max-w-md">
+          <h3 className="text-lg font-semibold mb-2">Summary</h3>
+          <p className="text-sm text-gray-700">{summary}</p>
+          <Button 
+            variant="outline" 
+            className="mt-2" 
+            size="sm"
+            onClick={() => setShowSummary(false)}
+          >
+            Close
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
