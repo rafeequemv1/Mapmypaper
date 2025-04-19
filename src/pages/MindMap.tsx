@@ -8,7 +8,7 @@ import { retrievePDF } from "@/utils/pdfStorage";
 import { Loader } from "lucide-react";
 
 const MindMap = () => {
-  const [showPdf, setShowPdf] = useState(true); // Always show PDF by default
+  const [showPdf, setShowPdf] = useState(true);
   const [pdfAvailable, setPdfAvailable] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSummary, setShowSummary] = useState(false);

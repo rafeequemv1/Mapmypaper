@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
@@ -34,9 +33,10 @@ const PanelStructure = ({
   const [pdfKey, setPdfKey] = useState(Date.now());
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(true);
-  const [explainImage, setExplainImage] = useState<string | null>(null);
   const isMobile = useIsMobile();
   
+  // Removed explainImage state and related methods
+
   // Check for PDF availability when component mounts
   useEffect(() => {
     const checkPdfAvailability = async () => {
@@ -88,16 +88,6 @@ const PanelStructure = ({
       pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
     }
   };
-  
-  const handleImageSelected = (imageData: string) => {
-    console.log("Image area selected in PDF, data length:", imageData.length);
-    setExplainImage(imageData);
-    
-    // Automatically open chat panel when an image is selected for explanation
-    if (!showChat) {
-      toggleChat();
-    }
-  };
 
   return (
     <div className="h-full w-full flex">
@@ -106,17 +96,16 @@ const PanelStructure = ({
         <div className="h-full w-[40%] flex-shrink-0">
           <TooltipProvider>
             <PdfViewer 
-              key={pdfKey} // Add key to force remount when changed
+              key={pdfKey}
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
-              onImageSelected={handleImageSelected}
-              onPdfLoaded={handlePdfLoaded}
+              onPdfLoaded={() => setPdfLoaded(true)}
             />
           </TooltipProvider>
         </div>
       )}
 
-      {/* Mind Map Panel - Takes up remaining space */}
+      {/* Remaining code stays the same */}
       <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
         <MindMapViewer
           isMapGenerated={isMapGenerated}
@@ -125,15 +114,12 @@ const PanelStructure = ({
         />
       </div>
 
-      {/* Chat Panel - Fixed to 30% width */}
       {showChat && (
         <div className="h-full w-[30%] flex-shrink-0">
           <ChatPanel
             toggleChat={toggleChat}
             explainText={explainText}
-            explainImage={explainImage}
             onExplainText={onExplainText}
-            onScrollToPdfPosition={handleScrollToPdfPosition}
           />
         </div>
       )}

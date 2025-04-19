@@ -1,247 +1,33 @@
-import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Loader2, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { generateMindMapChatResponse } from "@/services/geminiService";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
-import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
-import { getWelcomeMessage, getContextualQuestions } from "@/utils/chatExampleQuestions";
+import { useAuth } from "@/contexts/AuthContext";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { generateUniqueId } from "@/lib/utils";
+import { trackMindMapChatInteraction } from "@/utils/analytics";
 
 interface ChatPanelProps {
   toggleChat: () => void;
-  explainText?: string;
-  explainImage?: string;
-  onScrollToPdfPosition?: (position: string) => void;
-  onExplainText?: (text: string) => void;
+  explainText: string;
+  onExplainText: (text: string) => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText, onExplainText }: ChatPanelProps) => {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
-    { role: 'assistant', content: getWelcomeMessage(), isHtml: true }
-  ]);
-  const [inputValue, setInputValue] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
-  const [processingExplainText, setProcessingExplainText] = useState(false);
-  const [processingExplainImage, setProcessingExplainImage] = useState(false);
-  const [contextQuestions, setContextQuestions] = useState<string[]>([]);
-  
-  // Initial load of contextual questions
-  useEffect(() => {
-    // Get contextual questions based on document content
-    setContextQuestions(getContextualQuestions());
-  }, []);
-  
-  useEffect(() => {
-    // Scroll to bottom when messages change
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
-    }
-  }, [messages]);
+  const { user } = useAuth();
 
-  // Process text to explain when it changes
-  useEffect(() => {
-    const processExplainText = async () => {
-      if (explainText && !processingExplainText) {
-        setProcessingExplainText(true);
-        
-        // Add user message with the selected text
-        setMessages(prev => [...prev, { role: 'user', content: `Please explain this text in detail with page citations: "${explainText}"` }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          // Enhanced prompt to encourage complete sentences and page citations
-          const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
-          );
-          
-          // Hide typing indicator and add AI response with formatting
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: formatAIResponse(response),
-              isHtml: true 
-            }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Chat error:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error explaining that. Please try again." 
-            }
-          ]);
-          
-          toast({
-            title: "Explanation Error",
-            description: "Failed to get an explanation from the AI.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingExplainText(false);
-        }
-      }
-    };
-    
-    processExplainText();
-  }, [explainText, toast]);
-
-  // Process image to explain when it changes
-  useEffect(() => {
-    const processExplainImage = async () => {
-      if (explainImage && !processingExplainImage) {
-        console.log("ChatPanel: Starting image processing", {
-          imageDataLength: explainImage.length,
-          isDataUrl: explainImage.startsWith('data:image/')
-        });
-        
-        setProcessingExplainImage(true);
-        
-        // Add user message with the selected area image
-        setMessages(prev => [...prev, { 
-          role: 'user', 
-          content: "Please explain this selected area from the document:", 
-          image: explainImage 
-        }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          console.log("ChatPanel: Calling Gemini API for image analysis");
-          // Call enhanced Gemini API with the image
-          const response = await analyzeImageWithGemini(explainImage);
-          
-          console.log("ChatPanel: Received Gemini API response", {
-            responseLength: response.length,
-            preview: response.substring(0, 50) + "..."
-          });
-          
-          // Hide typing indicator and add AI response with formatting
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: formatAIResponse(response),
-              isHtml: true 
-            }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Image analysis error:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error analyzing that image. Please try again." 
-            }
-          ]);
-          
-          toast({
-            title: "Image Analysis Error",
-            description: "Failed to analyze the selected area.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingExplainImage(false);
-        }
-      }
-    };
-    
-    processExplainImage();
-  }, [explainImage, toast]);
-
-  // Activate citations in messages when they are rendered
-  useEffect(() => {
-    // Use a longer timeout to ensure the DOM is fully rendered
-    const activationTimeout = setTimeout(() => {
-      const messageContainers = document.querySelectorAll('.ai-message-content');
-      
-      messageContainers.forEach(container => {
-        activateCitations(container as HTMLElement, (citation) => {
-          console.log("Desktop Citation clicked:", citation);
-          if (onScrollToPdfPosition) {
-            // Directly invoke the scroll function with sufficient delay to ensure proper handling
-            onScrollToPdfPosition(citation);
-          }
-        });
-      });
-    }, 200); // Increased timeout for more reliable activation
-    
-    return () => clearTimeout(activationTimeout);
-  }, [messages, onScrollToPdfPosition]);
-
-  // Add a function to handle clicking on example questions
-  const handleExampleQuestionClick = (question: string) => {
-    setInputValue(question);
-    // Focus the textarea
-    const textarea = document.querySelector(".chat-input") as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.focus();
-    }
+  const handleCloseChat = () => {
+    toggleChat();
   };
 
-  const handleSendMessage = async () => {
-    if (inputValue.trim()) {
-      // Add user message
-      const userMessage = inputValue.trim();
-      setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-      
-      // Clear input
-      setInputValue('');
-      
-      // Show typing indicator
-      setIsTyping(true);
-      
-      try {
-        // Use the enhanced research-focused prompt from geminiService
-        const response = await chatWithGeminiAboutPdf(userMessage);
-        
-        // Hide typing indicator and add AI response with enhanced formatting
-        setIsTyping(false);
-        setMessages(prev => [
-          ...prev, 
-          { 
-            role: 'assistant', 
-            content: formatAIResponse(response),
-            isHtml: true 
-          }
-        ]);
-      } catch (error) {
-        // Handle errors
-        setIsTyping(false);
-        console.error("Chat error:", error);
-        setMessages(prev => [
-          ...prev, 
-          { 
-            role: 'assistant', 
-            content: "Sorry, I encountered an error. Please try again." 
-          }
-        ]);
-        
-        toast({
-          title: "Chat Error",
-          description: "Failed to get a response from the AI.",
-          variant: "destructive"
-        });
-      }
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputMessage(e.target.value);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -251,148 +37,128 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
     }
   };
 
-  const copyToClipboard = (text: string, messageId: number) => {
-    // Strip HTML tags for copying plain text
-    const plainText = text.replace(/<[^>]*>?/gm, '');
-    
-    navigator.clipboard.writeText(plainText).then(() => {
-      setCopiedMessageId(messageId);
+  const handleSendMessage = useCallback(async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const newMessage = {
+      id: generateUniqueId(),
+      text: inputMessage,
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      const aiResponse = await generateMindMapChatResponse(inputMessage);
       
+      const aiMessage = {
+        id: generateUniqueId(),
+        text: aiResponse,
+        sender: 'ai',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+      
+      trackMindMapChatInteraction('user_message');
+    } catch (error) {
+      console.error('Error generating chat response:', error);
       toast({
-        title: "Copied to clipboard",
-        description: "Message content has been copied",
-        duration: 2000,
-      });
-      
-      // Reset the copied icon after 2 seconds
-      setTimeout(() => {
-        setCopiedMessageId(null);
-      }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy text: ', err);
-      
-      toast({
-        title: "Copy failed",
-        description: "Could not copy to clipboard",
+        title: "Error",
+        description: "Failed to generate response. Please try again.",
         variant: "destructive"
       });
-    });
-  };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [inputMessage, isLoading, toast]);
+
+  useEffect(() => {
+    if (explainText) {
+      const newMessage = {
+        id: generateUniqueId(),
+        text: `Explain this text: "${explainText}"`,
+        sender: 'user',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+      
+      const explainTextMessage = async () => {
+        setIsLoading(true);
+        try {
+          const aiResponse = await generateMindMapChatResponse(
+            `Provide a detailed explanation for this text: "${explainText}"`
+          );
+          
+          const aiMessage = {
+            id: generateUniqueId(),
+            text: aiResponse,
+            sender: 'ai',
+            timestamp: new Date()
+          };
+
+          setMessages(prev => [...prev, aiMessage]);
+        } catch (error) {
+          console.error('Error generating text explanation:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      explainTextMessage();
+    }
+  }, [explainText]);
 
   return (
-    <div className="flex flex-col h-full border-l">
-      {/* Chat panel header */}
-      <div className="flex items-center justify-between p-3 border-b bg-white">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4" />
-          <h3 className="font-medium text-sm">Research Assistant</h3>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8" 
-          onClick={toggleChat}
-        >
-          <X className="h-4 w-4" />
+    <div className="flex flex-col h-full bg-gray-100 border-l border-gray-200">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <h2 className="text-lg font-semibold">Chat</h2>
+        <Button variant="ghost" size="icon" onClick={handleCloseChat}>
+          <X className="h-5 w-5" />
         </Button>
       </div>
-      
-      {/* Chat messages area with enhanced styling for better scrollable citations */}
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-        <div className="flex flex-col gap-4">
-          {messages.map((message, i) => (
-            <div key={i} className="group relative">
-              <div 
-                className={`rounded-lg p-4 ${
-                  message.role === 'user' 
-                    ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
-                    : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
-                }`}
-              >
-                {/* Display attached image if present */}
-                {message.image && (
-                  <div className="mb-2">
-                    <img 
-                      src={message.image} 
-                      alt="Selected area" 
-                      className="max-w-full rounded-md border border-gray-200"
-                      style={{ maxHeight: '300px' }} 
-                    />
-                  </div>
-                )}
-                
-                {message.isHtml ? (
-                  <div 
-                    className="ai-message-content overflow-auto" 
-                    dangerouslySetInnerHTML={{ __html: message.content }} 
-                  />
-                ) : (
-                  message.content
-                )}
-                
-                {/* Example questions buttons - only show for first welcome message */}
-                {message.role === 'assistant' && i === 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {contextQuestions.slice(0, 5).map((question, idx) => (
-                      <Button
-                        key={idx}
-                        variant="outline"
-                        size="sm"
-                        className="text-xs bg-white border-gray-200 hover:bg-gray-50 text-left justify-start"
-                        onClick={() => handleExampleQuestionClick(question)}
-                      >
-                        {question.length > 30 ? question.substring(0, 27) + '...' : question}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-                
-                {message.role === 'assistant' && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => copyToClipboard(message.content, i)}
-                  >
-                    {copiedMessageId === i ? (
-                      <Check className="h-3 w-3" />
-                    ) : (
-                      <Copy className="h-3 w-3" />
-                    )}
-                  </Button>
-                )}
-              </div>
+
+      {/* Chat Messages */}
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-2">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex flex-col rounded-lg p-3 w-fit max-w-[80%] ${
+                message.sender === 'user' ? 'bg-blue-100 ml-auto' : 'bg-gray-200'
+              }`}
+            >
+              <p className="text-sm whitespace-pre-line">{message.text}</p>
+              <span className="text-xs text-gray-500 self-end">{new Date(message.timestamp).toLocaleTimeString()}</span>
             </div>
           ))}
-          
-          {isTyping && (
-            <div className="ai-message bg-gray-50 border border-gray-100 shadow-sm rounded-lg p-4">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '200ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" style={{ animationDelay: '400ms' }}></div>
-              </div>
+          {isLoading && (
+            <div className="flex items-center">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <p className="text-sm text-gray-500">Generating response...</p>
             </div>
           )}
         </div>
       </ScrollArea>
-      
-      {/* Input area */}
-      <div className="p-3 border-t bg-white">
-        <div className="flex gap-2">
+
+      {/* Input Area */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center">
           <Textarea
-            className="flex-1 min-h-10 max-h-32 resize-none chat-input"
-            placeholder="Ask about the document..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            value={inputMessage}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            placeholder="Type your message..."
+            className="flex-1 resize-none border rounded-md py-2 px-3 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            rows={1}
           />
-          <Button 
-            className="shrink-0" 
-            size="sm" 
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
-          >
+          <Button onClick={handleSendMessage} disabled={isLoading}>
+            <Send className="h-4 w-4 mr-2" />
             Send
           </Button>
         </div>
