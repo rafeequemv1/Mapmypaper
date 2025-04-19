@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useRef, ErrorBoundary } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
@@ -9,17 +9,17 @@ import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 
 // Error Boundary Component
-class MindMapErrorBoundary extends React.Component {
-  constructor(props) {
+class MindMapErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: {children: React.ReactNode}) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: any) {
     return { hasError: true };
   }
 
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch(error: any, errorInfo: any) {
     console.error("MindMap error:", error, errorInfo);
   }
 

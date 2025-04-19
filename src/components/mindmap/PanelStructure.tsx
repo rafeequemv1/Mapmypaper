@@ -31,16 +31,24 @@ const PanelStructure = ({
 
   // Ensure components mount safely
   useEffect(() => {
-    setIsRendered(true);
+    const timer = setTimeout(() => {
+      setIsRendered(true);
+    }, 100);
+    
     return () => {
+      clearTimeout(timer);
       setIsRendered(false);
     };
   }, []);
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
-      // @ts-ignore - we know this method exists
-      pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
+      try {
+        // @ts-ignore - we know this method exists
+        pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
+      } catch (error) {
+        console.error("Error scrolling to PDF position:", error);
+      }
     }
   };
 
