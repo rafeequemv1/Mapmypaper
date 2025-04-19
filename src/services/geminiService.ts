@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -180,6 +179,12 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     console.error("Gemini API error:", error);
     throw error;
   }
+};
+
+// Adding the missing function that was referenced in ChatPanel.tsx
+export const generateMindMapChatResponse = async (message: string): Promise<string> => {
+  // This is just a wrapper around the existing chatWithGeminiAboutPdf function
+  return chatWithGeminiAboutPdf(message);
 };
 
 // Chat with Gemini about PDF content with citation support

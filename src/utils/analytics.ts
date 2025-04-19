@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for Google Analytics tracking
  */
@@ -50,6 +49,14 @@ export const trackUserSignIn = (method: string) => {
 export const trackMindMapGeneration = (pdfName?: string) => {
   trackEvent('mind_map_generation', {
     pdf_name: pdfName || 'unknown',
+    timestamp: new Date().toISOString()
+  });
+};
+
+// Add the missing trackMindMapChatInteraction function
+export const trackMindMapChatInteraction = (action: string) => {
+  trackEvent('mind_map_chat_interaction', {
+    action,
     timestamp: new Date().toISOString()
   });
 };
