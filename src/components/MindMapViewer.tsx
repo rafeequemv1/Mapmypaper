@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -701,4 +702,161 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     
     // Helper function to extract node topics and build a hierarchical summary
     const extractTopics = (node: any, level: number = 0) => {
-      if (!node
+      if (!node) return '';
+      
+      let indent = '';
+      for (let i = 0; i < level; i++) {
+        indent += '  ';
+      }
+      
+      // Get clean topic text without emojis and formatting
+      let topicText = node.topic || '';
+      
+      // Remove emojis
+      topicText = topicText.replace(/[\p{Emoji}]/gu, '').trim();
+      
+      // Remove line breaks
+      topicText = topicText.replace(/\n/g, ' ');
+      
+      let result = `${indent}- ${topicText}\n`;
+      
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          result += extractTopics(child, level + 1);
+        }
+      }
+      
+      return result;
+    };
+    
+    // Count the number of nodes for statistics
+    const countNodes = (node: any): number => {
+      if (!node) return 0;
+      
+      let count = 1; // Count this node
+      
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          count += countNodes(child);
+        }
+      }
+      
+      return count;
+    };
+    
+    const hierarchySummary = extractTopics(nodeData);
+    const totalNodes = countNodes(nodeData);
+    
+    summaryText += hierarchySummary;
+    summaryText += `\n\n### Statistics\n`;
+    summaryText += `- Total topics: ${totalNodes}\n`;
+    summaryText += `- Depth: ${nodeData.children ? Math.max(...nodeData.children.map((c: any) => countNodes(c))) : 1}\n`;
+    
+    setSummary(summaryText);
+    setShowSummary(true);
+    
+    // If there's an onExplainText callback, send the summary
+    if (onExplainText) {
+      onExplainText(summaryText);
+    }
+    
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+    
+    toast({
+      title: "Summary Generated",
+      description: "The summary has been sent to the chat panel.",
+      duration: 3000,
+    });
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col min-h-[400px]">
+      {!isMapGenerated && (
+        <div className="flex flex-col items-center justify-center h-full p-6 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+          <div className="mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-gray-400"
+            >
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">No Mind Map Available</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Upload a document or start a chat to generate a mind map.
+          </p>
+        </div>
+      )}
+      
+      {isMapGenerated && (
+        <>
+          <div
+            ref={containerRef}
+            className="w-full flex-grow relative min-h-[400px] overflow-hidden"
+            style={{ 
+              backgroundColor: "#F9F7FF",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              transition: "all 0.3s ease"
+            }}
+          ></div>
+          
+          {showSummary && (
+            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 text-sm max-h-[300px] overflow-auto">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900">Mind Map Summary</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowSummary(false)}>Close</Button>
+              </div>
+              <div className="prose prose-sm">
+                {summary.split('\n').map((line, i) => (
+                  <div key={i} className="mb-1">
+                    {line.startsWith('#') ? (
+                      <h4 className="text-md font-bold">{line.replace(/^#+\s/, '')}</h4>
+                    ) : line.startsWith('-') ? (
+                      <div className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>{line.replace(/^-\s/, '')}</span>
+                      </div>
+                    ) : (
+                      <p>{line}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    if (onExplainText && summary) {
+                      onExplainText(summary);
+                    }
+                    if (onRequestOpenChat) {
+                      onRequestOpenChat();
+                    }
+                  }}
+                >
+                  <FileText size={16} />
+                  Send to Chat
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
