@@ -9,10 +9,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import RequireAuth from "@/components/RequireAuth";
 import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
-import Pricing from "./pages/Pricing";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentCanceled from "./pages/PaymentCanceled";
-import ManageSubscription from "./pages/ManageSubscription";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 
@@ -35,17 +31,12 @@ const App = () => (
         <div className="relative">
           <BrowserRouter>
             <Routes>
-              {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<PdfUpload />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/payment-success" element={<PaymentSuccess />} />
-              <Route path="/payment-canceled" element={<PaymentCanceled />} />
               
               {/* Protected routes */}
               <Route element={<RequireAuth />}>
+                <Route path="/" element={<PdfUpload />} />
                 <Route path="/mindmap" element={<MindMap />} />
-                <Route path="/manage-subscription" element={<ManageSubscription />} />
               </Route>
               
               {/* Catch-all route */}

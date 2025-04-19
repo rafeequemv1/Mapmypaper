@@ -1,18 +1,17 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
   Download,
+  Upload,
   MessageSquare,
   Image,
   FileJson,
-  Upload,
-  FileIcon
+  Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsPDF } from "@/lib/export-utils";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,12 +20,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
-import PaperLogo from "@/components/PaperLogo";
 
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMindmap?: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
@@ -36,6 +36,8 @@ const Header = ({
   togglePdf, 
   toggleChat, 
   setShowSummary,
+  setShowFlowchart,
+  setShowMindmap,
   isPdfActive,
   isChatActive,
   mindMap
@@ -68,23 +70,6 @@ const Header = ({
       toast({
         title: "Export successful",
         description: `Mind map exported as ${fileName}.svg`
-      });
-    } else {
-      toast({
-        title: "Export failed",
-        description: "Mind map instance not available",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  // Handle export as PDF
-  const handleExportPDF = () => {
-    if (mindMap) {
-      downloadMindMapAsPDF(mindMap, fileName);
-      toast({
-        title: "Export successful",
-        description: `Mind map exported as ${fileName}.pdf`
       });
     } else {
       toast({
@@ -131,13 +116,15 @@ const Header = ({
       });
     }
   }, [toast]);
-
+  
   return (
     <header className="bg-white border-b py-2 px-4">
       <div className="flex items-center justify-between">
         {/* Left side - Logo with Beta tag */}
         <div className="flex items-center gap-2">
-          <PaperLogo size="sm" />
+          <div className="bg-black text-white p-1.5 rounded-md">
+            <Upload className="h-4 w-4" />
+          </div>
           <div className="flex items-center">
             <h1 className="text-lg font-bold">mapmypaper</h1>
             <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
@@ -172,6 +159,24 @@ const Header = ({
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Summary</span>
           </Button>
+          
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowFlowchart && setShowFlowchart(true)} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Flowchart</span>
+          </Button>
+
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowMindmap && setShowMindmap(true)} 
+            className="flex items-center gap-1 text-black h-8 px-3"
+          >
+            <Network className="h-3.5 w-3.5" />
+            <span className="hidden md:inline text-sm">Treemap</span>
+          </Button>
         </div>
         
         {/* Right side - Action buttons and User Menu */}
@@ -186,7 +191,7 @@ const Header = ({
                 <Download className="h-3.5 w-3.5 text-black" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-white border shadow-md z-50">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
                 <Image className="h-4 w-4" />
                 <span>Export as SVG</span>
@@ -194,10 +199,6 @@ const Header = ({
               <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
                 <Image className="h-4 w-4" />
                 <span>Export as PNG</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPDF} className="flex items-center gap-2 cursor-pointer">
-                <FileIcon className="h-4 w-4" />
-                <span>Export as PDF</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
                 <FileJson className="h-4 w-4" />

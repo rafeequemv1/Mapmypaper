@@ -1,43 +1,28 @@
+
 import { MessageSquare, Copy, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
-import { getWelcomeMessage, getContextualQuestions } from "@/utils/chatExampleQuestions";
 
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
-  explainImage?: string;
 }
 
-const MobileChatSheet = ({ 
-  onScrollToPdfPosition,
-  explainImage
-}: MobileChatSheetProps) => {
+const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
-    { role: 'assistant', content: getWelcomeMessage(), isHtml: true }
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
+    { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
-  const [processingExplainImage, setProcessingExplainImage] = useState(false);
-  const [contextQuestions, setContextQuestions] = useState<string[]>([]);
   
-  // Load contextual questions when sheet opens
-  useEffect(() => {
-    if (isSheetOpen) {
-      // Get contextual questions based on document content
-      // For now, we'll use the default questions, but this could be enhanced
-      // to pass document content from the parent component
-      setContextQuestions(getContextualQuestions());
-    }
-  }, [isSheetOpen]);
-  
+  // Activate citations in messages when they are rendered
   useEffect(() => {
     if (isSheetOpen) {
       setTimeout(() => {
@@ -58,83 +43,6 @@ const MobileChatSheet = ({
       }, 200); // Increased timeout to ensure DOM is fully ready
     }
   }, [messages, isSheetOpen, onScrollToPdfPosition]);
-
-  // Process image to explain when it changes
-  useEffect(() => {
-    const processExplainImage = async () => {
-      if (explainImage && !processingExplainImage && isSheetOpen) {
-        console.log("MobileChatSheet: Starting image processing", {
-          imageDataLength: explainImage.length,
-          isDataUrl: explainImage.startsWith('data:image/')
-        });
-        
-        setProcessingExplainImage(true);
-        
-        // Add user message with the selected area image
-        setMessages(prev => [...prev, { 
-          role: 'user', 
-          content: "Please explain this selected area from the document:", 
-          image: explainImage 
-        }]);
-        
-        // Show typing indicator
-        setIsTyping(true);
-        
-        try {
-          console.log("MobileChatSheet: Calling Gemini API for image analysis");
-          // Call AI with the image using the enhanced function
-          const response = await analyzeImageWithGemini(explainImage);
-          
-          console.log("MobileChatSheet: Received Gemini API response", {
-            responseLength: response.length,
-            preview: response.substring(0, 50) + "..."
-          });
-          
-          // Hide typing indicator and add AI response with formatting
-          setIsTyping(false);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: formatAIResponse(response),
-              isHtml: true 
-            }
-          ]);
-        } catch (error) {
-          // Handle errors
-          setIsTyping(false);
-          console.error("Image analysis error:", error);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              role: 'assistant', 
-              content: "Sorry, I encountered an error analyzing that image. Please try again." 
-            }
-          ]);
-          
-          toast({
-            title: "Image Analysis Error",
-            description: "Failed to analyze the selected area.",
-            variant: "destructive"
-          });
-        } finally {
-          setProcessingExplainImage(false);
-        }
-      }
-    };
-    
-    processExplainImage();
-  }, [explainImage, isSheetOpen, toast]);
-  
-  // Add a function to handle clicking on example questions
-  const handleExampleQuestionClick = (question: string) => {
-    setInputValue(question);
-    // Focus the textarea
-    const textarea = document.querySelector(".mobile-chat-input") as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.focus();
-    }
-  };
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
@@ -149,8 +57,10 @@ const MobileChatSheet = ({
       setIsTyping(true);
       
       try {
-        // Use the enhanced research-focused prompt from geminiService
-        const response = await chatWithGeminiAboutPdf(userMessage);
+        // Enhanced prompt to encourage complete sentences, page citations, and emojis
+        const response = await chatWithGeminiAboutPdf(
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+        );
         
         // Hide typing indicator and add AI response with formatting
         setIsTyping(false);
@@ -247,18 +157,6 @@ const MobileChatSheet = ({
                       : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
                   }`}
                 >
-                  {/* Display attached image if present */}
-                  {message.image && (
-                    <div className="mb-2">
-                      <img 
-                        src={message.image} 
-                        alt="Selected area" 
-                        className="max-w-full rounded-md border border-gray-200"
-                        style={{ maxHeight: '300px' }} 
-                      />
-                    </div>
-                  )}
-                  
                   {message.isHtml ? (
                     <div 
                       className="ai-message-content" 
@@ -266,23 +164,6 @@ const MobileChatSheet = ({
                     />
                   ) : (
                     message.content
-                  )}
-                  
-                  {/* Example questions buttons - only show for first welcome message */}
-                  {message.role === 'assistant' && i === 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {contextQuestions.slice(0, 4).map((question, idx) => (
-                        <Button
-                          key={idx}
-                          variant="outline"
-                          size="sm"
-                          className="text-xs bg-white border-gray-200 hover:bg-gray-50 text-left justify-start"
-                          onClick={() => handleExampleQuestionClick(question)}
-                        >
-                          {question.length > 25 ? question.substring(0, 22) + '...' : question}
-                        </Button>
-                      ))}
-                    </div>
                   )}
                   
                   {message.role === 'assistant' && (
@@ -318,7 +199,7 @@ const MobileChatSheet = ({
         <div className="p-3 border-t mt-auto">
           <div className="flex gap-2">
             <textarea
-              className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none mobile-chat-input"
+              className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none"
               placeholder="Type your message..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}

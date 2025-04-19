@@ -1,3 +1,4 @@
+
 /* Basic styles for the node menu */
 .mind-elixir-node-menu {
   position: absolute;
@@ -81,7 +82,6 @@
   visibility: visible !important;
   display: block !important;
   transform: none !important;
-  z-index: 9999 !important;
 }
 
 /* Style adjustments for the node menu */
@@ -208,33 +208,4 @@
 /* Hide the resize handles */
 .resizable-handle {
   display: none !important;
-}
-
-/* Fix for Radix UI context menu positioning and z-index */
-[data-radix-popper-content-wrapper] {
-  z-index: 9999 !important;
-}
-
-/* Ensure all Radix UI dropdowns have appropriate z-index and visibility */
-[data-state="open"][data-radix-menu],
-[data-state="open"][data-radix-dropdown-menu],
-[data-state="open"][data-radix-context-menu] {
-  z-index: 9999 !important;
-  visibility: visible !important;
-  display: block !important;
-}
-
-/* Ensure dropdown menus are visible */
-[role="menu"],
-[role="menuitem"],
-[data-radix-dropdown-menu-content],
-[data-radix-context-menu-content] {
-  background-color: white !important;
-  z-index: 9999 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  border: 1px solid #e8e8e8 !important;
-  border-radius: 6px !important;
 }
