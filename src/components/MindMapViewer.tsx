@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -237,120 +236,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           layout: true,
         },
         theme: colorfulTheme,
-        autoFit: true,
-        scale: 0.6, // Add initial scale to make mindmap smaller
-        // Add custom style to nodes based on their level and content
-        beforeRender: (node: any, tpc: HTMLElement, level: number) => {
-          // Get branch color from palette based on branch position
-          const getBranchColor = (node: any) => {
-            if (!node || !node.id) return colorfulTheme.palette[0];
-            
-            // If it's a root node, use the root color from theme
-            if (node.id === 'root') return colorfulTheme.cssVar['--root-color'];
-            
-            // Find branch position for consistent coloring
-            const branchId = node.id.split('-')[0];
-            const branchIndex = parseInt(branchId.replace(/\D/g, '')) || 0;
-            
-            // Get color from palette based on branch index
-            return colorfulTheme.palette[branchIndex % colorfulTheme.palette.length];
-          };
-          
-          // Determine color based on branch and node level
-          const branchColor = getBranchColor(node);
-          
-          // Lighten color for background
-          const lightenColor = (color: string, percent: number) => {
-            const num = parseInt(color.slice(1), 16);
-            const amt = Math.round(2.55 * percent);
-            const R = (num >> 16) + amt;
-            const G = (num >> 8 & 0x00FF) + amt;
-            const B = (num & 0x0000FF) + amt;
-            return `#${(1 << 24 | (R < 255 ? R < 1 ? 0 : R : 255) << 16 | (G < 255 ? G < 1 ? 0 : G : 255) << 8 | (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)}`;
-          };
-          
-          // Calculate a lighter variant for background
-          const bgColor = lightenColor(branchColor, 85);
-          
-          // Apply colorful styling to nodes
-          tpc.style.backgroundColor = level === 0 ? colorfulTheme.cssVar['--root-bgcolor'] : bgColor;
-          tpc.style.color = level === 0 ? colorfulTheme.cssVar['--root-color'] : branchColor;
-          tpc.style.border = `2px solid ${level === 0 ? colorfulTheme.cssVar['--root-border-color'] : branchColor}`;
-          tpc.style.borderRadius = '12px';
-          tpc.style.padding = '10px 16px';
-          tpc.style.boxShadow = colorfulTheme.cssVar['--box-shadow'];
-          tpc.style.fontWeight = level === 0 ? 'bold' : 'normal';
-          tpc.style.fontSize = level === 0 ? '20px' : '16px';
-          tpc.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
-          tpc.style.lineHeight = '1.5';
-          tpc.style.maxWidth = level === 0 ? '220px' : '320px'; // Limit width of nodes, especially root
-          
-          // Add transition for smooth color changes
-          tpc.style.transition = 'all 0.3s ease';
-          
-          // Add tags based on node content
-          const addTags = (topic: string, element: HTMLElement) => {
-            const topicLower = topic.toLowerCase();
-            const tags = [];
-            
-            if (topicLower.includes('important')) tags.push({ text: 'Important', color: '#ef4444' });
-            if (topicLower.includes('review')) tags.push({ text: 'Review', color: '#f97316' });
-            if (topicLower.includes('todo')) tags.push({ text: 'Todo', color: '#3b82f6' });
-            if (topicLower.includes('done')) tags.push({ text: 'Done', color: '#22c55e' });
-            if (topicLower.includes('chapter') || topicLower.includes('section')) tags.push({ text: 'Section', color: '#8b5cf6' });
-            if (topicLower.includes('concept')) tags.push({ text: 'Concept', color: '#06b6d4' });
-            
-            if (tags.length > 0) {
-              // Create a tag container
-              const tagContainer = document.createElement('div');
-              tagContainer.style.display = 'flex';
-              tagContainer.style.flexWrap = 'wrap';
-              tagContainer.style.gap = '4px';
-              tagContainer.style.marginTop = '6px';
-              
-              // Add tags
-              tags.forEach(tag => {
-                const tagElement = document.createElement('span');
-                tagElement.textContent = tag.text;
-                tagElement.style.fontSize = '10px';
-                tagElement.style.fontWeight = 'bold';
-                tagElement.style.padding = '2px 6px';
-                tagElement.style.borderRadius = '4px';
-                tagElement.style.backgroundColor = tag.color;
-                tagElement.style.color = 'white';
-                tagContainer.appendChild(tagElement);
-              });
-              
-              element.appendChild(tagContainer);
-            }
-          };
-          
-          // Add tags to nodes
-          addTags(node.topic || "", tpc);
-          
-          // Add hover effect
-          tpc.addEventListener('mouseover', () => {
-            tpc.style.boxShadow = colorfulTheme.cssVar['--hover-box-shadow'];
-            tpc.style.transform = 'translateY(-2px)';
-          });
-          
-          tpc.addEventListener('mouseout', () => {
-            tpc.style.boxShadow = colorfulTheme.cssVar['--box-shadow'];
-            tpc.style.transform = 'translateY(0)';
-          });
-        }
+        autoFit: true
       };
 
       // Initialize mind map
       const mind = new MindElixir(options);
-      
-      // After initialization, ensure the mindmap is centered
-      setTimeout(() => {
-        if (mind && mind.container) {
-          mind.container.style.transform = 'scale(0.6)';
-          mind.container.style.transformOrigin = 'center center';
-        }
-      }, 300);
 
       // Add custom styles to node-menu and style-panel elements when they appear
       const observeStylePanel = () => {

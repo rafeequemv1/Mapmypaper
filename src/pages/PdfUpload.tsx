@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +5,7 @@ import PdfToText from "react-pdftotext";
 import { Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
+import TopBar from "@/components/TopBar";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -131,7 +131,8 @@ const PdfUpload = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      <TopBar />
+      <div className="flex-1 flex flex-col items-center justify-center p-4 mt-16">
         <div className="text-center mb-12 mt-16"> {/* Added more space above hero text */}
           <div className="flex items-center justify-center gap-4 mb-6"> {/* Increased spacing */}
             <Brain className="h-12 w-12 text-[#333]" /> {/* Made icon slightly larger */}
