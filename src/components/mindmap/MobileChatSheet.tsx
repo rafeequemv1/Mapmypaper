@@ -1,6 +1,6 @@
 
 import { MessageSquare, Copy, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,26 +21,42 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
+  const citationActivated = useRef(false);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
-    if (isSheetOpen) {
-      setTimeout(() => {
-        const messageContainers = document.querySelectorAll('.ai-message-content');
-        
-        messageContainers.forEach(container => {
-          activateCitations(container as HTMLElement, (citation) => {
-            console.log("Mobile Citation clicked:", citation);
-            if (onScrollToPdfPosition) {
-              onScrollToPdfPosition(citation);
-              // Small delay to ensure event is processed before closing sheet
-              setTimeout(() => {
-                setIsSheetOpen(false); // Close sheet after citation click on mobile
-              }, 50);
-            }
+    if (isSheetOpen && !citationActivated.current) {
+      const activationTimeout = setTimeout(() => {
+        try {
+          const messageContainers = document.querySelectorAll('.ai-message-content');
+          
+          messageContainers.forEach(container => {
+            activateCitations(container as HTMLElement, (citation) => {
+              console.log("Mobile Citation clicked:", citation);
+              if (onScrollToPdfPosition) {
+                onScrollToPdfPosition(citation);
+                // Small delay to ensure event is processed before closing sheet
+                setTimeout(() => {
+                  setIsSheetOpen(false); // Close sheet after citation click on mobile
+                }, 50);
+              }
+            });
           });
-        });
-      }, 200); // Increased timeout to ensure DOM is fully ready
+          
+          citationActivated.current = true;
+        } catch (error) {
+          console.error("Error activating citations:", error);
+        }
+      }, 300); // Increased timeout to ensure DOM is fully ready
+      
+      return () => {
+        clearTimeout(activationTimeout);
+      };
+    }
+    
+    // Reset citation activation when sheet closes
+    if (!isSheetOpen) {
+      citationActivated.current = false;
     }
   }, [messages, isSheetOpen, onScrollToPdfPosition]);
   
@@ -72,6 +88,9 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
             isHtml: true
           }
         ]);
+        
+        // Reset citation activation flag so citations are processed on the new message
+        citationActivated.current = false;
       } catch (error) {
         // Handle errors
         setIsTyping(false);
@@ -101,35 +120,52 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
   };
 
   const copyToClipboard = (text: string, messageId: number) => {
-    // Strip HTML tags for copying plain text
-    const plainText = text.replace(/<[^>]*>?/gm, '');
-    
-    navigator.clipboard.writeText(plainText).then(() => {
-      setCopiedMessageId(messageId);
+    try {
+      // Strip HTML tags for copying plain text
+      const plainText = text.replace(/<[^>]*>?/gm, '');
       
-      toast({
-        title: "Copied to clipboard",
-        description: "Message content has been copied",
-        duration: 2000,
+      navigator.clipboard.writeText(plainText).then(() => {
+        setCopiedMessageId(messageId);
+        
+        toast({
+          title: "Copied to clipboard",
+          description: "Message content has been copied",
+          duration: 2000,
+        });
+        
+        // Reset the copied icon after 2 seconds
+        setTimeout(() => {
+          setCopiedMessageId(null);
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        
+        toast({
+          title: "Copy failed",
+          description: "Could not copy to clipboard",
+          variant: "destructive"
+        });
       });
-      
-      // Reset the copied icon after 2 seconds
-      setTimeout(() => {
-        setCopiedMessageId(null);
-      }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy text: ', err);
-      
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
       toast({
         title: "Copy failed",
-        description: "Could not copy to clipboard",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
-    });
+    }
+  };
+
+  const handleSheetOpenChange = (open: boolean) => {
+    // Reset when closing
+    if (!open) {
+      citationActivated.current = false;
+    }
+    setIsSheetOpen(open);
   };
 
   return (
-    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+    <Sheet open={isSheetOpen} onOpenChange={handleSheetOpenChange}>
       <SheetTrigger asChild>
         <Button 
           className="fixed right-4 bottom-4 rounded-full h-12 w-12 md:hidden shadow-lg"

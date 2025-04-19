@@ -1,5 +1,5 @@
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
@@ -27,6 +27,15 @@ const PanelStructure = ({
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
+  const [isRendered, setIsRendered] = useState(false);
+
+  // Ensure components mount safely
+  useEffect(() => {
+    setIsRendered(true);
+    return () => {
+      setIsRendered(false);
+    };
+  }, []);
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
@@ -34,6 +43,10 @@ const PanelStructure = ({
       pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
     }
   };
+
+  if (!isRendered) {
+    return <div className="h-full w-full flex justify-center items-center">Loading panels...</div>;
+  }
 
   return (
     <div className="h-full w-full flex">
