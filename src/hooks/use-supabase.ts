@@ -1,16 +1,11 @@
 
 import { useContext, createContext } from 'react';
-import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-
-// Create a Supabase client singleton
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 // Context for Supabase
 const SupabaseContext = createContext<{
-  client: SupabaseClient;
+  client: typeof supabase;
   user: User | null;
   loading: boolean;
 }>({
@@ -35,4 +30,4 @@ export const useSupabaseLoading = () => {
   return context.loading;
 };
 
-export { SupabaseContext };
+export { SupabaseContext, supabase };
