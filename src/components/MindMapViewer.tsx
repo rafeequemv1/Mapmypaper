@@ -239,9 +239,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         autoFit: true
       };
 
-      // Initialize mind map
-      const mind = new MindElixir(options);
-
       // Add custom styles to node-menu and style-panel elements when they appear
       const observeStylePanel = () => {
         const observer = new MutationObserver((mutations) => {
@@ -662,9 +659,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   };
 
   return (
-    <div className="w-full h-full flex flex-col min-h-[400px]">
+    <div className="w-full h-full flex flex-col min-h-[300px]">
       {!isMapGenerated && (
-        <div className="flex flex-col items-center justify-center h-full p-6 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+        <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
           <div className="mb-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -692,12 +689,13 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         <>
           <div
             ref={containerRef}
-            className="w-full flex-grow relative min-h-[400px] overflow-hidden"
+            className="w-full flex-grow relative min-h-[300px] overflow-hidden"
             style={{ 
               backgroundColor: "#F9F7FF",
               border: "1px solid #e5e7eb",
               borderRadius: "8px",
-              transition: "all 0.3s ease"
+              transition: "all 0.3s ease",
+              maxHeight: "calc(100vh - 300px)" // Add max height constraint
             }}
           ></div>
           
