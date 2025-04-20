@@ -1,13 +1,10 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileText, Image } from "lucide-react";
-import { getPdfData } from "@/utils/pdfStorage";
-import { supabase } from "@/integrations/supabase/client";
+import { FileText } from "lucide-react";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -185,124 +182,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [isReady, setIsReady] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string>('');
-  const [isLoadingImages, setIsLoadingImages] = useState(false);
-  const [pdfImages, setPdfImages] = useState<any[]>([]);
   const { toast } = useToast();
-
-  // Function to extract images from PDF
-  const extractPdfImages = async () => {
-    try {
-      setIsLoadingImages(true);
-      
-      // Get PDF data from storage
-      const pdfData = await getPdfData();
-      
-      if (!pdfData) {
-        toast({
-          title: "No PDF Found",
-          description: "Please upload a PDF document first.",
-          variant: "destructive",
-        });
-        setIsLoadingImages(false);
-        return;
-      }
-      
-      // Call the edge function to extract images
-      const { data, error } = await supabase.functions.invoke('extract-pdf-images', {
-        body: { pdf_data: pdfData },
-      });
-      
-      if (error) {
-        console.error("Error extracting images:", error);
-        toast({
-          title: "Extraction Failed",
-          description: "Failed to extract images from PDF. Please try again.",
-          variant: "destructive",
-        });
-        setIsLoadingImages(false);
-        return;
-      }
-      
-      // Save the extracted images
-      if (data?.images && data.images.length > 0) {
-        setPdfImages(data.images);
-        toast({
-          title: "Images Extracted",
-          description: `Successfully extracted ${data.images.length} images from the PDF.`,
-        });
-      } else {
-        toast({
-          title: "No Images Found",
-          description: "No images were found in the PDF document.",
-        });
-      }
-      
-    } catch (error) {
-      console.error("Error processing PDF:", error);
-      toast({
-        title: "Processing Error",
-        description: "An error occurred while processing the PDF.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingImages(false);
-    }
-  };
-
-  // Function to add PDF images to mind map
-  const addPdfImagesToMindMap = () => {
-    if (!mindMapRef.current || pdfImages.length === 0) return;
-    
-    const mind = mindMapRef.current;
-    const selectedNode = mind.currentNode?.nodeObj?.id || 'root';
-    
-    // Create image nodes
-    pdfImages.forEach((image, index) => {
-      // Create a unique ID for the image node
-      const nodeId = `img-${Date.now()}-${index}`;
-      
-      // Add caption with page number
-      const caption = `Image from Page ${image.page}`;
-      
-      // Adjust image size if too large
-      let width = image.width || 300;
-      let height = image.height || 200;
-      
-      // Scale down large images
-      const maxWidth = 400;
-      const maxHeight = 300;
-      
-      if (width > maxWidth || height > maxHeight) {
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        width = Math.floor(width * ratio);
-        height = Math.floor(height * ratio);
-      }
-      
-      // Add the image node - use the type assertion to work around the TypeScript error
-      // This is necessary because the TypeScript definitions don't include the addNode method
-      // that is available in the actual mind-elixir library
-      (mind as any).addNode('image', {
-        id: nodeId,
-        topic: caption,
-        direction: 1,
-        image: {
-          url: image.data,
-          width,
-          height
-        }
-      }, selectedNode);
-    });
-    
-    // Save the updated mind map
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('mindMapData', JSON.stringify(mind.getData()));
-    }
-    
-    toast({
-      title: "Images Added",
-      description: `Added ${pdfImages.length} images to the mind map.`,
-    });
-  };
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -406,13 +286,13 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Start observing for style panels
       const styleObserver = observeStylePanel();
       
-      // Define the mind map instance
+      // Create the mind map instance
       const mind = new MindElixir(options);
       
       // Install the node menu plugin with full styling support
       const customNodeMenu = nodeMenu;
       
-      // Enhance node menu with additional options
+      // Add summary option to node menu
       const originalMenus = customNodeMenu.menus;
       customNodeMenu.menus = (node: any, mindInstance: MindElixirInstance) => {
         const menus = originalMenus(node, mindInstance);
@@ -423,21 +303,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           onclick: () => {
             // Get the node and its children
             generateNodeSummary(node);
-          }
-        });
-        
-        // Add PDF image extraction option
-        menus.push({
-          name: '🖼️ Add PDF Images',
-          onclick: () => {
-            // First extract images if not already done
-            if (pdfImages.length === 0) {
-              extractPdfImages().then(() => {
-                addPdfImagesToMindMap();
-              });
-            } else {
-              addPdfImagesToMindMap();
-            }
           }
         });
         
@@ -716,7 +581,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         observer.disconnect();
       };
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfImages]);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {
@@ -779,45 +644,106 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     
     setSummary(summaryText);
     setShowSummary(true);
+    
+    // If there's an onExplainText callback, send the summary
+    if (onExplainText) {
+      onExplainText(summaryText);
+    }
+    
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+    
+    toast({
+      title: "Summary Generated",
+      description: "The summary has been sent to the chat panel.",
+      duration: 3000,
+    });
   };
-  
-  // Add missing return statement with JSX
+
   return (
-    <div className="relative w-full h-full flex flex-col">
-      {isLoadingImages && (
-        <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg shadow-lg">
-            <p className="text-lg font-medium">Extracting images from PDF...</p>
+    <div className="w-full h-full flex flex-col min-h-[300px]">
+      {!isMapGenerated && (
+        <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+          <div className="mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-gray-400"
+            >
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+            </svg>
           </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">No Mind Map Available</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Upload a document or start a chat to generate a mind map.
+          </p>
         </div>
       )}
       
-      <div ref={containerRef} className="flex-grow mind-map-container" />
-      
-      {showSummary && (
-        <div className="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-lg max-w-md max-h-[80%] overflow-auto z-40">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-bold">Node Summary</h3>
-            <Button variant="ghost" size="sm" onClick={() => setShowSummary(false)}>×</Button>
-          </div>
-          <div className="prose prose-sm">
-            <pre className="whitespace-pre-wrap">{summary}</pre>
-          </div>
-        </div>
-      )}
-      
-      {pdfImages.length > 0 && (
-        <div className="absolute bottom-4 left-4 bg-white p-2 rounded-lg shadow-lg z-40">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-2"
-            onClick={addPdfImagesToMindMap}
-          >
-            <Image className="h-4 w-4" />
-            <span>Add {pdfImages.length} Images to Mind Map</span>
-          </Button>
-        </div>
+      {isMapGenerated && (
+        <>
+          <div
+            ref={containerRef}
+            className="w-full flex-grow relative min-h-[300px] overflow-hidden"
+            style={{ 
+              backgroundColor: "#F9F7FF",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              transition: "all 0.3s ease",
+            }}
+          ></div>
+          
+          {showSummary && (
+            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 text-sm max-h-[300px] overflow-auto">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900">Mind Map Summary</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowSummary(false)}>Close</Button>
+              </div>
+              <div className="prose prose-sm">
+                {summary.split('\n').map((line, i) => (
+                  <div key={i} className="mb-1">
+                    {line.startsWith('#') ? (
+                      <h4 className="text-md font-bold">{line.replace(/^#+\s/, '')}</h4>
+                    ) : line.startsWith('-') ? (
+                      <div className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>{line.replace(/^-\s/, '')}</span>
+                      </div>
+                    ) : (
+                      <p>{line}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    if (onExplainText && summary) {
+                      onExplainText(summary);
+                    }
+                    if (onRequestOpenChat) {
+                      onRequestOpenChat();
+                    }
+                  }}
+                >
+                  <FileText size={16} />
+                  Send to Chat
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
