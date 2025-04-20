@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -139,8 +140,8 @@ const Header = ({
           </div>
         </div>
         
-        {/* Center - Main Button Group */}
-        <div className="flex items-center gap-2 md:gap-3 absolute left-1/2 transform -translate-x-1/2">
+        {/* Left side - Main Button Group */}
+        <div className="flex items-center gap-2 md:gap-3">
           <Button 
             variant={isPdfActive ? "default" : "ghost"} 
             onClick={togglePdf} 
@@ -214,3 +215,4 @@ const Header = ({
 };
 
 export default Header;
+
