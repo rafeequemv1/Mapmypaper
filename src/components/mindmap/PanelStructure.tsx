@@ -63,7 +63,7 @@ const PanelStructure = ({
     };
   }, [showChat, toggleChat, onExplainText]);
 
-  // New event listener for opening chat with image
+  // Event listener for opening chat with image
   useEffect(() => {
     const handleOpenChatWithImage = (event: any) => {
       // Open chat panel if it's closed

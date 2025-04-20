@@ -45,12 +45,16 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const [showTooltip, setShowTooltip] = useState(false);
     
-    // New state for area selection
+    // Area selection state
     const [isAreaSelectMode, setIsAreaSelectMode] = useState(false);
     const selectoRef = useRef<Selecto | null>(null);
     const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
     const [showAreaToolTip, setShowAreaToolTip] = useState(false);
     const [areaTooltipPosition, setAreaTooltipPosition] = useState({ x: 0, y: 0 });
+    
+    // Selection start position
+    const selectionStartRef = useRef<{x: number, y: number} | null>(null);
+    const overlayRef = useRef<HTMLDivElement>(null);
 
     // Load PDF data from IndexedDB
     useEffect(() => {
@@ -86,85 +90,79 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       loadPdfData();
     }, [toast]);
 
-    // Initialize area selection tool
+    // Manual area selection handling
     useEffect(() => {
-      if (pdfContainerRef.current && isAreaSelectMode) {
-        const container = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (!container) return;
-
-        // Initialize Selecto
-        const selecto = new Selecto({
-          container: container as HTMLElement,
-          dragContainer: container as HTMLElement,
-          selectableTargets: [".react-pdf__Page"],
-          hitRate: 0,
-          selectByClick: false,
-          selectFromInside: false,
-          ratio: 0,
-        });
-
-        selecto.on("dragStart", (e) => {
-          e.stop();
+      if (!isAreaSelectMode || !pdfContainerRef.current) return;
+      
+      const container = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (!container) return;
+      
+      const handleMouseDown = (e: MouseEvent) => {
+        // Only handle left mouse button
+        if (e.button !== 0) return;
+        
+        const rect = container.getBoundingClientRect();
+        selectionStartRef.current = { 
+          x: e.clientX - rect.left + (container as HTMLElement).scrollLeft,
+          y: e.clientY - rect.top + (container as HTMLElement).scrollTop
+        };
+        
+        setSelectionRect(null);
+        setShowAreaToolTip(false);
+      };
+      
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!selectionStartRef.current) return;
+        
+        const rect = container.getBoundingClientRect();
+        const currentX = e.clientX - rect.left + (container as HTMLElement).scrollLeft;
+        const currentY = e.clientY - rect.top + (container as HTMLElement).scrollTop;
+        
+        const startX = selectionStartRef.current.x;
+        const startY = selectionStartRef.current.y;
+        
+        const x = Math.min(startX, currentX);
+        const y = Math.min(startY, currentY);
+        const width = Math.abs(currentX - startX);
+        const height = Math.abs(currentY - startY);
+        
+        setSelectionRect({ x, y, width, height });
+      };
+      
+      const handleMouseUp = (e: MouseEvent) => {
+        if (!selectionStartRef.current || !selectionRect) {
+          selectionStartRef.current = null;
+          return;
+        }
+        
+        const rect = selectionRect;
+        
+        // Only show tooltip if selection is meaningful
+        if (rect.width > 10 && rect.height > 10) {
+          // Position tooltip at the top of selection
+          setAreaTooltipPosition({
+            x: rect.x + rect.width/2,
+            y: rect.y - 10
+          });
+          setShowAreaToolTip(true);
+        } else {
           setSelectionRect(null);
           setShowAreaToolTip(false);
-        }).on("drag", ({ clientX, clientY, inputEvent }) => {
-          const container = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-          if (!container) return;
-
-          const rect = container.getBoundingClientRect();
-          const x = clientX - rect.left;
-          const y = clientY - rect.top;
-          
-          setSelectionRect(prevRect => {
-            if (!prevRect) {
-              return {
-                x: x - (container as HTMLElement).scrollLeft,
-                y: y - (container as HTMLElement).scrollTop,
-                width: 0,
-                height: 0
-              };
-            }
-            return {
-              ...prevRect,
-              width: x - prevRect.x - (container as HTMLElement).scrollLeft + (container as HTMLElement).scrollLeft,
-              height: y - prevRect.y - (container as HTMLElement).scrollTop + (container as HTMLElement).scrollTop
-            };
-          });
-        }).on("dragEnd", ({ isDrag, inputEvent }) => {
-          if (isDrag && selectionRect) {
-            // Ensure positive width and height
-            const fixedRect = {
-              x: selectionRect.width < 0 ? selectionRect.x + selectionRect.width : selectionRect.x,
-              y: selectionRect.height < 0 ? selectionRect.y + selectionRect.height : selectionRect.y,
-              width: Math.abs(selectionRect.width),
-              height: Math.abs(selectionRect.height)
-            };
-            
-            // Only show tooltip if the selection is meaningful
-            if (fixedRect.width > 10 && fixedRect.height > 10) {
-              setSelectionRect(fixedRect);
-              
-              // Position the tooltip at the top of the selection
-              setAreaTooltipPosition({
-                x: fixedRect.x + fixedRect.width/2,
-                y: fixedRect.y - 10
-              });
-              
-              setShowAreaToolTip(true);
-            } else {
-              setSelectionRect(null);
-              setShowAreaToolTip(false);
-            }
-          }
-        });
-
-        selectoRef.current = selecto;
+        }
         
-        return () => {
-          selecto.destroy();
-          selectoRef.current = null;
-        };
-      }
+        selectionStartRef.current = null;
+      };
+      
+      container.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        container.removeEventListener('mousedown', handleMouseDown);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        selectionStartRef.current = null;
+      };
     }, [isAreaSelectMode, selectionRect]);
 
     // Enhanced text selection handler
@@ -664,9 +662,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div 
               className="flex flex-col items-center py-4 relative" 
               onMouseUp={handleDocumentMouseUp}
+              ref={overlayRef}
             >
               {/* Selection rectangle overlay */}
-              {selectionRect && (
+              {selectionRect && isAreaSelectMode && (
                 <div 
                   className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-20 pointer-events-none z-10"
                   style={{
@@ -681,10 +680,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               {/* Area Selection Tooltip */}
               {showAreaToolTip && (
                 <div
-                  className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm transform -translate-x-1/2 -translate-y-full cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors"
                   style={{
-                    left: areaTooltipPosition.x,
-                    top: areaTooltipPosition.y
+                    left: areaTooltipPosition.x + 'px',
+                    top: areaTooltipPosition.y + 'px',
+                    transform: 'translate(-50%, -100%)'
                   }}
                   onClick={captureSelectedArea}
                 >
@@ -706,6 +706,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 </div>
               )}
               
+              {/* Document component */}
               <Document
                 file={pdfData}
                 onLoadSuccess={onDocumentLoadSuccess}
