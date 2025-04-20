@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 
 const MindMap = () => {
@@ -56,6 +57,12 @@ const MindMap = () => {
       <FlowchartModal 
         open={showFlowchart} 
         onOpenChange={setShowFlowchart}
+      />
+
+      {/* Modal for Summary */}
+      <SummaryModal 
+        open={showSummary}
+        onOpenChange={setShowSummary}
       />
     </div>
   );

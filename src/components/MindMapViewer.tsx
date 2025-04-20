@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -699,7 +698,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
               border: "1px solid #e5e7eb",
               borderRadius: "8px",
               transition: "all 0.3s ease",
-              maxHeight: "calc(100vh - 300px)" // Add max height constraint
             }}
           ></div>
           
