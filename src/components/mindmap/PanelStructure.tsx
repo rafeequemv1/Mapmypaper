@@ -41,6 +41,21 @@ const PanelStructure = ({
     };
   }, []);
 
+  // Listen for openChatWithText event to open chat panel if needed
+  useEffect(() => {
+    const handleOpenChat = (event: any) => {
+      if (!showChat) {
+        toggleChat();
+      }
+    };
+    
+    window.addEventListener('openChatWithText', handleOpenChat);
+    
+    return () => {
+      window.removeEventListener('openChatWithText', handleOpenChat);
+    };
+  }, [showChat, toggleChat]);
+
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
       try {

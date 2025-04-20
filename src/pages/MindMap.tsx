@@ -25,6 +25,25 @@ const MindMap = () => {
     setMindMapInstance(instance);
   }, []);
 
+  // Listen for text selection events that should activate chat
+  useEffect(() => {
+    const handleTextSelected = (e: CustomEvent) => {
+      if (e.detail?.text) {
+        setExplainText(e.detail.text);
+        // Open chat panel if it's not already open
+        if (!showChat) {
+          setShowChat(true);
+        }
+      }
+    };
+    
+    window.addEventListener('openChatWithText', handleTextSelected as EventListener);
+    
+    return () => {
+      window.removeEventListener('openChatWithText', handleTextSelected as EventListener);
+    };
+  }, [showChat]);
+
   useEffect(() => {
     if (location.state?.presetQuestion) {
       setExplainText(location.state.presetQuestion);
