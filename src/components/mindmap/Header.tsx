@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -47,15 +47,22 @@ const Header = ({
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // Add logging to help debug
+  useEffect(() => {
+    console.log("Mind map instance in Header:", mindMap);
+  }, [mindMap]);
+  
   // Handle export as PNG
   const handleExportPNG = () => {
     if (mindMap) {
+      console.log("Exporting as PNG with mind map:", mindMap);
       downloadMindMapAsPNG(mindMap, fileName);
       toast({
         title: "Export successful",
         description: `Mind map exported as ${fileName}.png`
       });
     } else {
+      console.error("Mind map instance not available for PNG export");
       toast({
         title: "Export failed",
         description: "Mind map instance not available",
@@ -67,12 +74,14 @@ const Header = ({
   // Handle export as SVG
   const handleExportSVG = () => {
     if (mindMap) {
+      console.log("Exporting as SVG with mind map:", mindMap);
       downloadMindMapAsSVG(mindMap, fileName);
       toast({
         title: "Export successful",
         description: `Mind map exported as ${fileName}.svg`
       });
     } else {
+      console.error("Mind map instance not available for SVG export");
       toast({
         title: "Export failed",
         description: "Mind map instance not available",
@@ -84,6 +93,7 @@ const Header = ({
   // Handle export as JSON
   const handleExportJSON = () => {
     if (mindMap) {
+      console.log("Exporting as JSON with mind map:", mindMap);
       const data = mindMap.getData();
       const dataStr = JSON.stringify(data, null, 2);
       const blob = new Blob([dataStr], { type: "application/json" });
@@ -98,6 +108,7 @@ const Header = ({
         description: `Mind map exported as ${fileName}.json`
       });
     } else {
+      console.error("Mind map instance not available for JSON export");
       toast({
         title: "Export failed",
         description: "Mind map instance not available",
