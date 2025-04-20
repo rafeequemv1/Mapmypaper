@@ -72,7 +72,7 @@ const PanelStructure = ({
   }
 
   return (
-    <div className="h-full w-full flex">
+    <div className="h-full w-full flex pl-12"> {/* Added pl-12 to account for the vertical toolbar width */}
       {/* PDF Panel - Fixed to 40% width */}
       {showPdf && (
         <div className="h-full w-[40%] flex-shrink-0">
