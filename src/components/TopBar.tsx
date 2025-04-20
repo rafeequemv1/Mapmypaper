@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogIn, UserPlus, DollarSign, Home } from "lucide-react";
 import UserMenu from "./UserMenu";
+import Logo from "./Logo";
 
 const TopBar = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const TopBar = () => {
             onClick={() => navigate('/')}
             className="flex items-center gap-2"
           >
-            <Home className="h-4 w-4" />
+            <Logo className="h-4 w-4" />
             Home
           </Button>
           

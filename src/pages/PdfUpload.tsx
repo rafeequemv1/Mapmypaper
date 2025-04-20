@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -7,8 +6,7 @@ import { Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { storePdfData } from "@/utils/pdfStorage";
-import TopBar from "@/components/TopBar";
-import Footer from "@/components/Footer";
+import Logo from "@/components/Logo";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -156,11 +154,10 @@ const PdfUpload = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
-      <TopBar />
-      <div className="flex-1 flex flex-col items-center justify-center p-4 mt-16">
-        <div className="text-center mb-12 mt-16">
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-4 mb-6">
-            <Brain className="h-12 w-12 text-[#333]" />
+            <Logo className="h-12 w-12 text-[#333]" />
             <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl">
@@ -220,7 +217,6 @@ const PdfUpload = () => {
           )}
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

@@ -1,15 +1,15 @@
-
 import { Link } from "react-router-dom";
 import { Mail, FileText, DollarSign } from "lucide-react";
+import Logo from "./Logo";
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-50 border-t mt-8">
+    <footer className="bg-gray-50 border-t">
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Logo" className="h-8 w-8" />
+              <Logo className="h-8 w-8" />
               <span className="text-xl font-semibold">mapmypaper</span>
             </div>
             <p className="text-sm text-gray-600">
