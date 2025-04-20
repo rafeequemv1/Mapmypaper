@@ -18,6 +18,7 @@ const MindMap = () => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
+  const [pdfImagesExtracted, setPdfImagesExtracted] = useState(false);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -50,6 +51,26 @@ const MindMap = () => {
       window.history.replaceState({}, document.title, location.pathname);
     }
   }, [location]);
+
+  // Listen for PDF image extraction event
+  useEffect(() => {
+    const handleImagesExtracted = (e: CustomEvent) => {
+      if (e.detail?.success) {
+        setPdfImagesExtracted(true);
+        toast({
+          title: "PDF Images Ready",
+          description: "Images have been extracted from your PDF and are ready to use in your mind map.",
+          duration: 5000,
+        });
+      }
+    };
+    
+    window.addEventListener('pdfImagesExtracted', handleImagesExtracted as EventListener);
+    
+    return () => {
+      window.removeEventListener('pdfImagesExtracted', handleImagesExtracted as EventListener);
+    };
+  }, [toast]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
