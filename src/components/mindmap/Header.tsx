@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Image,
   FileJson,
+  FilePdf,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -135,7 +136,7 @@ const Header = ({
           className={`w-9 h-9 p-0 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
           title="Toggle PDF"
         >
-          <FileText className="h-4 w-4" />
+          <FilePdf className="h-4 w-4" />
         </Button>
         
         <Button 
@@ -186,29 +187,12 @@ const Header = ({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
 
-      {/* Top Header */}
-      <header className="bg-white border-b py-2 px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-black text-white p-1.5 rounded-md">
-              <Upload className="h-4 w-4" />
-            </div>
-            <div className="flex items-center">
-              <h1 className="text-lg font-bold">mapmypaper</h1>
-              <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
-              <Upload className="h-3.5 w-3.5 text-black" />
-            </Button>
-            <UserMenu />
-          </div>
+        {/* User Menu in Vertical Sidebar */}
+        <div className="mt-auto mb-4">
+          <UserMenu />
         </div>
-      </header>
+      </div>
     </>
   );
 };
