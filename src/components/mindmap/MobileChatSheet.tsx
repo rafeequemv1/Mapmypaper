@@ -9,9 +9,10 @@ import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
+  explainText?: string;
 }
 
-const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
+const MobileChatSheet = ({ onScrollToPdfPosition, explainText }: MobileChatSheetProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
     { 
@@ -26,6 +27,7 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const citationActivated = useRef(false);
+  const [processingExplainText, setProcessingExplainText] = useState(false);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -63,6 +65,66 @@ Feel free to ask me any questions! Here are some suggestions:`
       citationActivated.current = false;
     }
   }, [messages, isSheetOpen, onScrollToPdfPosition]);
+  
+  // Process text to explain when it changes
+  useEffect(() => {
+    const processExplainText = async () => {
+      if (explainText && !processingExplainText && isSheetOpen) {
+        setProcessingExplainText(true);
+        
+        // Set the text in the input field first
+        setInputValue(`Please explain this text: "${explainText}"`);
+        
+        // Add user message with the selected text
+        setMessages(prev => [...prev, { 
+          role: 'user', 
+          content: `Please explain this text: "${explainText}"` 
+        }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          // Enhanced prompt for explanation
+          const response = await chatWithGeminiAboutPdf(
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
+          );
+          
+          // Hide typing indicator and add AI response with formatting
+          setIsTyping(false);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: formatAIResponse(response),
+              isHtml: true 
+            }
+          ]);
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("Chat error:", error);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: "Sorry, I encountered an error explaining that. Please try again." 
+            }
+          ]);
+          
+          toast({
+            title: "Explanation Error",
+            description: "Failed to get an explanation from the AI.",
+            variant: "destructive"
+          });
+        } finally {
+          setProcessingExplainText(false);
+        }
+      }
+    };
+    
+    processExplainText();
+  }, [explainText, isSheetOpen, toast]);
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {

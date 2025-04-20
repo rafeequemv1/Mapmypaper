@@ -94,6 +94,7 @@ const PanelStructure = ({
       {/* Mobile Chat Sheet */}
       <MobileChatSheet 
         onScrollToPdfPosition={handleScrollToPdfPosition}
+        explainText={explainText}
       />
     </div>
   );

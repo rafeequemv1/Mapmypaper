@@ -102,7 +102,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Handle tooltip click
+    // Handle tooltip click - simplified to just call onTextSelected
     const handleTooltipClick = () => {
       if (onTextSelected && selectedText) {
         onTextSelected(selectedText);
@@ -456,7 +456,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               className="flex flex-col items-center py-4 relative" 
               onMouseUp={handleDocumentMouseUp}
             >
-              {/* Tooltip */}
+              {/* Simplified Tooltip */}
               {showTooltip && (
                 <div
                   className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm transform -translate-x-1/2 -translate-y-full cursor-pointer hover:bg-gray-50 transition-colors"
@@ -466,7 +466,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   }}
                   onClick={handleTooltipClick}
                 >
-                  Click to explain this text
+                  Explain
                 </div>
               )}
               

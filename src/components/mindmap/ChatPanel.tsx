@@ -49,8 +49,14 @@ Feel free to ask me any questions! Here are some suggestions:`
       if (explainText && !processingExplainText) {
         setProcessingExplainText(true);
         
+        // Set the text in the input field first
+        setInputValue(`Please explain this text: "${explainText}"`);
+        
         // Add user message with the selected text
-        setMessages(prev => [...prev, { role: 'user', content: `Please explain this text in detail with page citations: "${explainText}"` }]);
+        setMessages(prev => [...prev, { 
+          role: 'user', 
+          content: `Please explain this text: "${explainText}"` 
+        }]);
         
         // Show typing indicator
         setIsTyping(true);
@@ -79,13 +85,13 @@ Feel free to ask me any questions! Here are some suggestions:`
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I encountered an error explaining that. Please try again." 
+              content: "Sorry, I encountered an error. Please try again." 
             }
           ]);
           
           toast({
-            title: "Explanation Error",
-            description: "Failed to get an explanation from the AI.",
+            title: "Chat Error",
+            description: "Failed to get a response from the AI.",
             variant: "destructive"
           });
         } finally {
@@ -140,13 +146,13 @@ Feel free to ask me any questions! Here are some suggestions:`
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I encountered an error analyzing that image. Please try again." 
+              content: "Sorry, I encountered an error. Please try again." 
             }
           ]);
           
           toast({
-            title: "Image Analysis Error",
-            description: "Failed to analyze the selected area.",
+            title: "Chat Error",
+            description: "Failed to get a response from the AI.",
             variant: "destructive"
           });
         } finally {
