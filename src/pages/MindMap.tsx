@@ -9,12 +9,17 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);  // Set default to true
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
+  const [showSummary, setShowSummary] = useState(false);
+  const [showFlowchart, setShowFlowchart] = useState(false);
+  const [showMindmap, setShowMindmap] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
+  const [mindMap, setMindMap] = useState(null);
 
-  const handleMindMapReady = useCallback(() => {
+  const handleMindMapReady = useCallback((instance) => {
     setIsMapGenerated(true);
+    setMindMap(instance);
   }, []);
 
   useEffect(() => {
@@ -28,10 +33,14 @@ const MindMap = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header 
-        showPdfButton={true}
-        showChatButton={true}
-        onTogglePdf={setShowPdf}
-        onToggleChat={setShowChat}
+        togglePdf={() => setShowPdf(!showPdf)}
+        toggleChat={() => setShowChat(!showChat)}
+        setShowSummary={setShowSummary}
+        setShowFlowchart={setShowFlowchart}
+        setShowMindmap={setShowMindmap}
+        isPdfActive={showPdf}
+        isChatActive={showChat}
+        mindMap={mindMap}
       />
       <PanelStructure
         showPdf={showPdf}
