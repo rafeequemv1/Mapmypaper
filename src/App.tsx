@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,6 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import RequireAuth from "@/components/RequireAuth";
+import TopBar from "@/components/TopBar";
+import Footer from "@/components/Footer";
 import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
@@ -25,6 +28,18 @@ const queryClient = new QueryClient({
   }
 });
 
+// Layout component that includes TopBar and Footer
+const Layout = ({ children }: { children: React.ReactNode }) => (
+  <>
+    <TopBar />
+    {children}
+    <Footer />
+  </>
+);
+
+// Layout without TopBar and Footer for the editor
+const EditorLayout = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -34,20 +49,23 @@ const App = () => (
         <div className="relative">
           <BrowserRouter>
             <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/policy" element={<Policy />} />
-              <Route path="/refund" element={<Refund />} />
-              
-              {/* Protected routes */}
-              <Route element={<RequireAuth />}>
+              {/* Routes with TopBar and Footer */}
+              <Route element={<Layout />}>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/policy" element={<Policy />} />
+                <Route path="/refund" element={<Refund />} />
                 <Route path="/" element={<PdfUpload />} />
-                <Route path="/mindmap" element={<MindMap />} />
               </Route>
               
-              {/* Catch-all route */}
-              <Route path="*" element={<NotFound />} />
+              {/* Routes without TopBar and Footer */}
+              <Route element={<EditorLayout />}>
+                <Route element={<RequireAuth />}>
+                  <Route path="/mindmap" element={<MindMap />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Route>
             </Routes>
           </BrowserRouter>
         </div>

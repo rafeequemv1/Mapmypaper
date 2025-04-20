@@ -2,7 +2,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserPlus, DollarSign } from "lucide-react";
+import { LogIn, UserPlus, DollarSign, Home } from "lucide-react";
 import UserMenu from "./UserMenu";
 
 const TopBar = () => {
@@ -12,9 +12,16 @@ const TopBar = () => {
   return (
     <div className="fixed top-0 left-0 right-0 bg-white border-b z-50">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <div className="text-xl font-semibold">mapmypaper</div>
-        
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2"
+          >
+            <Home className="h-4 w-4" />
+            Home
+          </Button>
+          
           <Button
             variant="ghost"
             onClick={() => navigate('/pricing')}
@@ -23,7 +30,9 @@ const TopBar = () => {
             <DollarSign className="h-4 w-4" />
             Pricing
           </Button>
-          
+        </div>
+        
+        <div className="flex items-center gap-3">
           {user ? (
             <UserMenu />
           ) : (
