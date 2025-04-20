@@ -6,6 +6,7 @@ import { Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import TopBar from "@/components/TopBar";
+import Footer from "@/components/Footer";
 
 const PdfUpload = () => {
   const navigate = useNavigate();
@@ -129,13 +130,20 @@ const PdfUpload = () => {
     }
   }, [selectedFile, navigate, toast]);
 
+  const presetQuestions = [
+    "What are the main topics covered in this paper?",
+    "Can you summarize the key findings?",
+    "What are the research methods used?",
+    "What are the limitations of this study?",
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">
       <TopBar />
       <div className="flex-1 flex flex-col items-center justify-center p-4 mt-16">
-        <div className="text-center mb-12 mt-16"> {/* Added more space above hero text */}
-          <div className="flex items-center justify-center gap-4 mb-6"> {/* Increased spacing */}
-            <Brain className="h-12 w-12 text-[#333]" /> {/* Made icon slightly larger */}
+        <div className="text-center mb-12 mt-16">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <Brain className="h-12 w-12 text-[#333]" />
             <h1 className="text-4xl font-bold text-[#333]">mapmypaper</h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl">
@@ -173,6 +181,34 @@ const PdfUpload = () => {
             </div>
           </div>
           
+          {/* Pre-set Questions */}
+          <div className="mt-8">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">
+              Example questions you can ask:
+            </h3>
+            <div className="flex flex-col gap-2">
+              {presetQuestions.map((question, index) => (
+                <button
+                  key={index}
+                  className="text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
+                  onClick={() => {
+                    if (selectedFile) {
+                      navigate("/mindmap", { state: { presetQuestion: question } });
+                    } else {
+                      toast({
+                        title: "No file selected",
+                        description: "Please upload a PDF file first",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </div>
+          
           {/* Selected File Info */}
           {selectedFile && (
             <div className="p-4 bg-gray-50 rounded-lg flex items-center justify-between mb-6">
@@ -198,10 +234,7 @@ const PdfUpload = () => {
           )}
         </div>
       </div>
-      
-      <footer className="py-4 text-center text-gray-500 text-sm">
-        mapmypaper — Transform research into visual knowledge for better learning
-      </footer>
+      <Footer />
     </div>
   );
 };
