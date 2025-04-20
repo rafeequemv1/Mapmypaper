@@ -25,22 +25,23 @@ interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowFlowchart?: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowMindmap?: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
+  // Add the new prop types to match MindMap.tsx
+  openFlowchart?: () => void;
+  openMindmap?: () => void;
 }
 
 const Header = ({ 
   togglePdf, 
   toggleChat, 
   setShowSummary,
-  setShowFlowchart,
-  setShowMindmap,
   isPdfActive,
   isChatActive,
-  mindMap
+  mindMap,
+  openFlowchart, // Use the new prop names
+  openMindmap,   // Use the new prop names
 }: HeaderProps) => {
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
@@ -162,7 +163,7 @@ const Header = ({
           
           <Button 
             variant="ghost" 
-            onClick={() => setShowFlowchart && setShowFlowchart(true)} 
+            onClick={openFlowchart} // Use the new prop directly
             className="flex items-center gap-1 text-black h-8 px-3"
           >
             <FileText className="h-3.5 w-3.5" />
@@ -171,7 +172,7 @@ const Header = ({
 
           <Button 
             variant="ghost" 
-            onClick={() => setShowMindmap && setShowMindmap(true)} 
+            onClick={openMindmap} // Use the new prop directly
             className="flex items-center gap-1 text-black h-8 px-3"
           >
             <Network className="h-3.5 w-3.5" />
