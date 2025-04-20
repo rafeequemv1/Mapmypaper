@@ -4,11 +4,15 @@ import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
+import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import { MindmapModal } from "@/components/mindmap/MindmapModal";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);  // Set default to true
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
+  const [showFlowchart, setShowFlowchart] = useState(false);
+  const [showMindmap, setShowMindmap] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -34,6 +38,8 @@ const MindMap = () => {
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={null}
+        openFlowchart={() => setShowFlowchart(true)}
+        openMindmap={() => setShowMindmap(true)}
       />
       <PanelStructure
         showPdf={showPdf}
@@ -43,6 +49,18 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={setExplainText}
+      />
+      
+      {/* Modal for Flowchart */}
+      <FlowchartModal 
+        open={showFlowchart} 
+        onOpenChange={setShowFlowchart}
+      />
+      
+      {/* Modal for Mindmap */}
+      <MindmapModal 
+        isOpen={showMindmap} 
+        onClose={() => setShowMindmap(false)}
       />
     </div>
   );
