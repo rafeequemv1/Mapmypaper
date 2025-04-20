@@ -1,7 +1,8 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import Header from "@/components/Header";
+import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 
 const MindMap = () => {
@@ -27,10 +28,12 @@ const MindMap = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header 
-        showPdfButton={true}
-        showChatButton={true}
-        onTogglePdf={setShowPdf}
-        onToggleChat={setShowChat}
+        togglePdf={() => setShowPdf(!showPdf)}
+        toggleChat={() => setShowChat(!showChat)}
+        setShowSummary={() => {}}
+        isPdfActive={showPdf}
+        isChatActive={showChat}
+        mindMap={null}
       />
       <PanelStructure
         showPdf={showPdf}
