@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -776,5 +777,48 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     
     setSummary(summaryText);
     setShowSummary(true);
-    
-    // If there's an onExplainText callback, send the
+  };
+  
+  // Add missing return statement with JSX
+  return (
+    <div className="relative w-full h-full flex flex-col">
+      {isLoadingImages && (
+        <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg shadow-lg">
+            <p className="text-lg font-medium">Extracting images from PDF...</p>
+          </div>
+        </div>
+      )}
+      
+      <div ref={containerRef} className="flex-grow mind-map-container" />
+      
+      {showSummary && (
+        <div className="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-lg max-w-md max-h-[80%] overflow-auto z-40">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-bold">Node Summary</h3>
+            <Button variant="ghost" size="sm" onClick={() => setShowSummary(false)}>×</Button>
+          </div>
+          <div className="prose prose-sm">
+            <pre className="whitespace-pre-wrap">{summary}</pre>
+          </div>
+        </div>
+      )}
+      
+      {pdfImages.length > 0 && (
+        <div className="absolute bottom-4 left-4 bg-white p-2 rounded-lg shadow-lg z-40">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-2"
+            onClick={addPdfImagesToMindMap}
+          >
+            <Image className="h-4 w-4" />
+            <span>Add {pdfImages.length} Images to Mind Map</span>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
