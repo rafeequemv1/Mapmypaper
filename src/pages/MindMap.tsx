@@ -1,7 +1,8 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import Header from "@/components/Header";
+import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 
 const MindMap = () => {
