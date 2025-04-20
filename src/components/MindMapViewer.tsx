@@ -278,8 +278,10 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         height = Math.floor(height * ratio);
       }
       
-      // Add the image node
-      mind.addNode('image', {
+      // Add the image node - use the type assertion to work around the TypeScript error
+      // This is necessary because the TypeScript definitions don't include the addNode method
+      // that is available in the actual mind-elixir library
+      (mind as any).addNode('image', {
         id: nodeId,
         topic: caption,
         direction: 1,
