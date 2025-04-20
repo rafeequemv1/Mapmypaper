@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import RequireAuth from "@/components/RequireAuth";
 import TopBar from "@/components/TopBar";
@@ -29,16 +29,18 @@ const queryClient = new QueryClient({
 });
 
 // Layout component that includes TopBar and Footer
-const Layout = ({ children }: { children: React.ReactNode }) => (
+const Layout = () => (
   <>
     <TopBar />
-    {children}
+    <div className="pt-16 pb-8">
+      <Outlet />
+    </div>
     <Footer />
   </>
 );
 
 // Layout without TopBar and Footer for the editor
-const EditorLayout = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+const EditorLayout = () => <Outlet />;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
