@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -11,6 +10,10 @@ import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import Pricing from "./pages/Pricing";
+import Contact from "./pages/Contact";
+import Policy from "./pages/Policy";
+import Refund from "./pages/Refund";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -32,6 +35,10 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/policy" element={<Policy />} />
+              <Route path="/refund" element={<Refund />} />
               
               {/* Protected routes */}
               <Route element={<RequireAuth />}>
