@@ -7,7 +7,7 @@ import {
   MessageSquare,
   Image,
   FileJson,
-  FilePdf,
+  File,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -136,7 +136,7 @@ const Header = ({
           className={`w-9 h-9 p-0 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
           title="Toggle PDF"
         >
-          <FilePdf className="h-4 w-4" />
+          <File className="h-4 w-4" />
         </Button>
         
         <Button 
