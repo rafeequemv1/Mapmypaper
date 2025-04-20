@@ -30,6 +30,7 @@ const FlowchartPreview = ({
       try {
         ref.current.innerHTML = "";
         
+        // Enhanced configuration for more detailed and colorful diagrams
         mermaid.initialize({
           theme: theme,
           securityLevel: 'loose',
@@ -37,13 +38,13 @@ const FlowchartPreview = ({
           flowchart: {
             htmlLabels: true,
             curve: 'basis',
-            diagramPadding: 16,
-            nodeSpacing: 60,
-            rankSpacing: 80,
+            diagramPadding: 20,
+            nodeSpacing: 80,
+            rankSpacing: 100,
             useMaxWidth: true,
           },
           mindmap: {
-            padding: 16,
+            padding: 20,
           }
         });
         
@@ -52,70 +53,53 @@ const FlowchartPreview = ({
           processedCode = processedCode.replace(/flowchart\s+[A-Z]{2}/, 'flowchart LR');
         }
         
-        if (processedCode.includes('flowchart') && !processedCode.includes('class') && !processedCode.includes('style')) {
-          const lines = processedCode.split('\n');
-          let nodeCount = 0;
-          const nodeClass = {};
-          
-          for (let i = 0; i < lines.length; i++) {
-            const nodeMatches = lines[i].match(/([A-Za-z0-9_-]+)(?:\[|\(|\{|\>)/g);
-            if (nodeMatches) {
-              for (const match of nodeMatches) {
-                const nodeName = match.replace(/[\[\(\{\>]$/, '').trim();
-                if (!nodeClass[nodeName] && nodeName !== 'flowchart') {
-                  nodeClass[nodeName] = `class-${(nodeCount % 7) + 1}`;
-                  nodeCount++;
-                }
-              }
-            }
-            
-            const connMatches = lines[i].match(/([A-Za-z0-9_-]+)\s*-->/g);
-            if (connMatches) {
-              for (const match of connMatches) {
-                const nodeName = match.replace(/\s*-->$/, '').trim();
-                if (!nodeClass[nodeName]) {
-                  nodeClass[nodeName] = `class-${(nodeCount % 7) + 1}`;
-                  nodeCount++;
-                }
-              }
-            }
-          }
-          
-          for (const [node, className] of Object.entries(nodeClass)) {
-            processedCode += `\nclass ${node} ${className}`;
-          }
+        // Add enhanced styling classes if they don't exist
+        if (!processedCode.includes('classDef')) {
+          processedCode += `
+            classDef default fill:#E5DEFF,stroke:#8B5CF6,stroke-width:3px,rx:15px,ry:15px
+            classDef primary fill:#D3E4FD,stroke:#3B82F6,stroke-width:3px,rx:15px,ry:15px
+            classDef success fill:#F2FCE2,stroke:#22C55E,stroke-width:3px,rx:15px,ry:15px
+            classDef warning fill:#FEF7CD,stroke:#F59E0B,stroke-width:3px,rx:15px,ry:15px
+            classDef danger fill:#FFDEE2,stroke:#EF4444,stroke-width:3px,rx:15px,ry:15px
+            classDef info fill:#FDE1D3,stroke:#F97316,stroke-width:3px,rx:15px,ry:15px
+            classDef special fill:#F1F0FB,stroke:#D946EF,stroke-width:3px,rx:15px,ry:15px
+          `;
         }
 
         const customStyles = `
           .flowchart-node rect, .flowchart-label rect {
             rx: 15px;
             ry: 15px;
-            fill-opacity: 0.8 !important;
+            fill-opacity: 0.9 !important;
           }
           .node rect, .node circle, .node ellipse, .node polygon, .node path {
-            stroke-width: 2px !important;
+            stroke-width: 3px !important;
             rx: 15px;
             ry: 15px;
           }
-          .node.class-1 > rect { fill: #F2FCE2 !important; stroke: #22C55E !important; }
-          .node.class-2 > rect { fill: #FEF7CD !important; stroke: #F59E0B !important; }
-          .node.class-3 > rect { fill: #FDE1D3 !important; stroke: #F97316 !important; }
-          .node.class-4 > rect { fill: #E5DEFF !important; stroke: #8B5CF6 !important; }
-          .node.class-5 > rect { fill: #FFDEE2 !important; stroke: #EF4444 !important; }
-          .node.class-6 > rect { fill: #D3E4FD !important; stroke: #3B82F6 !important; }
-          .node.class-7 > rect { fill: #F1F0FB !important; stroke: #D946EF !important; }
-          
           .edgeLabel {
             background-color: white;
             border-radius: 8px;
-            padding: 4px 8px;
-            font-size: 12px;
+            padding: 6px 12px;
+            font-size: 14px;
             font-weight: 500;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
           }
-          
           .flowchart-link {
-            stroke-width: 2px !important;
+            stroke-width: 3px !important;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+          }
+          #flowchart {
+            font-family: system-ui, -apple-system, sans-serif;
+          }
+          .node text {
+            font-size: 14px;
+            font-weight: 500;
+          }
+          .label text {
+            font-size: 14px;
+            font-weight: 500;
           }
         `;
         
@@ -142,16 +126,15 @@ const FlowchartPreview = ({
             styleElement.textContent = customStyles;
             svgElement.appendChild(styleElement);
             
+            // Apply zoom level
             if (zoomLevel !== 1) {
               const g = svgElement.querySelector('g');
               if (g) {
                 const viewBox = svgElement.getAttribute('viewBox');
                 if (viewBox) {
                   const [x, y, width, height] = viewBox.split(' ').map(Number);
-                  
                   const centerX = width / 2;
                   const centerY = height / 2;
-                  
                   g.setAttribute('transform', 
                     `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
                   );
