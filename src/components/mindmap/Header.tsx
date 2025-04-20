@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -125,94 +124,93 @@ const Header = ({
       });
     }
   }, [toast]);
-  
+
   return (
-    <header className="bg-white border-b py-2 px-4">
-      <div className="flex items-center justify-between">
-        {/* Left side - Logo with Beta tag */}
-        <div className="flex items-center gap-2">
-          <div className="bg-black text-white p-1.5 rounded-md">
-            <Upload className="h-4 w-4" />
-          </div>
-          <div className="flex items-center">
-            <h1 className="text-lg font-bold">mapmypaper</h1>
-            <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
-          </div>
-        </div>
+    <>
+      {/* Vertical Sidebar */}
+      <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-20 gap-2 z-10">
+        <Button 
+          variant={isPdfActive ? "default" : "ghost"} 
+          onClick={togglePdf} 
+          className={`w-9 h-9 p-0 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
+          title="Toggle PDF"
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
         
-        {/* Left side - Main Button Group */}
-        <div className="flex items-center gap-2 md:gap-3">
-          <Button 
-            variant={isPdfActive ? "default" : "ghost"} 
-            onClick={togglePdf} 
-            className={`flex items-center gap-1 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">PDF</span>
-          </Button>
-          
-          <Button 
-            variant={isChatActive ? "default" : "ghost"} 
-            onClick={toggleChat} 
-            className={`flex items-center gap-1 ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"} h-8 px-3`}
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Chat</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            onClick={() => setShowSummary(true)} 
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Summary</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            onClick={openFlowchart}
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Flowchart</span>
-          </Button>
-        </div>
+        <Button 
+          variant={isChatActive ? "default" : "ghost"} 
+          onClick={toggleChat} 
+          className={`w-9 h-9 p-0 ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
+          title="Toggle Chat"
+        >
+          <MessageSquare className="h-4 w-4" />
+        </Button>
         
-        {/* Right side - Action buttons and User Menu */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
-            <Upload className="h-3.5 w-3.5 text-black" />
-          </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 px-2">
-                <Download className="h-3.5 w-3.5 text-black" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
-                <Image className="h-4 w-4" />
-                <span>Export as SVG</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
-                <Image className="h-4 w-4" />
-                <span>Export as PNG</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
-                <FileJson className="h-4 w-4" />
-                <span>Export as JSON</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <UserMenu />
-        </div>
+        <Button 
+          variant="ghost" 
+          onClick={() => setShowSummary(true)} 
+          className="w-9 h-9 p-0 text-black"
+          title="Show Summary"
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
+        
+        <Button 
+          variant="ghost" 
+          onClick={openFlowchart}
+          className="w-9 h-9 p-0 text-black"
+          title="Open Flowchart"
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-9 h-9 p-0" title="Export">
+              <Download className="h-4 w-4 text-black" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
+              <Image className="h-4 w-4" />
+              <span>Export as SVG</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
+              <Image className="h-4 w-4" />
+              <span>Export as PNG</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
+              <FileJson className="h-4 w-4" />
+              <span>Export as JSON</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-    </header>
+
+      {/* Top Header */}
+      <header className="bg-white border-b py-2 px-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-black text-white p-1.5 rounded-md">
+              <Upload className="h-4 w-4" />
+            </div>
+            <div className="flex items-center">
+              <h1 className="text-lg font-bold">mapmypaper</h1>
+              <div className="ml-1 bg-purple-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">BETA</div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/")}>
+              <Upload className="h-3.5 w-3.5 text-black" />
+            </Button>
+            <UserMenu />
+          </div>
+        </div>
+      </header>
+    </>
   );
 };
 
 export default Header;
-
