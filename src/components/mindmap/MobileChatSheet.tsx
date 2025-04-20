@@ -18,13 +18,7 @@ const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
       role: 'assistant', 
       content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
 
-Here are some questions you can ask:
-• What are the main topics covered in this paper?
-• Can you summarize the key findings?
-• What are the research methods used?
-• What are the limitations of this study?
-
-Feel free to ask any of these questions or your own!`
+Feel free to ask me any questions! Here are some suggestions:` 
     }
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -174,6 +168,46 @@ Feel free to ask any of these questions or your own!`
     setIsSheetOpen(open);
   };
 
+  const handleQuickQuestion = async (question: string) => {
+    // Add user message
+    setMessages(prev => [...prev, { role: 'user', content: question }]);
+    
+    // Show typing indicator
+    setIsTyping(true);
+    
+    try {
+      const response = await chatWithGeminiAboutPdf(
+        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+      );
+      
+      setIsTyping(false);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          role: 'assistant', 
+          content: formatAIResponse(response),
+          isHtml: true 
+        }
+      ]);
+    } catch (error) {
+      setIsTyping(false);
+      console.error("Chat error:", error);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          role: 'assistant', 
+          content: "Sorry, I encountered an error. Please try again." 
+        }
+      ]);
+      
+      toast({
+        title: "Chat Error",
+        description: "Failed to get a response from the AI.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Sheet open={isSheetOpen} onOpenChange={handleSheetOpenChange}>
       <SheetTrigger asChild>
@@ -184,6 +218,7 @@ Feel free to ask any of these questions or your own!`
           <MessageSquare className="h-6 w-6" />
         </Button>
       </SheetTrigger>
+      
       <SheetContent side="right" className="sm:max-w-lg w-full p-0 flex flex-col">
         <div className="flex items-center justify-between p-3 border-b">
           <div className="flex items-center gap-2">
@@ -210,6 +245,39 @@ Feel free to ask any of these questions or your own!`
                     />
                   ) : (
                     message.content
+                  )}
+
+                  {i === 0 && (
+                    <div className="mt-4 space-y-2">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                        onClick={() => handleQuickQuestion("What are the main topics covered in this paper?")}
+                      >
+                        What are the main topics covered in this paper?
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                        onClick={() => handleQuickQuestion("Can you summarize the key findings?")}
+                      >
+                        Can you summarize the key findings?
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                        onClick={() => handleQuickQuestion("What are the research methods used?")}
+                      >
+                        What are the research methods used?
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                        onClick={() => handleQuickQuestion("What are the limitations of this study?")}
+                      >
+                        What are the limitations of this study?
+                      </Button>
+                    </div>
                   )}
                   
                   {message.role === 'assistant' && (
