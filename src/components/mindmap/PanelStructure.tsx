@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
@@ -41,11 +40,17 @@ const PanelStructure = ({
     };
   }, []);
 
-  // Listen for openChatWithText event to open chat panel if needed
+  // Enhanced event listener for opening chat with text
   useEffect(() => {
     const handleOpenChat = (event: any) => {
+      // Open chat panel if it's closed
       if (!showChat) {
         toggleChat();
+      }
+      
+      // If there's text in the event detail, update the explain text
+      if (event.detail?.text) {
+        onExplainText(event.detail.text);
       }
     };
     
@@ -54,7 +59,7 @@ const PanelStructure = ({
     return () => {
       window.removeEventListener('openChatWithText', handleOpenChat);
     };
-  }, [showChat, toggleChat]);
+  }, [showChat, toggleChat, onExplainText]);
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
