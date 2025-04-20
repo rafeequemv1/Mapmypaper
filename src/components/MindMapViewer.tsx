@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -238,6 +239,9 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         theme: colorfulTheme,
         autoFit: true
       };
+
+      // Initialize mind map - this was accidentally removed in previous edit
+      const mind = new MindElixir(options);
 
       // Add custom styles to node-menu and style-panel elements when they appear
       const observeStylePanel = () => {
