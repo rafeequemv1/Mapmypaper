@@ -18,6 +18,8 @@ export const Markmaper = () => {
       .map(section => `- ${section.trim()}`)
       .join('\n');
     
+    console.log('Creating markmap with text sections:', sections.substring(0, 100) + '...');
+    
     const { root } = transformer.transform(sections);
     const mm = Markmap.create(svgRef.current);
     mm.setData(root);
