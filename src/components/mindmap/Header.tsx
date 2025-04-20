@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -21,12 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MindElixirInstance } from "mind-elixir";
 import UserMenu from "@/components/UserMenu";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -134,97 +127,73 @@ const Header = ({
   }, [toast]);
 
   return (
-    <TooltipProvider>
-      <div className="fixed left-0 top-0 bottom-0 w-16 bg-white border-r flex flex-col items-center py-20 gap-4 z-10">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant={isPdfActive ? "default" : "ghost"} 
-              onClick={togglePdf} 
-              className={`w-14 h-14 p-0 flex flex-col items-center justify-center ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
-            >
-              <File className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">PDF</TooltipContent>
-        </Tooltip>
+    <>
+      {/* Vertical Sidebar */}
+      <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-20 gap-2 z-10">
+        <Button 
+          variant={isPdfActive ? "default" : "ghost"} 
+          onClick={togglePdf} 
+          className={`w-9 h-9 p-0 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
+          title="Toggle PDF"
+        >
+          <File className="h-4 w-4" />
+        </Button>
         
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant={isChatActive ? "default" : "ghost"} 
-              onClick={toggleChat} 
-              className={`w-14 h-14 p-0 flex flex-col items-center justify-center ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
-            >
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">Chat</TooltipContent>
-        </Tooltip>
+        <Button 
+          variant={isChatActive ? "default" : "ghost"} 
+          onClick={toggleChat} 
+          className={`w-9 h-9 p-0 ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
+          title="Toggle Chat"
+        >
+          <MessageSquare className="h-4 w-4" />
+        </Button>
         
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowSummary(true)} 
-              className="w-14 h-14 p-0 flex flex-col items-center justify-center text-black"
-            >
-              <FileText className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">Summary</TooltipContent>
-        </Tooltip>
+        <Button 
+          variant="ghost" 
+          onClick={() => setShowSummary(true)} 
+          className="w-9 h-9 p-0 text-black"
+          title="Show Summary"
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
         
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              onClick={openFlowchart}
-              className="w-14 h-14 p-0 flex flex-col items-center justify-center text-black"
-            >
-              <FileText className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">Flowchart</TooltipContent>
-        </Tooltip>
+        <Button 
+          variant="ghost" 
+          onClick={openFlowchart}
+          className="w-9 h-9 p-0 text-black"
+          title="Open Flowchart"
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-14 h-14 p-0 flex flex-col items-center justify-center" 
-                >
-                  <Download className="h-4 w-4 text-black" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
-                  <Image className="h-4 w-4" />
-                  <span>Export as SVG</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
-                  <Image className="h-4 w-4" />
-                  <span>Export as PNG</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
-                  <FileJson className="h-4 w-4" />
-                  <span>Export as JSON</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </TooltipTrigger>
-          <TooltipContent side="right">Export</TooltipContent>
-        </Tooltip>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-9 h-9 p-0" title="Export">
+              <Download className="h-4 w-4 text-black" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
+              <Image className="h-4 w-4" />
+              <span>Export as SVG</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
+              <Image className="h-4 w-4" />
+              <span>Export as PNG</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
+              <FileJson className="h-4 w-4" />
+              <span>Export as JSON</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* User Menu at bottom of sidebar */}
+        {/* User Menu in Vertical Sidebar */}
         <div className="mt-auto mb-4">
           <UserMenu />
         </div>
       </div>
-    </TooltipProvider>
+    </>
   );
 };
 
