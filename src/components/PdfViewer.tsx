@@ -2,18 +2,21 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, Image } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { getPdfData } from "@/utils/pdfStorage";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import Selecto from "selecto";
+import html2canvas from 'html2canvas';
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
+  onImageSelected?: (imageData: string) => void;
   onPdfLoaded?: () => void;
   renderTooltipContent?: () => React.ReactNode;
 }
@@ -23,7 +26,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onImageSelected, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -41,6 +44,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [selectedText, setSelectedText] = useState("");
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const [showTooltip, setShowTooltip] = useState(false);
+    
+    // New state for area selection
+    const [isAreaSelectMode, setIsAreaSelectMode] = useState(false);
+    const selectoRef = useRef<Selecto | null>(null);
+    const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+    const [showAreaToolTip, setShowAreaToolTip] = useState(false);
+    const [areaTooltipPosition, setAreaTooltipPosition] = useState({ x: 0, y: 0 });
 
     // Load PDF data from IndexedDB
     useEffect(() => {
@@ -76,8 +86,92 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       loadPdfData();
     }, [toast]);
 
+    // Initialize area selection tool
+    useEffect(() => {
+      if (pdfContainerRef.current && isAreaSelectMode) {
+        const container = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (!container) return;
+
+        // Initialize Selecto
+        const selecto = new Selecto({
+          container: container as HTMLElement,
+          dragContainer: container as HTMLElement,
+          selectableTargets: [".react-pdf__Page"],
+          hitRate: 0,
+          selectByClick: false,
+          selectFromInside: false,
+          ratio: 0,
+        });
+
+        selecto.on("dragStart", (e) => {
+          e.stop();
+          setSelectionRect(null);
+          setShowAreaToolTip(false);
+        }).on("drag", ({ clientX, clientY, inputEvent }) => {
+          const container = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+          if (!container) return;
+
+          const rect = container.getBoundingClientRect();
+          const x = clientX - rect.left;
+          const y = clientY - rect.top;
+          
+          setSelectionRect(prevRect => {
+            if (!prevRect) {
+              return {
+                x: x - (container as HTMLElement).scrollLeft,
+                y: y - (container as HTMLElement).scrollTop,
+                width: 0,
+                height: 0
+              };
+            }
+            return {
+              ...prevRect,
+              width: x - prevRect.x - (container as HTMLElement).scrollLeft + (container as HTMLElement).scrollLeft,
+              height: y - prevRect.y - (container as HTMLElement).scrollTop + (container as HTMLElement).scrollTop
+            };
+          });
+        }).on("dragEnd", ({ isDrag, inputEvent }) => {
+          if (isDrag && selectionRect) {
+            // Ensure positive width and height
+            const fixedRect = {
+              x: selectionRect.width < 0 ? selectionRect.x + selectionRect.width : selectionRect.x,
+              y: selectionRect.height < 0 ? selectionRect.y + selectionRect.height : selectionRect.y,
+              width: Math.abs(selectionRect.width),
+              height: Math.abs(selectionRect.height)
+            };
+            
+            // Only show tooltip if the selection is meaningful
+            if (fixedRect.width > 10 && fixedRect.height > 10) {
+              setSelectionRect(fixedRect);
+              
+              // Position the tooltip at the top of the selection
+              setAreaTooltipPosition({
+                x: fixedRect.x + fixedRect.width/2,
+                y: fixedRect.y - 10
+              });
+              
+              setShowAreaToolTip(true);
+            } else {
+              setSelectionRect(null);
+              setShowAreaToolTip(false);
+            }
+          }
+        });
+
+        selectoRef.current = selecto;
+        
+        return () => {
+          selecto.destroy();
+          selectoRef.current = null;
+        };
+      }
+    }, [isAreaSelectMode, selectionRect]);
+
     // Enhanced text selection handler
     const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+      // Don't process text selection if we're in area select mode
+      if (isAreaSelectMode) return;
+      
       const selection = window.getSelection();
       if (selection && selection.toString().trim() !== "") {
         const text = selection.toString().trim();
@@ -100,6 +194,88 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       } else {
         setShowTooltip(false);
       }
+    };
+
+    // Capture the selected area as an image
+    const captureSelectedArea = () => {
+      if (!selectionRect) return;
+      
+      // Create a canvas to draw the selected area
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      
+      const container = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+      if (!container) return;
+      
+      // Set canvas dimensions to match selection size
+      canvas.width = selectionRect.width;
+      canvas.height = selectionRect.height;
+      
+      // Draw the selection onto the canvas
+      document.querySelectorAll('.react-pdf__Page').forEach((page) => {
+        const pageRect = page.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        
+        // Calculate the relative position of the page to the container
+        const pageLeft = pageRect.left - containerRect.left + (container as HTMLElement).scrollLeft;
+        const pageTop = pageRect.top - containerRect.top + (container as HTMLElement).scrollTop;
+        
+        // Check if this page overlaps with our selection
+        if (pageLeft < selectionRect.x + selectionRect.width &&
+            pageLeft + pageRect.width > selectionRect.x &&
+            pageTop < selectionRect.y + selectionRect.height &&
+            pageTop + pageRect.height > selectionRect.y) {
+              
+          // Calculate the visible part of the page within selection
+          const sourceX = Math.max(0, selectionRect.x - pageLeft);
+          const sourceY = Math.max(0, selectionRect.y - pageTop);
+          const sourceWidth = Math.min(pageRect.width - sourceX, selectionRect.x + selectionRect.width - Math.max(selectionRect.x, pageLeft));
+          const sourceHeight = Math.min(pageRect.height - sourceY, selectionRect.y + selectionRect.height - Math.max(selectionRect.y, pageTop));
+          
+          // Calculate where to draw on the canvas
+          const destX = Math.max(0, pageLeft - selectionRect.x);
+          const destY = Math.max(0, pageTop - selectionRect.y);
+          
+          // Get the page content as an image
+          html2canvas(page as HTMLElement, {
+            backgroundColor: null,
+            scale: window.devicePixelRatio,
+            x: sourceX,
+            y: sourceY,
+            width: sourceWidth,
+            height: sourceHeight
+          }).then(pageCanvas => {
+            context.drawImage(
+              pageCanvas, 
+              0, 0, sourceWidth, sourceHeight,
+              destX, destY, sourceWidth, sourceHeight
+            );
+            
+            // Convert the canvas to a base64 image
+            const imageData = canvas.toDataURL('image/png');
+            if (onImageSelected) {
+              onImageSelected(imageData);
+              
+              // Create and dispatch custom event for opening chat with image
+              const chatOpenEvent = new CustomEvent('openChatWithImage', { 
+                detail: { image: imageData } 
+              });
+              window.dispatchEvent(chatOpenEvent);
+              
+              // Exit area select mode and clear selection
+              setIsAreaSelectMode(false);
+              setSelectionRect(null);
+              setShowAreaToolTip(false);
+              
+              toast({
+                title: "Area captured",
+                description: "The selected area has been sent to the assistant for analysis.",
+              });
+            }
+          });
+        }
+      });
     };
 
     // Improved tooltip click handler to send selected text to chat
@@ -128,6 +304,20 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }, []);
+
+    // Toggle area selection mode
+    const toggleAreaSelectMode = () => {
+      setIsAreaSelectMode(!isAreaSelectMode);
+      setSelectionRect(null);
+      setShowAreaToolTip(false);
+      
+      if (!isAreaSelectMode) {
+        toast({
+          title: "Area selection mode",
+          description: "Drag to select an area of the PDF to analyze.",
+        });
+      }
+    };
 
     // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
@@ -406,6 +596,18 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             </Button>
           </div>
           
+          {/* Area Selection Toggle */}
+          <Button 
+            variant={isAreaSelectMode ? "default" : "ghost"} 
+            size="sm" 
+            className="h-7 text-xs"
+            onClick={toggleAreaSelectMode}
+            title="Select Area for Analysis"
+          >
+            <Image className="h-3.5 w-3.5 mr-1" />
+            <span>Select Area</span>
+          </Button>
+          
           {/* Search Input */}
           <div className="flex-1 mx-2">
             <div className="flex items-center">
@@ -463,7 +665,34 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               className="flex flex-col items-center py-4 relative" 
               onMouseUp={handleDocumentMouseUp}
             >
-              {/* Simplified Tooltip - Shows only "Explain" */}
+              {/* Selection rectangle overlay */}
+              {selectionRect && (
+                <div 
+                  className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-20 pointer-events-none z-10"
+                  style={{
+                    left: selectionRect.x + 'px',
+                    top: selectionRect.y + 'px',
+                    width: selectionRect.width + 'px',
+                    height: selectionRect.height + 'px'
+                  }}
+                ></div>
+              )}
+              
+              {/* Area Selection Tooltip */}
+              {showAreaToolTip && (
+                <div
+                  className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm transform -translate-x-1/2 -translate-y-full cursor-pointer hover:bg-gray-50 transition-colors"
+                  style={{
+                    left: areaTooltipPosition.x,
+                    top: areaTooltipPosition.y
+                  }}
+                  onClick={captureSelectedArea}
+                >
+                  Analyze Area
+                </div>
+              )}
+              
+              {/* Simplified Tooltip for text - Shows only "Explain" */}
               {showTooltip && (
                 <div
                   className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm transform -translate-x-1/2 -translate-y-full cursor-pointer hover:bg-gray-50 transition-colors"

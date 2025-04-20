@@ -1,20 +1,21 @@
-import { MessageSquare, Copy, Check } from "lucide-react";
+import { MessageSquare, Copy, Check, Image } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
   explainText?: string;
+  explainImage?: string | null;
 }
 
-const MobileChatSheet = ({ onScrollToPdfPosition, explainText }: MobileChatSheetProps) => {
+const MobileChatSheet = ({ onScrollToPdfPosition, explainText, explainImage }: MobileChatSheetProps) => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
     { 
       role: 'assistant', 
       content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
@@ -28,6 +29,7 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const citationActivated = useRef(false);
   const [processingExplainText, setProcessingExplainText] = useState(false);
+  const [processingExplainImage, setProcessingExplainImage] = useState(false);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -126,6 +128,62 @@ Feel free to ask me any questions! Here are some suggestions:`
     processExplainText();
   }, [explainText, isSheetOpen, toast]);
   
+  // New effect to process image explanations
+  useEffect(() => {
+    const processExplainImage = async () => {
+      if (explainImage && !processingExplainImage && isSheetOpen) {
+        setProcessingExplainImage(true);
+        
+        // Add user message with the selected area image
+        setMessages(prev => [...prev, { 
+          role: 'user', 
+          content: "Please explain this selected area from the document:", 
+          image: explainImage 
+        }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          // Call the new Gemini Vision function
+          const response = await analyzeImageWithGemini(explainImage);
+          
+          // Hide typing indicator and add AI response with formatting
+          setIsTyping(false);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: formatAIResponse(response),
+              isHtml: true 
+            }
+          ]);
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("Image analysis error:", error);
+          setMessages(prev => [
+            ...prev, 
+            { 
+              role: 'assistant', 
+              content: "Sorry, I encountered an error analyzing that image. Please try again." 
+            }
+          ]);
+          
+          toast({
+            title: "Image Analysis Error",
+            description: "Failed to analyze the selected area.",
+            variant: "destructive"
+          });
+        } finally {
+          setProcessingExplainImage(false);
+        }
+      }
+    };
+    
+    processExplainImage();
+  }, [explainImage, isSheetOpen, toast]);
+
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
       // Add user message
@@ -300,6 +358,18 @@ Feel free to ask me any questions! Here are some suggestions:`
                       : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
                   }`}
                 >
+                  {/* Display attached image if present */}
+                  {message.image && (
+                    <div className="mb-2">
+                      <img 
+                        src={message.image} 
+                        alt="Selected area" 
+                        className="max-w-full rounded-md border border-gray-200"
+                        style={{ maxHeight: '300px' }} 
+                      />
+                    </div>
+                  )}
+                  
                   {message.isHtml ? (
                     <div 
                       className="ai-message-content" 
