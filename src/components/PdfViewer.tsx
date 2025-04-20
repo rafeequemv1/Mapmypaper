@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +5,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { getPdfData } from "@/utils/pdfStorage";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -36,32 +36,41 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const { toast } = useToast();
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
-    // Extract PDF data from sessionStorage
+    // Load PDF data from IndexedDB
     useEffect(() => {
-      try {
-        // Try to get PDF data from either key
-        const storedData =
-          sessionStorage.getItem("pdfData") || 
-          sessionStorage.getItem("uploadedPdfData");
-        
-        if (storedData) {
-          setPdfData(storedData);
-        } else {
+      const loadPdfData = async () => {
+        try {
+          setIsLoading(true);
+          const data = await getPdfData();
+          
+          if (data) {
+            setPdfData(data);
+            console.log("PDF data loaded successfully from IndexedDB");
+          } else {
+            setLoadError("No PDF found. Please upload a PDF document first.");
+            toast({
+              title: "No PDF Found",
+              description: "Please upload a PDF document first.",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error("Error retrieving PDF data:", error);
+          setLoadError("Could not load the PDF document.");
           toast({
-            title: "No PDF Found",
-            description: "Please upload a PDF document first.",
+            title: "Error loading PDF",
+            description: "Could not load the PDF document.",
             variant: "destructive",
           });
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error("Error retrieving PDF data:", error);
-        toast({
-          title: "Error loading PDF",
-          description: "Could not load the PDF document.",
-          variant: "destructive",
-        });
-      }
+      };
+      
+      loadPdfData();
     }, [toast]);
 
     // Handle text selection - simplified to just pass the text without showing tooltip
@@ -287,6 +296,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       if (onPdfLoaded) {
         onPdfLoaded();
       }
+      setLoadError(null);
     };
 
     // Handle page render success to adjust container height
@@ -415,7 +425,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 onLoadSuccess={onDocumentLoadSuccess}
                 className="w-full"
                 loading={<div className="text-center py-4">Loading PDF...</div>}
-                error={<div className="text-center py-4 text-red-500">Failed to load PDF. Please try again.</div>}
+                error={
+                  <div className="text-center py-4 text-red-500">
+                    {loadError || "Failed to load PDF. Please try again."}
+                  </div>
+                }
               >
                 {Array.from(new Array(numPages), (_, index) => (
                   <div
@@ -448,8 +462,25 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             </div>
           </ScrollArea>
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-gray-500">Loading PDF...</p>
+          <div className="flex h-full items-center justify-center flex-col gap-4">
+            {isLoading ? (
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-500">Loading PDF...</p>
+              </div>
+            ) : (
+              <div className="text-center p-8">
+                <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
+                <p className="text-gray-500">Please return to the upload page and select a PDF document.</p>
+                <Button 
+                  onClick={() => window.location.href = '/'} 
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Go to Upload Page
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

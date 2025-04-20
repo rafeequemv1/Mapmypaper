@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -5,6 +6,7 @@ import PdfToText from "react-pdftotext";
 import { Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
+import { storePdfData } from "@/utils/pdfStorage";
 import TopBar from "@/components/TopBar";
 import Footer from "@/components/Footer";
 
@@ -90,14 +92,29 @@ const PdfUpload = () => {
     try {
       // First, read the PDF as DataURL for viewing later
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64data = e.target?.result as string;
-        // Store PDF data under both keys for compatibility
-        sessionStorage.setItem('pdfData', base64data);
-        sessionStorage.setItem('uploadedPdfData', base64data);
-        console.log("PDF data stored, length:", base64data.length);
-      };
-      reader.readAsDataURL(selectedFile);
+      
+      // We'll wait for the reader to finish loading
+      const pdfDataPromise = new Promise<string>((resolve, reject) => {
+        reader.onload = (e) => {
+          try {
+            const base64data = e.target?.result as string;
+            if (!base64data) {
+              reject(new Error("Failed to read PDF file"));
+              return;
+            }
+            resolve(base64data);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error("Error reading PDF file"));
+        reader.readAsDataURL(selectedFile);
+      });
+      
+      // Get the PDF data and store it in IndexedDB
+      const pdfData = await pdfDataPromise;
+      await storePdfData(pdfData);
+      console.log("PDF data stored to IndexedDB successfully");
       
       // Extract text from PDF
       const extractedText = await PdfToText(selectedFile);
@@ -109,7 +126,7 @@ const PdfUpload = () => {
       // Process the text with Gemini to generate mind map data
       const mindMapData = await generateMindMapFromText(extractedText);
       
-      // Store the generated mind map data in sessionStorage
+      // Store the generated mind map data in sessionStorage (this is much smaller than the PDF)
       sessionStorage.setItem('mindMapData', JSON.stringify(mindMapData));
       
       // Navigate to the mind map view

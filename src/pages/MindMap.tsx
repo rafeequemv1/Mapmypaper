@@ -13,6 +13,7 @@ const MindMap = () => {
   const [explainText, setExplainText] = useState("");
   const [showFlowchart, setShowFlowchart] = useState(false);
   const [showMindmap, setShowMindmap] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -34,10 +35,11 @@ const MindMap = () => {
       <Header 
         togglePdf={() => setShowPdf(!showPdf)}
         toggleChat={() => setShowChat(!showChat)}
-        setShowSummary={() => {}}
+        setShowSummary={() => setShowSummary(true)}
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={null}
+        // Pass these functions to Header since they're now expected in the component props
         openFlowchart={() => setShowFlowchart(true)}
         openMindmap={() => setShowMindmap(true)}
       />
