@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -286,13 +287,16 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       // Start observing for style panels
       const styleObserver = observeStylePanel();
       
+      // Create the mind map instance
+      const mind = new MindElixir(options);
+      
       // Install the node menu plugin with full styling support
       const customNodeMenu = nodeMenu;
       
       // Add summary option to node menu
       const originalMenus = customNodeMenu.menus;
-      customNodeMenu.menus = (node: any, mind: MindElixirInstance) => {
-        const menus = originalMenus(node, mind);
+      customNodeMenu.menus = (node: any, mindInstance: MindElixirInstance) => {
+        const menus = originalMenus(node, mindInstance);
         
         // Add summary option
         menus.push({
