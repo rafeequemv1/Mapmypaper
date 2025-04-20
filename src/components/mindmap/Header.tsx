@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Image,
   FileJson,
-  Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -28,9 +27,7 @@ interface HeaderProps {
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
-  // Add the new prop types to match MindMap.tsx
   openFlowchart?: () => void;
-  openMindmap?: () => void;
 }
 
 const Header = ({ 
@@ -40,8 +37,7 @@ const Header = ({
   isPdfActive,
   isChatActive,
   mindMap,
-  openFlowchart, // Use the new prop names
-  openMindmap,   // Use the new prop names
+  openFlowchart,
 }: HeaderProps) => {
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
@@ -174,20 +170,11 @@ const Header = ({
           
           <Button 
             variant="ghost" 
-            onClick={openFlowchart} // Use the new prop directly
+            onClick={openFlowchart}
             className="flex items-center gap-1 text-black h-8 px-3"
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden md:inline text-sm">Flowchart</span>
-          </Button>
-
-          <Button 
-            variant="ghost" 
-            onClick={openMindmap} // Use the new prop directly
-            className="flex items-center gap-1 text-black h-8 px-3"
-          >
-            <Network className="h-3.5 w-3.5" />
-            <span className="hidden md:inline text-sm">Treemap</span>
           </Button>
         </div>
         

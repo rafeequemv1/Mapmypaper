@@ -1,24 +1,21 @@
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
-import { MindmapModal } from "@/components/mindmap/MindmapModal";
 import { MindElixirInstance } from "mind-elixir";
 
 const MindMap = () => {
-  const [showPdf, setShowPdf] = useState(true);  // Set default to true
+  const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
   const [showFlowchart, setShowFlowchart] = useState(false);
-  const [showMindmap, setShowMindmap] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
-  // Add a state to store the mind map instance
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
@@ -30,7 +27,6 @@ const MindMap = () => {
   useEffect(() => {
     if (location.state?.presetQuestion) {
       setExplainText(location.state.presetQuestion);
-      // Clear the state to prevent re-triggering
       window.history.replaceState({}, document.title, location.pathname);
     }
   }, [location]);
@@ -45,7 +41,6 @@ const MindMap = () => {
         isChatActive={showChat}
         mindMap={mindMapInstance}
         openFlowchart={() => setShowFlowchart(true)}
-        openMindmap={() => setShowMindmap(true)}
       />
       <PanelStructure
         showPdf={showPdf}
@@ -61,12 +56,6 @@ const MindMap = () => {
       <FlowchartModal 
         open={showFlowchart} 
         onOpenChange={setShowFlowchart}
-      />
-      
-      {/* Modal for Mindmap */}
-      <MindmapModal 
-        isOpen={showMindmap} 
-        onClose={() => setShowMindmap(false)}
       />
     </div>
   );
