@@ -156,7 +156,6 @@ const PdfUpload = () => {
         </div>
         
         <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
-          {/* Dropzone */}
           <div
             className={`border-2 border-dashed rounded-lg p-8 transition-colors mb-6 ${
               dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"
@@ -181,35 +180,6 @@ const PdfUpload = () => {
             </div>
           </div>
           
-          {/* Pre-set Questions */}
-          <div className="mt-8">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">
-              Example questions you can ask:
-            </h3>
-            <div className="flex flex-col gap-2">
-              {presetQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  className="text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
-                  onClick={() => {
-                    if (selectedFile) {
-                      navigate("/mindmap", { state: { presetQuestion: question } });
-                    } else {
-                      toast({
-                        title: "No file selected",
-                        description: "Please upload a PDF file first",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Selected File Info */}
           {selectedFile && (
             <div className="p-4 bg-gray-50 rounded-lg flex items-center justify-between mb-6">
               <p className="font-medium truncate">{selectedFile.name}</p>
@@ -219,7 +189,6 @@ const PdfUpload = () => {
             </div>
           )}
           
-          {/* Generate Button */}
           <Button 
             onClick={handleGenerateMindmap} 
             className="w-full bg-[#333] hover:bg-[#444] text-white" 

@@ -1,4 +1,3 @@
-
 import { MessageSquare, Copy, Check } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,18 @@ interface MobileChatSheetProps {
 const MobileChatSheet = ({ onScrollToPdfPosition }: MobileChatSheetProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
-    { role: 'assistant', content: 'Hello! 👋 I\'m your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.' }
+    { 
+      role: 'assistant', 
+      content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
+
+Here are some questions you can ask:
+• What are the main topics covered in this paper?
+• Can you summarize the key findings?
+• What are the research methods used?
+• What are the limitations of this study?
+
+Feel free to ask any of these questions or your own!`
+    }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
