@@ -14,14 +14,30 @@ interface MobileChatSheetProps {
 
 const MobileChatSheet = ({ onScrollToPdfPosition, explainText }: MobileChatSheetProps) => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
-    { 
-      role: 'assistant', 
-      content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>(() => {
+    // Try to load chat history from sessionStorage
+    const savedHistory = sessionStorage.getItem('chatHistory');
+    if (savedHistory) {
+      try {
+        return JSON.parse(savedHistory);
+      } catch (e) {
+        console.error("Error parsing chat history:", e);
+        return [{ 
+          role: 'assistant', 
+          content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
 
 Feel free to ask me any questions! Here are some suggestions:` 
+        }];
+      }
+    } else {
+      return [{ 
+        role: 'assistant', 
+        content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
+
+Feel free to ask me any questions! Here are some suggestions:` 
+      }];
     }
-  ]);
+  });
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -269,6 +285,11 @@ Feel free to ask me any questions! Here are some suggestions:`
       });
     }
   };
+
+  // Save messages to sessionStorage whenever they change
+  useEffect(() => {
+    sessionStorage.setItem('chatHistory', JSON.stringify(messages));
+  }, [messages]);
 
   return (
     <Sheet open={isSheetOpen} onOpenChange={handleSheetOpenChange}>
