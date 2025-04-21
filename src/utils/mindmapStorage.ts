@@ -1,5 +1,5 @@
 
-import { supabaseClient } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 // TypeScript interface for mindmap project data
 export interface MindMapProject {
@@ -15,7 +15,7 @@ export interface MindMapProject {
 
 // Get all mindmap projects for the current user
 export async function getUserMindmapProjects(): Promise<MindMapProject[]> {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('user_mindmaps')
     .select('*')
     .order('created_at', { ascending: false });
@@ -30,7 +30,7 @@ export async function getUserMindmapProjects(): Promise<MindMapProject[]> {
 
 // Get a specific mindmap project by ID
 export async function getMindmapProject(id: number): Promise<MindMapProject | null> {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('user_mindmaps')
     .select('*')
     .eq('id', id)
@@ -46,7 +46,7 @@ export async function getMindmapProject(id: number): Promise<MindMapProject | nu
 
 // Save a mindmap project
 export async function saveMindmapProject(projectData: Omit<MindMapProject, 'id' | 'created_at'>): Promise<number> {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('user_mindmaps')
     .insert({
       ...projectData,
@@ -65,7 +65,7 @@ export async function saveMindmapProject(projectData: Omit<MindMapProject, 'id' 
 
 // Update an existing mindmap project
 export async function updateMindmapProject(id: number, projectData: Partial<Omit<MindMapProject, 'id' | 'user_id' | 'created_at'>>): Promise<void> {
-  const { error } = await supabaseClient
+  const { error } = await supabase
     .from('user_mindmaps')
     .update(projectData)
     .eq('id', id);
@@ -78,7 +78,7 @@ export async function updateMindmapProject(id: number, projectData: Partial<Omit
 
 // Delete a mindmap project
 export async function deleteMindmapProject(id: number): Promise<void> {
-  const { error } = await supabaseClient
+  const { error } = await supabase
     .from('user_mindmaps')
     .delete()
     .eq('id', id);
