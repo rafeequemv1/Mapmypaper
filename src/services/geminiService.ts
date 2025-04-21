@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Google Generative AI with API key
@@ -6,11 +5,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyBXCTrrbB6hepfwO9EdgDn816TL1tRoGWU";
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Get the generative model (Gemini Pro)
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// Get the generative model (updated to use gemini-1.5-pro instead of gemini-pro)
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 // Model that can handle both text and images
-const visionModel = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
 
 /**
  * Generate a mind map from text extracted from a PDF

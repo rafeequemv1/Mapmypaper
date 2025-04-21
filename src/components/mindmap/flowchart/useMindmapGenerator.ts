@@ -107,13 +107,29 @@ const useMindmapGenerator = () => {
         throw new Error("No PDF content found. Please upload a PDF document first.");
       }
 
-      // New: Service returns Mermaid code string directly
-      const response = await generateMindmapFromPdf();
-      
-      if (response && response.trim().startsWith("mindmap")) {
-        setCode(response);
-      } else {
-        throw new Error("Failed to generate a valid mindmap diagram from Gemini.");
+      // Try to get mindmap from Gemini API
+      try {
+        const response = await generateMindmapFromPdf();
+        
+        if (response && response.trim().startsWith("mindmap")) {
+          setCode(response);
+        } else {
+          throw new Error("Failed to generate a valid mindmap diagram from Gemini.");
+        }
+      } catch (apiError) {
+        console.error("Gemini API error:", apiError);
+        // Provide more specific error message based on the API error
+        if (apiError instanceof Error) {
+          if (apiError.message.includes("404")) {
+            throw new Error("The Gemini API model specified is not available. Please check your API key and model configuration.");
+          } else if (apiError.message.includes("403")) {
+            throw new Error("Authentication error with Gemini API. Please verify your API key is correct and has proper permissions.");
+          } else {
+            throw apiError;
+          }
+        } else {
+          throw new Error("Unknown error connecting to Gemini API.");
+        }
       }
     } catch (err) {
       console.error("Error generating mindmap:", err);
