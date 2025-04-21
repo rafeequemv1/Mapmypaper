@@ -32,29 +32,43 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom to ensure it fits
   const [isRendering, setIsRendering] = useState(false);
   const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
+  const mountedRef = useRef(true);
   
   // Always initialize mermaid library with horizontal layout
   useMermaidInit("LR"); 
   
+  // Set up cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  
   // Generate flowchart when modal is opened
   useEffect(() => {
-    if (open && !initialLoadAttempted) {
+    if (open && !initialLoadAttempted && mountedRef.current) {
       // Delay generation slightly to ensure modal is fully opened
       const timer = setTimeout(() => {
-        setIsRendering(true);
-        generateFlowchart()
-          .catch(err => {
-            console.error("Error in flowchart generation:", err);
-            toast({
-              title: "Flowchart Generation Issue",
-              description: "There was a problem creating the flowchart. A simplified view is shown instead.",
-              variant: "destructive",
+        if (mountedRef.current) {
+          setIsRendering(true);
+          generateFlowchart()
+            .catch(err => {
+              console.error("Error in flowchart generation:", err);
+              if (mountedRef.current) {
+                toast({
+                  title: "Flowchart Generation Issue",
+                  description: "There was a problem creating the flowchart. A simplified view is shown instead.",
+                  variant: "destructive",
+                });
+              }
+            })
+            .finally(() => {
+              if (mountedRef.current) {
+                setIsRendering(false);
+                setInitialLoadAttempted(true);
+              }
             });
-          })
-          .finally(() => {
-            setIsRendering(false);
-            setInitialLoadAttempted(true);
-          });
+        }
       }, 500);
       
       return () => clearTimeout(timer);
@@ -107,14 +121,18 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     generateFlowchart()
       .catch(err => {
         console.error("Retry failed:", err);
-        toast({
-          title: "Retry Failed",
-          description: "Still having trouble generating the flowchart. Using simplified view.",
-          variant: "destructive",
-        });
+        if (mountedRef.current) {
+          toast({
+            title: "Retry Failed",
+            description: "Still having trouble generating the flowchart. Using simplified view.",
+            variant: "destructive",
+          });
+        }
       })
       .finally(() => {
-        setIsRendering(false);
+        if (mountedRef.current) {
+          setIsRendering(false);
+        }
       });
   };
 
@@ -174,7 +192,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           {/* Preview - Takes up all space */}
           <div className="h-full flex flex-col">
             <FlowchartPreview
-              code={code}
+              code={code || defaultFlowchart}
               error={error}
               isGenerating={isGenerating || isRendering}
               theme={theme}

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 
@@ -23,19 +24,26 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const renderIdRef = useRef<string>(`diagram-${Date.now()}`);
+  const mountedRef = useRef(true);
+
+  // Set up cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const renderDiagram = async () => {
-      if (!ref.current || !code || isGenerating || error) return;
+      if (!ref.current || !code || isGenerating || error || !mountedRef.current) return;
 
       setIsRendering(true);
       setRenderError(null);
 
       try {
         // Safely clear the container before rendering
-        if (ref.current) {
+        if (ref.current && mountedRef.current) {
           // Create a fresh container to avoid DOM removal conflicts
-          const oldContent = ref.current.innerHTML;
           ref.current.innerHTML = '<div class="mermaid-container"></div>';
           const container = ref.current.querySelector('.mermaid-container');
           
@@ -67,7 +75,7 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
             const { svg } = await mermaid.render(renderIdRef.current, code, container);
             
             // If we got here, rendering worked
-            if (ref.current) {
+            if (ref.current && mountedRef.current) {
               // Replace the container with the rendered SVG instead of manipulating existing DOM
               ref.current.innerHTML = svg;
 
@@ -141,25 +149,33 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
                 renderError.toString().includes('Failed to fetch')) {
               
               // Simple SVG fallback that doesn't rely on mermaid diagrams
-              createFallbackDiagram(code);
+              if (mountedRef.current) {
+                createFallbackDiagram(code);
+              }
             } else {
               // Other rendering errors
               setRenderError(`Render error: ${renderError.toString()}`);
-              createFallbackDiagram(code);
+              if (mountedRef.current) {
+                createFallbackDiagram(code);
+              }
             }
           }
         }
       } catch (err: any) {
         console.error('Error rendering diagram:', err);
         setRenderError(err.message || 'Unknown error rendering diagram');
-        createFallbackDiagram(code);
+        if (mountedRef.current) {
+          createFallbackDiagram(code);
+        }
       } finally {
-        setIsRendering(false);
+        if (mountedRef.current) {
+          setIsRendering(false);
+        }
       }
     };
 
     const createFallbackDiagram = (code: string) => {
-      if (!ref.current) return;
+      if (!ref.current || !mountedRef.current) return;
       
       try {
         // Create a simple SVG fallback that represents the flowchart structure
@@ -171,37 +187,39 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
         const nodes = Array.from(new Set(nodeMatches.map(n => n.replace(/[\[\(\{]$/, ''))));
         
         // Create the SVG container - replacing instead of modifying to avoid DOM conflicts
-        ref.current.innerHTML = `
-          <svg width="100%" height="100%" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="#64748B" />
-              </marker>
-            </defs>
-            <g transform="translate(50, 50)">
-              ${nodes.map((node, i) => `
-                <g transform="translate(${(i % 3) * 260}, ${Math.floor(i / 3) * 100})">
-                  <rect width="200" height="60" rx="15" ry="15" 
-                    fill="${['#F2FCE2', '#FEF7CD', '#E5DEFF', '#D3E4FD', '#FDE1D3'][i % 5]}" 
-                    stroke="${['#22C55E', '#F59E0B', '#8B5CF6', '#3B82F6', '#F97316'][i % 5]}" 
-                    stroke-width="2" />
-                  <text x="100" y="35" text-anchor="middle" font-family="Arial" font-size="14">${node}</text>
-                </g>
-              `).join('')}
-            </g>
-            <text x="400" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold">
-              Simplified Flowchart (Fallback Mode)
-            </text>
-            ${renderError ? `
-              <text x="400" y="570" text-anchor="middle" font-family="Arial" font-size="14" fill="#EF4444">
-                Note: Using simplified view due to rendering issues
+        if (ref.current && mountedRef.current) {
+          ref.current.innerHTML = `
+            <svg width="100%" height="100%" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#64748B" />
+                </marker>
+              </defs>
+              <g transform="translate(50, 50)">
+                ${nodes.map((node, i) => `
+                  <g transform="translate(${(i % 3) * 260}, ${Math.floor(i / 3) * 100})">
+                    <rect width="200" height="60" rx="15" ry="15" 
+                      fill="${['#F2FCE2', '#FEF7CD', '#E5DEFF', '#D3E4FD', '#FDE1D3'][i % 5]}" 
+                      stroke="${['#22C55E', '#F59E0B', '#8B5CF6', '#3B82F6', '#F97316'][i % 5]}" 
+                      stroke-width="2" />
+                    <text x="100" y="35" text-anchor="middle" font-family="Arial" font-size="14">${node}</text>
+                  </g>
+                `).join('')}
+              </g>
+              <text x="400" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold">
+                Simplified Flowchart (Fallback Mode)
               </text>
-            ` : ''}
-          </svg>
-        `;
+              ${renderError ? `
+                <text x="400" y="570" text-anchor="middle" font-family="Arial" font-size="14" fill="#EF4444">
+                  Note: Using simplified view due to rendering issues
+                </text>
+              ` : ''}
+            </svg>
+          `;
+        }
       } catch (fallbackError) {
         console.error('Fallback diagram creation failed:', fallbackError);
-        if (ref.current) {
+        if (ref.current && mountedRef.current) {
           ref.current.innerHTML = `
             <div class="p-4 text-center">
               <h3 class="text-lg font-medium mb-2">Unable to render flowchart</h3>
@@ -214,11 +232,7 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
 
     renderDiagram();
     
-    // Cleanup function to prevent memory leaks and DOM conflicts
-    return () => {
-      // Don't attempt to manipulate the DOM in cleanup if we're unmounting
-      // This prevents the "removeChild" error
-    };
+    // No DOM cleanup in the effect return function to prevent the "removeChild" error
   }, [code, theme, isGenerating, error, zoomLevel, ref]);
 
   return (
