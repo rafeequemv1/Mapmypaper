@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -104,6 +103,25 @@ export const useFlowchartGenerator = () => {
       setIsGenerating(true);
       setError(null);
       
+      // Check if we have any PDFs loaded
+      const allPdfs = getAllPdfs();
+      if (allPdfs.length === 0) {
+        setError("No PDFs available. Please upload a PDF first.");
+        setCode(defaultFlowchart);
+        toast({
+          title: "No PDFs Found",
+          description: "Please upload a PDF document before generating a flowchart.",
+          variant: "destructive",
+        });
+        setIsGenerating(false);
+        return;
+      }
+      
+      // Check for invalid or "add-pdf" key
+      if (pdfKey === "add-pdf") {
+        pdfKey = null; // Reset to null to use the default PDF
+      }
+      
       // Try to initialize mermaid with minimal configuration to avoid module loading issues
       try {
         await mermaid.initialize({
@@ -177,6 +195,9 @@ export const useFlowchartGenerator = () => {
                 errorMessage.includes("Failed to fetch")) {
         errorDesc = "Failed to load flowchart rendering modules. This might be due to network issues.";
         errorMessage = "Module loading error: " + errorMessage;
+      } else if (errorMessage.includes("No PDF content available")) {
+        errorDesc = "No PDF content available. Please upload a PDF document first.";
+        errorMessage = "Missing PDF content: " + errorMessage;
       }
       
       setCode(defaultFlowchart);
