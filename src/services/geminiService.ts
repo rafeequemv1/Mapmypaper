@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const MODEL_NAME = "gemini-1.5-pro-latest";
@@ -366,7 +367,7 @@ async function getCurrentPdfText(pdfKey: string | null = null): Promise<string |
       
       // Get the cached text for the current PDF
       const cachedText = sessionStorage.getItem(`pdfText_${currentPdfMeta}`);
-      if (cachedText) return null;
+      if (cachedText) return cachedText;
       
       // If no cached text, extract from the current PDF
       const extractedText = "Sample text extracted from current PDF"; // Placeholder
