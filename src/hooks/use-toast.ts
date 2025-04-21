@@ -1,20 +1,23 @@
 
-import * as React from "react"
-import { toast as sonnerToast, type Toast as SonnerToast } from "sonner"
+import * as React from "react";
+import { toast as sonnerToast } from "sonner";
 
-type ToastProps = SonnerToast & {
-  title?: string
-  description?: string
-  variant?: "default" | "destructive" | "success" | "warning"
-  position?: "top-right" | "top-center" | "top-left" | "bottom-right" | "bottom-center" | "bottom-left"
-}
+type ToastProps = {
+  title?: string;
+  description?: string;
+  variant?: "default" | "destructive" | "success" | "warning";
+  position?: "top-right" | "top-center" | "top-left" | "bottom-right" | "bottom-center" | "bottom-left";
+  dismissible?: boolean;
+  duration?: number;
+  // You can add other sonner toast options here if needed
+};
 
 const toastVariantClassnames = {
   default: "",
   destructive: "destructive",
   success: "success",
   warning: "warning",
-}
+};
 
 export function toast({
   title,
@@ -30,7 +33,7 @@ export function toast({
     duration: 5000,
     className: toastVariantClassnames[variant],
     ...props,
-  })
+  });
 }
 
 export function useToast() {
@@ -38,5 +41,5 @@ export function useToast() {
     toast,
     dismiss: sonnerToast.dismiss,
     toasts: [] as ToastProps[],
-  }
+  };
 }
