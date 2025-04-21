@@ -1,27 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FileText,
-  Download,
-  Upload,
-  MessageSquare,
-  Image,
-  FileJson,
-  File,
-  FileCode,
-  FileBarChart,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MindElixirInstance } from "mind-elixir";
 import { useToast } from "@/hooks/use-toast";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MindElixirInstance } from "mind-elixir";
-import UserMenu from "@/components/UserMenu";
+import HeaderSidebar from "./HeaderSidebar";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -33,25 +16,23 @@ interface HeaderProps {
   openFlowchart?: () => void;
 }
 
-const Header = ({ 
-  togglePdf, 
-  toggleChat, 
+const Header: React.FC<HeaderProps> = ({
+  togglePdf,
+  toggleChat,
   setShowSummary,
   isPdfActive,
   isChatActive,
   mindMap,
   openFlowchart,
-}: HeaderProps) => {
+}) => {
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
   const navigate = useNavigate();
-  
-  // Add logging to help debug
+
   useEffect(() => {
     console.log("Mind map instance in Header:", mindMap);
   }, [mindMap]);
-  
-  // Handle export as PNG
+
   const handleExportPNG = () => {
     if (mindMap) {
       console.log("Exporting as PNG with mind map:", mindMap);
@@ -69,8 +50,7 @@ const Header = ({
       });
     }
   };
-  
-  // Handle export as SVG
+
   const handleExportSVG = () => {
     if (mindMap) {
       console.log("Exporting as SVG with mind map:", mindMap);
@@ -88,8 +68,7 @@ const Header = ({
       });
     }
   };
-  
-  // Handle export as JSON
+
   const handleExportJSON = () => {
     if (mindMap) {
       console.log("Exporting as JSON with mind map:", mindMap);
@@ -115,9 +94,8 @@ const Header = ({
       });
     }
   };
-  
-  // Check if we have PDF data
-  React.useEffect(() => {
+
+  useEffect(() => {
     const pdfData = sessionStorage.getItem("pdfData") || sessionStorage.getItem("uploadedPdfData");
     if (!pdfData) {
       toast({
@@ -129,73 +107,17 @@ const Header = ({
   }, [toast]);
 
   return (
-    <>
-      {/* Vertical Sidebar */}
-      <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-20 gap-2 z-10">
-        <Button 
-          variant={isPdfActive ? "default" : "ghost"} 
-          onClick={togglePdf} 
-          className={`w-9 h-9 p-0 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
-          title="Toggle PDF"
-        >
-          <FileCode className="h-4 w-4" />
-        </Button>
-        
-        <Button 
-          variant={isChatActive ? "default" : "ghost"} 
-          onClick={toggleChat} 
-          className={`w-9 h-9 p-0 ${isChatActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
-          title="Toggle Chat"
-        >
-          <MessageSquare className="h-4 w-4" />
-        </Button>
-        
-        <Button 
-          variant="ghost" 
-          onClick={() => setShowSummary(true)} 
-          className="w-9 h-9 p-0 text-black"
-          title="Show Summary"
-        >
-          <FileText className="h-4 w-4" />
-        </Button>
-        
-        <Button 
-          variant="ghost" 
-          onClick={openFlowchart}
-          className="w-9 h-9 p-0 text-black"
-          title="Open Flowchart"
-        >
-          <FileBarChart className="h-4 w-4" />
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="w-9 h-9 p-0" title="Export">
-              <Download className="h-4 w-4 text-black" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
-              <Image className="h-4 w-4" />
-              <span>Export as SVG</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
-              <Image className="h-4 w-4" />
-              <span>Export as PNG</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
-              <FileJson className="h-4 w-4" />
-              <span>Export as JSON</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* User Menu in Vertical Sidebar */}
-        <div className="mt-auto mb-4">
-          <UserMenu />
-        </div>
-      </div>
-    </>
+    <HeaderSidebar
+      isPdfActive={isPdfActive}
+      isChatActive={isChatActive}
+      togglePdf={togglePdf}
+      toggleChat={toggleChat}
+      setShowSummary={setShowSummary}
+      openFlowchart={openFlowchart}
+      onExportSVG={handleExportSVG}
+      onExportPNG={handleExportPNG}
+      onExportJSON={handleExportJSON}
+    />
   );
 };
 
