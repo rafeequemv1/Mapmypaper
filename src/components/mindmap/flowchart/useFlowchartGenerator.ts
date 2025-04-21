@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -98,7 +99,7 @@ export const useFlowchartGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const generateFlowchart = async () => {
+  const generateFlowchart = async (pdfKey: string | null = null) => {
     try {
       setIsGenerating(true);
       setError(null);
@@ -120,7 +121,7 @@ export const useFlowchartGenerator = () => {
         // Continue anyway as initialization might already have happened or will happen later
       }
       
-      const flowchartCode = await generateFlowchartFromPdf();
+      const flowchartCode = await generateFlowchartFromPdf(pdfKey);
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
