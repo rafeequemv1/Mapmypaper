@@ -2,8 +2,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Google Generative AI with API key
-// Use a fallback empty string to prevent initialization errors
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+// Use the provided API key or the environment variable if available
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyBXCTrrbB6hepfwO9EdgDn816TL1tRoGWU";
 const genAI = new GoogleGenerativeAI(apiKey);
 
 // Get the generative model (Gemini Pro)
