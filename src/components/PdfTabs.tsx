@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type PdfMeta = { name: string; size: number; lastModified: number; };
@@ -26,9 +26,10 @@ interface PdfTabsProps {
   activeKey: string | null;
   onTabChange: (key: string) => void;
   onRemove: (key: string) => void;
+  onAddPdf?: () => void; // NEW PROP
 }
 
-const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove }) => {
+const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onAddPdf }) => {
   const [pdfMetas, setPdfMetas] = useState<PdfMeta[]>([]);
 
   useEffect(() => {
@@ -36,21 +37,18 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove }) =
     // Listen for any storage changes
     const handler = () => setPdfMetas(getAllPdfs());
     window.addEventListener("storage", handler);
-    
-    // Also add a custom event for PDF list updates
     window.addEventListener("pdfListUpdated", handler);
-    
     return () => {
       window.removeEventListener("storage", handler);
       window.removeEventListener("pdfListUpdated", handler);
     };
   }, []);
 
-  if (pdfMetas.length === 0) return null;
+  if (pdfMetas.length === 0 && !onAddPdf) return null;
 
   return (
-    <div className="p-0.5 bg-gray-100 border-b">
-      <Tabs value={activeKey || undefined} onValueChange={onTabChange} className="w-full">
+    <div className="p-0.5 bg-gray-100 border-b flex items-center">
+      <Tabs value={activeKey || undefined} onValueChange={onTabChange} className="w-full flex-1">
         <TabsList className="overflow-auto">
           {pdfMetas.map((meta) => (
             <TabsTrigger
@@ -73,6 +71,21 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove }) =
               </button>
             </TabsTrigger>
           ))}
+          {onAddPdf && (
+            <TabsTrigger
+              key="add-pdf"
+              value="add-pdf"
+              className="px-2"
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onAddPdf) onAddPdf();
+              }}
+              title="Add PDF"
+            >
+              <Plus className="h-4 w-4" />
+            </TabsTrigger>
+          )}
         </TabsList>
       </Tabs>
     </div>
@@ -80,3 +93,4 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove }) =
 };
 
 export default PdfTabs;
+
