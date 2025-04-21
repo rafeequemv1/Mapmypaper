@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Google Generative AI with API key
@@ -340,7 +341,7 @@ export async function chatWithGeminiAboutPdf(userMessage: string): Promise<strin
       When citing information from specific pages, use the format [citation:pageX] where X is the page number.
     `;
     
-    // Get response from the model
+    // Get response from the model - using the correct API format
     const result = await model.generateContent([
       { text: systemPrompt },
       { text: userMessage }
