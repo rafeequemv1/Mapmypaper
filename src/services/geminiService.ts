@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const MODEL_NAME = "gemini-1.5-pro-latest";
@@ -251,8 +250,8 @@ export async function generateStructuredSummary(): Promise<any> {
   }
 }
 
-// Added function for Mind Map generation directly from PDF
-export async function generateMindmapFromPdf(pdfKey: string | null = null): Promise<any> {
+// Update for mindmap generation: Now expects Mermaid code, not JSON
+export async function generateMindmapFromPdf(pdfKey: string | null = null): Promise<string> {
   try {
     // Get current PDF text
     const pdfText = await getCurrentPdfText(pdfKey);
@@ -260,23 +259,54 @@ export async function generateMindmapFromPdf(pdfKey: string | null = null): Prom
       throw new Error("No PDF content available");
     }
 
-    // Mindmap generation prompt
+    // Mindmap prompt: ask for Mermaid mindmap code in your preferred style
     const mindmapPrompt = `
-      Create a mind map JSON structure from the following PDF content.
-      The mind map should represent the key concepts, ideas, and relationships in the text.
-      Use a hierarchical structure with a central topic and subtopics.
-      Include a title, and array of child nodes with their own titles and child nodes.
-      Keep the mindmap concise and focused on the most important information.
-      Ensure that the JSON structure is valid and well-formed.
+      Create a detailed mindmap diagram in Mermaid syntax based on the following PDF content.
+      Use the "mindmap" directive (not flowchart) and include the central topic for the paper, with explicit branches for Summary, Key Points, Main Contributions, Significance, and at least three Key Concepts each with their own sub-concepts and details, following this structure:
+      
+      mindmap
+        root((Paper Topic))
+        root --> summary["Summary"]
+        summary --> keyPoints["Key Points"]
+        summary --> mainContrib["Main Contributions"]
+        summary --> significance["Significance"]
+        root --> concept1["Key Concept 1"]
+        concept1 --> sub11["Sub-concept 1.1"]
+        sub11 --> det111["Detail 1.1.1"]
+        ... etc.
+      
+      Every branch and node should contain information relevant from the paper. Structure the mindmap deeply, using unique node IDs (root, summary, concept1, sub11, etc).
+      Return ONLY Mermaid code (no Markdown or other text).
+      Ensure the mindmap code includes at the end all class definitions and color styling exactly as in the following example:
+      %% classDef rootStyle fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-size:18px
+      %% ...etc...
       
       PDF Content:
       ${pdfText.slice(0, 8000)}
     `;
 
-    return generateMindMapFromText(mindmapPrompt);
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([mindmapPrompt]);
+    const response = await result.response;
+    let text = response.text();
+
+    // Only keep the code section
+    if (text.includes("```mermaid")) {
+      text = text.split("```mermaid")[1].split("```")[0].trim();
+    } else if (text.includes("```")) {
+      text = text.split("```")[1].split("```")[0].trim();
+    }
+
+    // Ensure code starts with 'mindmap'
+    if (!text.trim().startsWith("mindmap")) {
+      text = "mindmap\n" + text;
+    }
+
+    return text;
   } catch (error) {
     console.error("Error generating mind map from PDF:", error);
-    throw new Error(`Failed to generate mind map from PDF: ${error instanceof Error ? error.message : String(error)}`);
+    // Fallback: return empty so hook can show defaultMindmap
+    return "";
   }
 }
 
