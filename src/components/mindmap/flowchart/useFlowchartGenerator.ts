@@ -94,16 +94,53 @@ export const cleanMermaidSyntax = (input: string): string => {
   return result;
 };
 
+/**
+ * Wait for a specified amount of time
+ * @param ms Time to wait in milliseconds
+ */
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const useFlowchartGenerator = () => {
   const [code, setCode] = useState(defaultFlowchart);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
+
+  /**
+   * Try to generate a flowchart with exponential backoff for rate limit errors
+   */
+  const generateFlowchartWithRetry = async (pdfKey: string | null = null, maxRetries = 3): Promise<string> => {
+    try {
+      return await generateFlowchartFromPdf(pdfKey);
+    } catch (error: any) {
+      // Check if this is a rate limit error (429)
+      if (error.message && error.message.includes('429') && retryCount < maxRetries) {
+        // Calculate exponential backoff time (1s, 2s, 4s, etc.)
+        const backoffTime = Math.pow(2, retryCount) * 1000;
+        
+        console.log(`Rate limit reached. Retrying in ${backoffTime}ms... (Attempt ${retryCount + 1}/${maxRetries})`);
+        
+        // Increment retry count
+        setRetryCount(retryCount + 1);
+        
+        // Wait for backoff time
+        await wait(backoffTime);
+        
+        // Try again
+        return generateFlowchartWithRetry(pdfKey, maxRetries);
+      }
+      
+      // If not a rate limit error or we've exhausted retries, throw the error
+      throw error;
+    }
+  };
 
   const generateFlowchart = async (pdfKey: string | null = null) => {
     try {
       setIsGenerating(true);
       setError(null);
+      setRetryCount(0); // Reset retry count
       
       // Check if we have any PDFs loaded
       const allPdfs = getAllPdfs();
@@ -138,10 +175,90 @@ export const useFlowchartGenerator = () => {
         });
       } catch (initError) {
         console.warn("Non-critical mermaid initialization warning:", initError);
-        // Continue anyway as initialization might already have happened or will happen later
       }
       
-      const flowchartCode = await generateFlowchartFromPdf(pdfKey);
+      let flowchartCode: string;
+      
+      try {
+        // Try to get cached flowchart for this PDF first
+        const cachedFlowchart = sessionStorage.getItem(`cachedFlowchart_${pdfKey || 'default'}`);
+        
+        // Check session storage for a previously generated and cached flowchart
+        if (cachedFlowchart) {
+          // Use cached flowchart first while attempting to generate a new one in the background
+          setCode(cachedFlowchart);
+          toast({
+            title: "Using Cached Flowchart",
+            description: "Showing cached flowchart while generating a new one...",
+          });
+        }
+        
+        // Generate new flowchart with retry logic
+        flowchartCode = await generateFlowchartWithRetry(pdfKey);
+        
+        // Cache successful flowchart for future use
+        sessionStorage.setItem(`cachedFlowchart_${pdfKey || 'default'}`, flowchartCode);
+      } catch (genError) {
+        console.error("Failed to generate flowchart:", genError);
+        
+        // Check for rate limit error specifically
+        if (genError instanceof Error && genError.message.includes('429')) {
+          const errorMessage = "Rate limit exceeded. The Gemini API free tier has a limit on requests per minute.";
+          
+          // Check if we have a cached version
+          const cachedFlowchart = sessionStorage.getItem(`cachedFlowchart_${pdfKey || 'default'}`);
+          
+          if (cachedFlowchart) {
+            // Use the cached version
+            setCode(cachedFlowchart);
+            setError(`${errorMessage} Using cached flowchart instead.`);
+            toast({
+              title: "API Rate Limit Reached",
+              description: "Using previously generated flowchart. Please try again in a minute.",
+              variant: "warning",
+            });
+            setIsGenerating(false);
+            return;
+          } else {
+            // No cached version, use default
+            setError(`${errorMessage} Using default flowchart instead.`);
+            setCode(defaultFlowchart);
+            toast({
+              title: "API Rate Limit Reached",
+              description: "Using default flowchart. Please try again in a minute.",
+              variant: "destructive",
+            });
+            setIsGenerating(false);
+            return;
+          }
+        }
+        
+        // Handle other errors
+        let errorDesc = "Failed to generate flowchart from PDF content.";
+        let errorMessage = genError instanceof Error ? genError.message : String(genError);
+        
+        if (errorMessage.includes("quota")) {
+          errorDesc = "Failed to generate flowchart from Gemini. Quota exceeded or API unavailable.";
+        } else if (errorMessage.includes("dynamically imported module") || 
+                  errorMessage.includes("Failed to fetch")) {
+          errorDesc = "Failed to load flowchart rendering modules. This might be due to network issues.";
+          errorMessage = "Module loading error: " + errorMessage;
+        } else if (errorMessage.includes("No PDF content available")) {
+          errorDesc = "No PDF content available. Please upload a PDF document first.";
+          errorMessage = "Missing PDF content: " + errorMessage;
+        }
+        
+        setCode(defaultFlowchart);
+        setError(`Generation failed: ${errorMessage}`);
+        
+        toast({
+          title: "Generation Failed",
+          description: errorDesc + " Using default template.",
+          variant: "destructive",
+        });
+        setIsGenerating(false);
+        return;
+      }
       
       // Clean and validate the mermaid syntax
       const cleanedCode = cleanMermaidSyntax(flowchartCode);
@@ -186,28 +303,12 @@ export const useFlowchartGenerator = () => {
       }
     } catch (err: any) {
       console.error("Failed to generate flowchart:", err);
-
-      // Set a more specific error message for dynamic module import failures
-      let errorDesc = "Failed to generate flowchart from PDF content.";
-      let errorMessage = err instanceof Error ? err.message : String(err);
-      
-      if (errorMessage.includes("quota")) {
-        errorDesc = "Failed to generate flowchart from Gemini. Quota exceeded or API unavailable.";
-      } else if (errorMessage.includes("dynamically imported module") || 
-                errorMessage.includes("Failed to fetch")) {
-        errorDesc = "Failed to load flowchart rendering modules. This might be due to network issues.";
-        errorMessage = "Module loading error: " + errorMessage;
-      } else if (errorMessage.includes("No PDF content available")) {
-        errorDesc = "No PDF content available. Please upload a PDF document first.";
-        errorMessage = "Missing PDF content: " + errorMessage;
-      }
-      
       setCode(defaultFlowchart);
-      setError(`Generation failed: ${errorMessage}`);
+      setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
       
       toast({
         title: "Generation Failed",
-        description: errorDesc + " Using default template.",
+        description: "An unexpected error occurred. Using default template.",
         variant: "destructive",
       });
     } finally {

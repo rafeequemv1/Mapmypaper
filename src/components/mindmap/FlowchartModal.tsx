@@ -237,6 +237,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               previewRef={previewRef}
               zoomLevel={zoomLevel}
               hideEditor={true}
+              onRetry={handleRetry}
             />
           </div>
         </div>

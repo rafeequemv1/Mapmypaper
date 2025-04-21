@@ -85,6 +85,12 @@ export const defaultMindmap = `mindmap
 `;
 
 /**
+ * Wait for a specified amount of time
+ * @param ms Time to wait in milliseconds
+ */
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
  * Custom hook for generating and managing mindmap diagrams
  * (Now expects and sets only Mermaid code, never JSON)
  */
@@ -92,6 +98,36 @@ const useMindmapGenerator = () => {
   const [code, setCode] = useState<string>(defaultMindmap);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  /**
+   * Try to generate a mindmap with exponential backoff for rate limit errors
+   */
+  const generateMindmapWithRetry = async (maxRetries = 3): Promise<string> => {
+    try {
+      return await generateMindmapFromPdf();
+    } catch (error: any) {
+      // Check if this is a rate limit error (429)
+      if (error.message && error.message.includes('429') && retryCount < maxRetries) {
+        // Calculate exponential backoff time (1s, 2s, 4s, etc.)
+        const backoffTime = Math.pow(2, retryCount) * 1000;
+        
+        console.log(`Rate limit reached. Retrying in ${backoffTime}ms... (Attempt ${retryCount + 1}/${maxRetries})`);
+        
+        // Increment retry count
+        setRetryCount(retryCount + 1);
+        
+        // Wait for backoff time
+        await wait(backoffTime);
+        
+        // Try again
+        return generateMindmapWithRetry(maxRetries);
+      }
+      
+      // If not a rate limit error or we've exhausted retries, throw the error
+      throw error;
+    }
+  };
 
   /**
    * Generate a mindmap based on the PDF content in session storage
@@ -99,6 +135,7 @@ const useMindmapGenerator = () => {
   const generateMindmap = async () => {
     setIsGenerating(true);
     setError(null);
+    setRetryCount(0); // Reset retry count
 
     try {
       // Get PDF text from session storage
@@ -107,23 +144,48 @@ const useMindmapGenerator = () => {
         throw new Error("No PDF content found. Please upload a PDF document first.");
       }
 
-      // Try to get mindmap from Gemini API
+      // Check for cached mindmap first
+      const cachedMindmap = sessionStorage.getItem("cachedMindmap");
+      
+      if (cachedMindmap) {
+        // Use cached mindmap first while attempting to generate a new one
+        setCode(cachedMindmap);
+        console.log("Using cached mindmap while generating a new one...");
+      }
+
+      // Try to get mindmap from Gemini API with retry logic
       try {
-        const response = await generateMindmapFromPdf();
+        const response = await generateMindmapWithRetry();
         
         if (response && response.trim().startsWith("mindmap")) {
           setCode(response);
+          // Cache successful generation
+          sessionStorage.setItem("cachedMindmap", response);
         } else {
           throw new Error("Failed to generate a valid mindmap diagram from Gemini.");
         }
       } catch (apiError) {
         console.error("Gemini API error:", apiError);
+        
+        // Check for rate limit error specifically
+        if (apiError instanceof Error && apiError.message.includes('429')) {
+          // If we have a cached version, use that
+          if (cachedMindmap) {
+            setError("Rate limit exceeded. The Gemini API free tier has a limit on requests per minute. Using cached mindmap.");
+            setCode(cachedMindmap);
+            setIsGenerating(false);
+            return;
+          }
+        }
+        
         // Provide more specific error message based on the API error
         if (apiError instanceof Error) {
           if (apiError.message.includes("404")) {
             throw new Error("The Gemini API model specified is not available. Please check your API key and model configuration.");
           } else if (apiError.message.includes("403")) {
             throw new Error("Authentication error with Gemini API. Please verify your API key is correct and has proper permissions.");
+          } else if (apiError.message.includes("429")) {
+            throw new Error("Gemini API rate limit exceeded. Please try again in a minute.");
           } else {
             throw apiError;
           }

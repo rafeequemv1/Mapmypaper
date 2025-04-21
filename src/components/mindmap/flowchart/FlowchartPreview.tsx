@@ -11,6 +11,7 @@ interface FlowchartPreviewProps {
   previewRef?: React.RefObject<HTMLDivElement>;
   hideEditor?: boolean;
   zoomLevel?: number;
+  onRetry?: () => void;
 }
 
 const FlowchartPreview = ({
@@ -20,6 +21,7 @@ const FlowchartPreview = ({
   theme,
   previewRef,
   zoomLevel = 1,
+  onRetry,
 }: FlowchartPreviewProps) => {
   return (
     <FlowchartPreviewContainer>
@@ -30,6 +32,7 @@ const FlowchartPreview = ({
         theme={theme}
         previewRef={previewRef}
         zoomLevel={zoomLevel}
+        onRetry={onRetry}
       />
     </FlowchartPreviewContainer>
   );
