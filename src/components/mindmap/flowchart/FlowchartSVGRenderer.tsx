@@ -1,5 +1,4 @@
-
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 
 interface FlowchartSVGRendererProps {
@@ -21,14 +20,20 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
 }) => {
   const localRef = useRef<HTMLDivElement>(null);
   const ref = previewRef || localRef;
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [isRendering, setIsRendering] = useState(false);
 
   useEffect(() => {
     const renderDiagram = async () => {
       if (!ref.current || !code || isGenerating || error) return;
 
+      setIsRendering(true);
+      setRenderError(null);
+
       try {
         ref.current.innerHTML = "";
 
+        // Attempt to initialize with basic settings that don't require dynamic imports
         try {
           mermaid.initialize({
             theme: theme,
@@ -36,118 +41,34 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
             startOnLoad: false,
             flowchart: {
               htmlLabels: true,
-              curve: 'basis',
-              diagramPadding: 16,
-              nodeSpacing: 60,
-              rankSpacing: 80,
               useMaxWidth: true,
             },
-            mindmap: {
-              padding: 16,
-            },
-            logLevel: 1
+            logLevel: 5
           });
         } catch (initError) {
-          console.warn("Mermaid initialization warning:", initError);
+          console.warn("Mermaid initialization warning, proceeding anyway:", initError);
         }
-
-        // Preprocessing code: LR direction and color classes
-        let processedCode = code;
-        if (processedCode.trim().startsWith('flowchart') && !processedCode.trim().startsWith('flowchart LR')) {
-          processedCode = processedCode.replace(/flowchart\s+[A-Z]{2}/, 'flowchart LR');
-        }
-
-        if (processedCode.includes('flowchart') && !processedCode.includes('class') && !processedCode.includes('style')) {
-          const lines = processedCode.split('\n');
-          let nodeCount = 0;
-          const nodeClass: Record<string, string> = {};
-
-          for (let i = 0; i < lines.length; i++) {
-            const nodeMatches = lines[i].match(/([A-Za-z0-9_-]+)(?:\[|\(|\{|\>)/g);
-            if (nodeMatches) {
-              for (const match of nodeMatches) {
-                const nodeName = match.replace(/[\[\(\{\>]$/, '').trim();
-                if (!nodeClass[nodeName] && nodeName !== 'flowchart') {
-                  nodeClass[nodeName] = `class-${(nodeCount % 7) + 1}`;
-                  nodeCount++;
-                }
-              }
-            }
-
-            const connMatches = lines[i].match(/([A-Za-z0-9_-]+)\s*-->/g);
-            if (connMatches) {
-              for (const match of connMatches) {
-                const nodeName = match.replace(/\s*-->$/, '').trim();
-                if (!nodeClass[nodeName]) {
-                  nodeClass[nodeName] = `class-${(nodeCount % 7) + 1}`;
-                  nodeCount++;
-                }
-              }
-            }
-          }
-
-          for (const [node, className] of Object.entries(nodeClass)) {
-            processedCode += `\nclass ${node} ${className}`;
-          }
-        }
-
-        const customStyles = `
-          .flowchart-node rect, .flowchart-label rect {
-            rx: 15px;
-            ry: 15px;
-            fill-opacity: 0.8 !important;
-          }
-          .node rect, .node circle, .node ellipse, .node polygon, .node path {
-            stroke-width: 2px !important;
-            rx: 15px;
-            ry: 15px;
-          }
-          .node.class-1 > rect { fill: #F2FCE2 !important; stroke: #22C55E !important; }
-          .node.class-2 > rect { fill: #FEF7CD !important; stroke: #F59E0B !important; }
-          .node.class-3 > rect { fill: #FDE1D3 !important; stroke: #F97316 !important; }
-          .node.class-4 > rect { fill: #E5DEFF !important; stroke: #8B5CF6 !important; }
-          .node.class-5 > rect { fill: #FFDEE2 !important; stroke: #EF4444 !important; }
-          .node.class-6 > rect { fill: #D3E4FD !important; stroke: #3B82F6 !important; }
-          .node.class-7 > rect { fill: #F1F0FB !important; stroke: #D946EF !important; }
-
-          .edgeLabel {
-            background-color: white;
-            border-radius: 8px;
-            padding: 4px 8px;
-            font-size: 12px;
-            font-weight: 500;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          }
-
-          .flowchart-link {
-            stroke-width: 2px !important;
-          }
-        `;
 
         try {
-          const { svg } = await mermaid.render(`diagram-${Date.now()}`, processedCode);
-
+          // Use a simpler syntax for the first attempt to reduce chance of module loading errors
+          const { svg } = await mermaid.render(`diagram-${Date.now()}`, code, ref.current);
+          
+          // If we got here, rendering worked
           if (ref.current) {
+            // Clean existing content and insert the rendered SVG
+            ref.current.innerHTML = "";
             ref.current.innerHTML = svg;
 
             const svgElement = ref.current.querySelector('svg');
             if (svgElement) {
+              // Apply basic sizing
               svgElement.setAttribute('width', '100%');
               svgElement.setAttribute('height', '100%');
               svgElement.style.maxWidth = '100%';
               svgElement.style.maxHeight = '100%';
               svgElement.style.display = 'block';
 
-              const viewBox = svgElement.getAttribute('viewBox');
-              if (!viewBox) {
-                const bbox = (svgElement as SVGSVGElement).getBBox();
-                svgElement.setAttribute('viewBox', `0 0 ${bbox.width} ${bbox.height}`);
-              }
-
-              const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-              styleElement.textContent = customStyles;
-              svgElement.appendChild(styleElement);
-
+              // Apply zoom if needed
               if (zoomLevel !== 1) {
                 const g = svgElement.querySelector('g');
                 if (g) {
@@ -162,25 +83,118 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
                   }
                 }
               }
+
+              // Add custom styles directly to the SVG
+              const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+              styleElement.textContent = `
+                .flowchart-node rect, .flowchart-label rect {
+                  rx: 15px;
+                  ry: 15px;
+                  fill-opacity: 0.8 !important;
+                }
+                .node rect, .node circle, .node ellipse, .node polygon, .node path {
+                  stroke-width: 2px !important;
+                  rx: 15px;
+                  ry: 15px;
+                }
+                .node.class-1 > rect { fill: #F2FCE2 !important; stroke: #22C55E !important; }
+                .node.class-2 > rect { fill: #FEF7CD !important; stroke: #F59E0B !important; }
+                .node.class-3 > rect { fill: #FDE1D3 !important; stroke: #F97316 !important; }
+                .node.class-4 > rect { fill: #E5DEFF !important; stroke: #8B5CF6 !important; }
+                .node.class-5 > rect { fill: #FFDEE2 !important; stroke: #EF4444 !important; }
+                .node.class-6 > rect { fill: #D3E4FD !important; stroke: #3B82F6 !important; }
+                .node.class-7 > rect { fill: #F1F0FB !important; stroke: #D946EF !important; }
+
+                .edgeLabel {
+                  background-color: white;
+                  border-radius: 8px;
+                  padding: 4px 8px;
+                  font-size: 12px;
+                  font-weight: 500;
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                }
+
+                .flowchart-link {
+                  stroke-width: 2px !important;
+                }
+              `;
+              svgElement.appendChild(styleElement);
             }
           }
         } catch (renderError) {
-          console.error('Mermaid render error:', renderError);
-          if (ref.current) {
-            ref.current.innerHTML = `
-              <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                <rect width="100%" height="100%" fill="#f9f9f9"/>
-                <text x="50%" y="50%" font-family="Arial" font-size="14" text-anchor="middle">
-                  Unable to render diagram. Using simple flowchart.
-                </text>
-              </svg>
-            `;
+          console.error('Mermaid render error, trying fallback rendering:', renderError);
+          
+          // If dynamic import failed, use fallback rendering with basic SVG
+          if (renderError.toString().includes('dynamically imported') || 
+              renderError.toString().includes('Failed to fetch')) {
+            
+            // Simple SVG fallback that doesn't rely on mermaid diagrams
+            createFallbackDiagram(code);
+          } else {
+            // Other rendering errors
+            setRenderError(`Render error: ${renderError.toString()}`);
+            createFallbackDiagram(code);
           }
         }
       } catch (err: any) {
         console.error('Error rendering diagram:', err);
+        setRenderError(err.message || 'Unknown error rendering diagram');
+        createFallbackDiagram(code);
+      } finally {
+        setIsRendering(false);
+      }
+    };
+
+    const createFallbackDiagram = (code: string) => {
+      if (!ref.current) return;
+      
+      try {
+        // Create a simple SVG fallback that represents the flowchart structure
+        // Extract nodes and connections from the mermaid code
+        const nodeMatches = code.match(/([A-Za-z0-9_-]+)(?:\[|\(|\{)/g) || [];
+        const connections = code.match(/([A-Za-z0-9_-]+)\s*-->\s*([A-Za-z0-9_-]+)/g) || [];
+        
+        // Simple flowchart as SVG
+        const nodes = Array.from(new Set(nodeMatches.map(n => n.replace(/[\[\(\{]$/, ''))));
+        
+        // Create the SVG container
+        ref.current.innerHTML = `
+          <svg width="100%" height="100%" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#64748B" />
+              </marker>
+            </defs>
+            <g transform="translate(50, 50)">
+              ${nodes.map((node, i) => `
+                <g transform="translate(${(i % 3) * 260}, ${Math.floor(i / 3) * 100})">
+                  <rect width="200" height="60" rx="15" ry="15" 
+                    fill="${['#F2FCE2', '#FEF7CD', '#E5DEFF', '#D3E4FD', '#FDE1D3'][i % 5]}" 
+                    stroke="${['#22C55E', '#F59E0B', '#8B5CF6', '#3B82F6', '#F97316'][i % 5]}" 
+                    stroke-width="2" />
+                  <text x="100" y="35" text-anchor="middle" font-family="Arial" font-size="14">${node}</text>
+                </g>
+              `).join('')}
+            </g>
+            <text x="400" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold">
+              Simplified Flowchart (Fallback Mode)
+            </text>
+            ${renderError ? `
+              <text x="400" y="570" text-anchor="middle" font-family="Arial" font-size="14" fill="#EF4444">
+                Note: Using simplified view due to rendering issues
+              </text>
+            ` : ''}
+          </svg>
+        `;
+      } catch (fallbackError) {
+        console.error('Fallback diagram creation failed:', fallbackError);
         if (ref.current) {
-          ref.current.innerHTML = `<div class="text-red-500 p-4">Error rendering diagram: ${err.message || 'Unknown error'}</div>`;
+          ref.current.innerHTML = `
+            <div class="p-4 text-center">
+              <h3 class="text-lg font-medium mb-2">Unable to render flowchart</h3>
+              <p class="text-sm text-gray-600">Try refreshing or using a simpler flowchart structure.</p>
+            </div>
+          `;
         }
       }
     };
@@ -189,7 +203,16 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
   }, [code, theme, isGenerating, error, zoomLevel, ref]);
 
   return (
-    <div className="mermaid-diagram w-full h-full flex items-center justify-center" ref={ref} />
+    <div className="mermaid-diagram w-full h-full flex items-center justify-center" ref={ref}>
+      {isRendering && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-8 w-8 rounded-full bg-gray-300 mb-4"></div>
+            <div className="h-4 w-48 bg-gray-300 rounded"></div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

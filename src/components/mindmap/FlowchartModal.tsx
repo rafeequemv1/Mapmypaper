@@ -14,6 +14,7 @@ import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 import { Activity, ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -23,29 +24,50 @@ interface FlowchartModalProps {
 const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const { code, error, isGenerating, generateFlowchart, handleCodeChange } = useFlowchartGenerator();
+  const { toast } = useToast();
   
   // State for theme and UI
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [hideEditor, setHideEditor] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom to ensure it fits
   const [isRendering, setIsRendering] = useState(false);
+  const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
   
   // Always initialize mermaid library with horizontal layout
   useMermaidInit("LR"); 
   
   // Generate flowchart when modal is opened
   useEffect(() => {
-    if (open && code === defaultFlowchart) {
+    if (open && !initialLoadAttempted) {
       // Delay generation slightly to ensure modal is fully opened
       const timer = setTimeout(() => {
-        generateFlowchart().catch(err => {
-          console.error("Error in flowchart generation:", err);
-        });
-      }, 300);
+        setIsRendering(true);
+        generateFlowchart()
+          .catch(err => {
+            console.error("Error in flowchart generation:", err);
+            toast({
+              title: "Flowchart Generation Issue",
+              description: "There was a problem creating the flowchart. A simplified view is shown instead.",
+              variant: "destructive",
+            });
+          })
+          .finally(() => {
+            setIsRendering(false);
+            setInitialLoadAttempted(true);
+          });
+      }, 500);
       
       return () => clearTimeout(timer);
     }
-  }, [open, generateFlowchart, code]);
+  }, [open, generateFlowchart, initialLoadAttempted, toast]);
+
+  // Reset initial load when modal closes
+  useEffect(() => {
+    if (!open) {
+      // Reset for next opening
+      setInitialLoadAttempted(false);
+    }
+  }, [open]);
 
   // Toggle color theme
   const toggleTheme = () => {
@@ -83,6 +105,14 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const handleRetry = () => {
     setIsRendering(true);
     generateFlowchart()
+      .catch(err => {
+        console.error("Retry failed:", err);
+        toast({
+          title: "Retry Failed",
+          description: "Still having trouble generating the flowchart. Using simplified view.",
+          variant: "destructive",
+        });
+      })
       .finally(() => {
         setIsRendering(false);
       });
@@ -92,9 +122,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Flowchart Editor</DialogTitle>
+          <DialogTitle>Flowchart View</DialogTitle>
           <DialogDescription>
-            Create and edit flowcharts visualizing processes and relationships.
+            View flowcharts visualizing processes and relationships from your document.
           </DialogDescription>
         </DialogHeader>
         
@@ -128,18 +158,16 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             </Button>
           </div>
           
-          {error && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRetry}
-              className="flex items-center gap-1 ml-auto"
-              disabled={isGenerating || isRendering}
-            >
-              <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating || isRendering ? 'animate-spin' : ''}`} />
-              Retry Generation
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            className="flex items-center gap-1 ml-auto"
+            disabled={isGenerating || isRendering}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating || isRendering ? 'animate-spin' : ''}`} />
+            {error ? "Retry Generation" : "Refresh Flowchart"}
+          </Button>
         </div>
         
         <div className="flex-1 overflow-hidden">

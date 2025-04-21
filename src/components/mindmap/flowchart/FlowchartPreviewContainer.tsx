@@ -6,7 +6,7 @@ interface FlowchartPreviewContainerProps {
 }
 
 const FlowchartPreviewContainer: React.FC<FlowchartPreviewContainerProps> = ({ children }) => (
-  <div className="flex-1 p-1 bg-white rounded-md border overflow-auto flex items-center justify-center">
+  <div className="flex-1 p-1 bg-white rounded-md border border-gray-200 overflow-auto shadow-sm flex items-center justify-center relative">
     {children}
   </div>
 );

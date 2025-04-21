@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -104,19 +103,21 @@ export const useFlowchartGenerator = () => {
       setIsGenerating(true);
       setError(null);
       
-      // Try to initialize mermaid before anything else to ensure it's loaded
+      // Try to initialize mermaid with minimal configuration to avoid module loading issues
       try {
         await mermaid.initialize({
           startOnLoad: false,
           securityLevel: 'loose',
+          theme: 'default',
           flowchart: {
             useMaxWidth: false,
             htmlLabels: true
-          }
+          },
+          logLevel: 5 // Enable detailed logging
         });
       } catch (initError) {
-        console.error("Failed to initialize mermaid:", initError);
-        // Continue anyway as initialization might already have happened
+        console.warn("Non-critical mermaid initialization warning:", initError);
+        // Continue anyway as initialization might already have happened or will happen later
       }
       
       const flowchartCode = await generateFlowchartFromPdf();
@@ -126,6 +127,7 @@ export const useFlowchartGenerator = () => {
       
       // Check if the flowchart code is valid
       try {
+        // Simple syntax check without rendering
         await mermaid.parse(cleanedCode);
         setCode(cleanedCode);
         toast({
@@ -134,13 +136,32 @@ export const useFlowchartGenerator = () => {
         });
       } catch (parseError) {
         console.error("Mermaid parse error:", parseError);
-        setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-        setCode(defaultFlowchart);
-        toast({
-          title: "Syntax Error",
-          description: "The generated flowchart had syntax errors. Using a default template instead.",
-          variant: "destructive",
-        });
+        
+        // Check for module loading errors
+        if (parseError instanceof Error && 
+           (parseError.message.includes('dynamically imported module') || 
+            parseError.message.includes('Failed to fetch'))) {
+          
+          setError(`Module loading error: The browser had trouble loading the flowchart rendering components. This might be due to network issues or ad blockers.`);
+          // Still set the code for the fallback renderer to use
+          setCode(cleanedCode);
+          
+          toast({
+            title: "Rendering Issue",
+            description: "Using simplified flowchart due to module loading issues.",
+            variant: "warning",
+          });
+        } else {
+          // Other syntax errors
+          setError(`Invalid flowchart syntax. Using default instead. Error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+          setCode(defaultFlowchart);
+          
+          toast({
+            title: "Syntax Error",
+            description: "The generated flowchart had syntax errors. Using a default template instead.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (err: any) {
       console.error("Failed to generate flowchart:", err);
