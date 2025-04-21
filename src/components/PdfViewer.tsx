@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -5,7 +6,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { getPdfData } from "@/utils/pdfStorage";
+import { getCurrentPdfData } from "@/utils/pdfStorage";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -44,7 +45,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
-        const data = await getPdfData();
+        const data = await getCurrentPdfData();
         
         if (data) {
           setPdfData(data);

@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -7,7 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -51,17 +50,10 @@ const PanelStructure = ({
   const handleTabChange = async (key: string) => {
     try {
       setActivePdfKey(key);
-      const pdfDataKey = `pdfData_${key}`;
-      let pdfData = sessionStorage.getItem(pdfDataKey);
-      if (!pdfData) {
-        toast({
-          title: "PDF data not found",
-          description: "The PDF data couldn't be retrieved.",
-          variant: "destructive",
-        });
-        return;
-      }
-      await storePdfData(pdfData);
+      
+      // Set the selected PDF as current in IndexedDB
+      await setCurrentPdf(key);
+      
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
       toast({
         title: "PDF Loaded",
@@ -81,7 +73,7 @@ const PanelStructure = ({
   function handleRemovePdf(key: string) {
     sessionStorage.removeItem(`pdfMeta_${key}`);
     sessionStorage.removeItem(`mindMapData_${key}`);
-    sessionStorage.removeItem(`pdfData_${key}`);
+    sessionStorage.removeItem(`hasPdfData_${key}`);
     const metas = getAllPdfs();
     if (activePdfKey === key) {
       if (metas.length > 0) {
@@ -130,8 +122,10 @@ const PanelStructure = ({
           reader.readAsDataURL(file);
         });
         const pdfData = await pdfDataPromise;
-        await storePdfData(pdfData);
-        sessionStorage.setItem(`pdfData_${pdfKey}`, pdfData);
+        
+        // Store PDF data in IndexedDB only, not in sessionStorage
+        await storePdfData(pdfKey, pdfData);
+        
         // Extract text from PDF
         const extractedText = await PdfToText(file);
         if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
@@ -147,7 +141,7 @@ const PanelStructure = ({
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
         // Optionally, select this tab
         setActivePdfKey(pdfKey);
-        await storePdfData(pdfData); // Refresh viewer as well
+        await setCurrentPdf(pdfKey); // Set as current PDF
         window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
         toast({
@@ -155,6 +149,7 @@ const PanelStructure = ({
           description: "Mind map generated and PDF added!",
         });
       } catch (err) {
+        console.error("Error processing PDF:", err);
         toast({
           title: "Failed to process PDF",
           description: "Could not process the selected PDF.",
@@ -274,4 +269,3 @@ const PanelStructure = ({
 };
 
 export default PanelStructure;
-
