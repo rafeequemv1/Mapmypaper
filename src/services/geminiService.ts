@@ -2,7 +2,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Google Generative AI with API key
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
+// Use a fallback empty string to prevent initialization errors
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+const genAI = new GoogleGenerativeAI(apiKey);
 
 // Get the generative model (Gemini Pro)
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
@@ -16,6 +18,11 @@ const visionModel = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
  */
 export async function generateMindmapFromPdf(): Promise<string> {
   try {
+    // Check if API key is configured
+    if (!apiKey) {
+      throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+    }
+
     // First, check if we have PDF text in session storage
     const pdfText = sessionStorage.getItem("pdfText");
     
@@ -224,6 +231,11 @@ export async function generateSequenceDiagramFromPdf(pdfKey: string | null = nul
  */
 export async function generateMindMapFromText(text: string): Promise<any> {
   try {
+    // Check if API key is configured
+    if (!apiKey) {
+      throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+    }
+
     if (!text || text.trim() === "") {
       throw new Error("No text content provided for mind map generation.");
     }
@@ -319,6 +331,11 @@ export async function generateMindMapFromText(text: string): Promise<any> {
  */
 export async function chatWithGeminiAboutPdf(userMessage: string): Promise<string> {
   try {
+    // Check if API key is configured
+    if (!apiKey) {
+      throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+    }
+
     // Get the PDF text from session storage
     const pdfText = sessionStorage.getItem("pdfText");
     

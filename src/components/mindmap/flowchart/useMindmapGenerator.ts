@@ -1,5 +1,7 @@
+
 import { useState } from "react";
 import { generateMindmapFromPdf } from "@/services/geminiService";
+import { getAllPdfs } from "@/components/PdfTabs";
 
 // Default mindmap diagram with enhanced colors and branch-based structure
 export const defaultMindmap = `mindmap
