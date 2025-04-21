@@ -358,8 +358,8 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Create a simple, valid Mermaid flowchart based on this document text.
-    
+    Create a simple, VALID and COLORFUL Mermaid flowchart based on this document text.
+
     CRITICAL MERMAID SYNTAX RULES:
     1. Start with 'flowchart TD'
     2. Nodes MUST have this format: A[Text] or A(Text) or A{Text} - no exceptions
@@ -372,21 +372,33 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     9. EXTREMELY IMPORTANT: Never use hyphens (-) in node text. Replace ALL hyphens with spaces or underscores.
     10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
     11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
-    
-    EXAMPLE CORRECT SYNTAX:
-    flowchart TD
-      A[Start] --> B{Decision}
-      B -->|Yes| C[Process One]
-      B -->|No| D[Process Two]
-      C --> E[End]
-      D --> E
-    
+
+    COLORFUL REQUIREMENT:
+    - For each node, ADD a Mermaid class assignment line at the end as:
+        class NODE_ID CLASSNAME
+      where CLASSNAME is one of: success, warning, info, neutral, decision, default, danger.
+    - Try to use a different class for every connected node so the flowchart looks colorful.
+    - Example:
+      flowchart TD
+        A[Start] --> B{Decision}
+        B -->|Yes| C[Process One]
+        B -->|No| D[Process Two]
+        C --> E[End]
+        D --> E
+        class A success
+        class B decision
+        class C info
+        class D warning
+        class E default
+
+    - Your output should use several classes so the colors are visible in the chart.
+
     Here's the document text:
     ${pdfText.slice(0, 8000)}
-    
-    Generate ONLY valid Mermaid flowchart code, nothing else.
+
+    Generate ONLY valid Mermaid flowchart code WITH the described COLORFUL class lines, nothing else.
     `;
-    
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text().trim();
