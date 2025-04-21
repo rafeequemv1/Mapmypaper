@@ -312,77 +312,78 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
+    // PDF Toolbar (make even more compact)
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
-        <div className="bg-white border-b px-2 py-0 flex flex-nowrap items-center gap-1 z-10 min-h-[38px]">
+        <div className="bg-white border-b px-1 py-0 flex flex-nowrap items-center gap-0.5 z-10 min-h-[30px] h-8">
           {/* Zoom Controls with percentage display */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-black" 
+              className="h-6 w-6 text-black p-0" 
               onClick={zoomOut}
               title="Zoom Out"
             >
-              <ZoomOut className="h-3.5 w-3.5" />
+              <ZoomOut className="h-3 w-3" />
             </Button>
-            <span className="text-xs w-12 text-center font-medium">
+            <span className="text-xs w-10 text-center font-medium">
               {Math.round(scale * 100)}%
             </span>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-black" 
+              className="h-6 w-6 text-black p-0" 
               onClick={zoomIn}
               title="Zoom In"
             >
-              <ZoomIn className="h-3.5 w-3.5" />
+              <ZoomIn className="h-3 w-3" />
             </Button>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-black" 
+              className="h-6 w-6 text-black p-0" 
               onClick={resetZoom}
               title="Reset Zoom"
             >
-              <RotateCw className="h-3.5 w-3.5" />
+              <RotateCw className="h-3 w-3" />
             </Button>
           </div>
           
           {/* Search Input */}
-          <div className="flex-1 mx-1">
+          <div className="flex-1 mx-0.5">
             <div className="flex items-center">
               <Input
                 placeholder="Search in document..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-7 text-sm mr-1"
+                className="h-6 text-xs mr-0.5"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-7 flex items-center gap-1 text-black"
+                className="h-6 flex items-center gap-0.5 text-black px-1"
                 onClick={handleSearch}
               >
-                <Search className="h-3.5 w-3.5" />
-                <span>Search</span>
+                <Search className="h-3 w-3" />
+                <span className="text-xs">Search</span>
               </Button>
             </div>
           </div>
           
           {/* Search Navigation */}
           {searchResults.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <span className="text-xs">
                 {currentSearchIndex + 1} of {searchResults.length}
               </span>
-              <div className="flex gap-1">
+              <div className="flex gap-0.5">
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-7 px-2 text-black"
+                  className="h-6 px-1 text-black"
                   onClick={() => navigateSearch('prev')}
                 >
                   ←
@@ -390,7 +391,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-7 px-2 text-black"
+                  className="h-6 px-1 text-black"
                   onClick={() => navigateSearch('next')}
                 >
                   →
