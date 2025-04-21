@@ -38,39 +38,62 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [scale, setScale] = useState<number>(1);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [pdfKey, setPdfKey] = useState<string | null>(null);
 
-    // Load PDF data from IndexedDB
-    useEffect(() => {
-      const loadPdfData = async () => {
-        try {
-          setIsLoading(true);
-          const data = await getPdfData();
-          
-          if (data) {
-            setPdfData(data);
-            console.log("PDF data loaded successfully from IndexedDB");
-          } else {
-            setLoadError("No PDF found. Please upload a PDF document first.");
-            toast({
-              title: "No PDF Found",
-              description: "Please upload a PDF document first.",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error("Error retrieving PDF data:", error);
-          setLoadError("Could not load the PDF document.");
+    // Load PDF data from IndexedDB when active PDF changes
+    const loadPdfData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getPdfData();
+        
+        if (data) {
+          setPdfData(data);
+          console.log("PDF data loaded successfully from IndexedDB");
+        } else {
+          setLoadError("No PDF found. Please upload a PDF document first.");
           toast({
-            title: "Error loading PDF",
-            description: "Could not load the PDF document.",
+            title: "No PDF Found",
+            description: "Please upload a PDF document first.",
             variant: "destructive",
           });
-        } finally {
-          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Error retrieving PDF data:", error);
+        setLoadError("Could not load the PDF document.");
+        toast({
+          title: "Error loading PDF",
+          description: "Could not load the PDF document.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Initial load
+    useEffect(() => {
+      loadPdfData();
+    }, []);
+    
+    // Listen for PDF switch events
+    useEffect(() => {
+      const handlePdfSwitch = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pdfKey) {
+          setPdfKey(customEvent.detail.pdfKey);
+          // Reset view state
+          setSearchQuery("");
+          setSearchResults([]);
+          setCurrentSearchIndex(-1);
+          // Load the new PDF
+          loadPdfData();
         }
       };
       
-      loadPdfData();
+      window.addEventListener('pdfSwitched', handlePdfSwitch);
+      return () => {
+        window.removeEventListener('pdfSwitched', handlePdfSwitch);
+      };
     }, [toast]);
 
     // Enhanced search functionality with improved highlighting

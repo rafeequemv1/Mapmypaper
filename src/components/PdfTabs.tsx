@@ -3,12 +3,13 @@ import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type PdfMeta = { name: string; size: number; lastModified: number; };
+export type PdfMeta = { name: string; size: number; lastModified: number; };
 
-function getPdfKey(meta: PdfMeta) {
+export function getPdfKey(meta: PdfMeta) {
   return `${meta.name}_${meta.size}_${meta.lastModified}`;
 }
-function getAllPdfs(): PdfMeta[] {
+
+export function getAllPdfs(): PdfMeta[] {
   const keys = Object.keys(sessionStorage)
     .filter((k) => k.startsWith("pdfMeta_"))
     .map((k) => k.replace("pdfMeta_", ""));
@@ -35,7 +36,14 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove }) =
     // Listen for any storage changes
     const handler = () => setPdfMetas(getAllPdfs());
     window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
+    
+    // Also add a custom event for PDF list updates
+    window.addEventListener("pdfListUpdated", handler);
+    
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("pdfListUpdated", handler);
+    };
   }, []);
 
   if (pdfMetas.length === 0) return null;

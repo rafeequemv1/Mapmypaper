@@ -198,10 +198,16 @@ const PdfUpload = () => {
         reader.readAsDataURL(selectedFile as File);
       });
 
-      // Store only the currently active PDF in IndexedDB, not every file's data
+      // Store the PDF data both in IndexedDB and sessionStorage
       const pdfData = await pdfDataPromise;
+      
+      // Store in IndexedDB for the current active PDF
       await storePdfData(pdfData);
-      console.log(`PDF data stored to IndexedDB for: ${selectedFile.name}`);
+      
+      // Also store in sessionStorage with the PDF key for switching between PDFs
+      sessionStorage.setItem(`pdfData_${pdfKey}`, pdfData);
+      
+      console.log(`PDF data stored for: ${selectedFile.name}`);
 
       // Extract text
       const extractedText = await PdfToText(selectedFile);

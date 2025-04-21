@@ -48,6 +48,8 @@ export const storePdfData = async (pdfData: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       transaction.oncomplete = () => {
         db.close();
+        // Dispatch a custom event that PDF data has been updated
+        window.dispatchEvent(new CustomEvent('pdfDataUpdated'));
         resolve();
       };
       

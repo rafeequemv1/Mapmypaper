@@ -1,11 +1,13 @@
 
 import { useRef, useState, useEffect } from "react";
-import PdfTabs from "@/components/PdfTabs";
+import PdfTabs, { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { storePdfData } from "@/utils/pdfStorage";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -16,22 +18,6 @@ interface PanelStructureProps {
   explainText: string;
   onExplainText: (text: string) => void;
 }
-
-const getAllPdfMetas = () => {
-  const keys = Object.keys(sessionStorage)
-    .filter((k) => k.startsWith("pdfMeta_"))
-    .map((k) => k.replace("pdfMeta_", ""));
-  return keys.map((key) => {
-    try {
-      return JSON.parse(sessionStorage.getItem(`pdfMeta_${key}`) || "");
-    } catch {
-      return null;
-    }
-  }).filter(Boolean);
-};
-
-const getPdfKey = (meta: { name: string; size: number; lastModified: number }) =>
-  `${meta.name}_${meta.size}_${meta.lastModified}`;
 
 const PanelStructure = ({
   showPdf,
@@ -45,20 +31,82 @@ const PanelStructure = ({
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
+  const { toast } = useToast();
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
-    const metas = getAllPdfMetas();
+    const metas = getAllPdfs();
     if (metas.length === 0) return null;
     return getPdfKey(metas[0]);
   });
 
+  // Track current PDF data
+  const [currentPdfData, setCurrentPdfData] = useState<string | null>(null);
+
+  // Handle active PDF change
+  const handleTabChange = async (key: string) => {
+    try {
+      // Set the active key first
+      setActivePdfKey(key);
+      
+      // Get the PDF data from sessionStorage
+      const pdfDataKey = `pdfData_${key}`;
+      let pdfData = sessionStorage.getItem(pdfDataKey);
+      
+      if (!pdfData) {
+        toast({
+          title: "PDF data not found",
+          description: "The PDF data couldn't be retrieved.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Store the PDF data in IndexedDB for the PdfViewer
+      await storePdfData(pdfData);
+      
+      // Trigger a custom event to notify components that need to update
+      window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
+      
+      toast({
+        title: "PDF Loaded",
+        description: "PDF and mindmap switched successfully.",
+      });
+    } catch (error) {
+      console.error("Error switching PDF:", error);
+      toast({
+        title: "Error Switching PDF",
+        description: "Failed to switch to the selected PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Remove pdf logic
   function handleRemovePdf(key: string) {
+    // Remove data from sessionStorage
     sessionStorage.removeItem(`pdfMeta_${key}`);
     sessionStorage.removeItem(`mindMapData_${key}`);
-    // Remove active key if needed
-    setActivePdfKey(prev => prev === key ? null : prev);
+    sessionStorage.removeItem(`pdfData_${key}`);
+    
+    // Set active key to another PDF if available
+    const metas = getAllPdfs();
+    if (activePdfKey === key) {
+      if (metas.length > 0) {
+        // Switch to the first available PDF
+        handleTabChange(getPdfKey(metas[0]));
+      } else {
+        setActivePdfKey(null);
+      }
+    }
+    
+    // Notify that PDF list has changed
+    window.dispatchEvent(new CustomEvent('pdfListUpdated'));
+    
+    toast({
+      title: "PDF Removed",
+      description: "The PDF has been removed.",
+    });
   }
 
   useEffect(() => {
@@ -113,7 +161,7 @@ const PanelStructure = ({
           {/* PDF tabs above viewer */}
           <PdfTabs
             activeKey={activePdfKey}
-            onTabChange={setActivePdfKey}
+            onTabChange={handleTabChange}
             onRemove={handleRemovePdf}
           />
           <TooltipProvider>
@@ -131,6 +179,7 @@ const PanelStructure = ({
           isMapGenerated={isMapGenerated}
           onMindMapReady={onMindMapReady}
           onExplainText={onExplainText}
+          pdfKey={activePdfKey}
         />
       </div>
 
