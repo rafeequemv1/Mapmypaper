@@ -3,12 +3,11 @@ import { useNavigate } from "react-router-dom";
 import {
   FileText,
   Download,
-  ChartNetwork,
+  Upload,
   MessageSquare,
   Image,
   FileJson,
-  Home,
-  FilePlus,
+  File,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -129,35 +128,15 @@ const Header = ({
 
   return (
     <>
-      {/* Add Home button at the very top */}
-      <Button
-        variant="ghost"
-        onClick={() => navigate('/')}
-        className="fixed top-2 left-2 z-20"
-        size="sm"
-      >
-        <Home className="h-4 w-4" />
-      </Button>
-
       {/* Vertical Sidebar */}
       <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-20 gap-2 z-10">
-        {/* Add Upload PDF button at the top */}
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-          className="w-9 h-9 p-0 text-black"
-          title="Upload New PDF"
-        >
-          <FilePlus className="h-4 w-4" />
-        </Button>
-
         <Button 
           variant={isPdfActive ? "default" : "ghost"} 
           onClick={togglePdf} 
           className={`w-9 h-9 p-0 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
           title="Toggle PDF"
         >
-          <FileText className="h-4 w-4" />
+          <File className="h-4 w-4" />
         </Button>
         
         <Button 
@@ -184,7 +163,7 @@ const Header = ({
           className="w-9 h-9 p-0 text-black"
           title="Open Flowchart"
         >
-          <ChartNetwork className="h-4 w-4" />
+          <FileText className="h-4 w-4" />
         </Button>
 
         <DropdownMenu>

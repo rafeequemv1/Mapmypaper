@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
@@ -28,7 +27,6 @@ const PanelStructure = ({
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
-  const [explainImage, setExplainImage] = useState<string | null>(null);
 
   // Ensure components mount safely
   useEffect(() => {
@@ -63,27 +61,6 @@ const PanelStructure = ({
     };
   }, [showChat, toggleChat, onExplainText]);
 
-  // Event listener for opening chat with image
-  useEffect(() => {
-    const handleOpenChatWithImage = (event: any) => {
-      // Open chat panel if it's closed
-      if (!showChat) {
-        toggleChat();
-      }
-      
-      // If there's an image in the event detail, set it
-      if (event.detail?.image) {
-        setExplainImage(event.detail.image);
-      }
-    };
-    
-    window.addEventListener('openChatWithImage', handleOpenChatWithImage);
-    
-    return () => {
-      window.removeEventListener('openChatWithImage', handleOpenChatWithImage);
-    };
-  }, [showChat, toggleChat]);
-
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
       try {
@@ -108,7 +85,6 @@ const PanelStructure = ({
             <PdfViewer 
               ref={pdfViewerRef}
               onTextSelected={onExplainText}
-              onImageSelected={setExplainImage}
             />
           </TooltipProvider>
         </div>
@@ -129,7 +105,6 @@ const PanelStructure = ({
           <ChatPanel
             toggleChat={toggleChat}
             explainText={explainText}
-            explainImage={explainImage}
             onExplainText={onExplainText}
             onScrollToPdfPosition={handleScrollToPdfPosition}
           />
@@ -140,7 +115,6 @@ const PanelStructure = ({
       <MobileChatSheet 
         onScrollToPdfPosition={handleScrollToPdfPosition}
         explainText={explainText}
-        explainImage={explainImage}
       />
     </div>
   );

@@ -4,18 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
-  explainImage?: string | null;
+  explainImage?: string;
   onScrollToPdfPosition?: (position: string) => void;
   onExplainText?: (text: string) => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition, onExplainText }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -121,7 +121,12 @@ Feel free to ask me any questions! Here are some suggestions:`
         
         try {
           // Call AI with the image
-          const response = await analyzeImageWithGemini(explainImage);
+          // Here we're using the existing chatWithGeminiAboutPdf function
+          // In a real implementation, you would want to modify this to accept an image
+          // or create a new function that can process images
+          const response = await chatWithGeminiAboutPdf(
+            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection."
+          );
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
