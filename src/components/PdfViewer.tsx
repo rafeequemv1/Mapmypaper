@@ -315,7 +315,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
-        <div className="bg-white border-b p-1 flex flex-wrap items-center gap-2 z-10">
+        <div className="bg-white border-b px-2 py-0 flex flex-nowrap items-center gap-1 z-10 min-h-[38px]">
           {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-1">
             <Button 
@@ -351,13 +351,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           </div>
           
           {/* Search Input */}
-          <div className="flex-1 mx-2">
+          <div className="flex-1 mx-1">
             <div className="flex items-center">
               <Input
                 placeholder="Search in document..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-7 text-sm mr-2"
+                className="h-7 text-sm mr-1"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
               <Button 
