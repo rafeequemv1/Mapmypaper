@@ -28,6 +28,22 @@ export async function generateMindMapFromText(text: string): Promise<any> {
       Keep the mindmap concise and focused on the most important information.
       Ensure that the JSON structure is valid and well-formed.
       
+      Important: Return ONLY a valid JSON object without any additional text, markdown formatting, or code blocks.
+      The JSON structure should follow this format:
+      {
+        "nodeData": {
+          "id": "root",
+          "topic": "Main Topic",
+          "children": [
+            {
+              "id": "child1",
+              "topic": "Subtopic 1",
+              "children": []
+            }
+          ]
+        }
+      }
+      
       Text:
       ${text.slice(0, 8000)}
     `;
@@ -35,25 +51,76 @@ export async function generateMindMapFromText(text: string): Promise<any> {
     const model = initializeGeminiModel();
     const result = await model.generateContent([prompt]);
     const response = await result.response;
-    const jsonString = response.text();
+    const responseText = response.text();
 
+    // First, try to find and extract a JSON object from the response
+    // Look for anything that resembles a JSON object
+    const jsonRegex = /\{[\s\S]*\}/;
+    const match = responseText.match(jsonRegex);
+    
+    if (!match) {
+      console.error("No JSON-like structure found in response");
+      throw new Error("Could not extract JSON from the model response");
+    }
+    
+    // Try to clean up the extracted JSON string
+    let jsonString = match[0];
+    
+    // Replace any incorrect escape characters or invalid JSON
+    jsonString = jsonString
+      .replace(/\\"/g, '"') // Replace escaped quotes
+      .replace(/\n/g, ' ')   // Remove newlines
+      .replace(/,\s*}/g, '}') // Remove trailing commas
+      .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+    
     try {
-      // Attempt to parse the entire response as JSON
-      return JSON.parse(jsonString);
-    } catch (jsonError) {
-      // If parsing fails, attempt to extract JSON from the response
-      const jsonMatch = jsonString.match(/\{[\s\S]*?\}/);
-      if (jsonMatch) {
-        try {
-          return JSON.parse(jsonMatch[0]);
-        } catch (extractionError) {
-          console.error("Failed to parse extracted JSON:", extractionError);
-          throw new Error("Failed to parse extracted JSON.");
+      // Attempt to parse the extracted and cleaned string
+      const parsedData = JSON.parse(jsonString);
+      
+      // Check if the parsed data has the expected structure
+      if (!parsedData.nodeData) {
+        // If it doesn't have nodeData, try to create the proper structure
+        if (parsedData.topic || parsedData.children) {
+          return {
+            nodeData: parsedData
+          };
+        } else {
+          // Create a default structure from whatever we got
+          return {
+            nodeData: {
+              id: "root",
+              topic: parsedData.title || "Mind Map",
+              children: Array.isArray(parsedData) ? parsedData : 
+                        (parsedData.items || parsedData.nodes || [])
+            }
+          };
         }
-      } else {
-        console.error("No JSON found in response.");
-        throw new Error("No JSON found in response.");
       }
+      
+      return parsedData;
+    } catch (jsonError) {
+      console.error("Failed to parse JSON:", jsonError);
+      console.log("Problematic JSON string:", jsonString);
+      
+      // Fallback: Return a basic mind map structure
+      return {
+        nodeData: {
+          id: "root",
+          topic: "Generated Mind Map",
+          children: [
+            {
+              id: "fallback1",
+              topic: "Content could not be parsed properly",
+              children: []
+            },
+            {
+              id: "fallback2",
+              topic: "Please try regenerating or simplifying the content",
+              children: []
+            }
+          ]
+        }
+      };
     }
   } catch (error) {
     console.error("Error generating mind map:", error);
