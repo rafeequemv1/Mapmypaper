@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Image, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,7 +19,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string, filename?: string, filetype?: string }[]>([
     { 
       role: 'assistant', 
       content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
@@ -32,6 +32,7 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -308,22 +309,90 @@ Feel free to ask me any questions! Here are some suggestions:`
     }
   };
 
+  // File attachment handler
+  const handleAttachClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFilesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      let messageObj: any = {
+        role: "user",
+        content: `Uploaded: ${file.name}`,
+      };
+
+      if (file.type.startsWith("image/")) {
+        // Show image preview
+        const reader = new FileReader();
+        reader.onload = () => {
+          setMessages(prev => [
+            ...prev,
+            {
+              ...messageObj,
+              content: "Uploaded image:",
+              image: reader.result as string,
+            },
+          ]);
+        };
+        reader.readAsDataURL(file);
+        // Optionally, here you could send file to backend or invoke Gemini
+      } else {
+        // Show file name/type for non-image
+        setMessages(prev => [
+          ...prev,
+          {
+            ...messageObj,
+            content: `Uploaded file: ${file.name} (${file.type || "unknown type"})`,
+            filename: file.name,
+            filetype: file.type,
+          },
+        ]);
+        // Optionally, handle sending file to backend here as needed
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full border-l">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.csv,.xls,.xlsx,.doc,.docx,.txt"
+        style={{ display: "none" }}
+        onChange={handleFilesUpload}
+      />
       {/* Chat panel header */}
       <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           <h3 className="font-medium text-sm">Research Assistant</h3>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8" 
-          onClick={toggleChat}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleAttachClick}
+            title="Attach file"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8" 
+            onClick={toggleChat}
+            title="Close chat"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
       {/* Chat messages area with enhanced styling */}
@@ -349,7 +418,12 @@ Feel free to ask me any questions! Here are some suggestions:`
                     />
                   </div>
                 )}
-                
+                {/* Display non-image file name and type */}
+                {message.filename && !message.image && (
+                  <div className="mb-2 text-xs text-muted-foreground">
+                    <span className="font-semibold">{message.filename}</span> <span>({message.filetype})</span>
+                  </div>
+                )}
                 {message.isHtml ? (
                   <div 
                     className="ai-message-content" 
