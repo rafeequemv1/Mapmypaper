@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -9,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
+import FlowchartLoading from "@/components/mindmap/flowchart/FlowchartLoading"; // Import spinner
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -35,6 +37,7 @@ const PanelStructure = ({
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
   const { toast } = useToast();
+  const [loadingPdfKey, setLoadingPdfKey] = useState<string | null>(null); // currently loading PDF key
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -50,10 +53,7 @@ const PanelStructure = ({
   const handleTabChange = async (key: string) => {
     try {
       setActivePdfKey(key);
-      
-      // Set the selected PDF as current in IndexedDB
       await setCurrentPdf(key);
-      
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
       toast({
         title: "PDF Loaded",
@@ -114,6 +114,8 @@ const PanelStructure = ({
         JSON.stringify({ name: file.name, size: file.size, lastModified: file.lastModified })
       );
       try {
+        setLoadingPdfKey(pdfKey); // Show spinner immediately for this tab
+        setActivePdfKey(pdfKey);  // Switch to the new tab
         // Read and process PDF file as dataURL
         const reader = new FileReader();
         const pdfDataPromise = new Promise<string>((resolve, reject) => {
@@ -122,10 +124,8 @@ const PanelStructure = ({
           reader.readAsDataURL(file);
         });
         const pdfData = await pdfDataPromise;
-        
-        // Store PDF data in IndexedDB only, not in sessionStorage
         await storePdfData(pdfKey, pdfData);
-        
+
         // Extract text from PDF
         const extractedText = await PdfToText(file);
         if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
@@ -134,11 +134,13 @@ const PanelStructure = ({
             description: "This PDF appears to be image-based or scanned.",
             variant: "destructive"
           });
+          setLoadingPdfKey(null);
           continue;
         }
         // Generate mindmap data
         const mindMapData = await generateMindMapFromText(extractedText);
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
+        setLoadingPdfKey(null);
         // Optionally, select this tab
         setActivePdfKey(pdfKey);
         await setCurrentPdf(pdfKey); // Set as current PDF
@@ -150,6 +152,7 @@ const PanelStructure = ({
         });
       } catch (err) {
         console.error("Error processing PDF:", err);
+        setLoadingPdfKey(null); // Hide loading spinner even on error
         toast({
           title: "Failed to process PDF",
           description: "Could not process the selected PDF.",
@@ -160,9 +163,8 @@ const PanelStructure = ({
   }
 
   const handlePlusClick = () => {
-    // Open file dialog
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // reset for re-uploading same file
+      fileInputRef.current.value = "";
       fileInputRef.current.click();
     }
   };
@@ -209,6 +211,10 @@ const PanelStructure = ({
     return <div className="h-full w-full flex justify-center items-center">Loading panels...</div>;
   }
 
+  // Show loading spinner in middle panel if new PDF is being added & is active
+  const showLoading =
+    loadingPdfKey && activePdfKey && loadingPdfKey === activePdfKey;
+
   return (
     <>
       <input
@@ -227,10 +233,10 @@ const PanelStructure = ({
               activeKey={activePdfKey}
               onTabChange={handleTabChange}
               onRemove={handleRemovePdf}
-              onAddPdf={handlePlusClick} // The plus
+              onAddPdf={handlePlusClick}
             />
             <TooltipProvider>
-              <PdfViewer 
+              <PdfViewer
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
               />
@@ -240,12 +246,16 @@ const PanelStructure = ({
 
         {/* Mind Map Panel - Takes up remaining space */}
         <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
-          <MindMapViewer
-            isMapGenerated={isMapGenerated}
-            onMindMapReady={onMindMapReady}
-            onExplainText={onExplainText}
-            pdfKey={activePdfKey}
-          />
+          {showLoading ? (
+            <FlowchartLoading />
+          ) : (
+            <MindMapViewer
+              isMapGenerated={isMapGenerated}
+              onMindMapReady={onMindMapReady}
+              onExplainText={onExplainText}
+              pdfKey={activePdfKey}
+            />
+          )}
         </div>
 
         {showChat && (
@@ -259,7 +269,7 @@ const PanelStructure = ({
           </div>
         )}
 
-        <MobileChatSheet 
+        <MobileChatSheet
           onScrollToPdfPosition={handleScrollToPdfPosition}
           explainText={explainText}
         />
