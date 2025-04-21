@@ -2,8 +2,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const MODEL_NAME = "gemini-1.5-pro-latest";
 
+// Use import.meta.env instead of process.env for Vite projects
 function initializeGeminiModel() {
-  const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "");
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+  const genAI = new GoogleGenerativeAI(apiKey);
   return genAI.getGenerativeModel({ model: MODEL_NAME });
 }
 
