@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, RefObject } from "react";
 import mermaid from "mermaid";
 
@@ -30,22 +31,29 @@ const FlowchartPreview = ({
       try {
         ref.current.innerHTML = "";
         
-        mermaid.initialize({
-          theme: theme,
-          securityLevel: 'loose',
-          startOnLoad: false,
-          flowchart: {
-            htmlLabels: true,
-            curve: 'basis',
-            diagramPadding: 16,
-            nodeSpacing: 60,
-            rankSpacing: 80,
-            useMaxWidth: true,
-          },
-          mindmap: {
-            padding: 16,
-          }
-        });
+        // Initialize mermaid with safe configuration
+        try {
+          mermaid.initialize({
+            theme: theme,
+            securityLevel: 'loose',
+            startOnLoad: false,
+            flowchart: {
+              htmlLabels: true,
+              curve: 'basis',
+              diagramPadding: 16,
+              nodeSpacing: 60,
+              rankSpacing: 80,
+              useMaxWidth: true,
+            },
+            mindmap: {
+              padding: 16,
+            },
+            logLevel: 1 // Set to lowest level to avoid unnecessary logs
+          });
+        } catch (initError) {
+          console.warn("Mermaid initialization warning (may be already initialized):", initError);
+          // Continue anyway as initialization might already have happened
+        }
         
         let processedCode = code;
         if (processedCode.trim().startsWith('flowchart') && !processedCode.trim().startsWith('flowchart LR')) {
@@ -119,45 +127,61 @@ const FlowchartPreview = ({
           }
         `;
         
-        const { svg } = await mermaid.render(`diagram-${Date.now()}`, processedCode);
-        
-        if (ref.current) {
-          ref.current.innerHTML = svg;
+        // We'll use a try-catch specifically for the rendering part
+        try {
+          const { svg } = await mermaid.render(`diagram-${Date.now()}`, processedCode);
           
-          const svgElement = ref.current.querySelector('svg');
-          if (svgElement) {
-            svgElement.setAttribute('width', '100%');
-            svgElement.setAttribute('height', '100%');
-            svgElement.style.maxWidth = '100%';
-            svgElement.style.maxHeight = '100%';
-            svgElement.style.display = 'block';
+          if (ref.current) {
+            ref.current.innerHTML = svg;
             
-            const viewBox = svgElement.getAttribute('viewBox');
-            if (!viewBox) {
-              const bbox = (svgElement as SVGSVGElement).getBBox();
-              svgElement.setAttribute('viewBox', `0 0 ${bbox.width} ${bbox.height}`);
-            }
-            
-            const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-            styleElement.textContent = customStyles;
-            svgElement.appendChild(styleElement);
-            
-            if (zoomLevel !== 1) {
-              const g = svgElement.querySelector('g');
-              if (g) {
-                const viewBox = svgElement.getAttribute('viewBox');
-                if (viewBox) {
-                  const [x, y, width, height] = viewBox.split(' ').map(Number);
-                  
-                  const centerX = width / 2;
-                  const centerY = height / 2;
-                  
-                  g.setAttribute('transform', 
-                    `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
-                  );
+            const svgElement = ref.current.querySelector('svg');
+            if (svgElement) {
+              svgElement.setAttribute('width', '100%');
+              svgElement.setAttribute('height', '100%');
+              svgElement.style.maxWidth = '100%';
+              svgElement.style.maxHeight = '100%';
+              svgElement.style.display = 'block';
+              
+              const viewBox = svgElement.getAttribute('viewBox');
+              if (!viewBox) {
+                const bbox = (svgElement as SVGSVGElement).getBBox();
+                svgElement.setAttribute('viewBox', `0 0 ${bbox.width} ${bbox.height}`);
+              }
+              
+              const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+              styleElement.textContent = customStyles;
+              svgElement.appendChild(styleElement);
+              
+              if (zoomLevel !== 1) {
+                const g = svgElement.querySelector('g');
+                if (g) {
+                  const viewBox = svgElement.getAttribute('viewBox');
+                  if (viewBox) {
+                    const [x, y, width, height] = viewBox.split(' ').map(Number);
+                    
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    
+                    g.setAttribute('transform', 
+                      `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
+                    );
+                  }
                 }
               }
             }
+          }
+        } catch (renderError) {
+          console.error('Mermaid render error:', renderError);
+          // Fallback to showing just a simple diagram message
+          if (ref.current) {
+            ref.current.innerHTML = `
+              <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100%" height="100%" fill="#f9f9f9"/>
+                <text x="50%" y="50%" font-family="Arial" font-size="14" text-anchor="middle">
+                  Unable to render diagram. Using simple flowchart.
+                </text>
+              </svg>
+            `;
           }
         }
       } catch (err) {
@@ -186,6 +210,7 @@ const FlowchartPreview = ({
         <div className="p-4 bg-red-50 text-red-800 rounded-md border border-red-200">
           <h3 className="font-bold mb-2">Error</h3>
           <pre className="whitespace-pre-wrap text-sm overflow-auto">{error}</pre>
+          <p className="mt-4 text-sm">Using default flowchart template instead.</p>
         </div>
       </div>
     );

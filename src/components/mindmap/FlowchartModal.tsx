@@ -28,6 +28,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
   const [hideEditor, setHideEditor] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom to ensure it fits
+  const [isRendering, setIsRendering] = useState(false);
   
   // Always initialize mermaid library with horizontal layout
   useMermaidInit("LR"); 
@@ -35,7 +36,14 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // Generate flowchart when modal is opened
   useEffect(() => {
     if (open && code === defaultFlowchart) {
-      generateFlowchart();
+      // Delay generation slightly to ensure modal is fully opened
+      const timer = setTimeout(() => {
+        generateFlowchart().catch(err => {
+          console.error("Error in flowchart generation:", err);
+        });
+      }, 300);
+      
+      return () => clearTimeout(timer);
     }
   }, [open, generateFlowchart, code]);
 
@@ -70,6 +78,15 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  
+  // Handle retry for generation failures
+  const handleRetry = () => {
+    setIsRendering(true);
+    generateFlowchart()
+      .finally(() => {
+        setIsRendering(false);
+      });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,6 +127,19 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               <ZoomOut className="h-4 w-4" />
             </Button>
           </div>
+          
+          {error && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="flex items-center gap-1 ml-auto"
+              disabled={isGenerating || isRendering}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating || isRendering ? 'animate-spin' : ''}`} />
+              Retry Generation
+            </Button>
+          )}
         </div>
         
         <div className="flex-1 overflow-hidden">
@@ -118,7 +148,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             <FlowchartPreview
               code={code}
               error={error}
-              isGenerating={isGenerating}
+              isGenerating={isGenerating || isRendering}
               theme={theme}
               previewRef={previewRef}
               zoomLevel={zoomLevel}

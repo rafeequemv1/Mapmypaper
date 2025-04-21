@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -102,6 +103,22 @@ export const useFlowchartGenerator = () => {
     try {
       setIsGenerating(true);
       setError(null);
+      
+      // Try to initialize mermaid before anything else to ensure it's loaded
+      try {
+        await mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: 'loose',
+          flowchart: {
+            useMaxWidth: false,
+            htmlLabels: true
+          }
+        });
+      } catch (initError) {
+        console.error("Failed to initialize mermaid:", initError);
+        // Continue anyway as initialization might already have happened
+      }
+      
       const flowchartCode = await generateFlowchartFromPdf();
       
       // Clean and validate the mermaid syntax
@@ -128,15 +145,24 @@ export const useFlowchartGenerator = () => {
     } catch (err: any) {
       console.error("Failed to generate flowchart:", err);
 
+      // Set a more specific error message for dynamic module import failures
       let errorDesc = "Failed to generate flowchart from PDF content.";
-      if (typeof err?.message === "string" && err.message?.includes("quota")) {
-        errorDesc = "Failed to generate flowchart from Gemini. Quota exceeded or API unavailable. Using default template.";
+      let errorMessage = err instanceof Error ? err.message : String(err);
+      
+      if (errorMessage.includes("quota")) {
+        errorDesc = "Failed to generate flowchart from Gemini. Quota exceeded or API unavailable.";
+      } else if (errorMessage.includes("dynamically imported module") || 
+                errorMessage.includes("Failed to fetch")) {
+        errorDesc = "Failed to load flowchart rendering modules. This might be due to network issues.";
+        errorMessage = "Module loading error: " + errorMessage;
       }
+      
       setCode(defaultFlowchart);
-      setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
+      setError(`Generation failed: ${errorMessage}`);
+      
       toast({
         title: "Generation Failed",
-        description: errorDesc,
+        description: errorDesc + " Using default template.",
         variant: "destructive",
       });
     } finally {
