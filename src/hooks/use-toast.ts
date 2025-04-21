@@ -3,8 +3,10 @@ import * as React from "react";
 import { toast as sonnerToast } from "sonner";
 
 type ToastProps = {
+  id?: string;
   title?: string;
   description?: string;
+  action?: React.ReactNode;
   variant?: "default" | "destructive" | "success" | "warning";
   position?: "top-right" | "top-center" | "top-left" | "bottom-right" | "bottom-center" | "bottom-left";
   dismissible?: boolean;
@@ -37,9 +39,11 @@ export function toast({
 }
 
 export function useToast() {
+  const [toasts, setToasts] = React.useState<ToastProps[]>([]);
+  
   return {
     toast,
     dismiss: sonnerToast.dismiss,
-    toasts: [] as ToastProps[],
+    toasts
   };
 }
