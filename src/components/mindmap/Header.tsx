@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,6 +9,8 @@ import {
   Image,
   FileJson,
   File,
+  FilePdf,
+  FileChartPie,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -136,7 +139,7 @@ const Header = ({
           className={`w-9 h-9 p-0 ${isPdfActive ? "text-blue-600 bg-blue-50" : "text-black"}`}
           title="Toggle PDF"
         >
-          <File className="h-4 w-4" />
+          <FilePdf className="h-4 w-4" />
         </Button>
         
         <Button 
@@ -163,7 +166,7 @@ const Header = ({
           className="w-9 h-9 p-0 text-black"
           title="Open Flowchart"
         >
-          <FileText className="h-4 w-4" />
+          <FileChartPie className="h-4 w-4" />
         </Button>
 
         <DropdownMenu>
@@ -198,3 +201,4 @@ const Header = ({
 };
 
 export default Header;
+

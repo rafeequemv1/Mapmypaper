@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import mermaid from "mermaid";
 import { useToast } from "@/hooks/use-toast";
@@ -126,13 +125,18 @@ export const useFlowchartGenerator = () => {
           variant: "destructive",
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to generate flowchart:", err);
+
+      let errorDesc = "Failed to generate flowchart from PDF content.";
+      if (typeof err?.message === "string" && err.message?.includes("quota")) {
+        errorDesc = "Failed to generate flowchart from Gemini. Quota exceeded or API unavailable. Using default template.";
+      }
       setCode(defaultFlowchart);
       setError(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
       toast({
         title: "Generation Failed",
-        description: "Failed to generate flowchart from PDF content.",
+        description: errorDesc,
         variant: "destructive",
       });
     } finally {
