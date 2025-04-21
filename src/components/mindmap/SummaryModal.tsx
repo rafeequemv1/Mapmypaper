@@ -161,6 +161,59 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     return acc;
   }, {} as Record<string, string>);
 
+  // Download summary as PDF
+  const downloadSummaryAsPDF = async () => {
+    if (!summaryRef.current) return;
+
+    setConfirmDownload(false);
+
+    try {
+      // Show loading toast
+      toast({
+        title: "Preparing PDF",
+        description: "Please wait while we generate your PDF...",
+      });
+
+      const element = summaryRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+
+      // Calculate PDF dimensions to match the aspect ratio of the content
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      // Add title
+      pdf.setFontSize(20);
+      pdf.text("Paper Summary", 105, 15, { align: 'center' });
+
+      // Add the captured content
+      pdf.addImage(imgData, 'PNG', 0, 25, imgWidth, imgHeight - 25);
+
+      // Save the PDF
+      pdf.save("paper_summary.pdf");
+
+      toast({
+        title: "PDF Generated",
+        description: "Your summary has been downloaded as PDF",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "PDF Generation Failed",
+        description: "Could not generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -263,4 +316,3 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
 };
 
 export default SummaryModal;
-
