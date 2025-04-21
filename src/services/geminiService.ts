@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize the Google Generative AI with API key
@@ -343,8 +342,8 @@ export async function chatWithGeminiAboutPdf(userMessage: string): Promise<strin
     
     // Get response from the model
     const result = await model.generateContent([
-      { role: "system", parts: [{ text: systemPrompt }] },
-      { role: "user", parts: [{ text: userMessage }] }
+      { text: systemPrompt },
+      { text: userMessage }
     ]);
     
     const response = await result.response;
