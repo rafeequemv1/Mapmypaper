@@ -19,36 +19,21 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string, filename?: string, filetype?: string }[]>(() => {
-    // Try to load chat history from sessionStorage
-    const savedHistory = sessionStorage.getItem('chatHistory');
-    if (savedHistory) {
-      try {
-        return JSON.parse(savedHistory);
-      } catch (e) {
-        console.error("Error parsing chat history:", e);
-        return [{ 
-          role: 'assistant', 
-          content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string, filename?: string, filetype?: string }[]>([
+    { 
+      role: 'assistant', 
+      content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
 
 Feel free to ask me any questions! Here are some suggestions:` 
-        }];
-      }
-    } else {
-      return [{ 
-        role: 'assistant', 
-        content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
-
-Feel free to ask me any questions! Here are some suggestions:` 
-      }];
     }
-  });
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
+  const [processingExplainText, setProcessingExplainText] = useState(false);
+  const [processingExplainImage, setProcessingExplainImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Save messages to sessionStorage whenever they change
-  useEffect(() => {
-    sessionStorage.setItem('chatHistory', JSON.stringify(messages));
-  }, [messages]);
-
   useEffect(() => {
     // Scroll to bottom when messages change
     if (scrollAreaRef.current) {

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -8,12 +9,7 @@ import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Home, Save } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Home } from "lucide-react";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -25,10 +21,6 @@ const MindMap = () => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [projectTitle, setProjectTitle] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const { user } = useAuth();
 
   // Navigation and dialog state
   const navigate = useNavigate();
@@ -68,90 +60,6 @@ const MindMap = () => {
     navigate("/");
   };
 
-  // Save the current mindmap project
-  const handleSaveProject = async () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to save your mindmap project.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!mindMapInstance) {
-      toast({
-        title: "Mind Map Not Ready",
-        description: "Please wait for the mind map to fully load before saving.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!projectTitle.trim()) {
-      toast({
-        title: "Title Required",
-        description: "Please enter a title for your mindmap project.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      // Get current active PDF key
-      const activePdfKey = sessionStorage.getItem('currentPdfKey');
-      
-      // Get mindmap data
-      const mindMapData = mindMapInstance.getData();
-      
-      // Get PDF data from IndexedDB if available
-      let pdfData = null;
-      if (activePdfKey) {
-        const pdfResponse = await fetch(`/api/pdf/${activePdfKey}`);
-        if (pdfResponse.ok) {
-          pdfData = await pdfResponse.text();
-        }
-      }
-      
-      // Get chat history from session storage if available
-      const chatHistory = sessionStorage.getItem('chatHistory') || '[]';
-      
-      // Save to Supabase
-      const { data, error } = await supabase
-        .from('user_mindmaps')
-        .insert({
-          user_id: user.id,
-          title: projectTitle,
-          pdf_key: activePdfKey,
-          pdf_data: pdfData,
-          mindmap_data: JSON.stringify(mindMapData),
-          chat_history: chatHistory,
-          created_at: new Date().toISOString()
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Success!",
-        description: "Your mindmap project has been saved.",
-      });
-      setShowSaveDialog(false);
-    } catch (error) {
-      console.error("Error saving project:", error);
-      toast({
-        title: "Save Failed",
-        description: "There was an error saving your mindmap project. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Home button at top-left */}
@@ -179,19 +87,6 @@ const MindMap = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      
-      {/* Save button at top-right */}
-      <div className="fixed top-3 right-3 z-[60]">
-        <Button 
-          variant="outline" 
-          className="flex items-center gap-2"
-          onClick={() => setShowSaveDialog(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save Project
-        </Button>
-      </div>
-      
       <Header 
         togglePdf={() => setShowPdf(!showPdf)}
         toggleChat={() => setShowChat(!showChat)}
@@ -220,43 +115,6 @@ const MindMap = () => {
         open={showSummary}
         onOpenChange={setShowSummary}
       />
-      
-      {/* Save Project Dialog */}
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Save Project</DialogTitle>
-            <DialogDescription>
-              Enter a title for your mindmap project to save it for later.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="project-title" className="text-right">
-                Title
-              </Label>
-              <Input
-                id="project-title"
-                placeholder="My Research Project"
-                className="col-span-3"
-                value={projectTitle}
-                onChange={(e) => setProjectTitle(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveProject} 
-              disabled={isSaving || !projectTitle.trim()}
-            >
-              {isSaving ? "Saving..." : "Save Project"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

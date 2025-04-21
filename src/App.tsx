@@ -1,45 +1,79 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import MindMap from './pages/MindMap';
-import HomePage from './pages/HomePage';
-import PricingPage from './pages/PricingPage';
-import { AuthProvider } from './contexts/AuthContext';
-import { ToastProvider } from "@/hooks/use-toast";
-import UserDashboard from './pages/UserDashboard';
-import { ThemeProvider } from "@/components/theme-provider";
-import { cn } from "@/lib/utils"
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import RequireAuth from "@/components/RequireAuth";
+import TopBar from "@/components/TopBar";
+import Footer from "@/components/Footer";
+import PdfUpload from "./pages/PdfUpload";
+import MindMap from "./pages/MindMap";
+import NotFound from "./pages/NotFound";
+import Auth from "./pages/Auth";
+import Pricing from "./pages/Pricing";
+import Contact from "./pages/Contact";
+import Policy from "./pages/Policy";
+import Refund from "./pages/Refund";
 
-// Import our PDF API handlers
-import { setupPdfApiHandlers } from "@/utils/pdfApiHandlers";
+// Create a new QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1
+    }
+  }
+});
 
-// Initialize PDF API handlers
-setupPdfApiHandlers();
+// Layout component that includes TopBar and Footer
+const Layout = () => (
+  <>
+    <TopBar />
+    <div className="pt-16 pb-8">
+      <Outlet />
+    </div>
+    <Footer />
+  </>
+);
 
-function App() {
-  return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <ToastProvider>
-        <AuthProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/mindmap" element={<MindMap />} />
-              <Route path="/pricing" element={<PricingPage />} />
-              <Route path="/dashboard" element={<UserDashboard />} />
-            </Routes>
-          </Router>
-        </AuthProvider>
+// Layout without TopBar and Footer for the editor
+const EditorLayout = () => <Outlet />;
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
         <Toaster />
-      </ToastProvider>
-    </ThemeProvider>
-  );
-}
+        <Sonner />
+        <div className="relative">
+          <BrowserRouter>
+            <Routes>
+              {/* Routes with TopBar and Footer */}
+              <Route element={<Layout />}>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/policy" element={<Policy />} />
+                <Route path="/refund" element={<Refund />} />
+                <Route path="/" element={<PdfUpload />} />
+              </Route>
+              
+              {/* Routes without TopBar and Footer */}
+              <Route element={<EditorLayout />}>
+                <Route element={<RequireAuth />}>
+                  <Route path="/mindmap" element={<MindMap />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </div>
+      </TooltipProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;
