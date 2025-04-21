@@ -6,6 +6,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import ChatToolbar from "./ChatToolbar";
+import { Mic, MicOff, Plus } from "lucide-react";
+import { useRef } from "react";
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -13,9 +16,17 @@ interface ChatPanelProps {
   explainImage?: string;
   onScrollToPdfPosition?: (position: string) => void;
   onExplainText?: (text: string) => void;
+  onPdfPlusClick?: () => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition }: ChatPanelProps) => {
+const ChatPanel = ({
+  toggleChat,
+  explainText,
+  explainImage,
+  onScrollToPdfPosition,
+  onExplainText,
+  onPdfPlusClick,
+}: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -32,6 +43,8 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
+  const [micEnabled, setMicEnabled] = useState(false);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -308,6 +321,65 @@ Feel free to ask me any questions! Here are some suggestions:`
     }
   };
 
+  // Handle mic toggle and speech-to-text
+  const handleMicToggle = async () => {
+    if (!micEnabled) {
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        let chunks: BlobPart[] = [];
+        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(chunks, { type: "audio/webm" });
+          // Convert to base64
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64 = reader.result?.toString().split(",")[1] as string;
+            // Send to API for transcription
+            try {
+              const resp = await fetch("/functions/v1/voice-to-text", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ audio: base64 }),
+              });
+              const res = await resp.json();
+              if (res && res.text) {
+                setInputValue(prev => prev + (prev ? " " : "") + res.text);
+                toast({
+                  title: "Transcribed",
+                  description: res.text,
+                  duration: 2000,
+                });
+              } else {
+                toast({ title: "Could not transcribe audio", variant: "destructive" });
+              }
+            } catch (err) {
+              toast({ title: "Mic error", description: "Audio could not be transcribed", variant: "destructive" });
+            }
+          };
+          reader.readAsDataURL(audioBlob);
+          stream.getTracks().forEach(track => track.stop());
+        };
+        mediaRecorder.start();
+        audioRecorderRef.current = mediaRecorder;
+        setMicEnabled(true);
+        toast({ title: "Mic enabled", description: "Speak now..." });
+        setTimeout(() => {
+          if (mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            setMicEnabled(false);
+          }
+        }, 6000); // limit to 6s for demo
+      } catch (err) {
+        toast({ title: "Mic not available", description: "Could not access your microphone", variant: "destructive" });
+      }
+    } else if (audioRecorderRef.current && audioRecorderRef.current.state === "recording") {
+      audioRecorderRef.current.stop();
+      setMicEnabled(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full border-l">
       {/* Chat panel header */}
@@ -325,8 +397,13 @@ Feel free to ask me any questions! Here are some suggestions:`
           <X className="h-4 w-4" />
         </Button>
       </div>
-      
-      {/* Chat messages area with enhanced styling */}
+      {/* Chat Toolbar with plus and mic */}
+      <ChatToolbar 
+        onPlus={onPdfPlusClick}
+        micEnabled={micEnabled}
+        onMicToggle={handleMicToggle}
+      />
+      {/* Chat messages area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="flex flex-col gap-4">
           {messages.map((message, i) => (
@@ -421,7 +498,6 @@ Feel free to ask me any questions! Here are some suggestions:`
           )}
         </div>
       </ScrollArea>
-      
       {/* Input area */}
       <div className="p-3 border-t bg-white">
         <div className="flex gap-2">
