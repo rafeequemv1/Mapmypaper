@@ -11,6 +11,7 @@ interface MindMapViewerProps {
   onMindMapReady?: (mindMap: MindElixirInstance) => void;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
+  pdfKey?: string | null; // Add the pdfKey prop
 }
 
 // Enhanced helper function to format node text with line breaks and add emojis
@@ -176,7 +177,7 @@ const stringToColor = (str: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
+const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -316,7 +317,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       let data: MindElixirData;
       
       try {
-        const savedData = sessionStorage.getItem('mindMapData');
+        // Try to load mindmap data for specific PDF if pdfKey is provided
+        const savedData = pdfKey 
+          ? sessionStorage.getItem(`mindMapData_${pdfKey}`)
+          : sessionStorage.getItem('mindMapData');
+          
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           
@@ -581,7 +586,35 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         observer.disconnect();
       };
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfKey]);
+
+  // Listen for PDF switching events and update mindmap
+  useEffect(() => {
+    const handlePdfSwitched = (event: CustomEvent) => {
+      if (event.detail?.pdfKey && mindMapRef.current) {
+        const newPdfKey = event.detail.pdfKey;
+        
+        // Load the mindmap data for this PDF
+        try {
+          const savedData = sessionStorage.getItem(`mindMapData_${newPdfKey}`);
+          if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            mindMapRef.current.init(parsedData);
+            console.log(`Loaded mindmap for PDF: ${newPdfKey}`);
+          }
+        } catch (error) {
+          console.error(`Error loading mindmap for PDF ${newPdfKey}:`, error);
+        }
+      }
+    };
+    
+    // Listen for PDF switching events
+    window.addEventListener('pdfSwitched', handlePdfSwitched as EventListener);
+    
+    return () => {
+      window.removeEventListener('pdfSwitched', handlePdfSwitched as EventListener);
+    };
+  }, []);
 
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {
@@ -711,42 +744,3 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
                 {summary.split('\n').map((line, i) => (
                   <div key={i} className="mb-1">
                     {line.startsWith('#') ? (
-                      <h4 className="text-md font-bold">{line.replace(/^#+\s/, '')}</h4>
-                    ) : line.startsWith('-') ? (
-                      <div className="flex items-start">
-                        <span className="mr-2">•</span>
-                        <span>{line.replace(/^-\s/, '')}</span>
-                      </div>
-                    ) : (
-                      <p>{line}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={() => {
-                    if (onExplainText && summary) {
-                      onExplainText(summary);
-                    }
-                    if (onRequestOpenChat) {
-                      onRequestOpenChat();
-                    }
-                  }}
-                >
-                  <FileText size={16} />
-                  Send to Chat
-                </Button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-};
-
-export default MindMapViewer;
