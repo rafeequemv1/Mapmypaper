@@ -59,9 +59,9 @@ const PdfUpload = () => {
     // On new uploads, this will be set and fully functional.
     // This example doesn't persist the full File object - could be improved with real backend!
     // On fresh mount: pdfFiles is empty.
-    if (window.__PDF_FILES__) {
+    if (window.__PDF_FILES__ && window.__PDF_FILES__.length > 0) {
       setPdfFiles(window.__PDF_FILES__);
-      setActivePdfKey(window.__ACTIVE_PDF_KEY__);
+      setActivePdfKey(window.__ACTIVE_PDF_KEY__ || null);
     } else {
       setPdfFiles([]);
       setActivePdfKey(null);
