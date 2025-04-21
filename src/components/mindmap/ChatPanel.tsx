@@ -8,7 +8,6 @@ import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import ChatToolbar from "./ChatToolbar";
 import { Mic, MicOff, Plus } from "lucide-react";
-import { useRef } from "react";
 
 interface ChatPanelProps {
   toggleChat: () => void;
