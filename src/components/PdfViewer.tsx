@@ -38,9 +38,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [scale, setScale] = useState<number>(1);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const [selectedText, setSelectedText] = useState("");
-    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-    const [showTooltip, setShowTooltip] = useState(false);
 
     // Load PDF data from IndexedDB
     useEffect(() => {
@@ -75,59 +72,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       
       loadPdfData();
     }, [toast]);
-
-    // Enhanced text selection handler
-    const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-      const selection = window.getSelection();
-      if (selection && selection.toString().trim() !== "") {
-        const text = selection.toString().trim();
-        
-        // Only show tooltip if text selection is meaningful
-        if (text.length > 2) {
-          setSelectedText(text);
-          
-          // Get selection coordinates for tooltip positioning
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          
-          setTooltipPosition({
-            x: rect.left + (rect.width / 2),
-            y: rect.top - 10
-          });
-          
-          setShowTooltip(true);
-        }
-      } else {
-        setShowTooltip(false);
-      }
-    };
-
-    // Improved tooltip click handler to send selected text to chat
-    const handleTooltipClick = () => {
-      if (selectedText && onTextSelected) {
-        // Call the onTextSelected callback with the selected text
-        onTextSelected(selectedText);
-        setShowTooltip(false);
-        
-        // Custom event to notify that chat should be opened
-        const chatOpenEvent = new CustomEvent('openChatWithText', { 
-          detail: { text: selectedText } 
-        });
-        window.dispatchEvent(chatOpenEvent);
-      }
-    };
-
-    // Handle clicking outside to close tooltip
-    useEffect(() => {
-      const handleClickOutside = () => {
-        setShowTooltip(false);
-      };
-
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
 
     // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
@@ -460,22 +404,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         {pdfData ? (
           <ScrollArea className="flex-1" ref={pdfContainerRef}>
             <div 
-              className="flex flex-col items-center py-4 relative" 
-              onMouseUp={handleDocumentMouseUp}
+              className="flex flex-col items-center py-4 relative"
             >
-              {/* Simplified Tooltip - Shows only "Explain" */}
-              {showTooltip && (
-                <div
-                  className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm transform -translate-x-1/2 -translate-y-full cursor-pointer hover:bg-gray-50 transition-colors"
-                  style={{
-                    left: tooltipPosition.x,
-                    top: tooltipPosition.y
-                  }}
-                  onClick={handleTooltipClick}
-                >
-                  Explain
-                </div>
-              )}
               
               <Document
                 file={pdfData}
