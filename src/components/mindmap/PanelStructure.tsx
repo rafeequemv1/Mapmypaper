@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -20,6 +19,7 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
+  onScrollToPdfPosition: (position: string) => void; // Added the missing prop
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -32,6 +32,7 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
+  onScrollToPdfPosition, // Added to destructuring
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -196,17 +197,6 @@ const PanelStructure = ({
     };
   }, [showChat, toggleChat, onExplainText]);
 
-  const handleScrollToPdfPosition = (position: string) => {
-    if (pdfViewerRef.current) {
-      try {
-        // @ts-ignore - we know this method exists
-        pdfViewerRef.current.scrollToPage(parseInt(position.replace('page', ''), 10));
-      } catch (error) {
-        console.error("Error scrolling to PDF position:", error);
-      }
-    }
-  };
-
   if (!isRendered) {
     return <div className="h-full w-full flex justify-center items-center">Loading panels...</div>;
   }
@@ -264,13 +254,13 @@ const PanelStructure = ({
               toggleChat={toggleChat}
               explainText={explainText}
               onExplainText={onExplainText}
-              onScrollToPdfPosition={handleScrollToPdfPosition}
+              onScrollToPdfPosition={onScrollToPdfPosition}
             />
           </div>
         )}
 
         <MobileChatSheet
-          onScrollToPdfPosition={handleScrollToPdfPosition}
+          onScrollToPdfPosition={onScrollToPdfPosition}
           explainText={explainText}
         />
       </div>
