@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -788,3 +787,40 @@ const cleanMindmapSyntax = (code: string): string => {
   }
 };
 
+// New function to analyze text-based files with Gemini
+export const analyzeFileWithGemini = async (fileContent: string, fileName: string, fileType: string): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage for context
+    const pdfText = sessionStorage.getItem('pdfText');
+    const pdfContext = pdfText ? pdfText.slice(0, 5000) : "";
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+      You are an AI research assistant helping a user understand a file they've uploaded.
+      
+      The user has uploaded a file named "${fileName}" with type "${fileType}".
+      
+      Analyze this file content and provide a detailed explanation of what it contains.
+      If it contains data, describe the structure and key points.
+      If it's text content, summarize the main ideas and concepts.
+      
+      Make connections to the broader research document context if possible.
+      
+      Here's some context from the main document (may be truncated):
+      ${pdfContext}
+      
+      Here's the content of the uploaded file:
+      ${fileContent}
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+    
+  } catch (error) {
+    console.error("Gemini API file analysis error:", error);
+    return "Sorry, I encountered an error while analyzing the file. Please try again.";
+  }
+};

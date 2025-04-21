@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface ChatPanelProps {
@@ -330,20 +330,57 @@ Feel free to ask me any questions! Here are some suggestions:`
       if (file.type.startsWith("image/")) {
         // Show image preview
         const reader = new FileReader();
-        reader.onload = () => {
+        reader.onload = async () => {
+          const imageData = reader.result as string;
+          
+          // Add user message with image
           setMessages(prev => [
             ...prev,
             {
               ...messageObj,
               content: "Uploaded image:",
-              image: reader.result as string,
+              image: imageData,
             },
           ]);
+          
+          // Show typing indicator
+          setIsTyping(true);
+          
+          try {
+            // Call Gemini to analyze the image
+            const analysis = await analyzeImageWithGemini(imageData);
+            
+            // Add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: formatAIResponse(analysis),
+                isHtml: true
+              }
+            ]);
+          } catch (error) {
+            setIsTyping(false);
+            console.error("Image analysis error:", error);
+            setMessages(prev => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: "Sorry, I encountered an error analyzing this image. Please try again."
+              }
+            ]);
+            
+            toast({
+              title: "Analysis Error",
+              description: "Failed to analyze the image with Gemini.",
+              variant: "destructive"
+            });
+          }
         };
         reader.readAsDataURL(file);
-        // Optionally, here you could send file to backend or invoke Gemini
       } else {
-        // Show file name/type for non-image
+        // For text-based files (PDF, TXT, CSV, etc.)
         setMessages(prev => [
           ...prev,
           {
@@ -353,7 +390,89 @@ Feel free to ask me any questions! Here are some suggestions:`
             filetype: file.type,
           },
         ]);
-        // Optionally, handle sending file to backend here as needed
+        
+        // Show typing indicator for file analysis
+        setIsTyping(true);
+        
+        try {
+          // For text-based files we can try to read and analyze them
+          if (file.type === "text/plain" || 
+              file.type === "text/csv" ||
+              file.type === "application/vnd.ms-excel" ||
+              file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+              file.type === "application/json") {
+            
+            const reader = new FileReader();
+            reader.onload = async () => {
+              const fileContent = reader.result as string;
+              
+              // Analyze file with Gemini
+              const analysis = await analyzeFileWithGemini(
+                fileContent,
+                file.name,
+                file.type
+              );
+              
+              // Add AI response
+              setIsTyping(false);
+              setMessages(prev => [
+                ...prev,
+                {
+                  role: 'assistant',
+                  content: formatAIResponse(analysis),
+                  isHtml: true
+                }
+              ]);
+            };
+            
+            reader.onerror = () => {
+              setIsTyping(false);
+              setMessages(prev => [
+                ...prev,
+                {
+                  role: 'assistant',
+                  content: "Sorry, I couldn't read this file. It may be too large or in an unsupported format."
+                }
+              ]);
+            };
+            
+            reader.readAsText(file);
+          } else {
+            // For other file types, send a generic response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: formatAIResponse(`I've received your file: ${file.name}. 
+                
+This appears to be a ${file.type || "unknown"} file. While I can't directly analyze the full contents of this file type, you can ask me questions about it, and I'll try to help based on the information you provide.
+
+Would you like to:
+1. Ask specific questions about this file?
+2. Extract certain information from it? 
+3. Compare it with the main document you uploaded?`),
+                isHtml: true
+              }
+            ]);
+          }
+        } catch (error) {
+          setIsTyping(false);
+          console.error("File analysis error:", error);
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: "Sorry, I encountered an error processing this file. Please try again or try a different file format."
+            }
+          ]);
+          
+          toast({
+            title: "Analysis Error",
+            description: "Failed to process the file.",
+            variant: "destructive"
+          });
+        }
       }
     }
   };
