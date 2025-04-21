@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -744,3 +745,42 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
                 {summary.split('\n').map((line, i) => (
                   <div key={i} className="mb-1">
                     {line.startsWith('#') ? (
+                      <h4 className="text-md font-bold">{line.replace(/^#+\s/, '')}</h4>
+                    ) : line.startsWith('-') ? (
+                      <div className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>{line.replace(/^-\s/, '')}</span>
+                      </div>
+                    ) : (
+                      <p>{line}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    if (onExplainText && summary) {
+                      onExplainText(summary);
+                    }
+                    if (onRequestOpenChat) {
+                      onRequestOpenChat();
+                    }
+                  }}
+                >
+                  <FileText size={16} />
+                  Send to Chat
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
