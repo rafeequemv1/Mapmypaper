@@ -27,7 +27,7 @@ const MindMap = () => {
   const [showAlert, setShowAlert] = useState(false);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
-    console.log("Mind map instance is ready:", instance);
+    console.log("Mind map instance in MindMap component:", instance);
     setIsMapGenerated(true);
     setMindMapInstance(instance);
   }, []);
@@ -62,13 +62,18 @@ const MindMap = () => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* Home button at top-left */}
+      {/* Home button at top-left - Icon only without text */}
       <div className="fixed top-3 left-3 z-[60]">
         <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
           <AlertDialogTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2" onClick={() => setShowAlert(true)}>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-8 w-8" 
+              onClick={() => setShowAlert(true)}
+              title="Return to Home"
+            >
               <Home className="w-5 h-5" />
-              Home
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>

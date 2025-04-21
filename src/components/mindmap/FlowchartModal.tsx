@@ -13,7 +13,7 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
-import { Activity, ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
+import { RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface FlowchartModalProps {
@@ -23,12 +23,11 @@ interface FlowchartModalProps {
 
 const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
-  const { code, error, isGenerating, generateFlowchart, handleCodeChange } = useFlowchartGenerator();
+  const { code, error, isGenerating, generateFlowchart } = useFlowchartGenerator();
   const { toast } = useToast();
   
   // State for theme and UI
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
-  const [hideEditor, setHideEditor] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom to ensure it fits
   const [isRendering, setIsRendering] = useState(false);
   const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
@@ -44,14 +43,21 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     };
   }, []);
   
-  // Generate flowchart when modal is opened
+  // Force a new flowchart generation when modal is opened
   useEffect(() => {
-    if (open && !initialLoadAttempted && mountedRef.current) {
-      // Delay generation slightly to ensure modal is fully opened
+    if (open && mountedRef.current) {
+      console.log("Flowchart modal opened, generating flowchart...");
+      // Reset attempted state to force regeneration
+      setInitialLoadAttempted(false);
+      
+      // Small delay to ensure modal is fully opened
       const timer = setTimeout(() => {
         if (mountedRef.current) {
           setIsRendering(true);
           generateFlowchart()
+            .then(() => {
+              console.log("Flowchart generated successfully");
+            })
             .catch(err => {
               console.error("Error in flowchart generation:", err);
               if (mountedRef.current) {
@@ -73,15 +79,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       
       return () => clearTimeout(timer);
     }
-  }, [open, generateFlowchart, initialLoadAttempted, toast]);
-
-  // Reset initial load when modal closes
-  useEffect(() => {
-    if (!open) {
-      // Reset for next opening
-      setInitialLoadAttempted(false);
-    }
-  }, [open]);
+  }, [open, generateFlowchart, toast]);
 
   // Toggle color theme
   const toggleTheme = () => {
@@ -119,6 +117,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const handleRetry = () => {
     setIsRendering(true);
     generateFlowchart()
+      .then(() => {
+        console.log("Flowchart regenerated successfully");
+      })
       .catch(err => {
         console.error("Retry failed:", err);
         if (mountedRef.current) {
@@ -163,8 +164,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               className="flex items-center gap-1"
               title="Reset zoom to fit diagram"
             >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              {Math.round(zoomLevel * 100)}%
+              <span className="text-xs">{Math.round(zoomLevel * 100)}%</span>
             </Button>
             <Button
               variant="outline"
@@ -188,7 +188,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           </Button>
         </div>
         
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden border rounded-md">
           {/* Preview - Takes up all space */}
           <div className="h-full flex flex-col">
             <FlowchartPreview
