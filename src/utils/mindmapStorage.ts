@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // TypeScript interface for mindmap project data
 export interface MindMapProject {
-  id: number;
+  id: string;
   user_id: string;
   title: string;
   pdf_key: string | null;
@@ -29,7 +29,7 @@ export async function getUserMindmapProjects(): Promise<MindMapProject[]> {
 }
 
 // Get a specific mindmap project by ID
-export async function getMindmapProject(id: number): Promise<MindMapProject | null> {
+export async function getMindmapProject(id: string): Promise<MindMapProject | null> {
   const { data, error } = await supabase
     .from('user_mindmaps')
     .select('*')
@@ -45,7 +45,7 @@ export async function getMindmapProject(id: number): Promise<MindMapProject | nu
 }
 
 // Save a mindmap project
-export async function saveMindmapProject(projectData: Omit<MindMapProject, 'id' | 'created_at'>): Promise<number> {
+export async function saveMindmapProject(projectData: Omit<MindMapProject, 'id' | 'created_at'>): Promise<string> {
   const { data, error } = await supabase
     .from('user_mindmaps')
     .insert({
@@ -64,7 +64,7 @@ export async function saveMindmapProject(projectData: Omit<MindMapProject, 'id' 
 }
 
 // Update an existing mindmap project
-export async function updateMindmapProject(id: number, projectData: Partial<Omit<MindMapProject, 'id' | 'user_id' | 'created_at'>>): Promise<void> {
+export async function updateMindmapProject(id: string, projectData: Partial<Omit<MindMapProject, 'id' | 'user_id' | 'created_at'>>): Promise<void> {
   const { error } = await supabase
     .from('user_mindmaps')
     .update(projectData)
@@ -77,7 +77,7 @@ export async function updateMindmapProject(id: number, projectData: Partial<Omit
 }
 
 // Delete a mindmap project
-export async function deleteMindmapProject(id: number): Promise<void> {
+export async function deleteMindmapProject(id: string): Promise<void> {
   const { error } = await supabase
     .from('user_mindmaps')
     .delete()

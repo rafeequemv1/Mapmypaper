@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -29,8 +28,7 @@ const MindMap = () => {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [projectTitle, setProjectTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const supabase = useSupabaseClient();
-  const { user } = useAuthContext();
+  const { user } = useAuth();
 
   // Navigation and dialog state
   const navigate = useNavigate();
