@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 // Initialize the Gemini API with a fixed API key
@@ -357,8 +358,8 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
-    Create a simple, VALID and COLORFUL Mermaid flowchart based on this document text.
-
+    Create a simple, valid Mermaid flowchart based on this document text.
+    
     CRITICAL MERMAID SYNTAX RULES:
     1. Start with 'flowchart TD'
     2. Nodes MUST have this format: A[Text] or A(Text) or A{Text} - no exceptions
@@ -371,33 +372,21 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     9. EXTREMELY IMPORTANT: Never use hyphens (-) in node text. Replace ALL hyphens with spaces or underscores.
     10. IMPORTANT: Date ranges like 1871-2020 must be written as 1871_2020 in node text.
     11. IMPORTANT: Simple node text is best - keep it short, avoid special characters
-
-    COLORFUL REQUIREMENT:
-    - For each node, ADD a Mermaid class assignment line at the end as:
-        class NODE_ID CLASSNAME
-      where CLASSNAME is one of: success, warning, info, neutral, decision, default, danger.
-    - Try to use a different class for every connected node so the flowchart looks colorful.
-    - Example:
-      flowchart TD
-        A[Start] --> B{Decision}
-        B -->|Yes| C[Process One]
-        B -->|No| D[Process Two]
-        C --> E[End]
-        D --> E
-        class A success
-        class B decision
-        class C info
-        class D warning
-        class E default
-
-    - Your output should use several classes so the colors are visible in the chart.
-
+    
+    EXAMPLE CORRECT SYNTAX:
+    flowchart TD
+      A[Start] --> B{Decision}
+      B -->|Yes| C[Process One]
+      B -->|No| D[Process Two]
+      C --> E[End]
+      D --> E
+    
     Here's the document text:
     ${pdfText.slice(0, 8000)}
-
-    Generate ONLY valid Mermaid flowchart code WITH the described COLORFUL class lines, nothing else.
+    
+    Generate ONLY valid Mermaid flowchart code, nothing else.
     `;
-
+    
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text().trim();
@@ -787,40 +776,3 @@ const cleanMindmapSyntax = (code: string): string => {
   }
 };
 
-// New function to analyze text-based files with Gemini
-export const analyzeFileWithGemini = async (fileContent: string, fileName: string, fileType: string): Promise<string> => {
-  try {
-    // Retrieve stored PDF text from sessionStorage for context
-    const pdfText = sessionStorage.getItem('pdfText');
-    const pdfContext = pdfText ? pdfText.slice(0, 5000) : "";
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const prompt = `
-      You are an AI research assistant helping a user understand a file they've uploaded.
-      
-      The user has uploaded a file named "${fileName}" with type "${fileType}".
-      
-      Analyze this file content and provide a detailed explanation of what it contains.
-      If it contains data, describe the structure and key points.
-      If it's text content, summarize the main ideas and concepts.
-      
-      Make connections to the broader research document context if possible.
-      
-      Here's some context from the main document (may be truncated):
-      ${pdfContext}
-      
-      Here's the content of the uploaded file:
-      ${fileContent}
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-    
-  } catch (error) {
-    console.error("Gemini API file analysis error:", error);
-    return "Sorry, I encountered an error while analyzing the file. Please try again.";
-  }
-};

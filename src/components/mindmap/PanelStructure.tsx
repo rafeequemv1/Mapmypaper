@@ -1,14 +1,12 @@
 import { useRef, useState, useEffect } from "react";
-import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
+import { BookOpen } from "lucide-react";
 import PdfViewer from "@/components/PdfViewer";
 import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
+import MarkMapModal from "@/components/mindmap/MarkMapModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
-import PdfToText from "react-pdftotext";
-import { generateMindMapFromText } from "@/services/geminiService";
+import { Button } from "@/components/ui/button";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -20,8 +18,6 @@ interface PanelStructureProps {
   onExplainText: (text: string) => void;
 }
 
-const mindMapKeyPrefix = "mindMapData_";
-
 const PanelStructure = ({
   showPdf,
   showChat,
@@ -31,168 +27,37 @@ const PanelStructure = ({
   explainText,
   onExplainText,
 }: PanelStructureProps) => {
+  const [showMarkMap, setShowMarkMap] = useState(false);
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
-  const { toast } = useToast();
 
-  // PDF tab state (active key)
-  const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
-    const metas = getAllPdfs();
-    if (metas.length === 0) return null;
-    return getPdfKey(metas[0]);
-  });
-
-  // File input for adding PDFs
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Handle active PDF change
-  const handleTabChange = async (key: string) => {
-    try {
-      setActivePdfKey(key);
-      
-      // Set the selected PDF as current in IndexedDB
-      await setCurrentPdf(key);
-      
-      window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
-      toast({
-        title: "PDF Loaded",
-        description: "PDF and mindmap switched successfully.",
-      });
-    } catch (error) {
-      console.error("Error switching PDF:", error);
-      toast({
-        title: "Error Switching PDF",
-        description: "Failed to switch to the selected PDF.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Remove pdf logic
-  function handleRemovePdf(key: string) {
-    sessionStorage.removeItem(`pdfMeta_${key}`);
-    sessionStorage.removeItem(`mindMapData_${key}`);
-    sessionStorage.removeItem(`hasPdfData_${key}`);
-    const metas = getAllPdfs();
-    if (activePdfKey === key) {
-      if (metas.length > 0) {
-        handleTabChange(getPdfKey(metas[0]));
-      } else {
-        setActivePdfKey(null);
-      }
-    }
-    window.dispatchEvent(new CustomEvent('pdfListUpdated'));
-    toast({
-      title: "PDF Removed",
-      description: "The PDF has been removed.",
-    });
-  }
-
-  // Generate Mindmap after extracting PDF text
-  async function handleAddPdf(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    const pdfFiles = Array.from(files).filter(f => f.type === "application/pdf");
-    if (!pdfFiles.length) {
-      toast({
-        title: "Invalid file(s)",
-        description: "Please upload PDF files only.",
-        variant: "destructive",
-      });
-      return;
-    }
-    for (const file of pdfFiles) {
-      const pdfKey = getPdfKey({ name: file.name, size: file.size, lastModified: file.lastModified });
-      // Prevent duplicates
-      if (sessionStorage.getItem(`pdfMeta_${pdfKey}`)) {
-        toast({ title: "Already added", description: `PDF "${file.name}" already exists.` });
-        continue;
-      }
-      // Store meta in sessionStorage
-      sessionStorage.setItem(
-        `pdfMeta_${pdfKey}`,
-        JSON.stringify({ name: file.name, size: file.size, lastModified: file.lastModified })
-      );
-      try {
-        // Read and process PDF file as dataURL
-        const reader = new FileReader();
-        const pdfDataPromise = new Promise<string>((resolve, reject) => {
-          reader.onload = e => resolve(e.target?.result as string);
-          reader.onerror = () => reject();
-          reader.readAsDataURL(file);
-        });
-        const pdfData = await pdfDataPromise;
-        
-        // Store PDF data in IndexedDB only, not in sessionStorage
-        await storePdfData(pdfKey, pdfData);
-        
-        // Extract text from PDF
-        const extractedText = await PdfToText(file);
-        if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
-          toast({
-            title: "No extractable text",
-            description: "This PDF appears to be image-based or scanned.",
-            variant: "destructive"
-          });
-          continue;
-        }
-        // Generate mindmap data
-        const mindMapData = await generateMindMapFromText(extractedText);
-        sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
-        // Optionally, select this tab
-        setActivePdfKey(pdfKey);
-        await setCurrentPdf(pdfKey); // Set as current PDF
-        window.dispatchEvent(new CustomEvent('pdfListUpdated'));
-        window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
-        toast({
-          title: "Success",
-          description: "Mind map generated and PDF added!",
-        });
-      } catch (err) {
-        console.error("Error processing PDF:", err);
-        toast({
-          title: "Failed to process PDF",
-          description: "Could not process the selected PDF.",
-          variant: "destructive",
-        });
-      }
-    }
-  }
-
-  const handlePlusClick = () => {
-    // Open file dialog
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // reset for re-uploading same file
-      fileInputRef.current.click();
-    }
-  };
-
+  // Ensure components mount safely
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsRendered(true);
     }, 100);
-
+    
     return () => {
       clearTimeout(timer);
       setIsRendered(false);
     };
   }, []);
 
-  // Enhanced event listener for opening chat with text
+  // Listen for openChatWithText event to open chat panel if needed
   useEffect(() => {
     const handleOpenChat = (event: any) => {
       if (!showChat) {
         toggleChat();
       }
-      if (event.detail?.text) {
-        onExplainText(event.detail.text);
-      }
     };
+    
     window.addEventListener('openChatWithText', handleOpenChat);
+    
     return () => {
       window.removeEventListener('openChatWithText', handleOpenChat);
     };
-  }, [showChat, toggleChat, onExplainText]);
+  }, [showChat, toggleChat]);
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
@@ -210,61 +75,64 @@ const PanelStructure = ({
   }
 
   return (
-    <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf"
-        style={{ display: "none" }}
-        onChange={e => handleAddPdf(e.target.files)}
-      />
-      <div className="h-full w-full flex pl-12">
-        {/* PDF Panel - Fixed to 40% width */}
-        {showPdf && (
-          <div className="h-full w-[40%] flex-shrink-0 flex flex-col">
-            {/* PDF tabs above viewer */}
-            <PdfTabs
-              activeKey={activePdfKey}
-              onTabChange={handleTabChange}
-              onRemove={handleRemovePdf}
-              onAddPdf={handlePlusClick} // The plus
-            />
-            <TooltipProvider>
-              <PdfViewer 
-                ref={pdfViewerRef}
-                onTextSelected={onExplainText}
-              />
-            </TooltipProvider>
-          </div>
-        )}
+    <div className="h-full w-full flex pl-12">
+      {/* Vertical Toolbar */}
+      <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-4 gap-2 z-10">
+        <Button
+          variant="ghost"
+          onClick={() => setShowMarkMap(true)}
+          className="w-9 h-9 p-0"
+          title="Open Mind Map"
+        >
+          <BookOpen className="h-4 w-4" />
+        </Button>
+      </div>
 
-        {/* Mind Map Panel - Takes up remaining space */}
-        <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
-          <MindMapViewer
-            isMapGenerated={isMapGenerated}
-            onMindMapReady={onMindMapReady}
-            onExplainText={onExplainText}
-            pdfKey={activePdfKey}
-          />
+      {/* PDF Panel - Fixed to 40% width */}
+      {showPdf && (
+        <div className="h-full w-[40%] flex-shrink-0">
+          <TooltipProvider>
+            <PdfViewer 
+              ref={pdfViewerRef}
+              onTextSelected={onExplainText}
+            />
+          </TooltipProvider>
         </div>
+      )}
 
-        {showChat && (
-          <div className="h-full w-[30%] flex-shrink-0">
-            <ChatPanel
-              toggleChat={toggleChat}
-              explainText={explainText}
-              onExplainText={onExplainText}
-              onScrollToPdfPosition={handleScrollToPdfPosition}
-            />
-          </div>
-        )}
-
-        <MobileChatSheet 
-          onScrollToPdfPosition={handleScrollToPdfPosition}
-          explainText={explainText}
+      {/* Mind Map Panel - Takes up remaining space */}
+      <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
+        <MindMapViewer
+          isMapGenerated={isMapGenerated}
+          onMindMapReady={onMindMapReady}
+          onExplainText={onExplainText}
         />
       </div>
-    </>
+
+      {/* Chat Panel - Fixed to 30% width */}
+      {showChat && (
+        <div className="h-full w-[30%] flex-shrink-0">
+          <ChatPanel
+            toggleChat={toggleChat}
+            explainText={explainText}
+            onExplainText={onExplainText}
+            onScrollToPdfPosition={handleScrollToPdfPosition}
+          />
+        </div>
+      )}
+      
+      {/* MarkMap Modal */}
+      <MarkMapModal 
+        open={showMarkMap} 
+        onOpenChange={setShowMarkMap}
+      />
+
+      {/* Mobile Chat Sheet */}
+      <MobileChatSheet 
+        onScrollToPdfPosition={handleScrollToPdfPosition}
+        explainText={explainText}
+      />
+    </div>
   );
 };
 

@@ -16,13 +16,6 @@ const TopBar = () => {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2"
-          >
-            <Home className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
             onClick={() => navigate('/')}
             className="flex items-center gap-2"
           >
@@ -69,4 +62,3 @@ const TopBar = () => {
 };
 
 export default TopBar;
-

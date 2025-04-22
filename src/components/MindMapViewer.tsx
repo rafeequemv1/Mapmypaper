@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -12,7 +11,6 @@ interface MindMapViewerProps {
   onMindMapReady?: (mindMap: MindElixirInstance) => void;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
-  pdfKey?: string | null; // Add the pdfKey prop
 }
 
 // Enhanced helper function to format node text with line breaks and add emojis
@@ -178,7 +176,7 @@ const stringToColor = (str: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey }: MindMapViewerProps) => {
+const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -318,11 +316,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       let data: MindElixirData;
       
       try {
-        // Try to load mindmap data for specific PDF if pdfKey is provided
-        const savedData = pdfKey 
-          ? sessionStorage.getItem(`mindMapData_${pdfKey}`)
-          : sessionStorage.getItem('mindMapData');
-          
+        const savedData = sessionStorage.getItem('mindMapData');
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           
@@ -587,35 +581,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         observer.disconnect();
       };
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfKey]);
-
-  // Listen for PDF switching events and update mindmap
-  useEffect(() => {
-    const handlePdfSwitched = (event: CustomEvent) => {
-      if (event.detail?.pdfKey && mindMapRef.current) {
-        const newPdfKey = event.detail.pdfKey;
-        
-        // Load the mindmap data for this PDF
-        try {
-          const savedData = sessionStorage.getItem(`mindMapData_${newPdfKey}`);
-          if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            mindMapRef.current.init(parsedData);
-            console.log(`Loaded mindmap for PDF: ${newPdfKey}`);
-          }
-        } catch (error) {
-          console.error(`Error loading mindmap for PDF ${newPdfKey}:`, error);
-        }
-      }
-    };
-    
-    // Listen for PDF switching events
-    window.addEventListener('pdfSwitched', handlePdfSwitched as EventListener);
-    
-    return () => {
-      window.removeEventListener('pdfSwitched', handlePdfSwitched as EventListener);
-    };
-  }, []);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat]);
 
   // Function to generate summaries for nodes and their children
   const generateNodeSummary = (nodeData: any) => {

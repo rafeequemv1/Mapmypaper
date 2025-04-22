@@ -13,8 +13,7 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
-import { RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Activity, ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -23,63 +22,22 @@ interface FlowchartModalProps {
 
 const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
-  const { code, error, isGenerating, generateFlowchart } = useFlowchartGenerator();
-  const { toast } = useToast();
+  const { code, error, isGenerating, generateFlowchart, handleCodeChange } = useFlowchartGenerator();
   
   // State for theme and UI
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('forest');
+  const [hideEditor, setHideEditor] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(0.8); // Start with 80% zoom to ensure it fits
-  const [isRendering, setIsRendering] = useState(false);
-  const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
-  const mountedRef = useRef(true);
   
   // Always initialize mermaid library with horizontal layout
   useMermaidInit("LR"); 
   
-  // Set up cleanup on unmount
+  // Generate flowchart when modal is opened
   useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  
-  // Force a new flowchart generation when modal is opened
-  useEffect(() => {
-    if (open && mountedRef.current) {
-      console.log("Flowchart modal opened, generating flowchart...");
-      // Reset attempted state to force regeneration
-      setInitialLoadAttempted(false);
-      
-      // Small delay to ensure modal is fully opened
-      const timer = setTimeout(() => {
-        if (mountedRef.current) {
-          setIsRendering(true);
-          generateFlowchart()
-            .then(() => {
-              console.log("Flowchart generated successfully");
-            })
-            .catch(err => {
-              console.error("Error in flowchart generation:", err);
-              if (mountedRef.current) {
-                toast({
-                  title: "Flowchart Generation Issue",
-                  description: "There was a problem creating the flowchart. A simplified view is shown instead.",
-                  variant: "destructive",
-                });
-              }
-            })
-            .finally(() => {
-              if (mountedRef.current) {
-                setIsRendering(false);
-                setInitialLoadAttempted(true);
-              }
-            });
-        }
-      }, 500);
-      
-      return () => clearTimeout(timer);
+    if (open && code === defaultFlowchart) {
+      generateFlowchart();
     }
-  }, [open, generateFlowchart, toast]);
+  }, [open, generateFlowchart, code]);
 
   // Toggle color theme
   const toggleTheme = () => {
@@ -112,38 +70,14 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
-  // Handle retry for generation failures
-  const handleRetry = () => {
-    setIsRendering(true);
-    generateFlowchart()
-      .then(() => {
-        console.log("Flowchart regenerated successfully");
-      })
-      .catch(err => {
-        console.error("Retry failed:", err);
-        if (mountedRef.current) {
-          toast({
-            title: "Retry Failed",
-            description: "Still having trouble generating the flowchart. Using simplified view.",
-            variant: "destructive",
-          });
-        }
-      })
-      .finally(() => {
-        if (mountedRef.current) {
-          setIsRendering(false);
-        }
-      });
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Flowchart View</DialogTitle>
+          <DialogTitle>Flowchart Editor</DialogTitle>
           <DialogDescription>
-            View flowcharts visualizing processes and relationships from your document.
+            Create and edit flowcharts visualizing processes and relationships.
           </DialogDescription>
         </DialogHeader>
         
@@ -164,7 +98,8 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               className="flex items-center gap-1"
               title="Reset zoom to fit diagram"
             >
-              <span className="text-xs">{Math.round(zoomLevel * 100)}%</span>
+              <RefreshCw className="h-4 w-4 mr-1" />
+              {Math.round(zoomLevel * 100)}%
             </Button>
             <Button
               variant="outline"
@@ -175,26 +110,15 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               <ZoomOut className="h-4 w-4" />
             </Button>
           </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRetry}
-            className="flex items-center gap-1 ml-auto"
-            disabled={isGenerating || isRendering}
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating || isRendering ? 'animate-spin' : ''}`} />
-            {error ? "Retry Generation" : "Refresh Flowchart"}
-          </Button>
         </div>
         
-        <div className="flex-1 overflow-hidden border rounded-md">
+        <div className="flex-1 overflow-hidden">
           {/* Preview - Takes up all space */}
           <div className="h-full flex flex-col">
             <FlowchartPreview
-              code={code || defaultFlowchart}
+              code={code}
               error={error}
-              isGenerating={isGenerating || isRendering}
+              isGenerating={isGenerating}
               theme={theme}
               previewRef={previewRef}
               zoomLevel={zoomLevel}
