@@ -31,6 +31,39 @@ const FlowchartPreviewBody = ({
 }: FlowchartPreviewBodyProps) => {
   const [isRetrying, setIsRetrying] = useState(false);
   const [renderAttempt, setRenderAttempt] = useState(0);
+  const [cleaned, setCleaned] = useState<string>(code);
+  
+  // Clean the mermaid code by removing potentially problematic syntax
+  useEffect(() => {
+    if (!code) return;
+    
+    try {
+      let cleanedCode = code;
+      
+      // Fix common syntax issues that cause parsing errors
+      // 1. Remove parentheses in node labels that aren't properly quoted
+      cleanedCode = cleanedCode.replace(/\[([^\]]*\([^\)]*\)[^\]]*)\]/g, (match, p1) => {
+        return `["${p1.replace(/"/g, '\\"')}"]`;
+      });
+      
+      // 2. Ensure all node IDs don't have spaces or special characters
+      const nodeIdRegex = /\s*([A-Za-z0-9_-]+)\s*-->/g;
+      cleanedCode = cleanedCode.replace(nodeIdRegex, ' $1 -->');
+      
+      // 3. Ensure flowchart statement is properly formatted
+      if (cleanedCode.includes('flowchart') && !cleanedCode.match(/flowchart\s+(TB|TD|BT|RL|LR)/)) {
+        cleanedCode = cleanedCode.replace(/flowchart/, 'flowchart LR');
+      }
+      
+      // 4. Ensure all edges are properly defined
+      cleanedCode = cleanedCode.replace(/-->\s*$/gm, '--> id1');
+      
+      setCleaned(cleanedCode);
+    } catch (err) {
+      console.error("Error cleaning mermaid code:", err);
+      setCleaned(code); // Fall back to original code
+    }
+  }, [code]);
   
   // Trigger re-render after mount to ensure DOM is ready
   useEffect(() => {
@@ -71,7 +104,7 @@ const FlowchartPreviewBody = ({
 
   return (
     <FlowchartSVGRenderer
-      code={code}
+      code={cleaned}
       theme={theme}
       isGenerating={isGenerating}
       error={error}

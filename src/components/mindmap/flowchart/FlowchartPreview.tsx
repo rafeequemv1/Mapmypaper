@@ -25,6 +25,7 @@ const FlowchartPreview = ({
 }: FlowchartPreviewProps) => {
   const [mounted, setMounted] = useState(false);
   const [autoRetry, setAutoRetry] = useState(0);
+  const [renderKey, setRenderKey] = useState(Date.now());
   
   // Ensure component is fully mounted before attempting to render flowchart
   useEffect(() => {
@@ -39,9 +40,11 @@ const FlowchartPreview = ({
 
   // Auto-retry up to 3 times when the component loads
   useEffect(() => {
-    if (mounted && !isGenerating && autoRetry < 3) {
+    if (mounted && !isGenerating && autoRetry < 5) {
       const timer = setTimeout(() => {
         setAutoRetry(prev => prev + 1);
+        // Force re-render with a new key
+        setRenderKey(Date.now());
       }, 1000 + (autoRetry * 500)); // Increasing delay with each retry
       
       return () => clearTimeout(timer);
@@ -53,12 +56,16 @@ const FlowchartPreview = ({
     if (onRetry) {
       onRetry();
     }
+    // Also trigger a local re-render
+    setRenderKey(Date.now());
+    setAutoRetry(prev => prev + 1);
   };
   
   return (
     <FlowchartPreviewContainer>
       {mounted ? (
         <FlowchartPreviewBody
+          key={`preview-${renderKey}`}
           code={code}
           error={error}
           isGenerating={isGenerating}

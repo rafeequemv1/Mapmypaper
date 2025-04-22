@@ -26,7 +26,7 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
   const ref = previewRef || localRef;
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
-  const renderIdRef = useRef<string>(`diagram-${Date.now()}-${renderAttempt}`);
+  const renderIdRef = useRef<string>(`diagram-${Date.now()}-${renderAttempt}-${Math.random().toString(36).substring(2, 11)}`);
   const mountedRef = useRef(true);
   const retryCountRef = useRef(0);
   const maxRetries = 5;
@@ -35,8 +35,17 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
   useEffect(() => {
     setRenderError(null);
     retryCountRef.current = 0;
-    renderIdRef.current = `diagram-${Date.now()}-${renderAttempt}`;
-  }, [code, renderAttempt]);
+    renderIdRef.current = `diagram-${Date.now()}-${renderAttempt}-${Math.random().toString(36).substring(2, 11)}`;
+    
+    // Force a rerender after a short delay
+    const timer = setTimeout(() => {
+      if (mountedRef.current && ref.current) {
+        ref.current.innerHTML = '<div class="mermaid-container"></div>';
+      }
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [code, renderAttempt, ref]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -74,11 +83,13 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
               flowchart: {
                 htmlLabels: true,
                 useMaxWidth: true,
+                curve: 'basis',
               },
               er: { useMaxWidth: true },
               sequence: { useMaxWidth: true },
               mindmap: { useMaxWidth: true },
-              logLevel: 3 // Reduce log verbosity
+              logLevel: 1, // Less verbose logging
+              fontFamily: 'system-ui, sans-serif'
             });
           } catch (initError) {
             console.warn("Mermaid initialization warning, proceeding anyway:", initError);
@@ -91,12 +102,29 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
               
               console.log(`Rendering attempt ${attempt + 1} for diagram ${renderIdRef.current}`);
               
-              const { svg } = await mermaid.render(renderIdRef.current, code, container);
+              // Try different mermaid rendering approach
+              let svgCode = '';
+              
+              try {
+                // First attempt with mermaid.render
+                const { svg } = await mermaid.render(renderIdRef.current, code, container);
+                svgCode = svg;
+              } catch (renderErr) {
+                console.warn(`Standard render failed, trying alternate method:`, renderErr);
+                
+                // Fallback to mermaid.mermaidAPI
+                try {
+                  svgCode = await mermaid.mermaidAPI.render(renderIdRef.current, code);
+                } catch (alternateRenderErr) {
+                  console.error(`Alternate render also failed:`, alternateRenderErr);
+                  throw alternateRenderErr;
+                }
+              }
               
               if (!mountedRef.current) return;
               
               if (ref.current && mountedRef.current) {
-                ref.current.innerHTML = svg;
+                ref.current.innerHTML = svgCode;
                 const svgElement = ref.current.querySelector('svg');
                 if (svgElement) {
                   // Apply SVG styling and adjustments
@@ -108,6 +136,7 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
                   
                   // Apply zoom if needed
                   if (zoomLevel !== 1) {
+                    // Try to find the transform group
                     const g = svgElement.querySelector('g');
                     if (g) {
                       const viewBox = svgElement.getAttribute('viewBox');
@@ -132,8 +161,6 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
                     }
                     .node rect, .node circle, .node ellipse, .node polygon, .node path {
                       stroke-width: 2px !important;
-                      rx: 15px;
-                      ry: 15px;
                     }
                     .node.class-1 > rect { fill: #F2FCE2 !important; stroke: #22C55E !important; }
                     .node.class-2 > rect { fill: #FEF7CD !important; stroke: #F59E0B !important; }
@@ -156,10 +183,12 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
                       padding: 4px 8px;
                       font-size: 12px;
                       font-weight: 500;
-                      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                     }
                     .flowchart-link, .mindmap-edge {
                       stroke-width: 2px !important;
+                    }
+                    text {
+                      font-family: system-ui, -apple-system, sans-serif;
                     }
                   `;
                   svgElement.appendChild(styleElement);
@@ -169,8 +198,9 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
               console.warn(`Mermaid render attempt ${attempt + 1} failed:`, renderError);
               
               if (attempt < maxRetries && mountedRef.current) {
-                // Wait a bit longer each retry with exponential backoff
-                await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(1.5, attempt)));
+                // Increase wait time between retries (exponential backoff)
+                const delay = 300 * Math.pow(1.5, attempt);
+                await new Promise(resolve => setTimeout(resolve, delay));
                 return attemptRender(attempt + 1);
               }
               
