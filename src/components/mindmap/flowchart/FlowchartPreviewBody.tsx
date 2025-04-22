@@ -1,9 +1,10 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import FlowchartSVGRenderer from "./FlowchartSVGRenderer";
 import FlowchartLoading from "./FlowchartLoading";
 import FlowchartError from "./FlowchartError";
 import RateLimitMessage from "./RateLimitMessage";
+import { isRateLimitError } from "./utils/retryUtils";
 
 interface FlowchartPreviewBodyProps {
   code: string;
@@ -13,6 +14,8 @@ interface FlowchartPreviewBodyProps {
   previewRef?: React.RefObject<HTMLDivElement>;
   zoomLevel?: number;
   onRetry?: () => void;
+  retryCount?: number;
+  maxRetries?: number;
 }
 
 const FlowchartPreviewBody = ({
@@ -22,17 +25,36 @@ const FlowchartPreviewBody = ({
   theme,
   previewRef,
   zoomLevel = 1,
-  onRetry
+  onRetry,
+  retryCount = 0,
+  maxRetries = 5
 }: FlowchartPreviewBodyProps) => {
-  const isRateLimitError = error?.includes('429') || error?.includes('rate limit') || error?.includes('quota exceeded');
-
+  const [isRetrying, setIsRetrying] = useState(false);
+  
+  // Handle error cases
   if (isGenerating) {
     return <FlowchartLoading />;
   }
 
   if (error) {
-    if (isRateLimitError && onRetry) {
-      return <RateLimitMessage onRetry={onRetry} isRetrying={false} />;
+    // Check for rate limit error using the utility function
+    if (isRateLimitError(error) && onRetry) {
+      const handleRetry = () => {
+        setIsRetrying(true);
+        if (onRetry) {
+          Promise.resolve(onRetry())
+            .finally(() => setIsRetrying(false));
+        }
+      };
+
+      return (
+        <RateLimitMessage 
+          onRetry={handleRetry} 
+          isRetrying={isRetrying}
+          retryCount={retryCount}
+          maxRetries={maxRetries}
+        />
+      );
     }
     return <FlowchartError error={error} />;
   }
