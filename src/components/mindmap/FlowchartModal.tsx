@@ -15,7 +15,6 @@ import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
 import { RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import PdfTabs, { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -34,13 +33,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
   const mountedRef = useRef(true);
   
-  // PDF tab state
-  const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
-    const metas = getAllPdfs();
-    if (metas.length === 0) return null;
-    return getPdfKey(metas[0]);
-  });
-  
   // Always initialize mermaid library with horizontal layout
   useMermaidInit("LR"); 
   
@@ -50,29 +42,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       mountedRef.current = false;
     };
   }, []);
-  
-  // Handle active PDF change
-  const handleTabChange = (key: string) => {
-    setActivePdfKey(key);
-    // Notify other components about PDF switch
-    window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
-    // Regenerate flowchart for the selected PDF
-    setIsRendering(true);
-    generateFlowchart(key)
-      .then(() => {
-        if (mountedRef.current) {
-          console.log("Flowchart generated for new PDF");
-        }
-      })
-      .catch(err => {
-        console.error("Error generating flowchart for new PDF:", err);
-      })
-      .finally(() => {
-        if (mountedRef.current) {
-          setIsRendering(false);
-        }
-      });
-  };
   
   // Force a new flowchart generation when modal is opened
   useEffect(() => {
@@ -85,7 +54,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       const timer = setTimeout(() => {
         if (mountedRef.current) {
           setIsRendering(true);
-          generateFlowchart(activePdfKey)
+          generateFlowchart()
             .then(() => {
               console.log("Flowchart generated successfully");
             })
@@ -110,7 +79,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       
       return () => clearTimeout(timer);
     }
-  }, [open, generateFlowchart, toast, activePdfKey]);
+  }, [open, generateFlowchart, toast]);
 
   // Toggle color theme
   const toggleTheme = () => {
@@ -147,7 +116,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // Handle retry for generation failures
   const handleRetry = () => {
     setIsRendering(true);
-    generateFlowchart(activePdfKey)
+    generateFlowchart()
       .then(() => {
         console.log("Flowchart regenerated successfully");
       })
@@ -177,13 +146,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             View flowcharts visualizing processes and relationships from your document.
           </DialogDescription>
         </DialogHeader>
-        
-        {/* PDF Tabs */}
-        <PdfTabs
-          activeKey={activePdfKey}
-          onTabChange={handleTabChange}
-          onRemove={() => {}} // No removal in this view
-        />
         
         <div className="flex justify-between items-center gap-4 mb-4">
           <div className="flex items-center gap-2">
