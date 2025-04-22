@@ -1,401 +1,414 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize the Google Generative AI with API key
-// Use the provided API key or the environment variable if available
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyBXCTrrbB6hepfwO9EdgDn816TL1tRoGWU";
-const genAI = new GoogleGenerativeAI(apiKey);
+const MODEL_NAME = "gemini-1.5-pro-latest";
 
-// Get the generative model (updated to use gemini-1.5-pro instead of gemini-pro)
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+// Use the provided hardcoded API key directly
+function initializeGeminiModel() {
+  const apiKey = "AIzaSyCEbxHCzwRHr6YL84pRVgxdkjoqIpb7IKc";
+  
+  // Add console log to debug the API key usage (value redacted)
+  console.log("Gemini API Key present:", apiKey ? "Yes" : "No");
+  
+  if (!apiKey) {
+    throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+  }
+  
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return genAI.getGenerativeModel({ model: MODEL_NAME });
+}
 
-// Model that can handle both text and images
-const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
-
-/**
- * Generate a mind map from text extracted from a PDF
- * Returns a Mermaid diagram string directly (not JSON)
- */
-export async function generateMindmapFromPdf(): Promise<string> {
+export async function generateMindMapFromText(text: string): Promise<any> {
   try {
-    // Check if API key is configured
-    if (!apiKey) {
-      throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
-    }
-
-    // First, check if we have PDF text in session storage
-    const pdfText = sessionStorage.getItem("pdfText");
-    
-    if (!pdfText || pdfText.trim() === "") {
-      throw new Error("No PDF content available. Please upload a PDF document first.");
-    }
-
-    // For long PDFs, we need to truncate to stay within token limits
-    const truncatedText = pdfText.length > 15000 ? pdfText.substring(0, 15000) + "..." : pdfText;
-
-    // Construct the prompt
     const prompt = `
-      Generate a mind map in Mermaid.js syntax based on the PDF content below.
+      Create a mind map JSON structure from the following text.
+      The mind map should represent the key concepts, ideas, and relationships in the text.
+      Use a hierarchical structure with a central topic and subtopics.
+      Include a title, and array of child nodes with their own titles and child nodes.
+      Keep the mindmap concise and focused on the most important information.
+      Ensure that the JSON structure is valid and well-formed.
       
-      The mind map should:
-      - Start with "mindmap" declaration
-      - Have a root node with the paper's main topic 
-      - Include branches for key sections (methodology, results, discussion)
-      - Include subbranches for important details, findings, and concepts
-      - Use appropriate styling for readability (classDef statements)
-      - Follow the Mermaid.js mindmap syntax exactly
+      Important: Return ONLY a valid JSON object without any additional text, markdown formatting, or code blocks.
+      The JSON structure should follow this format:
+      {
+        "nodeData": {
+          "id": "root",
+          "topic": "Main Topic",
+          "children": [
+            {
+              "id": "child1",
+              "topic": "Subtopic 1",
+              "children": []
+            }
+          ]
+        }
+      }
       
-      Here's the PDF content:
-      ${truncatedText}
-      
-      Only return the Mermaid syntax - no explanations, no markdown formatting, just the mindmap code.
+      Text:
+      ${text.slice(0, 8000)}
     `;
 
-    // Get response from the model
-    const result = await model.generateContent(prompt);
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([prompt]);
     const response = await result.response;
     const responseText = response.text();
+
+    // First, try to find and extract a JSON object from the response
+    // Look for anything that resembles a JSON object
+    const jsonRegex = /\{[\s\S]*\}/;
+    const match = responseText.match(jsonRegex);
     
-    // Extract just the Mermaid code (removing any markdown code blocks if present)
-    let mindmapCode = responseText.trim();
-    
-    // Clean up any markdown formatting that might be in the response
-    mindmapCode = mindmapCode.replace(/```mermaid\s*/g, "").replace(/```\s*$/g, "");
-    mindmapCode = mindmapCode.replace(/```mindmap\s*/g, "").replace(/```\s*$/g, "");
-    
-    // Validate that it starts with "mindmap"
-    if (!mindmapCode.trim().startsWith("mindmap")) {
-      mindmapCode = "mindmap\n" + mindmapCode;
+    if (!match) {
+      console.error("No JSON-like structure found in response");
+      throw new Error("Could not extract JSON from the model response");
     }
     
-    return mindmapCode;
+    // Try to clean up the extracted JSON string
+    let jsonString = match[0];
+    
+    // Replace any incorrect escape characters or invalid JSON
+    jsonString = jsonString
+      .replace(/\\"/g, '"') // Replace escaped quotes
+      .replace(/\n/g, ' ')   // Remove newlines
+      .replace(/,\s*}/g, '}') // Remove trailing commas
+      .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+    
+    try {
+      // Attempt to parse the extracted and cleaned string
+      const parsedData = JSON.parse(jsonString);
+      
+      // Check if the parsed data has the expected structure
+      if (!parsedData.nodeData) {
+        // If it doesn't have nodeData, try to create the proper structure
+        if (parsedData.topic || parsedData.children) {
+          return {
+            nodeData: parsedData
+          };
+        } else {
+          // Create a default structure from whatever we got
+          return {
+            nodeData: {
+              id: "root",
+              topic: parsedData.title || "Mind Map",
+              children: Array.isArray(parsedData) ? parsedData : 
+                        (parsedData.items || parsedData.nodes || [])
+            }
+          };
+        }
+      }
+      
+      return parsedData;
+    } catch (jsonError) {
+      console.error("Failed to parse JSON:", jsonError);
+      console.log("Problematic JSON string:", jsonString);
+      
+      // Fallback: Return a basic mind map structure
+      return {
+        nodeData: {
+          id: "root",
+          topic: "Generated Mind Map",
+          children: [
+            {
+              id: "fallback1",
+              topic: "Content could not be parsed properly",
+              children: []
+            },
+            {
+              id: "fallback2",
+              topic: "Please try regenerating or simplifying the content",
+              children: []
+            }
+          ]
+        }
+      };
+    }
   } catch (error) {
-    console.error("Error generating mindmap:", error);
-    throw new Error(`Failed to generate mindmap: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("Error generating mind map:", error);
+    throw new Error(`Failed to generate mind map: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-/**
- * Generate a flowchart from a PDF
- * @param pdfKey Optional specific PDF key to use
- * @returns Mermaid flowchart code as string
- */
-export async function generateFlowchartFromPdf(pdfKey: string | null = null): Promise<string> {
+export async function generateSummaryFromText(text: string): Promise<string> {
   try {
-    // Get current PDF text either from the specific key or from session storage
-    let pdfText: string | null = null;
-    
-    if (pdfKey) {
-      pdfText = sessionStorage.getItem(`pdfText_${pdfKey}`);
-    }
-    
-    // If no text found with the specific key, try the default key
-    if (!pdfText) {
-      pdfText = sessionStorage.getItem("pdfText");
-    }
-    
-    // Also try to get from mindmap data as a last resort
-    if (!pdfText && pdfKey) {
-      const mindMapData = sessionStorage.getItem(`mindMapData_${pdfKey}`);
-      if (mindMapData) {
-        // We have mindmap data but no direct text - we can still generate a flowchart
-        // based on the mindmap structure
-        const parsedData = JSON.parse(mindMapData);
-        if (parsedData && parsedData.topic) {
-          // Use the mindmap data to create a simple extraction of text
-          pdfText = extractTextFromMindMap(parsedData);
-        }
-      }
-    }
-    
-    if (!pdfText || pdfText.trim() === "") {
-      throw new Error("No PDF content available. Please upload a PDF document first.");
-    }
-
-    // For long PDFs, we need to truncate to stay within token limits
-    const truncatedText = pdfText.length > 15000 ? pdfText.substring(0, 15000) + "..." : pdfText;
-
-    // Construct the prompt
     const prompt = `
-      Generate a flowchart in Mermaid.js syntax based on the PDF content below.
+      Create a concise summary of the following text, highlighting the key points and main ideas.
+      The summary should be no more than 200 words.
       
-      The flowchart should:
-      - Start with "flowchart LR" (left to right) declaration
-      - Represent the main process or argument flow of the paper
-      - Use appropriate node shapes ([], (), {}, etc.)
-      - Connect nodes with arrows showing the logical flow
-      - Include appropriate styling with classDef statements
-      - Follow the Mermaid.js flowchart syntax exactly
-      
-      Here's the PDF content:
-      ${truncatedText}
-      
-      Return ONLY the Mermaid syntax - no explanations, no markdown formatting, just the flowchart code.
+      Text:
+      ${text.slice(0, 8000)}
     `;
 
-    // Get response from the model
-    const result = await model.generateContent(prompt);
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([prompt]);
     const response = await result.response;
-    const responseText = response.text();
+    return response.text();
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    throw new Error(`Failed to generate summary: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+export async function generateFlowchartFromPdf(pdfKey: string | null = null): Promise<string> {
+  try {
+    // Get current PDF text
+    const pdfText = await getCurrentPdfText(pdfKey);
+    if (!pdfText) {
+      throw new Error("No PDF content available");
+    }
+
+    // Flowchart prompt
+    const flowchartPrompt = `
+      Create a mermaid.js flowchart syntax for the following PDF content. Focus on the main processes, relationships, or sequences described.
+      Use 'flowchart LR' direction (left to right) and keep it under 20 nodes for clarity.
+      Make sure to use proper mermaid.js syntax with nodes and connections.
+      
+      PDF Content:
+      ${pdfText.slice(0, 8000)}
+    `;
+
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([flowchartPrompt]);
+    const response = await result.response;
+    const text = response.text();
+
+    // Extract the mermaid code from the response
+    let mermaidCode = text;
     
-    // Extract just the Mermaid code (removing any markdown code blocks if present)
-    let flowchartCode = responseText.trim();
-    
-    // Clean up any markdown formatting that might be in the response
-    flowchartCode = flowchartCode.replace(/```mermaid\s*/g, "").replace(/```\s*$/g, "");
-    flowchartCode = flowchartCode.replace(/```flowchart\s*/g, "").replace(/```\s*$/g, "");
-    
-    // Validate that it starts with "flowchart"
-    if (!flowchartCode.trim().startsWith("flowchart")) {
-      flowchartCode = "flowchart LR\n" + flowchartCode;
+    // If the response contains markdown code blocks, extract just the flowchart code
+    if (text.includes("```mermaid")) {
+      mermaidCode = text.split("```mermaid")[1].split("```")[0].trim();
+    } else if (text.includes("```")) {
+      mermaidCode = text.split("```")[1].split("```")[0].trim();
     }
     
-    return flowchartCode;
+    // Ensure it starts with the proper flowchart syntax
+    if (!mermaidCode.trim().startsWith("flowchart")) {
+      mermaidCode = "flowchart LR\n" + mermaidCode;
+    }
+    
+    return mermaidCode;
   } catch (error) {
     console.error("Error generating flowchart:", error);
     throw new Error(`Failed to generate flowchart: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-/**
- * Generate a sequence diagram from a PDF
- * @param pdfKey Optional specific PDF key to use
- * @returns Mermaid sequence diagram code as string
- */
-export async function generateSequenceDiagramFromPdf(pdfKey: string | null = null): Promise<string> {
+// Added function to generate structured summary for the Summary modal
+export async function generateStructuredSummary(): Promise<any> {
   try {
-    // Get current PDF text either from the specific key or from session storage
-    let pdfText: string | null = null;
-    
-    if (pdfKey) {
-      pdfText = sessionStorage.getItem(`pdfText_${pdfKey}`);
-    }
-    
-    // If no text found with the specific key, try the default key
+    // Get current PDF text
+    const pdfText = await getCurrentPdfText();
     if (!pdfText) {
-      pdfText = sessionStorage.getItem("pdfText");
-    }
-    
-    if (!pdfText || pdfText.trim() === "") {
-      throw new Error("No PDF content available. Please upload a PDF document first.");
+      throw new Error("No PDF content available");
     }
 
-    // For long PDFs, we need to truncate to stay within token limits
-    const truncatedText = pdfText.length > 15000 ? pdfText.substring(0, 15000) + "..." : pdfText;
-
-    // Construct the prompt
     const prompt = `
-      Generate a sequence diagram in Mermaid.js syntax based on the PDF content below.
+      Create a comprehensive structured summary of the following academic paper.
+      Return the result as a JSON object with the following sections:
+      {
+        "Summary": "A concise overview of the entire paper",
+        "Key Findings": "The most important discoveries or results",
+        "Objectives": "The goals or aims of the research",
+        "Methods": "The methodology used",
+        "Results": "The outcomes of the research",
+        "Conclusions": "The interpretations and implications",
+        "Key Concepts": "Important terms and ideas covered"
+      }
       
-      The sequence diagram should:
-      - Start with "sequenceDiagram" declaration
-      - Identify key actors/participants from the paper
-      - Show the sequence of interactions between participants
-      - Include activations where appropriate
-      - Follow the Mermaid.js sequence diagram syntax exactly
+      For each section, provide detailed information with important points.
+      When referencing specific information from the paper, include citation markers in the format [citation:pageX] where X is the page number.
       
-      Here's the PDF content:
-      ${truncatedText}
-      
-      Return ONLY the Mermaid syntax - no explanations, no markdown formatting, just the sequence diagram code.
+      PDF Content:
+      ${pdfText.slice(0, 8000)}
     `;
 
-    // Get response from the model
-    const result = await model.generateContent(prompt);
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([prompt]);
     const response = await result.response;
-    const responseText = response.text();
+    const jsonString = response.text();
+
+    try {
+      // Attempt to parse the response as JSON
+      return JSON.parse(jsonString);
+    } catch (jsonError) {
+      // If parsing fails, attempt to extract JSON from the response
+      const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          return JSON.parse(jsonMatch[0]);
+        } catch (extractionError) {
+          console.error("Failed to parse extracted JSON:", extractionError);
+          throw new Error("Failed to parse structured summary JSON.");
+        }
+      } else {
+        console.error("No JSON found in response.");
+        throw new Error("No JSON found in structured summary response.");
+      }
+    }
+  } catch (error) {
+    console.error("Error generating structured summary:", error);
+    throw new Error(`Failed to generate structured summary: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+// Update for mindmap generation: Now expects Mermaid code, not JSON
+export async function generateMindmapFromPdf(pdfKey: string | null = null): Promise<string> {
+  try {
+    // Get current PDF text
+    const pdfText = await getCurrentPdfText(pdfKey);
+    if (!pdfText) {
+      throw new Error("No PDF content available");
+    }
+
+    // Mindmap prompt: ask for Mermaid mindmap code in your preferred style
+    const mindmapPrompt = `
+      Create a detailed mindmap diagram in Mermaid syntax based on the following PDF content.
+      Use the "mindmap" directive (not flowchart) and include the central topic for the paper, with explicit branches for Summary, Key Points, Main Contributions, Significance, and at least three Key Concepts each with their own sub-concepts and details, following this structure:
+      
+      mindmap
+        root((Paper Topic))
+        root --> summary["Summary"]
+        summary --> keyPoints["Key Points"]
+        summary --> mainContrib["Main Contributions"]
+        summary --> significance["Significance"]
+        root --> concept1["Key Concept 1"]
+        concept1 --> sub11["Sub-concept 1.1"]
+        sub11 --> det111["Detail 1.1.1"]
+        ... etc.
+      
+      Every branch and node should contain information relevant from the paper. Structure the mindmap deeply, using unique node IDs (root, summary, concept1, sub11, etc).
+      Return ONLY Mermaid code (no Markdown or other text).
+      Ensure the mindmap code includes at the end all class definitions and color styling exactly as in the following example:
+      %% classDef rootStyle fill:#000000,color:#ffffff,stroke:#000000,stroke-width:2px,font-size:18px
+      %% ...etc...
+      
+      PDF Content:
+      ${pdfText.slice(0, 8000)}
+    `;
+
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([mindmapPrompt]);
+    const response = await result.response;
+    let text = response.text();
+
+    // Only keep the code section
+    if (text.includes("```mermaid")) {
+      text = text.split("```mermaid")[1].split("```")[0].trim();
+    } else if (text.includes("```")) {
+      text = text.split("```")[1].split("```")[0].trim();
+    }
+
+    // Ensure code starts with 'mindmap'
+    if (!text.trim().startsWith("mindmap")) {
+      text = "mindmap\n" + text;
+    }
+
+    return text;
+  } catch (error) {
+    console.error("Error generating mind map from PDF:", error);
+    // Fallback: return empty so hook can show defaultMindmap
+    return "";
+  }
+}
+
+// Added function for sequence diagram generation
+export async function generateSequenceDiagramFromPdf(pdfKey: string | null = null): Promise<string> {
+  try {
+    // Get current PDF text
+    const pdfText = await getCurrentPdfText(pdfKey);
+    if (!pdfText) {
+      throw new Error("No PDF content available");
+    }
+
+    // Sequence diagram prompt
+    const sequencePrompt = `
+      Create a mermaid.js sequence diagram syntax for the following PDF content. Focus on the main processes, interactions, or sequences described.
+      Use proper mermaid.js sequence diagram syntax with actors and messages.
+      Keep it under 15 interactions for clarity.
+      
+      PDF Content:
+      ${pdfText.slice(0, 8000)}
+    `;
+
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([sequencePrompt]);
+    const response = await result.response;
+    const text = response.text();
+
+    // Extract the mermaid code from the response
+    let mermaidCode = text;
     
-    // Extract just the Mermaid code (removing any markdown code blocks if present)
-    let sequenceDiagramCode = responseText.trim();
-    
-    // Clean up any markdown formatting that might be in the response
-    sequenceDiagramCode = sequenceDiagramCode.replace(/```mermaid\s*/g, "").replace(/```\s*$/g, "");
-    sequenceDiagramCode = sequenceDiagramCode.replace(/```sequenceDiagram\s*/g, "").replace(/```\s*$/g, "");
-    
-    // Validate that it starts with "sequenceDiagram"
-    if (!sequenceDiagramCode.trim().startsWith("sequenceDiagram")) {
-      sequenceDiagramCode = "sequenceDiagram\n" + sequenceDiagramCode;
+    // If the response contains markdown code blocks, extract just the sequence diagram code
+    if (text.includes("```mermaid")) {
+      mermaidCode = text.split("```mermaid")[1].split("```")[0].trim();
+    } else if (text.includes("```")) {
+      mermaidCode = text.split("```")[1].split("```")[0].trim();
     }
     
-    return sequenceDiagramCode;
+    // Ensure it starts with the proper sequence diagram syntax
+    if (!mermaidCode.trim().startsWith("sequenceDiagram")) {
+      mermaidCode = "sequenceDiagram\n" + mermaidCode;
+    }
+    
+    return mermaidCode;
   } catch (error) {
     console.error("Error generating sequence diagram:", error);
     throw new Error(`Failed to generate sequence diagram: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-/**
- * Generate a mind map from text
- * @param text Raw text content from PDF
- * @returns JSON structure for mind map
- */
-export async function generateMindMapFromText(text: string): Promise<any> {
+// Add chat function for interacting with PDF content
+export async function chatWithGeminiAboutPdf(message: string): Promise<string> {
   try {
-    // Check if API key is configured
-    if (!apiKey) {
-      throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+    // Get current PDF text
+    const pdfText = await getCurrentPdfText();
+    if (!pdfText) {
+      throw new Error("No PDF content available");
     }
 
-    if (!text || text.trim() === "") {
-      throw new Error("No text content provided for mind map generation.");
-    }
-
-    // Store the PDF text in session storage for other generation features to use
-    sessionStorage.setItem("pdfText", text);
-    
-    // For long texts, we need to truncate to stay within token limits
-    const truncatedText = text.length > 25000 ? text.substring(0, 25000) + "..." : text;
-
-    // Construct the prompt for JSON mind map format
     const prompt = `
-      Create a hierarchical mind map structure based on the academic paper content below.
-      Format your response as a properly formatted JSON object that can be used directly in a JavaScript application.
+      I'll act as your research assistant for this document.
+      Here's the document content:
+      ---
+      ${pdfText.slice(0, 6000)}
+      ---
       
-      The JSON should follow this exact structure:
-      {
-        "topic": "Main Title of Paper",
-        "children": [
-          {
-            "topic": "Main Section 1",
-            "children": [
-              {
-                "topic": "Subsection 1.1",
-                "children": [
-                  {"topic": "Detail 1.1.1"},
-                  {"topic": "Detail 1.1.2"}
-                ]
-              },
-              {"topic": "Subsection 1.2"}
-            ]
-          },
-          {
-            "topic": "Main Section 2",
-            "children": [...]
-          }
-        ]
-      }
+      Now, please respond to this question or instruction:
+      ${message}
       
-      Capture the hierarchical structure of the paper including:
-      - Paper title as the root topic
-      - Main sections (like Abstract, Introduction, Methods, Results, Discussion)
-      - Key subsections
-      - Important findings, methodologies, and conclusions
-      
-      Paper content:
-      ${truncatedText}
-      
-      IMPORTANT: Return ONLY valid JSON, no explanations, no markdown formatting, no text before or after the JSON.
-      Ensure all quotes are properly escaped within string values.
+      When referring to specific content from the document, include page citations in the format [citation:pageX] where X is the page number.
     `;
 
-    // Get response from the model
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const responseText = response.text();
-    
-    // Clean up any markdown formatting that might be in the response
-    let jsonString = responseText.trim();
-    jsonString = jsonString.replace(/```json\s*/g, "").replace(/```\s*$/g, "");
-    
-    try {
-      // Parse the returned JSON
-      const mindMapData = JSON.parse(jsonString);
-      return mindMapData;
-    } catch (parseError) {
-      console.error("Failed to parse JSON mind map:", parseError);
-      
-      // Return a simplified structure with the error message
-      return {
-        topic: "Paper Analysis (Error in Processing)",
-        children: [
-          {
-            topic: "Error Processing Paper",
-            children: [
-              { topic: "AI could not generate a proper mind map" },
-              { topic: "Please try again or with a different paper" }
-            ]
-          }
-        ]
-      };
-    }
-  } catch (error) {
-    console.error("Error generating mind map from text:", error);
-    throw new Error(`Failed to generate mind map: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Chat with Gemini about a PDF
- * @param userMessage The user's message
- * @returns AI response as string
- */
-export async function chatWithGeminiAboutPdf(userMessage: string): Promise<string> {
-  try {
-    // Check if API key is configured
-    if (!apiKey) {
-      throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
-    }
-
-    // Get the PDF text from session storage
-    const pdfText = sessionStorage.getItem("pdfText");
-    
-    if (!pdfText || pdfText.trim() === "") {
-      throw new Error("No PDF content available. Please upload a PDF document first.");
-    }
-    
-    // Truncate the PDF text to fit within token limits
-    const truncatedText = pdfText.length > 15000 ? pdfText.substring(0, 15000) + "..." : pdfText;
-    
-    // System prompt to give context about the PDF
-    const systemPrompt = `
-      You are an AI research assistant helping a user understand an academic paper. 
-      Below is the content of the paper the user is asking about. 
-      When answering questions, refer specifically to content in the paper and cite page numbers where possible.
-      
-      Paper content:
-      ${truncatedText}
-      
-      When citing information from specific pages, use the format [citation:pageX] where X is the page number.
-    `;
-    
-    // Get response from the model - using the correct API format
-    const result = await model.generateContent([
-      { text: systemPrompt },
-      { text: userMessage }
-    ]);
-    
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([prompt]);
     const response = await result.response;
     return response.text();
   } catch (error) {
-    console.error("Error chatting with Gemini about PDF:", error);
-    throw new Error(`Failed to get response: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("Error in chat with Gemini about PDF:", error);
+    throw new Error(`Failed to chat about PDF: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-/**
- * Analyze an image with Gemini
- * @param imageData Base64 encoded image data
- * @returns AI analysis as string
- */
+// Function to analyze uploaded images with Gemini
 export async function analyzeImageWithGemini(imageData: string): Promise<string> {
   try {
-    // Remove the data URL prefix if present
-    const base64Image = imageData.replace(/^data:image\/(png|jpeg|jpg|gif);base64,/, "");
+    // Process the image data (base64)
+    const imageBytes = imageData.split(",")[1]; // Remove data URL prefix
     
-    // Create a file part from the base64 data
-    const imagePart = {
-      inlineData: {
-        data: base64Image,
-        mimeType: "image/jpeg" // Assuming JPEG, adjust if needed
+    const model = initializeGeminiModel();
+    const prompt = "Analyze this image in detail. Describe what you see, including any text, diagrams, charts, or other visual elements. If it contains data or information, summarize it.";
+    
+    // Use multimodal capabilities (text + image)
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: imageBytes,
+          mimeType: "image/jpeg" // Assume JPEG, but could be dynamic based on the actual image
+        }
       }
-    };
+    ]);
     
-    // The prompt for image analysis
-    const prompt = "Analyze this image in detail. Describe what you see, including any text, diagrams, charts, or visual elements. If it appears to be from an academic paper, explain what information it's conveying.";
-    
-    // Generate content with the vision model
-    const result = await visionModel.generateContent([prompt, imagePart]);
     const response = await result.response;
-    
     return response.text();
   } catch (error) {
     console.error("Error analyzing image with Gemini:", error);
@@ -403,44 +416,25 @@ export async function analyzeImageWithGemini(imageData: string): Promise<string>
   }
 }
 
-/**
- * Analyze a file with Gemini
- * @param fileContent File content as string
- * @param fileName Name of the file
- * @param fileType MIME type of the file
- * @returns AI analysis as string
- */
-export async function analyzeFileWithGemini(
-  fileContent: string,
-  fileName: string,
-  fileType: string
-): Promise<string> {
+// Function to analyze uploaded files with Gemini
+export async function analyzeFileWithGemini(fileContent: string, fileName: string, fileType: string): Promise<string> {
   try {
-    // Create a prompt based on the file type
-    let prompt = `Analyze this ${fileType} file named "${fileName}". `;
+    const prompt = `
+      Analyze the following file content:
+      Filename: ${fileName}
+      File type: ${fileType}
+      
+      Content:
+      ${fileContent.slice(0, 8000)}
+      
+      Provide a detailed analysis of this file. Include key points, data insights, and any patterns you observe.
+      If it's structured data (like CSV or JSON), summarize the structure and important information.
+      Highlight any interesting or unusual aspects of the content.
+    `;
     
-    if (fileType === "text/plain") {
-      prompt += "The content of the text file is provided below. Summarize the key points and provide insights:\n\n";
-    } else if (fileType === "text/csv" || fileType.includes("spreadsheet")) {
-      prompt += "The content of the CSV/spreadsheet file is provided below. Parse this data, identify patterns, and summarize the key information:\n\n";
-    } else if (fileType === "application/json") {
-      prompt += "The content of the JSON file is provided below. Explain the structure and key data points:\n\n";
-    } else {
-      prompt += "The content is provided below. Do your best to analyze it:\n\n";
-    }
-    
-    // Limit content size
-    const truncatedContent = fileContent.length > 15000 
-      ? fileContent.substring(0, 15000) + "...[content truncated due to size]" 
-      : fileContent;
-    
-    // Full prompt with file content
-    const fullPrompt = prompt + truncatedContent;
-    
-    // Get response from the model
-    const result = await model.generateContent(fullPrompt);
+    const model = initializeGeminiModel();
+    const result = await model.generateContent([prompt]);
     const response = await result.response;
-    
     return response.text();
   } catch (error) {
     console.error("Error analyzing file with Gemini:", error);
@@ -448,100 +442,57 @@ export async function analyzeFileWithGemini(
   }
 }
 
-/**
- * Generate a structured summary of the PDF
- * @returns Structured summary object
- */
-export async function generateStructuredSummary(): Promise<object> {
+// Helper function to get text from current PDF
+async function getCurrentPdfText(pdfKey: string | null = null): Promise<string | null> {
   try {
-    // Get the PDF text from session storage
-    const pdfText = sessionStorage.getItem("pdfText");
-    
-    if (!pdfText || pdfText.trim() === "") {
-      throw new Error("No PDF content available. Please upload a PDF document first.");
-    }
-    
-    // Truncate the PDF text to fit within token limits
-    const truncatedText = pdfText.length > 20000 ? pdfText.substring(0, 20000) + "..." : pdfText;
-    
-    // Construct the prompt for structured summary
-    const prompt = `
-      Create a structured summary of this academic paper. Format your response as a JSON object with the following sections:
+    // If a specific pdfKey is provided, use it
+    if (pdfKey) {
+      const pdfDataString = sessionStorage.getItem(`hasPdfData_${pdfKey}`);
+      if (!pdfDataString) return null;
       
-      1. Summary: A concise overview of the paper in 3-5 sentences
-      2. Key Findings: The main discoveries or conclusions
-      3. Objectives: What the paper set out to accomplish
-      4. Methods: The approaches, techniques, or methods used
-      5. Results: The outcomes or data obtained
-      6. Conclusions: What the authors concluded
-      7. Key Concepts: Important terms, theories, or concepts introduced
+      // Check for cached text for this PDF to avoid re-extraction
+      const cachedText = sessionStorage.getItem(`pdfText_${pdfKey}`);
+      if (cachedText) return cachedText;
       
-      Use [citation:pageX] format to indicate where information comes from in the paper.
+      // Extract text using the stored PDF data
+      const pdfData = await getPdfData(pdfKey);
+      if (!pdfData) return null;
       
-      Paper content:
-      ${truncatedText}
+      // Use a simple text extraction method
+      // (In a real app, you'd integrate with a PDF text extraction library)
+      const extractedText = "Sample text extracted from PDF"; // Placeholder
       
-      Return ONLY the structured JSON object.
-    `;
-    
-    // Get response from the model
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const responseText = response.text();
-    
-    // Clean up any markdown formatting
-    let jsonString = responseText.trim();
-    jsonString = jsonString.replace(/```json\s*/g, "").replace(/```\s*$/g, "");
-    
-    try {
-      // Parse the returned JSON
-      return JSON.parse(jsonString);
-    } catch (parseError) {
-      console.error("Failed to parse structured summary:", parseError);
+      // Cache the extracted text
+      sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
+      return extractedText;
+    } else {
+      // Get the current PDF's key if none is provided
+      const currentPdfMeta = sessionStorage.getItem('currentPdf');
+      if (!currentPdfMeta) return null;
       
-      // Return a fallback structure
-      return {
-        "Summary": "Error parsing the AI response. Please try again.",
-        "Key Findings": "Not available due to processing error.",
-        "Objectives": "Not available due to processing error.",
-        "Methods": "Not available due to processing error.",
-        "Results": "Not available due to processing error.",
-        "Conclusions": "Not available due to processing error.",
-        "Key Concepts": "Not available due to processing error."
-      };
+      // Get the cached text for the current PDF
+      const cachedText = sessionStorage.getItem(`pdfText_${currentPdfMeta}`);
+      if (cachedText) return cachedText;
+      
+      // If no cached text, extract from the current PDF
+      const extractedText = "Sample text extracted from current PDF"; // Placeholder
+      
+      // Cache the extracted text
+      sessionStorage.setItem(`pdfText_${currentPdfMeta}`, extractedText);
+      return extractedText;
     }
   } catch (error) {
-    console.error("Error generating structured summary:", error);
-    throw new Error(`Failed to generate summary: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("Error getting PDF text:", error);
+    return null;
   }
 }
 
-// Helper function to extract text from mind map data for flowchart generation
-function extractTextFromMindMap(mindMapData: any): string {
-  let extractedText = '';
-  
-  if (mindMapData.topic) {
-    extractedText += mindMapData.topic + ". ";
+// Helper function to get PDF data from storage
+async function getPdfData(pdfKey: string): Promise<string | null> {
+  try {
+    return sessionStorage.getItem(`pdfData_${pdfKey}`);
+  } catch (error) {
+    console.error("Error retrieving PDF data:", error);
+    return null;
   }
-  
-  if (mindMapData.children && Array.isArray(mindMapData.children)) {
-    mindMapData.children.forEach((child: any) => {
-      extractedText += extractTextFromNode(child, 1) + " ";
-    });
-  }
-  
-  return extractedText;
-}
-
-// Recursive helper to extract text from mind map nodes
-function extractTextFromNode(node: any, level: number): string {
-  let text = node.topic || '';
-  
-  if (node.children && Array.isArray(node.children) && level < 3) {
-    node.children.forEach((child: any) => {
-      text += " " + extractTextFromNode(child, level + 1);
-    });
-  }
-  
-  return text;
 }

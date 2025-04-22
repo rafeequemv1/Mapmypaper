@@ -10,7 +10,6 @@ import { MindElixirInstance } from "mind-elixir";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
-import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -32,26 +31,6 @@ const MindMap = () => {
     setIsMapGenerated(true);
     setMindMapInstance(instance);
   }, []);
-
-  // Function to scroll to PDF position when a citation is clicked
-  const handleScrollToPdfPosition = useCallback((position: string) => {
-    // Extract page number from citation format [citation:pageX]
-    const pageMatch = position.match(/\[citation:page(\d+)\]/);
-    if (pageMatch && pageMatch[1]) {
-      const pageNumber = parseInt(pageMatch[1], 10);
-      
-      // Ensure PDF panel is visible
-      if (!showPdf) {
-        setShowPdf(true);
-      }
-      
-      // Dispatch event to notify PDF viewer to scroll to the page
-      const event = new CustomEvent('scrollToPdfPage', { 
-        detail: { page: pageNumber }
-      });
-      window.dispatchEvent(event);
-    }
-  }, [showPdf]);
 
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
@@ -130,12 +109,6 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={setExplainText}
-        onScrollToPdfPosition={handleScrollToPdfPosition}
-      />
-      {/* Mobile Chat Sheet (responsive - only shows on mobile) */}
-      <MobileChatSheet 
-        onScrollToPdfPosition={handleScrollToPdfPosition}
-        explainText={explainText}
       />
       {/* Modal for Flowchart */}
       <FlowchartModal 
