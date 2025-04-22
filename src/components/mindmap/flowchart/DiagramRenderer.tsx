@@ -10,6 +10,7 @@ interface DiagramRendererProps {
   error: string | null;
   zoomLevel: number;
   previewRef?: React.RefObject<HTMLDivElement>;
+  renderAttempt?: number;
 }
 
 const DiagramRenderer: React.FC<DiagramRendererProps> = ({
@@ -18,18 +19,27 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
   isGenerating,
   error,
   zoomLevel,
-  previewRef
+  previewRef,
+  renderAttempt = 0
 }) => {
   const localRef = useRef<HTMLDivElement>(null);
   const ref = previewRef || localRef;
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
-  const renderIdRef = useRef<string>(`diagram-${Date.now()}`);
+  const renderIdRef = useRef<string>(`diagram-${Date.now()}-${renderAttempt}`);
   const mountedRef = useRef(true);
   const retryCountRef = useRef(0);
-  const maxRetries = 3;
+  const maxRetries = 5;
+  
+  // Reset component state when code changes
+  useEffect(() => {
+    setRenderError(null);
+    retryCountRef.current = 0;
+    renderIdRef.current = `diagram-${Date.now()}-${renderAttempt}`;
+  }, [code, renderAttempt]);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };
@@ -42,19 +52,22 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
       setIsRendering(true);
       setRenderError(null);
       
-      // Reset retry counter when code changes
-      retryCountRef.current = 0;
-
+      // Clear previous content and recreate the container
+      if (ref.current) {
+        ref.current.innerHTML = '<div class="mermaid-container"></div>';
+      }
+      
       try {
         if (ref.current && mountedRef.current) {
-          ref.current.innerHTML = '<div class="mermaid-container"></div>';
           const container = ref.current.querySelector('.mermaid-container');
           if (!container) throw new Error("Container element not found");
-          renderIdRef.current = `diagram-${Date.now()}`;
           
-          // Try initializing mermaid with catch for any warnings
+          // Generate a unique ID for each render attempt
+          renderIdRef.current = `diagram-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+          
+          // Configure mermaid with the current theme and options
           try {
-            mermaid.initialize({
+            await mermaid.initialize({
               theme: theme,
               securityLevel: 'loose',
               startOnLoad: false,
@@ -62,6 +75,9 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
                 htmlLabels: true,
                 useMaxWidth: true,
               },
+              er: { useMaxWidth: true },
+              sequence: { useMaxWidth: true },
+              mindmap: { useMaxWidth: true },
               logLevel: 3 // Reduce log verbosity
             });
           } catch (initError) {
@@ -70,7 +86,15 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
           
           const attemptRender = async (attempt = 0): Promise<void> => {
             try {
+              // If we're not mounted anymore, don't continue
+              if (!mountedRef.current) return;
+              
+              console.log(`Rendering attempt ${attempt + 1} for diagram ${renderIdRef.current}`);
+              
               const { svg } = await mermaid.render(renderIdRef.current, code, container);
+              
+              if (!mountedRef.current) return;
+              
               if (ref.current && mountedRef.current) {
                 ref.current.innerHTML = svg;
                 const svgElement = ref.current.querySelector('svg');
@@ -118,6 +142,14 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
                     .node.class-5 > rect { fill: #FFDEE2 !important; stroke: #EF4444 !important; }
                     .node.class-6 > rect { fill: #D3E4FD !important; stroke: #3B82F6 !important; }
                     .node.class-7 > rect { fill: #F1F0FB !important; stroke: #D946EF !important; }
+                    .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse {
+                      rx: 10px;
+                      ry: 10px;
+                      fill-opacity: 0.8 !important;
+                    }
+                    .mindmap-node text {
+                      font-weight: 500;
+                    }
                     .edgeLabel {
                       background-color: white;
                       border-radius: 8px;
@@ -126,7 +158,7 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
                       font-weight: 500;
                       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                     }
-                    .flowchart-link {
+                    .flowchart-link, .mindmap-edge {
                       stroke-width: 2px !important;
                     }
                   `;
@@ -137,8 +169,8 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
               console.warn(`Mermaid render attempt ${attempt + 1} failed:`, renderError);
               
               if (attempt < maxRetries && mountedRef.current) {
-                // Wait a bit longer each retry
-                await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+                // Wait a bit longer each retry with exponential backoff
+                await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(1.5, attempt)));
                 return attemptRender(attempt + 1);
               }
               
@@ -162,8 +194,15 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
       }
     };
 
-    renderDiagram();
-  }, [code, theme, isGenerating, error, zoomLevel, ref]);
+    // Small delay to ensure DOM is fully ready
+    const timer = setTimeout(() => {
+      renderDiagram();
+    }, 100);
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [code, theme, isGenerating, error, zoomLevel, ref, renderAttempt]);
 
   if (renderError === 'fallback') {
     return (

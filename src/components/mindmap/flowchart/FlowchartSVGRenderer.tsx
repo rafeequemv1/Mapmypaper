@@ -9,6 +9,7 @@ interface FlowchartSVGRendererProps {
   error: string | null;
   zoomLevel: number;
   previewRef?: React.RefObject<HTMLDivElement>;
+  renderAttempt?: number;
 }
 
 const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
@@ -17,7 +18,8 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
   isGenerating,
   error,
   zoomLevel,
-  previewRef
+  previewRef,
+  renderAttempt = 0
 }) => {
   return (
     <DiagramRenderer
@@ -27,6 +29,7 @@ const FlowchartSVGRenderer: React.FC<FlowchartSVGRendererProps> = ({
       error={error}
       zoomLevel={zoomLevel}
       previewRef={previewRef}
+      renderAttempt={renderAttempt}
     />
   );
 };

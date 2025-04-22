@@ -30,6 +30,16 @@ const FlowchartPreviewBody = ({
   maxRetries = 5
 }: FlowchartPreviewBodyProps) => {
   const [isRetrying, setIsRetrying] = useState(false);
+  const [renderAttempt, setRenderAttempt] = useState(0);
+  
+  // Trigger re-render after mount to ensure DOM is ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setRenderAttempt(prev => prev + 1);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   // Handle error cases
   if (isGenerating) {
@@ -67,6 +77,7 @@ const FlowchartPreviewBody = ({
       error={error}
       zoomLevel={zoomLevel}
       previewRef={previewRef}
+      renderAttempt={renderAttempt}
     />
   );
 };

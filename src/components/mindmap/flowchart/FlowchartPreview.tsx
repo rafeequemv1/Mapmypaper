@@ -24,17 +24,36 @@ const FlowchartPreview = ({
   onRetry,
 }: FlowchartPreviewProps) => {
   const [mounted, setMounted] = useState(false);
+  const [autoRetry, setAutoRetry] = useState(0);
   
   // Ensure component is fully mounted before attempting to render flowchart
   useEffect(() => {
     const timer = setTimeout(() => {
       setMounted(true);
-    }, 100);
+    }, 200);
     
     return () => {
       clearTimeout(timer);
     };
   }, []);
+
+  // Auto-retry up to 3 times when the component loads
+  useEffect(() => {
+    if (mounted && !isGenerating && autoRetry < 3) {
+      const timer = setTimeout(() => {
+        setAutoRetry(prev => prev + 1);
+      }, 1000 + (autoRetry * 500)); // Increasing delay with each retry
+      
+      return () => clearTimeout(timer);
+    }
+  }, [mounted, isGenerating, autoRetry]);
+  
+  // Handle manual retry via prop
+  const handleRetry = () => {
+    if (onRetry) {
+      onRetry();
+    }
+  };
   
   return (
     <FlowchartPreviewContainer>
@@ -46,9 +65,9 @@ const FlowchartPreview = ({
           theme={theme}
           previewRef={previewRef}
           zoomLevel={zoomLevel}
-          onRetry={onRetry}
-          retryCount={0}
-          maxRetries={5} // Increased max retries
+          onRetry={handleRetry}
+          retryCount={autoRetry}
+          maxRetries={5}
         />
       ) : (
         <div className="flex items-center justify-center w-full h-full p-4">
