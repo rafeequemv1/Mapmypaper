@@ -26,6 +26,8 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
   const [isRendering, setIsRendering] = useState(false);
   const renderIdRef = useRef<string>(`diagram-${Date.now()}`);
   const mountedRef = useRef(true);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     return () => {
@@ -39,6 +41,9 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
 
       setIsRendering(true);
       setRenderError(null);
+      
+      // Reset retry counter when code changes
+      retryCountRef.current = 0;
 
       try {
         if (ref.current && mountedRef.current) {
@@ -46,6 +51,8 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
           const container = ref.current.querySelector('.mermaid-container');
           if (!container) throw new Error("Container element not found");
           renderIdRef.current = `diagram-${Date.now()}`;
+          
+          // Try initializing mermaid with catch for any warnings
           try {
             mermaid.initialize({
               theme: theme,
@@ -55,86 +62,95 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
                 htmlLabels: true,
                 useMaxWidth: true,
               },
-              logLevel: 5
+              logLevel: 3 // Reduce log verbosity
             });
           } catch (initError) {
             console.warn("Mermaid initialization warning, proceeding anyway:", initError);
           }
-          try {
-            const { svg } = await mermaid.render(renderIdRef.current, code, container);
-            if (ref.current && mountedRef.current) {
-              ref.current.innerHTML = svg;
-              const svgElement = ref.current.querySelector('svg');
-              if (svgElement) {
-                svgElement.setAttribute('width', '100%');
-                svgElement.setAttribute('height', '100%');
-                svgElement.style.maxWidth = '100%';
-                svgElement.style.maxHeight = '100%';
-                svgElement.style.display = 'block';
-                if (zoomLevel !== 1) {
-                  const g = svgElement.querySelector('g');
-                  if (g) {
-                    const viewBox = svgElement.getAttribute('viewBox');
-                    if (viewBox) {
-                      const [x, y, width, height] = viewBox.split(' ').map(Number);
-                      const centerX = width / 2;
-                      const centerY = height / 2;
-                      g.setAttribute('transform',
-                        `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
-                      );
+          
+          const attemptRender = async (attempt = 0): Promise<void> => {
+            try {
+              const { svg } = await mermaid.render(renderIdRef.current, code, container);
+              if (ref.current && mountedRef.current) {
+                ref.current.innerHTML = svg;
+                const svgElement = ref.current.querySelector('svg');
+                if (svgElement) {
+                  // Apply SVG styling and adjustments
+                  svgElement.setAttribute('width', '100%');
+                  svgElement.setAttribute('height', '100%');
+                  svgElement.style.maxWidth = '100%';
+                  svgElement.style.maxHeight = '100%';
+                  svgElement.style.display = 'block';
+                  
+                  // Apply zoom if needed
+                  if (zoomLevel !== 1) {
+                    const g = svgElement.querySelector('g');
+                    if (g) {
+                      const viewBox = svgElement.getAttribute('viewBox');
+                      if (viewBox) {
+                        const [x, y, width, height] = viewBox.split(' ').map(Number);
+                        const centerX = width / 2;
+                        const centerY = height / 2;
+                        g.setAttribute('transform',
+                          `translate(${centerX * (1 - zoomLevel)},${centerY * (1 - zoomLevel)}) scale(${zoomLevel})`
+                        );
+                      }
                     }
                   }
+                  
+                  // Add custom styles to the diagram
+                  const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+                  styleElement.textContent = `
+                    .flowchart-node rect, .flowchart-label rect {
+                      rx: 15px;
+                      ry: 15px;
+                      fill-opacity: 0.8 !important;
+                    }
+                    .node rect, .node circle, .node ellipse, .node polygon, .node path {
+                      stroke-width: 2px !important;
+                      rx: 15px;
+                      ry: 15px;
+                    }
+                    .node.class-1 > rect { fill: #F2FCE2 !important; stroke: #22C55E !important; }
+                    .node.class-2 > rect { fill: #FEF7CD !important; stroke: #F59E0B !important; }
+                    .node.class-3 > rect { fill: #FDE1D3 !important; stroke: #F97316 !important; }
+                    .node.class-4 > rect { fill: #E5DEFF !important; stroke: #8B5CF6 !important; }
+                    .node.class-5 > rect { fill: #FFDEE2 !important; stroke: #EF4444 !important; }
+                    .node.class-6 > rect { fill: #D3E4FD !important; stroke: #3B82F6 !important; }
+                    .node.class-7 > rect { fill: #F1F0FB !important; stroke: #D946EF !important; }
+                    .edgeLabel {
+                      background-color: white;
+                      border-radius: 8px;
+                      padding: 4px 8px;
+                      font-size: 12px;
+                      font-weight: 500;
+                      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    }
+                    .flowchart-link {
+                      stroke-width: 2px !important;
+                    }
+                  `;
+                  svgElement.appendChild(styleElement);
                 }
-                const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-                styleElement.textContent = `
-                  .flowchart-node rect, .flowchart-label rect {
-                    rx: 15px;
-                    ry: 15px;
-                    fill-opacity: 0.8 !important;
-                  }
-                  .node rect, .node circle, .node ellipse, .node polygon, .node path {
-                    stroke-width: 2px !important;
-                    rx: 15px;
-                    ry: 15px;
-                  }
-                  .node.class-1 > rect { fill: #F2FCE2 !important; stroke: #22C55E !important; }
-                  .node.class-2 > rect { fill: #FEF7CD !important; stroke: #F59E0B !important; }
-                  .node.class-3 > rect { fill: #FDE1D3 !important; stroke: #F97316 !important; }
-                  .node.class-4 > rect { fill: #E5DEFF !important; stroke: #8B5CF6 !important; }
-                  .node.class-5 > rect { fill: #FFDEE2 !important; stroke: #EF4444 !important; }
-                  .node.class-6 > rect { fill: #D3E4FD !important; stroke: #3B82F6 !important; }
-                  .node.class-7 > rect { fill: #F1F0FB !important; stroke: #D946EF !important; }
-                  .edgeLabel {
-                    background-color: white;
-                    border-radius: 8px;
-                    padding: 4px 8px;
-                    font-size: 12px;
-                    font-weight: 500;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                  }
-                  .flowchart-link {
-                    stroke-width: 2px !important;
-                  }
-                `;
-                svgElement.appendChild(styleElement);
               }
-            }
-          } catch (renderError) {
-            console.error('Mermaid render error, trying fallback rendering:', renderError);
-            if (
-              renderError.toString().includes('dynamically imported') ||
-              renderError.toString().includes('Failed to fetch')
-            ) {
-              if (mountedRef.current) {
-                setRenderError('fallback');
+            } catch (renderError) {
+              console.warn(`Mermaid render attempt ${attempt + 1} failed:`, renderError);
+              
+              if (attempt < maxRetries && mountedRef.current) {
+                // Wait a bit longer each retry
+                await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+                return attemptRender(attempt + 1);
               }
-            } else {
-              setRenderError(`Render error: ${renderError.toString()}`);
+              
+              console.error('Mermaid render error after retries, using fallback:', renderError);
               if (mountedRef.current) {
                 setRenderError('fallback');
               }
             }
-          }
+          };
+          
+          // Start the render attempt chain
+          await attemptRender();
         }
       } catch (err: any) {
         console.error('Error rendering diagram:', err);
