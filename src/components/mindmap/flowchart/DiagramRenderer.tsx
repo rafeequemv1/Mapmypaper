@@ -106,9 +106,10 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
               let svgCode = '';
               
               try {
-                // First attempt with mermaid.render
-                const { svg } = await mermaid.render(renderIdRef.current, code, container);
-                svgCode = svg;
+                // First attempt with mermaid.render - Fix type issue here
+                const result = await mermaid.render(renderIdRef.current, code, container);
+                // TypeScript fix: Extract the svg string from the result object
+                svgCode = result.svg;
               } catch (renderErr) {
                 console.warn(`Standard render failed, trying alternate method:`, renderErr);
                 
