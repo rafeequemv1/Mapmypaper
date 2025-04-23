@@ -13,7 +13,6 @@ interface HeaderProps {
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
-  openFlowchart?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -23,7 +22,6 @@ const Header: React.FC<HeaderProps> = ({
   isPdfActive,
   isChatActive,
   mindMap,
-  openFlowchart,
 }) => {
   const [fileName, setFileName] = useState("mindmap");
   const { toast } = useToast();
@@ -113,7 +111,6 @@ const Header: React.FC<HeaderProps> = ({
       togglePdf={togglePdf}
       toggleChat={toggleChat}
       setShowSummary={setShowSummary}
-      openFlowchart={openFlowchart}
       onExportSVG={handleExportSVG}
       onExportPNG={handleExportPNG}
       onExportJSON={handleExportJSON}

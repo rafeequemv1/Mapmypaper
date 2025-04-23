@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
-import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 
@@ -12,7 +11,6 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
-  const [showFlowchart, setShowFlowchart] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
@@ -30,7 +28,6 @@ const MindMap = () => {
     const handleTextSelected = (e: CustomEvent) => {
       if (e.detail?.text) {
         setExplainText(e.detail.text);
-        // Open chat panel if it's not already open
         if (!showChat) {
           setShowChat(true);
         }
@@ -42,7 +39,7 @@ const MindMap = () => {
     return () => {
       window.removeEventListener('openChatWithText', handleTextSelected as EventListener);
     };
-  }, [showChat]);
+  }, [showChat, toggleChat, onExplainText]);
 
   useEffect(() => {
     if (location.state?.presetQuestion) {
@@ -60,7 +57,6 @@ const MindMap = () => {
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
-        openFlowchart={() => setShowFlowchart(true)}
       />
       <PanelStructure
         showPdf={showPdf}
@@ -72,12 +68,6 @@ const MindMap = () => {
         onExplainText={setExplainText}
       />
       
-      {/* Modal for Flowchart */}
-      <FlowchartModal 
-        open={showFlowchart} 
-        onOpenChange={setShowFlowchart}
-      />
-
       {/* Modal for Summary */}
       <SummaryModal 
         open={showSummary}
