@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { MessageSquare, X, Copy, Check, Image, Mic, MicOff, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,8 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import ChatToolbar from "./ChatToolbar";
-import { Mic, MicOff, Plus } from "lucide-react";
-import { useRef } from "react";
 
 interface ChatPanelProps {
   toggleChat: () => void;
