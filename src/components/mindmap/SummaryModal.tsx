@@ -78,13 +78,13 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
       const pageNumber = parseInt(pageMatch[1], 10);
       // Close the summary modal
       onOpenChange(false);
-      
+
       // Wait for modal to close before scrolling to page
       setTimeout(() => {
         // Create and dispatch a custom event to scroll PDF to the page
         const scrollEvent = new CustomEvent("scrollToPdfPage", { detail: { pageNumber } });
         window.dispatchEvent(scrollEvent);
-        
+
         toast({
           title: "PDF Navigation",
           description: `Scrolling to page ${pageNumber}`,
@@ -105,12 +105,12 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             if (element instanceof HTMLElement) {
               // Format AI response - convert markdown and add citations
               let formattedContent = formatAIResponse(element.innerText);
-              
+
               // Convert citation format to small circles with page numbers
               formattedContent = formattedContent.replace(/\[citation:page(\d+)\]/gi, '<span class="citation-circle">$1</span>');
-              
+
               element.innerHTML = formattedContent;
-              
+
               // Activate citations to make them clickable
               const circles = element.querySelectorAll('.citation-circle');
               circles.forEach(circle => {
@@ -125,24 +125,55 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           });
         }
       }, 100);
-      
+
       return () => clearTimeout(timer);
     }
   }, [isLoading, open, summary]);
 
+  // Helper: sanitize and clean up summary text removing unwanted symbols
+  const cleanSummaryText = (text: any): string => {
+    if (!text) return "";
+    if (Array.isArray(text)) {
+      // Join array elements and remove extraneous punctuation and quotes
+      return text.join(' ').replace(/[\[\]"']/g, '').replace(/(\s*,\s*)+/g, ' ').trim();
+    }
+    if (typeof text === "string") {
+      return text.replace(/[\[\]"']/g, '').replace(/\s*,\s*/g, ' ').trim();
+    }
+    return String(text);
+  };
+
+  // Helper: parse Summary field into bullet points by splitting sentences
+  const getEasySummaryBullets = (text: string): string[] => {
+    if (!text) return [];
+    // Split by period, question mark, exclamation mark, or newline
+    const sentences = text.split(/[\.\!\?\n]+/).map(s => s.trim()).filter(Boolean);
+    return sentences;
+  };
+
+  // Prepare cleaned summary.Summary to always show easy summary bullets
+  const easySummaryText = cleanSummaryText(summary.Summary);
+  const easySummaryBullets = getEasySummaryBullets(easySummaryText);
+
+  // Prepare cleaned detailed sections to remove symbol marks before display
+  const cleanedSummary = Object.entries(summary).reduce((acc, [key, value]) => {
+    acc[key] = cleanSummaryText(value);
+    return acc;
+  }, {} as Record<string, string>);
+
   // Download summary as PDF
   const downloadSummaryAsPDF = async () => {
     if (!summaryRef.current) return;
-    
+
     setConfirmDownload(false);
-    
+
     try {
       // Show loading toast
       toast({
         title: "Preparing PDF",
         description: "Please wait while we generate your PDF...",
       });
-      
+
       const element = summaryRef.current;
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -150,25 +181,25 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         logging: false,
         backgroundColor: "#ffffff",
       });
-      
+
       const imgData = canvas.toDataURL('image/png');
-      
+
       // Calculate PDF dimensions to match the aspect ratio of the content
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
+
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
+
       // Add title
       pdf.setFontSize(20);
       pdf.text("Paper Summary", 105, 15, { align: 'center' });
-      
+
       // Add the captured content
       pdf.addImage(imgData, 'PNG', 0, 25, imgWidth, imgHeight - 25);
-      
+
       // Save the PDF
       pdf.save("paper_summary.pdf");
-      
+
       toast({
         title: "PDF Generated",
         description: "Your summary has been downloaded as PDF",
@@ -186,7 +217,10 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent 
+          className="max-w-[75vw] max-h-[90vh] overflow-hidden flex flex-col"
+          style={{ maxWidth: '75vw' }} // explicitly reduce width by ~25% from default max-w-4xl (~1120px)
+        >
           <DialogHeader>
             <DialogTitle className="flex justify-between items-center">
               <span>Paper Summary</span>
@@ -230,20 +264,37 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           ) : (
             <div className="flex-1 overflow-auto pr-2">
               <div ref={summaryRef} className="p-4 space-y-6">
-                {Object.entries(summary).map(([key, value]) => (
-                  <div key={key} className="summary-section">
-                    <h3 className="text-lg font-bold border-b pb-1 mb-2">{key}</h3>
-                    <div className="summary-section-content pl-2">
-                      {typeof value === 'string' ? value : JSON.stringify(value)}
-                    </div>
+                {/* Always show Easy Summary Section */}
+                {(easySummaryBullets.length > 0) && (
+                  <div className="summary-section">
+                    <h3 className="text-lg font-bold border-b pb-1 mb-2">Easy Summary</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      {easySummaryBullets.map((bullet, idx) => (
+                        <li key={idx}>{bullet}</li>
+                      ))}
+                    </ul>
                   </div>
-                ))}
+                )}
+
+                {/* Detailed Sections */}
+                {Object.entries(cleanedSummary).map(([key, value]) => {
+                  // Skip Easy Summary as it's separately rendered
+                  if (key === "Summary") return null;
+                  return (
+                    <div key={key} className="summary-section">
+                      <h3 className="text-lg font-bold border-b pb-1 mb-2">{key}</h3>
+                      <div className="summary-section-content pl-2">
+                        {value}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-      
+
       <AlertDialog open={confirmDownload} onOpenChange={setConfirmDownload}>
         <AlertDialogContent>
           <AlertDialogHeader>

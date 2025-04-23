@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -5,7 +6,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { getPdfData } from "@/utils/pdfStorage";
+import { getCurrentPdfData } from "@/utils/pdfStorage";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -38,96 +39,63 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [scale, setScale] = useState<number>(1);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const [selectedText, setSelectedText] = useState("");
-    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-    const [showTooltip, setShowTooltip] = useState(false);
+    const [pdfKey, setPdfKey] = useState<string | null>(null);
 
-    // Load PDF data from IndexedDB
-    useEffect(() => {
-      const loadPdfData = async () => {
-        try {
-          setIsLoading(true);
-          const data = await getPdfData();
-          
-          if (data) {
-            setPdfData(data);
-            console.log("PDF data loaded successfully from IndexedDB");
-          } else {
-            setLoadError("No PDF found. Please upload a PDF document first.");
-            toast({
-              title: "No PDF Found",
-              description: "Please upload a PDF document first.",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error("Error retrieving PDF data:", error);
-          setLoadError("Could not load the PDF document.");
+    // Load PDF data from IndexedDB when active PDF changes
+    const loadPdfData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getCurrentPdfData();
+        
+        if (data) {
+          setPdfData(data);
+          console.log("PDF data loaded successfully from IndexedDB");
+        } else {
+          setLoadError("No PDF found. Please upload a PDF document first.");
           toast({
-            title: "Error loading PDF",
-            description: "Could not load the PDF document.",
+            title: "No PDF Found",
+            description: "Please upload a PDF document first.",
             variant: "destructive",
           });
-        } finally {
-          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Error retrieving PDF data:", error);
+        setLoadError("Could not load the PDF document.");
+        toast({
+          title: "Error loading PDF",
+          description: "Could not load the PDF document.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Initial load
+    useEffect(() => {
+      loadPdfData();
+    }, []);
+    
+    // Listen for PDF switch events
+    useEffect(() => {
+      const handlePdfSwitch = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pdfKey) {
+          setPdfKey(customEvent.detail.pdfKey);
+          // Reset view state
+          setSearchQuery("");
+          setSearchResults([]);
+          setCurrentSearchIndex(-1);
+          // Load the new PDF
+          loadPdfData();
         }
       };
       
-      loadPdfData();
-    }, [toast]);
-
-    // Enhanced text selection handler
-    const handleDocumentMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-      const selection = window.getSelection();
-      if (selection && selection.toString().trim() !== "") {
-        const text = selection.toString().trim();
-        
-        // Only show tooltip if text selection is meaningful
-        if (text.length > 2) {
-          setSelectedText(text);
-          
-          // Get selection coordinates for tooltip positioning
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          
-          setTooltipPosition({
-            x: rect.left + (rect.width / 2),
-            y: rect.top - 10
-          });
-          
-          setShowTooltip(true);
-        }
-      } else {
-        setShowTooltip(false);
-      }
-    };
-
-    // Improved tooltip click handler to send selected text to chat
-    const handleTooltipClick = () => {
-      if (selectedText && onTextSelected) {
-        // Call the onTextSelected callback with the selected text
-        onTextSelected(selectedText);
-        setShowTooltip(false);
-        
-        // Custom event to notify that chat should be opened
-        const chatOpenEvent = new CustomEvent('openChatWithText', { 
-          detail: { text: selectedText } 
-        });
-        window.dispatchEvent(chatOpenEvent);
-      }
-    };
-
-    // Handle clicking outside to close tooltip
-    useEffect(() => {
-      const handleClickOutside = () => {
-        setShowTooltip(false);
-      };
-
-      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('pdfSwitched', handlePdfSwitch);
       return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('pdfSwitched', handlePdfSwitch);
       };
-    }, []);
+    }, [toast]);
 
     // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
@@ -368,77 +336,78 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
+    // PDF Toolbar (make even more compact)
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
-        <div className="bg-white border-b p-1 flex flex-wrap items-center gap-2 z-10">
+        <div className="bg-white border-b px-1 py-0 flex flex-nowrap items-center gap-0.5 z-10 min-h-[30px] h-8">
           {/* Zoom Controls with percentage display */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-black" 
+              className="h-6 w-6 text-black p-0" 
               onClick={zoomOut}
               title="Zoom Out"
             >
-              <ZoomOut className="h-3.5 w-3.5" />
+              <ZoomOut className="h-3 w-3" />
             </Button>
-            <span className="text-xs w-12 text-center font-medium">
+            <span className="text-xs w-10 text-center font-medium">
               {Math.round(scale * 100)}%
             </span>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-black" 
+              className="h-6 w-6 text-black p-0" 
               onClick={zoomIn}
               title="Zoom In"
             >
-              <ZoomIn className="h-3.5 w-3.5" />
+              <ZoomIn className="h-3 w-3" />
             </Button>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-black" 
+              className="h-6 w-6 text-black p-0" 
               onClick={resetZoom}
               title="Reset Zoom"
             >
-              <RotateCw className="h-3.5 w-3.5" />
+              <RotateCw className="h-3 w-3" />
             </Button>
           </div>
           
           {/* Search Input */}
-          <div className="flex-1 mx-2">
+          <div className="flex-1 mx-0.5">
             <div className="flex items-center">
               <Input
                 placeholder="Search in document..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-7 text-sm mr-2"
+                className="h-6 text-xs mr-0.5"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-7 flex items-center gap-1 text-black"
+                className="h-6 flex items-center gap-0.5 text-black px-1"
                 onClick={handleSearch}
               >
-                <Search className="h-3.5 w-3.5" />
-                <span>Search</span>
+                <Search className="h-3 w-3" />
+                <span className="text-xs">Search</span>
               </Button>
             </div>
           </div>
           
           {/* Search Navigation */}
           {searchResults.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <span className="text-xs">
                 {currentSearchIndex + 1} of {searchResults.length}
               </span>
-              <div className="flex gap-1">
+              <div className="flex gap-0.5">
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-7 px-2 text-black"
+                  className="h-6 px-1 text-black"
                   onClick={() => navigateSearch('prev')}
                 >
                   ←
@@ -446,7 +415,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-7 px-2 text-black"
+                  className="h-6 px-1 text-black"
                   onClick={() => navigateSearch('next')}
                 >
                   →
@@ -460,22 +429,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         {pdfData ? (
           <ScrollArea className="flex-1" ref={pdfContainerRef}>
             <div 
-              className="flex flex-col items-center py-4 relative" 
-              onMouseUp={handleDocumentMouseUp}
+              className="flex flex-col items-center py-4 relative"
             >
-              {/* Simplified Tooltip - Shows only "Explain" */}
-              {showTooltip && (
-                <div
-                  className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm transform -translate-x-1/2 -translate-y-full cursor-pointer hover:bg-gray-50 transition-colors"
-                  style={{
-                    left: tooltipPosition.x,
-                    top: tooltipPosition.y
-                  }}
-                  onClick={handleTooltipClick}
-                >
-                  Explain
-                </div>
-              )}
               
               <Document
                 file={pdfData}
