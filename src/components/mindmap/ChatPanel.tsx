@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image, Paperclip } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import ChatToolbar from "./ChatToolbar";
+import { Mic, MicOff, Plus } from "lucide-react";
+import { useRef } from "react";
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -13,13 +16,21 @@ interface ChatPanelProps {
   explainImage?: string;
   onScrollToPdfPosition?: (position: string) => void;
   onExplainText?: (text: string) => void;
+  onPdfPlusClick?: () => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition }: ChatPanelProps) => {
+const ChatPanel = ({
+  toggleChat,
+  explainText,
+  explainImage,
+  onScrollToPdfPosition,
+  onExplainText,
+  onPdfPlusClick,
+}: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string, filename?: string, filetype?: string }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string }[]>([
     { 
       role: 'assistant', 
       content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
@@ -32,7 +43,8 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [micEnabled, setMicEnabled] = useState(false);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -309,212 +321,89 @@ Feel free to ask me any questions! Here are some suggestions:`
     }
   };
 
-  // File attachment handler
-  const handleAttachClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFilesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    for (const file of Array.from(files)) {
-      let messageObj: any = {
-        role: "user",
-        content: `Uploaded: ${file.name}`,
-      };
-
-      if (file.type.startsWith("image/")) {
-        // Show image preview
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const imageData = reader.result as string;
-          
-          // Add user message with image
-          setMessages(prev => [
-            ...prev,
-            {
-              ...messageObj,
-              content: "Uploaded image:",
-              image: imageData,
-            },
-          ]);
-          
-          // Show typing indicator
-          setIsTyping(true);
-          
-          try {
-            // Call Gemini to analyze the image
-            const analysis = await analyzeImageWithGemini(imageData);
-            
-            // Add AI response
-            setIsTyping(false);
-            setMessages(prev => [
-              ...prev,
-              {
-                role: 'assistant',
-                content: formatAIResponse(analysis),
-                isHtml: true
+  // Handle mic toggle and speech-to-text
+  const handleMicToggle = async () => {
+    if (!micEnabled) {
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        let chunks: BlobPart[] = [];
+        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(chunks, { type: "audio/webm" });
+          // Convert to base64
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64 = reader.result?.toString().split(",")[1] as string;
+            // Send to API for transcription
+            try {
+              const resp = await fetch("/functions/v1/voice-to-text", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ audio: base64 }),
+              });
+              const res = await resp.json();
+              if (res && res.text) {
+                setInputValue(prev => prev + (prev ? " " : "") + res.text);
+                toast({
+                  title: "Transcribed",
+                  description: res.text,
+                  duration: 2000,
+                });
+              } else {
+                toast({ title: "Could not transcribe audio", variant: "destructive" });
               }
-            ]);
-          } catch (error) {
-            setIsTyping(false);
-            console.error("Image analysis error:", error);
-            setMessages(prev => [
-              ...prev,
-              {
-                role: 'assistant',
-                content: "Sorry, I encountered an error analyzing this image. Please try again."
-              }
-            ]);
-            
-            toast({
-              title: "Analysis Error",
-              description: "Failed to analyze the image with Gemini.",
-              variant: "destructive"
-            });
-          }
-        };
-        reader.readAsDataURL(file);
-      } else {
-        // For text-based files (PDF, TXT, CSV, etc.)
-        setMessages(prev => [
-          ...prev,
-          {
-            ...messageObj,
-            content: `Uploaded file: ${file.name} (${file.type || "unknown type"})`,
-            filename: file.name,
-            filetype: file.type,
-          },
-        ]);
-        
-        // Show typing indicator for file analysis
-        setIsTyping(true);
-        
-        try {
-          // For text-based files we can try to read and analyze them
-          if (file.type === "text/plain" || 
-              file.type === "text/csv" ||
-              file.type === "application/vnd.ms-excel" ||
-              file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-              file.type === "application/json") {
-            
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const fileContent = reader.result as string;
-              
-              // Analyze file with Gemini
-              const analysis = await analyzeFileWithGemini(
-                fileContent,
-                file.name,
-                file.type
-              );
-              
-              // Add AI response
-              setIsTyping(false);
-              setMessages(prev => [
-                ...prev,
-                {
-                  role: 'assistant',
-                  content: formatAIResponse(analysis),
-                  isHtml: true
-                }
-              ]);
-            };
-            
-            reader.onerror = () => {
-              setIsTyping(false);
-              setMessages(prev => [
-                ...prev,
-                {
-                  role: 'assistant',
-                  content: "Sorry, I couldn't read this file. It may be too large or in an unsupported format."
-                }
-              ]);
-            };
-            
-            reader.readAsText(file);
-          } else {
-            // For other file types, send a generic response
-            setIsTyping(false);
-            setMessages(prev => [
-              ...prev,
-              {
-                role: 'assistant',
-                content: formatAIResponse(`I've received your file: ${file.name}. 
-                
-This appears to be a ${file.type || "unknown"} file. While I can't directly analyze the full contents of this file type, you can ask me questions about it, and I'll try to help based on the information you provide.
-
-Would you like to:
-1. Ask specific questions about this file?
-2. Extract certain information from it? 
-3. Compare it with the main document you uploaded?`),
-                isHtml: true
-              }
-            ]);
-          }
-        } catch (error) {
-          setIsTyping(false);
-          console.error("File analysis error:", error);
-          setMessages(prev => [
-            ...prev,
-            {
-              role: 'assistant',
-              content: "Sorry, I encountered an error processing this file. Please try again or try a different file format."
+            } catch (err) {
+              toast({ title: "Mic error", description: "Audio could not be transcribed", variant: "destructive" });
             }
-          ]);
-          
-          toast({
-            title: "Analysis Error",
-            description: "Failed to process the file.",
-            variant: "destructive"
-          });
-        }
+          };
+          reader.readAsDataURL(audioBlob);
+          stream.getTracks().forEach(track => track.stop());
+        };
+        mediaRecorder.start();
+        audioRecorderRef.current = mediaRecorder;
+        setMicEnabled(true);
+        toast({ title: "Mic enabled", description: "Speak now..." });
+        setTimeout(() => {
+          if (mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            setMicEnabled(false);
+          }
+        }, 6000); // limit to 6s for demo
+      } catch (err) {
+        toast({ title: "Mic not available", description: "Could not access your microphone", variant: "destructive" });
       }
+    } else if (audioRecorderRef.current && audioRecorderRef.current.state === "recording") {
+      audioRecorderRef.current.stop();
+      setMicEnabled(false);
     }
   };
 
   return (
     <div className="flex flex-col h-full border-l">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,.pdf,.csv,.xls,.xlsx,.doc,.docx,.txt"
-        style={{ display: "none" }}
-        onChange={handleFilesUpload}
-      />
       {/* Chat panel header */}
       <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           <h3 className="font-medium text-sm">Research Assistant</h3>
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleAttachClick}
-            title="Attach file"
-          >
-            <Paperclip className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8" 
-            onClick={toggleChat}
-            title="Close chat"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={toggleChat}
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
-      
-      {/* Chat messages area with enhanced styling */}
+      {/* Chat Toolbar with plus and mic */}
+      <ChatToolbar 
+        onPlus={onPdfPlusClick}
+        micEnabled={micEnabled}
+        onMicToggle={handleMicToggle}
+      />
+      {/* Chat messages area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="flex flex-col gap-4">
           {messages.map((message, i) => (
@@ -537,12 +426,7 @@ Would you like to:
                     />
                   </div>
                 )}
-                {/* Display non-image file name and type */}
-                {message.filename && !message.image && (
-                  <div className="mb-2 text-xs text-muted-foreground">
-                    <span className="font-semibold">{message.filename}</span> <span>({message.filetype})</span>
-                  </div>
-                )}
+                
                 {message.isHtml ? (
                   <div 
                     className="ai-message-content" 
@@ -614,7 +498,6 @@ Would you like to:
           )}
         </div>
       </ScrollArea>
-      
       {/* Input area */}
       <div className="p-3 border-t bg-white">
         <div className="flex gap-2">

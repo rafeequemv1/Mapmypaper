@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
+import { useNavigate } from "react-router-dom";
+import { Home } from "lucide-react";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -35,6 +37,7 @@ const PanelStructure = ({
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -219,6 +222,16 @@ const PanelStructure = ({
         onChange={e => handleAddPdf(e.target.files)}
       />
       <div className="h-full w-full flex pl-12">
+        {/* Toolbar at the top left */}
+        <div className="fixed top-3 left-3 z-40 flex gap-2">
+          <button
+            onClick={() => navigate('/')}
+            className="rounded-full hover:bg-gray-200 transition-colors flex items-center justify-center p-2"
+            aria-label="Home"
+          >
+            <Home className="h-6 w-6 text-primary" />
+          </button>
+        </div>
         {/* PDF Panel - Fixed to 40% width */}
         {showPdf && (
           <div className="h-full w-[40%] flex-shrink-0 flex flex-col">
@@ -255,6 +268,7 @@ const PanelStructure = ({
               explainText={explainText}
               onExplainText={onExplainText}
               onScrollToPdfPosition={handleScrollToPdfPosition}
+              onPdfPlusClick={handlePlusClick}
             />
           </div>
         )}
