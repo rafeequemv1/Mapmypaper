@@ -23,6 +23,11 @@ const MindMap = () => {
     setMindMapInstance(instance);
   }, []);
 
+  // Toggle chat function
+  const toggleChat = useCallback(() => {
+    setShowChat(prev => !prev);
+  }, []);
+
   // Listen for text selection events that should activate chat
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
@@ -39,7 +44,7 @@ const MindMap = () => {
     return () => {
       window.removeEventListener('openChatWithText', handleTextSelected as EventListener);
     };
-  }, [showChat, toggleChat, onExplainText]);
+  }, [showChat]);
 
   useEffect(() => {
     if (location.state?.presetQuestion) {
@@ -52,7 +57,7 @@ const MindMap = () => {
     <div className="h-screen flex flex-col overflow-hidden">
       <Header 
         togglePdf={() => setShowPdf(!showPdf)}
-        toggleChat={() => setShowChat(!showChat)}
+        toggleChat={toggleChat}
         setShowSummary={setShowSummary}
         isPdfActive={showPdf}
         isChatActive={showChat}
@@ -61,7 +66,7 @@ const MindMap = () => {
       <PanelStructure
         showPdf={showPdf}
         showChat={showChat}
-        toggleChat={() => setShowChat(!showChat)}
+        toggleChat={toggleChat}
         togglePdf={() => setShowPdf(!showPdf)}
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
