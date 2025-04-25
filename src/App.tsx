@@ -54,8 +54,6 @@ const App = () => (
               {/* Routes with TopBar and Footer */}
               <Route element={<Layout />}>
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/about" element={<Auth />} />
-                <Route path="/features" element={<Auth />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/policy" element={<Policy />} />
