@@ -102,7 +102,7 @@ const Profile = () => {
             <Avatar className="h-20 w-20">
               {profile?.avatar_url ? (
                 <AvatarImage
-                  src={`${supabase.storageUrl}/object/public/profile_images/${profile.avatar_url}`}
+                  src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/profile_images/${profile.avatar_url}`}
                   alt={profile.display_name || "Profile"}
                 />
               ) : (
