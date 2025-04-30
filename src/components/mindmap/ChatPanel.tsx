@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image, Paperclip, Plus, FileText } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Image, Paperclip, FileText, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,6 +42,7 @@ const ChatPanel = ({
     isHtml?: boolean; 
     image?: string; 
     pdfKey?: string | null;
+    attachedFile?: File | null;
   }[]>([
     { 
       role: 'assistant', 
@@ -57,6 +57,8 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
   const [useAllPapers, setUseAllPapers] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -250,17 +252,20 @@ Feel free to ask me any questions! Here are some suggestions:`
   }, [messages, onScrollToPdfPosition]);
 
   const handleSendMessage = async () => {
-    if (inputValue.trim()) {
-      // Add user message
+    if (inputValue.trim() || attachedFile) {
+      // Add user message with possible attachment
       const userMessage = inputValue.trim();
       setMessages(prev => [...prev, { 
         role: 'user', 
-        content: userMessage,
-        pdfKey: activePdfKey
+        content: userMessage || (attachedFile ? `Attached file: ${attachedFile.name}` : ""),
+        pdfKey: activePdfKey,
+        attachedFile: attachedFile
       }]);
       
-      // Clear input
+      // Clear input and attachment
       setInputValue('');
+      setAttachedFile(null);
+      setFilePreview(null);
       
       // Show typing indicator
       setIsTyping(true);
@@ -268,6 +273,10 @@ Feel free to ask me any questions! Here are some suggestions:`
       try {
         // Build the prompt with context
         let prompt = `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`;
+        
+        if (attachedFile) {
+          prompt = `I've attached a file named ${attachedFile.name}. ${prompt}`;
+        }
         
         // If using all papers, add that context to the prompt
         if (useAllPapers && allPdfKeys.length > 1) {
@@ -404,6 +413,42 @@ Feel free to ask me any questions! Here are some suggestions:`
     }
   };
 
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAttachedFile(file);
+      
+      // Create preview for image files
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setFilePreview(e.target.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For non-image files, just show the name
+        setFilePreview(null);
+      }
+      
+      toast({
+        title: "File attached",
+        description: `${file.name} added to your message`,
+      });
+    }
+  };
+
+  // Remove attached file
+  const removeAttachedFile = () => {
+    setAttachedFile(null);
+    setFilePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   // Get PDF name from key for display
   const getPdfNameFromKey = (key: string | null | undefined): string => {
     if (!key) return "Unknown PDF";
@@ -424,15 +469,7 @@ Feel free to ask me any questions! Here are some suggestions:`
         type="file"
         ref={fileInputRef}
         style={{ display: 'none' }}
-        onChange={(e) => {
-          // Handle file attachment here
-          if (e.target.files && e.target.files[0]) {
-            toast({
-              title: "File attached",
-              description: `${e.target.files[0].name} added to your message`,
-            });
-          }
-        }}
+        onChange={handleFileChange}
       />
       
       {/* Chat panel header */}
@@ -468,11 +505,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         </div>
       )}
       
-      {/* Chat Toolbar with plus and attach */}
-      <ChatToolbar 
-        onPlus={onPdfPlusClick}
-        onAttach={handleAttachClick}
-      />
+      {/* Empty ChatToolbar */}
+      <ChatToolbar />
       
       {/* Chat messages area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
@@ -506,6 +540,16 @@ Feel free to ask me any questions! Here are some suggestions:`
                         className="max-w-full rounded-md border border-gray-200"
                         style={{ maxHeight: '300px' }} 
                       />
+                    </div>
+                  )}
+                  
+                  {/* Display attached file information if present */}
+                  {message.attachedFile && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      <span className="text-sm">
+                        {message.attachedFile.name} ({(message.attachedFile.size / 1024).toFixed(1)} KB)
+                      </span>
                     </div>
                   )}
                   
@@ -582,8 +626,40 @@ Feel free to ask me any questions! Here are some suggestions:`
         </div>
       </ScrollArea>
       
-      {/* Input area */}
+      {/* Input area with file preview */}
       <div className="p-3 border-t bg-white">
+        {/* File preview area */}
+        {attachedFile && (
+          <div className="mb-2 p-2 bg-gray-50 rounded-md border flex items-center justify-between">
+            <div className="flex items-center gap-2 overflow-hidden">
+              {filePreview ? (
+                <img 
+                  src={filePreview} 
+                  alt="Preview" 
+                  className="h-10 w-10 object-cover rounded"
+                />
+              ) : (
+                <FileText className="h-5 w-5 text-gray-500" />
+              )}
+              <div className="truncate">
+                <p className="text-sm font-medium truncate">{attachedFile.name}</p>
+                <p className="text-xs text-gray-500">
+                  {(attachedFile.size / 1024).toFixed(1)} KB
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={removeAttachedFile}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
+        {/* Input controls */}
         <div className="flex gap-2">
           <Textarea
             className="flex-1 min-h-10 max-h-32 resize-none"
@@ -606,9 +682,9 @@ Feel free to ask me any questions! Here are some suggestions:`
               className="shrink-0" 
               size="sm" 
               onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() && !attachedFile}
             >
-              Send
+              <Send className="h-4 w-4" />
             </Button>
           </div>
         </div>
