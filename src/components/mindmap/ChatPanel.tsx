@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image, Mic, MicOff, Plus, FileText } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Image, Paperclip, Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,6 +35,7 @@ const ChatPanel = ({
 }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [messages, setMessages] = useState<{ 
     role: 'user' | 'assistant' | 'system'; 
@@ -55,8 +56,6 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
-  const [micEnabled, setMicEnabled] = useState(false);
-  const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const [useAllPapers, setUseAllPapers] = useState(false);
   
   useEffect(() => {
@@ -122,7 +121,7 @@ Feel free to ask me any questions! Here are some suggestions:`
             prompt = `Consider all uploaded documents when answering. ${prompt}`;
           }
           
-          // Call the API with a single argument (the prompt)
+          // Call the API with the prompt
           const response = await chatWithGeminiAboutPdf(prompt);
           
           // Hide typing indicator and add AI response with formatting
@@ -189,7 +188,7 @@ Feel free to ask me any questions! Here are some suggestions:`
             prompt = `Consider all uploaded documents when answering. ${prompt}`;
           }
           
-          // Call the API with a single argument (the prompt)
+          // Call the API with the prompt
           const response = await chatWithGeminiAboutPdf(prompt);
           
           // Hide typing indicator and add AI response with formatting
@@ -275,7 +274,7 @@ Feel free to ask me any questions! Here are some suggestions:`
           prompt = `Consider all uploaded documents when answering. ${prompt}`;
         }
         
-        // Call the API with a single argument (the prompt)
+        // Call the API with the prompt
         const response = await chatWithGeminiAboutPdf(prompt);
         
         // Hide typing indicator and add AI response with enhanced formatting
@@ -365,7 +364,7 @@ Feel free to ask me any questions! Here are some suggestions:`
         prompt = `Consider all uploaded documents when answering. ${prompt}`;
       }
       
-      // Call the API with a single argument
+      // Call the API with the prompt
       const response = await chatWithGeminiAboutPdf(prompt);
       
       setIsTyping(false);
@@ -398,62 +397,10 @@ Feel free to ask me any questions! Here are some suggestions:`
     }
   };
 
-  // Handle mic toggle and speech-to-text
-  const handleMicToggle = async () => {
-    if (!micEnabled) {
-      // Start recording
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        let chunks: BlobPart[] = [];
-        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(chunks, { type: "audio/webm" });
-          // Convert to base64
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const base64 = reader.result?.toString().split(",")[1] as string;
-            // Send to API for transcription
-            try {
-              const resp = await fetch("/functions/v1/voice-to-text", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ audio: base64 }),
-              });
-              const res = await resp.json();
-              if (res && res.text) {
-                setInputValue(prev => prev + (prev ? " " : "") + res.text);
-                toast({
-                  title: "Transcribed",
-                  description: res.text,
-                  duration: 2000,
-                });
-              } else {
-                toast({ title: "Could not transcribe audio", variant: "destructive" });
-              }
-            } catch (err) {
-              toast({ title: "Mic error", description: "Audio could not be transcribed", variant: "destructive" });
-            }
-          };
-          reader.readAsDataURL(audioBlob);
-          stream.getTracks().forEach(track => track.stop());
-        };
-        mediaRecorder.start();
-        audioRecorderRef.current = mediaRecorder;
-        setMicEnabled(true);
-        toast({ title: "Mic enabled", description: "Speak now..." });
-        setTimeout(() => {
-          if (mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-            setMicEnabled(false);
-          }
-        }, 6000); // limit to 6s for demo
-      } catch (err) {
-        toast({ title: "Mic not available", description: "Could not access your microphone", variant: "destructive" });
-      }
-    } else if (audioRecorderRef.current && audioRecorderRef.current.state === "recording") {
-      audioRecorderRef.current.stop();
-      setMicEnabled(false);
+  // Handle file attachment
+  const handleAttachClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -472,6 +419,22 @@ Feel free to ask me any questions! Here are some suggestions:`
 
   return (
     <div className="flex flex-col h-full border-l">
+      {/* File input for attachments (hidden) */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          // Handle file attachment here
+          if (e.target.files && e.target.files[0]) {
+            toast({
+              title: "File attached",
+              description: `${e.target.files[0].name} added to your message`,
+            });
+          }
+        }}
+      />
+      
       {/* Chat panel header */}
       <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
@@ -505,11 +468,10 @@ Feel free to ask me any questions! Here are some suggestions:`
         </div>
       )}
       
-      {/* Chat Toolbar with plus and mic */}
+      {/* Chat Toolbar with plus and attach */}
       <ChatToolbar 
         onPlus={onPdfPlusClick}
-        micEnabled={micEnabled}
-        onMicToggle={handleMicToggle}
+        onAttach={handleAttachClick}
       />
       
       {/* Chat messages area */}
@@ -630,14 +592,25 @@ Feel free to ask me any questions! Here are some suggestions:`
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <Button 
-            className="shrink-0" 
-            size="sm" 
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
-          >
-            Send
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleAttachClick}
+              title="Attach file"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button 
+              className="shrink-0" 
+              size="sm" 
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim()}
+            >
+              Send
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -645,4 +618,3 @@ Feel free to ask me any questions! Here are some suggestions:`
 };
 
 export default ChatPanel;
-

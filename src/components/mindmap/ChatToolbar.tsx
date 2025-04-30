@@ -1,15 +1,14 @@
 
 import React from "react";
-import { Plus, Mic, MicOff } from "lucide-react";
+import { Plus, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ChatToolbarProps {
   onPlus?: () => void;
-  micEnabled: boolean;
-  onMicToggle: () => void;
+  onAttach?: () => void;
 }
 
-const ChatToolbar: React.FC<ChatToolbarProps> = ({ onPlus, micEnabled, onMicToggle }) => {
+const ChatToolbar: React.FC<ChatToolbarProps> = ({ onPlus, onAttach }) => {
   return (
     <div className="flex gap-2 px-2 py-1 border-b bg-white items-center">
       {onPlus && (
@@ -23,16 +22,17 @@ const ChatToolbar: React.FC<ChatToolbarProps> = ({ onPlus, micEnabled, onMicTogg
           <Plus className="h-5 w-5" />
         </Button>
       )}
-      <Button
-        variant={micEnabled ? "default" : "ghost"}
-        size="icon"
-        className="h-8 w-8"
-        onClick={onMicToggle}
-        aria-label="Toggle Microphone"
-      >
-        {micEnabled ? <Mic className="h-5 w-5 text-red-500" /> : <MicOff className="h-5 w-5" />}
-      </Button>
-      <span className="text-xs text-muted-foreground ml-2">{micEnabled ? "Listening..." : "Mic Off"}</span>
+      {onAttach && (
+        <Button
+          variant="ghost" 
+          size="icon"
+          className="h-8 w-8"
+          onClick={onAttach}
+          aria-label="Attach File"
+        >
+          <Paperclip className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   );
 };

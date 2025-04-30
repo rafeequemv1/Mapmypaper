@@ -1,5 +1,5 @@
 
-import { MessageSquare, Copy, Check, FileText } from "lucide-react";
+import { MessageSquare, Copy, Check, FileText, Paperclip } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -25,6 +25,7 @@ const MobileChatSheet = ({
   allPdfKeys 
 }: MobileChatSheetProps) => {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [messages, setMessages] = useState<{ 
     role: 'user' | 'assistant' | 'system'; 
     content: string; 
@@ -136,7 +137,7 @@ Feel free to ask me any questions! Here are some suggestions:`
             prompt = `Consider all uploaded documents when answering. ${prompt}`;
           }
           
-          // Call the API with a single argument (the prompt)
+          // Call the API with the prompt
           const response = await chatWithGeminiAboutPdf(prompt);
           
           // Hide typing indicator and add AI response with formatting
@@ -201,7 +202,7 @@ Feel free to ask me any questions! Here are some suggestions:`
           prompt = `Consider all uploaded documents when answering. ${prompt}`;
         }
         
-        // Call the API with a single argument (the prompt)
+        // Call the API with the prompt
         const response = await chatWithGeminiAboutPdf(prompt);
         
         // Hide typing indicator and add AI response with formatting
@@ -311,7 +312,7 @@ Feel free to ask me any questions! Here are some suggestions:`
         prompt = `Consider all uploaded documents when answering. ${prompt}`;
       }
       
-      // Call the API with a single argument (the prompt)
+      // Call the API with the prompt
       const response = await chatWithGeminiAboutPdf(prompt);
       
       setIsTyping(false);
@@ -341,6 +342,13 @@ Feel free to ask me any questions! Here are some suggestions:`
         description: "Failed to get a response from the AI.",
         variant: "destructive"
       });
+    }
+  };
+
+  // Handle attachment
+  const handleAttachment = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -375,6 +383,22 @@ Feel free to ask me any questions! Here are some suggestions:`
             <h3 className="font-medium text-sm">Research Assistant</h3>
           </div>
         </div>
+        
+        {/* Hidden file input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            // Handle file attachment logic here
+            if (e.target.files && e.target.files[0]) {
+              toast({
+                title: "File attached",
+                description: `${e.target.files[0].name} added to your message`,
+              });
+            }
+          }}
+        />
         
         {/* All papers toggle */}
         {allPdfKeys.length > 1 && (
@@ -498,14 +522,25 @@ Feel free to ask me any questions! Here are some suggestions:`
               onKeyDown={handleKeyDown}
               rows={1}
             />
-            <Button 
-              className="shrink-0" 
-              size="sm" 
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
-            >
-              Send
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button 
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleAttachment}
+                title="Attach file"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Button 
+                className="shrink-0" 
+                size="sm" 
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim()}
+              >
+                Send
+              </Button>
+            </div>
           </div>
         </div>
       </SheetContent>
@@ -514,4 +549,3 @@ Feel free to ask me any questions! Here are some suggestions:`
 };
 
 export default MobileChatSheet;
-
