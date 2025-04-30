@@ -1,11 +1,14 @@
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle 
+  DialogTitle,
+  DialogFooter
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import mermaid from "mermaid";
 
 interface MermaidModalProps {
@@ -18,6 +21,7 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
   onOpenChange 
 }) => {
   const mermaidRef = useRef<HTMLDivElement>(null);
+  const [svgContent, setSvgContent] = useState<string>("");
 
   useEffect(() => {
     if (open && mermaidRef.current) {
@@ -75,6 +79,7 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
         mermaid.render("mermaid-diagram", diagram).then(({ svg }) => {
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = svg;
+            setSvgContent(svg);
           }
         });
       } catch (error) {
@@ -82,6 +87,20 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
       }
     }
   }, [open]);
+
+  const handleDownloadSVG = () => {
+    if (!svgContent) return;
+    
+    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'research_paper_structure.svg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,6 +111,12 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
         <div className="p-4 bg-white rounded-md overflow-auto max-h-[70vh]">
           <div ref={mermaidRef} className="flex justify-center" />
         </div>
+        <DialogFooter>
+          <Button onClick={handleDownloadSVG} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Download as SVG
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
