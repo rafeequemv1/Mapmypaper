@@ -1,11 +1,14 @@
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { 
   Dialog, 
   DialogContent, 
+  DialogDescription,
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import mermaid from "mermaid";
 
 interface MermaidModalProps {
@@ -18,6 +21,7 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
   onOpenChange 
 }) => {
   const mermaidRef = useRef<HTMLDivElement>(null);
+  const [svgContent, setSvgContent] = useState<string>("");
 
   useEffect(() => {
     if (open && mermaidRef.current) {
@@ -34,7 +38,7 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
 
       // Research paper structure flowchart
       const diagram = `
-        graph TD
+        graph LR
           title[Research Paper Structure]
           title --> abstract[Abstract]
           title --> intro[Introduction]
@@ -75,7 +79,10 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
         mermaid.render("mermaid-diagram", diagram).then(({ svg }) => {
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = svg;
+            setSvgContent(svg);
           }
+        }).catch(error => {
+          console.error("Mermaid rendering promise error:", error);
         });
       } catch (error) {
         console.error("Mermaid rendering failed:", error);
@@ -83,14 +90,36 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
     }
   }, [open]);
 
+  const handleDownloadSVG = () => {
+    if (!svgContent) return;
+    
+    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'research-paper-structure.svg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Research Paper Structure</DialogTitle>
+          <DialogDescription>
+            A flowchart showing the structure of a research paper
+          </DialogDescription>
         </DialogHeader>
         <div className="p-4 bg-white rounded-md overflow-auto max-h-[70vh]">
           <div ref={mermaidRef} className="flex justify-center" />
+        </div>
+        <div className="flex justify-end mt-4">
+          <Button variant="outline" onClick={handleDownloadSVG}>
+            <Download className="mr-2 h-4 w-4" /> Download SVG
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
