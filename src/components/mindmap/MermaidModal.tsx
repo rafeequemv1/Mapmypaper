@@ -36,9 +36,9 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
         mermaidRef.current.innerHTML = '';
       }
 
-      // Research paper structure flowchart
+      // Research paper structure flowchart - changed from TD to LR for left to right direction
       const diagram = `
-        graph TD
+        graph LR
           title[Research Paper Structure]
           title --> abstract[Abstract]
           title --> intro[Introduction]
