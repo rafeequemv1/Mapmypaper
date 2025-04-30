@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import ChatToolbar from "./ChatToolbar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
-import * as pdfjs from 'react-pdf';
+import { pdfjs } from 'react-pdf';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -266,8 +267,9 @@ Feel free to ask me any questions! Here are some suggestions:`
       // Convert the file to an ArrayBuffer
       const arrayBuffer = await file.arrayBuffer();
       
-      // Load the PDF document
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      // Load the PDF document using the correct API
+      const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
       
       let fullText = '';
       
