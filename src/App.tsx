@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -17,6 +18,7 @@ import Contact from "./pages/Contact";
 import Policy from "./pages/Policy";
 import Refund from "./pages/Refund";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -61,6 +63,7 @@ const App = () => (
                 <Route path="/" element={<PdfUpload />} />
                 <Route element={<RequireAuth />}>
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Route>
               </Route>
               

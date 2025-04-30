@@ -51,6 +51,11 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
       icon={<FileText className="h-4 w-4" />}
       title="Show Summary"
     />
+    <HeaderSidebarIcon
+      onClick={() => setShowMermaid(true)}
+      icon={<GitBranch className="h-4 w-4" />}
+      title="Show Mermaid Flowchart"
+    />
     <HeaderExportMenu
       onExportSVG={onExportSVG}
       onExportPNG={onExportPNG}
@@ -58,12 +63,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
     />
     
     {/* User Menu at the bottom */}
-    <div className="mt-auto mb-4 flex flex-col gap-2">
-      <HeaderSidebarIcon
-        onClick={() => setShowMermaid(true)}
-        icon={<GitBranch className="h-4 w-4" />}
-        title="Show Mermaid Flowchart"
-      />
+    <div className="mt-auto mb-4">
       <UserMenu />
     </div>
   </div>
