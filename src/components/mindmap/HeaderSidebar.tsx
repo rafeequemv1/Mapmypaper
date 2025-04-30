@@ -4,7 +4,7 @@ import {
   FileCode,
   MessageSquare,
   FileText,
-  FlowArrow,
+  GitBranch,
 } from "lucide-react";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
@@ -61,7 +61,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
     <div className="mt-auto mb-4 flex flex-col gap-2">
       <HeaderSidebarIcon
         onClick={() => setShowMermaid(true)}
-        icon={<FlowArrow className="h-4 w-4" />}
+        icon={<GitBranch className="h-4 w-4" />}
         title="Show Mermaid Flowchart"
       />
       <UserMenu />
