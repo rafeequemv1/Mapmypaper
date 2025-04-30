@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Download, AlertCircle, RefreshCw } from "lucide-react";
 import mermaid from "mermaid";
+import { generateFlowchartFromPdf } from "@/services/geminiService";
 
 interface MermaidModalProps {
   open: boolean;
@@ -24,12 +25,15 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
   const [svgContent, setSvgContent] = useState<string>("");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState<boolean>(false);
+  const [mermaidCode, setMermaidCode] = useState<string>("");
 
   useEffect(() => {
     if (open) {
-      // Reset error state
+      // Reset states and fetch new flowchart
       setRenderError(null);
       setIsRendering(true);
+      setSvgContent("");
+      setMermaidCode("");
       
       // Initialize mermaid with flowchart configuration
       mermaid.initialize({
@@ -43,71 +47,37 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
         },
       });
 
-      // Give DOM time to render before attempting mermaid render
-      setTimeout(() => {
-        renderMermaidDiagram();
-      }, 200);
+      // Generate diagram code from PDF content using Gemini
+      generateFlowchartFromPdfContent();
     }
   }, [open]);
 
-  const renderMermaidDiagram = () => {
-    if (!mermaidRef.current) return;
+  const generateFlowchartFromPdfContent = async () => {
+    try {
+      // Call Gemini service to generate flowchart code based on PDF content
+      const flowchartCode = await generateFlowchartFromPdf();
+      setMermaidCode(flowchartCode);
+      
+      // Give DOM time to render before attempting mermaid render
+      setTimeout(() => {
+        renderMermaidDiagram(flowchartCode);
+      }, 200);
+    } catch (error) {
+      console.error("Error generating flowchart:", error);
+      setRenderError("Failed to generate flowchart from document content.");
+      setIsRendering(false);
+    }
+  };
+
+  const renderMermaidDiagram = (diagramCode: string) => {
+    if (!mermaidRef.current || !diagramCode) return;
     
     // Clear previous renders
     mermaidRef.current.innerHTML = '';
     setIsRendering(true);
     
-    // Research paper structure as a traditional flowchart
-    const diagram = `
-      flowchart TD
-        subgraph "Research Paper Structure"
-          Start([Start Reading]) --> Abstract
-          Abstract --> Introduction
-          Introduction --> Literature
-          Literature --> Methodology
-          Methodology --> Results
-          Results --> Discussion
-          Discussion --> Conclusion
-          Conclusion --> References
-          References --> End([End Reading])
-          
-          Introduction --> Problem["Problem Statement"]
-          Introduction --> Objectives["Research Objectives"] 
-          Introduction --> Scope["Scope of Study"]
-          
-          Methodology --> Design["Research Design"]
-          Methodology --> Collection["Data Collection"]
-          Methodology --> Analysis["Data Analysis"]
-          Methodology --> Ethics["Ethical Considerations"]
-          
-          Results --> MainFindings["Key Findings"]
-          Results --> DataViz["Data Visualization"]
-          Results --> StatAnalysis["Statistical Analysis"]
-          
-          Discussion --> Interpretation["Results Interpretation"] 
-          Discussion --> Comparison["Comparison with Literature"]
-          Discussion --> Limitations["Study Limitations"]
-          Discussion --> Implications["Theoretical & Practical Implications"]
-          
-          Conclusion --> Summary["Summary of Findings"]
-          Conclusion --> Contribution["Contribution to Field"]
-          Conclusion --> Future["Future Research Directions"]
-        end
-        
-        style Start fill:#d0f4de,stroke:#333,stroke-width:2px
-        style End fill:#d0f4de,stroke:#333,stroke-width:2px
-        style Abstract fill:#a9def9,stroke:#333,stroke-width:1px
-        style Introduction fill:#e4c1f9,stroke:#333,stroke-width:1px
-        style Literature fill:#e4c1f9,stroke:#333,stroke-width:1px
-        style Methodology fill:#fcf6bd,stroke:#333,stroke-width:1px
-        style Results fill:#ff99c8,stroke:#333,stroke-width:1px
-        style Discussion fill:#d0f4de,stroke:#333,stroke-width:1px
-        style Conclusion fill:#a9def9,stroke:#333,stroke-width:1px
-        style References fill:#e4c1f9,stroke:#333,stroke-width:1px
-    `;
-
     try {
-      mermaid.render("mermaid-diagram", diagram)
+      mermaid.render("mermaid-diagram", diagramCode)
         .then(({ svg }) => {
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = svg;
@@ -135,20 +105,28 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'research-paper-structure.svg';
+    link.download = 'document-flowchart.svg';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
+  const handleRetry = () => {
+    setIsRendering(true);
+    setRenderError(null);
+    
+    // Try regenerating the flowchart
+    generateFlowchartFromPdfContent();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Research Paper Structure</DialogTitle>
+          <DialogTitle>Document Structure Flowchart</DialogTitle>
           <DialogDescription>
-            A flowchart showing the overall structure and flow of a research paper
+            AI-generated flowchart showing the structure and flow of this document
           </DialogDescription>
         </DialogHeader>
         
@@ -159,7 +137,7 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
               <p>{renderError}</p>
               <Button 
                 variant="outline" 
-                onClick={renderMermaidDiagram}
+                onClick={handleRetry}
                 className="mt-4"
               >
                 Try Again
@@ -168,7 +146,7 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
           ) : isRendering ? (
             <div className="flex flex-col items-center justify-center p-8 text-center">
               <RefreshCw className="h-12 w-12 mb-2 animate-spin text-purple-500" />
-              <p>Rendering diagram...</p>
+              <p>Generating and rendering flowchart...</p>
             </div>
           ) : (
             <div 
@@ -181,11 +159,11 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
         <div className="flex justify-end mt-4 gap-2">
           <Button 
             variant="secondary"
-            onClick={renderMermaidDiagram}
+            onClick={handleRetry}
             disabled={isRendering}
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isRendering ? "animate-spin" : ""}`} /> 
-            Refresh
+            Regenerate
           </Button>
           <Button 
             variant="outline" 
