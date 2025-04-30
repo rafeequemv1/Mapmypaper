@@ -114,11 +114,16 @@ Feel free to ask me any questions! Here are some suggestions:`
         setIsTyping(true);
         
         try {
-          // Enhanced prompt to encourage complete sentences and page citations
-          const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
-            useAllPapers ? null : activePdfKey
-          );
+          // Build the prompt with context
+          let prompt = `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`;
+          
+          // If using all papers, add that context to the prompt
+          if (useAllPapers && allPdfKeys.length > 1) {
+            prompt = `Consider all uploaded documents when answering. ${prompt}`;
+          }
+          
+          // Call the API with a single argument (the prompt)
+          const response = await chatWithGeminiAboutPdf(prompt);
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
@@ -139,14 +144,14 @@ Feel free to ask me any questions! Here are some suggestions:`
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I encountered an error. Please try again.",
+              content: "Sorry, I encountered an error explaining that. Please try again.",
               pdfKey: activePdfKey
             }
           ]);
           
           toast({
-            title: "Chat Error",
-            description: "Failed to get a response from the AI.",
+            title: "Explanation Error",
+            description: "Failed to get an explanation from the AI.",
             variant: "destructive"
           });
         } finally {
@@ -156,7 +161,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainText();
-  }, [explainText, toast, activePdfKey, useAllPapers]);
+  }, [explainText, toast, activePdfKey, useAllPapers, allPdfKeys]);
 
   // Process image to explain when it changes
   useEffect(() => {
@@ -176,14 +181,16 @@ Feel free to ask me any questions! Here are some suggestions:`
         setIsTyping(true);
         
         try {
-          // Call AI with the image
-          // Here we're using the existing chatWithGeminiAboutPdf function
-          // In a real implementation, you would want to modify this to accept an image
-          // or create a new function that can process images
-          const response = await chatWithGeminiAboutPdf(
-            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection.",
-            useAllPapers ? null : activePdfKey
-          );
+          // Build the prompt with context
+          let prompt = "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection.";
+          
+          // If using all papers, add that context to the prompt
+          if (useAllPapers && allPdfKeys.length > 1) {
+            prompt = `Consider all uploaded documents when answering. ${prompt}`;
+          }
+          
+          // Call the API with a single argument (the prompt)
+          const response = await chatWithGeminiAboutPdf(prompt);
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
@@ -221,7 +228,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainImage();
-  }, [explainImage, toast, activePdfKey, useAllPapers]);
+  }, [explainImage, toast, activePdfKey, useAllPapers, allPdfKeys]);
 
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -260,17 +267,16 @@ Feel free to ask me any questions! Here are some suggestions:`
       setIsTyping(true);
       
       try {
-        // Enhanced prompt to encourage complete sentences and page citations with emojis
-        let promptPrefix = '';
+        // Build the prompt with context
+        let prompt = `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`;
         
+        // If using all papers, add that context to the prompt
         if (useAllPapers && allPdfKeys.length > 1) {
-          promptPrefix = 'Consider all uploaded documents when answering. ';
+          prompt = `Consider all uploaded documents when answering. ${prompt}`;
         }
         
-        const response = await chatWithGeminiAboutPdf(
-          `${promptPrefix}${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
-          useAllPapers ? null : activePdfKey
-        );
+        // Call the API with a single argument (the prompt)
+        const response = await chatWithGeminiAboutPdf(prompt);
         
         // Hide typing indicator and add AI response with enhanced formatting
         setIsTyping(false);
@@ -352,12 +358,15 @@ Feel free to ask me any questions! Here are some suggestions:`
     setIsTyping(true);
     
     try {
-      const promptPrefix = useAllPapers && allPdfKeys.length > 1 ? 'Consider all uploaded documents when answering. ' : '';
+      // Build the prompt with context
+      let prompt = `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`;
       
-      const response = await chatWithGeminiAboutPdf(
-        `${promptPrefix}${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
-        useAllPapers ? null : activePdfKey
-      );
+      if (useAllPapers && allPdfKeys.length > 1) {
+        prompt = `Consider all uploaded documents when answering. ${prompt}`;
+      }
+      
+      // Call the API with a single argument
+      const response = await chatWithGeminiAboutPdf(prompt);
       
       setIsTyping(false);
       setMessages(prev => [
@@ -636,3 +645,4 @@ Feel free to ask me any questions! Here are some suggestions:`
 };
 
 export default ChatPanel;
+

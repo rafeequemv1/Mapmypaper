@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -63,7 +62,8 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
   const generateSummary = async () => {
     setIsLoading(true);
     try {
-      const result = await generateStructuredSummary(pdfKey);
+      // Update the call to match the function signature (no arguments)
+      const result = await generateStructuredSummary();
       
       // Try to detect the document type from the result keys
       if (result["Key Findings"] && result["Methods"]) {
@@ -249,6 +249,7 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
     }
   };
 
+  
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
