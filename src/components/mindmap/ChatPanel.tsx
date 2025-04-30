@@ -10,7 +10,7 @@ import ChatToolbar from "./ChatToolbar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
-import { pdfjs } from 'react-pdf';
+import * as pdfjs from 'pdfjs-dist';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -931,4 +931,3 @@ Feel free to ask me any questions! Here are some suggestions:`
             >
               <Send className="h-4 w-4" />
             </Button>
-          </div>
