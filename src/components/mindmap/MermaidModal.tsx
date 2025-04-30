@@ -32,15 +32,43 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
         mermaidRef.current.innerHTML = '';
       }
 
+      // Research paper structure flowchart
       const diagram = `
         graph TD
-          A[Start] --> B{Is it a document?}
-          B -->|Yes| C[PDF Processing]
-          B -->|No| D[Text Processing]
-          C --> E[Generate Mind Map]
-          D --> E
-          E --> F[Add to Knowledge Base]
-          F --> G[End]
+          title[Research Paper Structure]
+          title --> abstract[Abstract]
+          title --> intro[Introduction]
+          title --> methods[Methodology]
+          title --> results[Results]
+          title --> discuss[Discussion]
+          title --> concl[Conclusion]
+          title --> refs[References]
+          
+          intro --> background[Background & Context]
+          intro --> problem[Problem Statement]
+          intro --> significance[Research Significance]
+          intro --> objectives[Research Objectives]
+          
+          methods --> design[Research Design]
+          methods --> data[Data Collection]
+          methods --> analysis[Data Analysis]
+          methods --> ethics[Ethical Considerations]
+          
+          results --> findings[Key Findings]
+          results --> tables[Tables & Figures]
+          results --> stats[Statistical Analysis]
+          
+          discuss --> interpret[Interpretation]
+          discuss --> compare[Comparison with Literature]
+          discuss --> limitations[Limitations]
+          discuss --> implications[Implications]
+          
+          concl --> summary[Summary of Findings]
+          concl --> contribution[Contribution to Field]
+          concl --> future[Future Research Directions]
+          
+          classDef highlight fill:#f9f,stroke:#333,stroke-width:2px;
+          class title highlight;
       `;
 
       try {
@@ -57,9 +85,9 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Document Processing Flow</DialogTitle>
+          <DialogTitle>Research Paper Structure</DialogTitle>
         </DialogHeader>
         <div className="p-4 bg-white rounded-md overflow-auto max-h-[70vh]">
           <div ref={mermaidRef} className="flex justify-center" />
