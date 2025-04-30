@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -10,7 +11,8 @@ import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { useNavigate } from "react-router-dom";
-import { Home } from "lucide-react";
+import { Home, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -48,6 +50,11 @@ const PanelStructure = ({
 
   // File input for adding PDFs
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Processing state for PDFs
+  const [processingPdfKey, setProcessingPdfKey] = useState<string | null>(null);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState("");
 
   // Handle active PDF change
   const handleTabChange = async (key: string) => {
@@ -104,6 +111,7 @@ const PanelStructure = ({
       });
       return;
     }
+    
     for (const file of pdfFiles) {
       const pdfKey = getPdfKey({ name: file.name, size: file.size, lastModified: file.lastModified });
       // Prevent duplicates
@@ -111,12 +119,19 @@ const PanelStructure = ({
         toast({ title: "Already added", description: `PDF "${file.name}" already exists.` });
         continue;
       }
+      
       // Store meta in sessionStorage
       sessionStorage.setItem(
         `pdfMeta_${pdfKey}`,
         JSON.stringify({ name: file.name, size: file.size, lastModified: file.lastModified })
       );
+      
       try {
+        // Set processing state
+        setProcessingPdfKey(pdfKey);
+        setProcessingProgress(0);
+        setProcessingStage("Reading PDF");
+        
         // Read and process PDF file as dataURL
         const reader = new FileReader();
         const pdfDataPromise = new Promise<string>((resolve, reject) => {
@@ -124,13 +139,20 @@ const PanelStructure = ({
           reader.onerror = () => reject();
           reader.readAsDataURL(file);
         });
+        
+        setProcessingProgress(20);
         const pdfData = await pdfDataPromise;
         
         // Store PDF data in IndexedDB only, not in sessionStorage
+        setProcessingProgress(40);
+        setProcessingStage("Storing PDF");
         await storePdfData(pdfKey, pdfData);
         
         // Extract text from PDF
+        setProcessingProgress(60);
+        setProcessingStage("Extracting text");
         const extractedText = await PdfToText(file);
+        
         if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
           toast({
             title: "No extractable text",
@@ -139,20 +161,40 @@ const PanelStructure = ({
           });
           continue;
         }
+        
         // Generate mindmap data
+        setProcessingProgress(80);
+        setProcessingStage("Generating mind map");
         const mindMapData = await generateMindMapFromText(extractedText);
+        
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
+        
         // Optionally, select this tab
         setActivePdfKey(pdfKey);
         await setCurrentPdf(pdfKey); // Set as current PDF
+        
+        setProcessingProgress(100);
+        setProcessingStage("Complete");
+        
         window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
+        
         toast({
           title: "Success",
           description: "Mind map generated and PDF added!",
         });
+        
+        // Reset processing state after a short delay to show completion
+        setTimeout(() => {
+          setProcessingPdfKey(null);
+          setProcessingProgress(0);
+          setProcessingStage("");
+        }, 1000);
       } catch (err) {
         console.error("Error processing PDF:", err);
+        setProcessingPdfKey(null);
+        setProcessingProgress(0);
+        setProcessingStage("");
         toast({
           title: "Failed to process PDF",
           description: "Could not process the selected PDF.",
@@ -232,6 +274,35 @@ const PanelStructure = ({
             <Home className="h-6 w-6 text-primary" />
           </button>
         </div>
+        
+        {/* Loading overlay for processing PDFs */}
+        {processingPdfKey && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl">
+              <h3 className="text-lg font-medium mb-4">Processing PDF</h3>
+              
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                  <span className="font-medium">{processingStage}</span>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span>Progress</span>
+                    <span>{processingProgress}%</span>
+                  </div>
+                  <Progress value={processingProgress} className="h-2" />
+                </div>
+                
+                <p className="text-sm text-gray-500">
+                  Please wait while we process your document. This may take a minute depending on the file size.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* PDF Panel - Fixed to 40% width */}
         {showPdf && (
           <div className="h-full w-[40%] flex-shrink-0 flex flex-col">
