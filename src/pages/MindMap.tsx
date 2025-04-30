@@ -16,6 +16,7 @@ const MindMap = () => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
+  const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -46,6 +47,21 @@ const MindMap = () => {
     };
   }, [showChat]);
 
+  // Listen for PDF tab changes
+  useEffect(() => {
+    const handlePdfSwitched = (e: CustomEvent) => {
+      if (e.detail?.pdfKey) {
+        setActivePdfKey(e.detail.pdfKey);
+      }
+    };
+    
+    window.addEventListener('pdfSwitched', handlePdfSwitched as EventListener);
+    
+    return () => {
+      window.removeEventListener('pdfSwitched', handlePdfSwitched as EventListener);
+    };
+  }, []);
+
   useEffect(() => {
     if (location.state?.presetQuestion) {
       setExplainText(location.state.presetQuestion);
@@ -71,12 +87,15 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={setExplainText}
+        activePdfKey={activePdfKey}
+        onActivePdfKeyChange={setActivePdfKey}
       />
       
       {/* Modal for Summary */}
       <SummaryModal 
         open={showSummary}
         onOpenChange={setShowSummary}
+        pdfKey={activePdfKey}
       />
     </div>
   );

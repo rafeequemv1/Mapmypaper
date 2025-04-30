@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { getAllPdfs } from "@/components/PdfTabs";
 
 // Define a flexible interface to handle different document types
 interface Summary {
@@ -24,28 +25,45 @@ const emptyMappedSummary: Summary = {
 interface SummaryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  pdfKey?: string | null;
 }
 
-const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
+const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
   const { toast } = useToast();
   const [summary, setSummary] = useState<Summary>(emptyMappedSummary);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
   const [documentType, setDocumentType] = useState<string>("document");
+  const [documentName, setDocumentName] = useState<string>("Document");
+
+  // Set the document name based on the key
+  useEffect(() => {
+    if (pdfKey) {
+      const pdfs = getAllPdfs();
+      const currentPdf = pdfs.find(pdf => pdf.name === pdfKey.split('_')[0]);
+      if (currentPdf) {
+        setDocumentName(currentPdf.name);
+      } else {
+        setDocumentName("Document");
+      }
+    } else {
+      setDocumentName("Document");
+    }
+  }, [pdfKey]);
 
   // Generate summary when the modal is opened
   useEffect(() => {
     if (open) {
       generateSummary();
     }
-  }, [open]);
+  }, [open, pdfKey]);
 
   // Generate summary from PDF
   const generateSummary = async () => {
     setIsLoading(true);
     try {
-      const result = await generateStructuredSummary();
+      const result = await generateStructuredSummary(pdfKey);
       
       // Try to detect the document type from the result keys
       if (result["Key Findings"] && result["Methods"]) {
@@ -171,15 +189,8 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
 
   // Get a title based on the detected document type
   const getModalTitle = () => {
-    switch(documentType) {
-      case "research paper": return "Research Paper Summary";
-      case "technical document": return "Technical Document Summary";
-      case "business document": return "Business Document Summary";
-      case "legal document": return "Legal Document Summary";
-      case "news article": return "News Article Summary";
-      case "creative work": return "Creative Work Summary";
-      default: return "Document Summary";
-    }
+    const typeTitle = documentType.charAt(0).toUpperCase() + documentType.slice(1);
+    return `${documentName} - ${typeTitle} Summary`;
   };
 
   // Download summary as PDF
@@ -218,8 +229,11 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
       // Add the captured content
       pdf.addImage(imgData, 'PNG', 0, 25, imgWidth, imgHeight - 25);
 
+      // Generate a filename based on the document name
+      const filename = documentName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') + '_summary.pdf';
+      
       // Save the PDF with appropriate filename
-      pdf.save(`${documentType.replace(/\s/g, "_")}_summary.pdf`);
+      pdf.save(filename);
 
       toast({
         title: "PDF Generated",
@@ -279,7 +293,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             <div className="flex flex-col items-center justify-center h-full p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-center text-muted-foreground">
-                Generating comprehensive summary of the {documentType}...
+                Generating comprehensive summary of {documentName}...
               </p>
             </div>
           ) : (
@@ -321,7 +335,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Download Summary as PDF</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create a PDF document containing the complete summary of the {documentType}.
+              This will create a PDF document containing the complete summary of {documentName}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

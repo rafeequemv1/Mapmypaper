@@ -1,4 +1,5 @@
-import { MessageSquare, Copy, Check } from "lucide-react";
+
+import { MessageSquare, Copy, Check, FileText } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -6,15 +7,30 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { getAllPdfs } from "@/components/PdfTabs";
 
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
   explainText?: string;
+  activePdfKey: string | null;
+  allPdfKeys: string[];
 }
 
-const MobileChatSheet = ({ onScrollToPdfPosition, explainText }: MobileChatSheetProps) => {
+const MobileChatSheet = ({ 
+  onScrollToPdfPosition, 
+  explainText, 
+  activePdfKey,
+  allPdfKeys 
+}: MobileChatSheetProps) => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
+  const [messages, setMessages] = useState<{ 
+    role: 'user' | 'assistant' | 'system'; 
+    content: string; 
+    isHtml?: boolean;
+    pdfKey?: string | null;
+  }[]>([
     { 
       role: 'assistant', 
       content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
@@ -28,6 +44,32 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const citationActivated = useRef(false);
   const [processingExplainText, setProcessingExplainText] = useState(false);
+  const [useAllPapers, setUseAllPapers] = useState(false);
+  
+  // Handle PDF switching by adding a system message
+  useEffect(() => {
+    if (activePdfKey && isSheetOpen) {
+      const pdfs = getAllPdfs();
+      const currentPdf = pdfs.find(pdf => pdf.name === activePdfKey.split('_')[0]);
+      
+      if (currentPdf) {
+        const systemMessage = {
+          role: 'system' as const,
+          content: `You are now discussing the PDF: "${currentPdf.name}". Your responses should focus on this document.`,
+          pdfKey: activePdfKey
+        };
+        
+        setMessages(prev => {
+          // Only add the system message if the last message wasn't already about this PDF
+          const lastSystemMsg = [...prev].reverse().find(msg => msg.role === 'system' && msg.pdfKey);
+          if (!lastSystemMsg || lastSystemMsg.pdfKey !== activePdfKey) {
+            return [...prev, systemMessage];
+          }
+          return prev;
+        });
+      }
+    }
+  }, [activePdfKey, isSheetOpen]);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -78,7 +120,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         // Add user message with the selected text
         setMessages(prev => [...prev, { 
           role: 'user', 
-          content: `Please explain this text: "${explainText}"` 
+          content: `Please explain this text: "${explainText}"`,
+          pdfKey: activePdfKey 
         }]);
         
         // Show typing indicator
@@ -87,7 +130,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         try {
           // Enhanced prompt for explanation
           const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
+            useAllPapers ? null : activePdfKey
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -97,7 +141,8 @@ Feel free to ask me any questions! Here are some suggestions:`
             { 
               role: 'assistant', 
               content: formatAIResponse(response),
-              isHtml: true 
+              isHtml: true,
+              pdfKey: activePdfKey
             }
           ]);
         } catch (error) {
@@ -108,7 +153,8 @@ Feel free to ask me any questions! Here are some suggestions:`
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I encountered an error explaining that. Please try again." 
+              content: "Sorry, I encountered an error explaining that. Please try again.",
+              pdfKey: activePdfKey
             }
           ]);
           
@@ -124,13 +170,17 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainText();
-  }, [explainText, isSheetOpen, toast]);
+  }, [explainText, isSheetOpen, toast, activePdfKey, useAllPapers]);
   
   const handleSendMessage = async () => {
     if (inputValue.trim()) {
       // Add user message
       const userMessage = inputValue.trim();
-      setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+      setMessages(prev => [...prev, { 
+        role: 'user', 
+        content: userMessage,
+        pdfKey: activePdfKey 
+      }]);
       
       // Clear input
       setInputValue('');
@@ -140,8 +190,15 @@ Feel free to ask me any questions! Here are some suggestions:`
       
       try {
         // Enhanced prompt to encourage complete sentences, page citations, and emojis
+        let promptPrefix = '';
+        
+        if (useAllPapers && allPdfKeys.length > 1) {
+          promptPrefix = 'Consider all uploaded documents when answering. ';
+        }
+        
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+          `${promptPrefix}${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
+          useAllPapers ? null : activePdfKey
         );
         
         // Hide typing indicator and add AI response with formatting
@@ -151,7 +208,8 @@ Feel free to ask me any questions! Here are some suggestions:`
           { 
             role: 'assistant', 
             content: formatAIResponse(response),
-            isHtml: true
+            isHtml: true,
+            pdfKey: useAllPapers ? 'all' : activePdfKey 
           }
         ]);
         
@@ -165,7 +223,8 @@ Feel free to ask me any questions! Here are some suggestions:`
           ...prev, 
           { 
             role: 'assistant', 
-            content: "Sorry, I encountered an error. Please try again." 
+            content: "Sorry, I encountered an error. Please try again.",
+            pdfKey: activePdfKey
           }
         ]);
         
@@ -232,14 +291,21 @@ Feel free to ask me any questions! Here are some suggestions:`
 
   const handleQuickQuestion = async (question: string) => {
     // Add user message
-    setMessages(prev => [...prev, { role: 'user', content: question }]);
+    setMessages(prev => [...prev, { 
+      role: 'user', 
+      content: question,
+      pdfKey: activePdfKey
+    }]);
     
     // Show typing indicator
     setIsTyping(true);
     
     try {
+      const promptPrefix = useAllPapers && allPdfKeys.length > 1 ? 'Consider all uploaded documents when answering. ' : '';
+      
       const response = await chatWithGeminiAboutPdf(
-        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+        `${promptPrefix}${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
+        useAllPapers ? null : activePdfKey
       );
       
       setIsTyping(false);
@@ -248,7 +314,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         { 
           role: 'assistant', 
           content: formatAIResponse(response),
-          isHtml: true 
+          isHtml: true,
+          pdfKey: useAllPapers ? 'all' : activePdfKey
         }
       ]);
     } catch (error) {
@@ -258,7 +325,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         ...prev, 
         { 
           role: 'assistant', 
-          content: "Sorry, I encountered an error. Please try again." 
+          content: "Sorry, I encountered an error. Please try again.",
+          pdfKey: activePdfKey
         }
       ]);
       
@@ -268,6 +336,19 @@ Feel free to ask me any questions! Here are some suggestions:`
         variant: "destructive"
       });
     }
+  };
+
+  // Get PDF name from key for display
+  const getPdfNameFromKey = (key: string | null | undefined): string => {
+    if (!key) return "Unknown PDF";
+    if (key === 'all') return "All PDFs";
+    
+    const pdfs = getAllPdfs();
+    const match = pdfs.find(pdf => 
+      pdf.name === key.split('_')[0]
+    );
+    
+    return match ? match.name : "Unknown PDF";
   };
 
   return (
@@ -289,76 +370,105 @@ Feel free to ask me any questions! Here are some suggestions:`
           </div>
         </div>
         
+        {/* All papers toggle */}
+        {allPdfKeys.length > 1 && (
+          <div className="flex items-center justify-between p-2 px-3 border-b bg-gray-50">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-500" />
+              <Label htmlFor="mobile-use-all-papers" className="text-sm text-gray-700 cursor-pointer">
+                Use all papers for answers
+              </Label>
+            </div>
+            <Switch
+              id="mobile-use-all-papers"
+              checked={useAllPapers}
+              onCheckedChange={setUseAllPapers}
+            />
+          </div>
+        )}
+        
         <ScrollArea className="flex-1 p-4">
           <div className="flex flex-col gap-4">
-            {messages.map((message, i) => (
-              <div key={i} className="group relative">
-                <div 
-                  className={`rounded-lg p-4 ${
-                    message.role === 'user' 
-                      ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
-                      : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
-                  }`}
-                >
-                  {message.isHtml ? (
-                    <div 
-                      className="ai-message-content" 
-                      dangerouslySetInnerHTML={{ __html: message.content }} 
-                    />
-                  ) : (
-                    message.content
-                  )}
-
-                  {i === 0 && (
-                    <div className="mt-4 space-y-2">
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                        onClick={() => handleQuickQuestion("What are the main topics covered in this paper?")}
-                      >
-                        What are the main topics covered in this paper?
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                        onClick={() => handleQuickQuestion("Can you summarize the key findings?")}
-                      >
-                        Can you summarize the key findings?
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                        onClick={() => handleQuickQuestion("What are the research methods used?")}
-                      >
-                        What are the research methods used?
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                        onClick={() => handleQuickQuestion("What are the limitations of this study?")}
-                      >
-                        What are the limitations of this study?
-                      </Button>
+            {messages.map((message, i) => {
+              // Skip system messages from rendering
+              if (message.role === 'system') return null;
+              
+              return (
+                <div key={i} className="group relative">
+                  {/* Show PDF context indicator for multi-PDF mode */}
+                  {message.pdfKey && allPdfKeys.length > 1 && (
+                    <div className="text-xs text-gray-500 mb-1">
+                      {message.role === 'user' ? 'Asking about' : 'Answering from'}: {getPdfNameFromKey(message.pdfKey)}
                     </div>
                   )}
                   
-                  {message.role === 'assistant' && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => copyToClipboard(message.content, i)}
-                    >
-                      {copiedMessageId === i ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
-                  )}
+                  <div 
+                    className={`rounded-lg p-4 ${
+                      message.role === 'user' 
+                        ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
+                        : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
+                    }`}
+                  >
+                    {message.isHtml ? (
+                      <div 
+                        className="ai-message-content" 
+                        dangerouslySetInnerHTML={{ __html: message.content }} 
+                      />
+                    ) : (
+                      message.content
+                    )}
+
+                    {i === 0 && (
+                      <div className="mt-4 space-y-2">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left"
+                          onClick={() => handleQuickQuestion("What are the main topics covered in this paper?")}
+                        >
+                          What are the main topics covered in this paper?
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left"
+                          onClick={() => handleQuickQuestion("Can you summarize the key findings?")}
+                        >
+                          Can you summarize the key findings?
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left"
+                          onClick={() => handleQuickQuestion("What are the research methods used?")}
+                        >
+                          What are the research methods used?
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left"
+                          onClick={() => handleQuickQuestion("What are the limitations of this study?")}
+                        >
+                          What are the limitations of this study?
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {message.role === 'assistant' && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => copyToClipboard(message.content, i)}
+                      >
+                        {copiedMessageId === i ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             
             {isTyping && (
               <div className="ai-message bg-gray-50 border border-gray-100 shadow-sm rounded-lg p-4">
@@ -376,7 +486,7 @@ Feel free to ask me any questions! Here are some suggestions:`
           <div className="flex gap-2">
             <textarea
               className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none"
-              placeholder="Type your message..."
+              placeholder={`Ask about ${useAllPapers ? 'all documents' : 'the document'}...`}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}

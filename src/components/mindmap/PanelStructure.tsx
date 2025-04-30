@@ -7,7 +7,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf, getAllPdfKeys } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +22,8 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
+  activePdfKey: string | null;
+  onActivePdfKeyChange: (key: string | null) => void;
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -34,6 +36,8 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
+  activePdfKey,
+  onActivePdfKeyChange,
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -42,24 +46,26 @@ const PanelStructure = ({
   const navigate = useNavigate();
 
   // PDF tab state (active key)
-  const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
-    const metas = getAllPdfs();
-    if (metas.length === 0) return null;
-    return getPdfKey(metas[0]);
-  });
-
-  // File input for adding PDFs
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [allPdfKeys, setAllPdfKeys] = useState<string[]>([]);
   
   // Processing state for PDFs
   const [processingPdfKey, setProcessingPdfKey] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState("");
 
+  // Fetch all PDF keys on mount
+  useEffect(() => {
+    const fetchPdfKeys = async () => {
+      const keys = await getAllPdfKeys();
+      setAllPdfKeys(keys);
+    };
+    fetchPdfKeys();
+  }, []);
+
   // Handle active PDF change
   const handleTabChange = async (key: string) => {
     try {
-      setActivePdfKey(key);
+      onActivePdfKeyChange(key);
       
       // Set the selected PDF as current in IndexedDB
       await setCurrentPdf(key);
@@ -89,7 +95,7 @@ const PanelStructure = ({
       if (metas.length > 0) {
         handleTabChange(getPdfKey(metas[0]));
       } else {
-        setActivePdfKey(null);
+        onActivePdfKeyChange(null);
       }
     }
     window.dispatchEvent(new CustomEvent('pdfListUpdated'));
@@ -169,8 +175,12 @@ const PanelStructure = ({
         
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
         
+        // Update the list of all PDF keys
+        const updatedKeys = await getAllPdfKeys();
+        setAllPdfKeys(updatedKeys);
+        
         // Optionally, select this tab
-        setActivePdfKey(pdfKey);
+        onActivePdfKeyChange(pdfKey);
         await setCurrentPdf(pdfKey); // Set as current PDF
         
         setProcessingProgress(100);
@@ -249,6 +259,8 @@ const PanelStructure = ({
       }
     }
   };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isRendered) {
     return <div className="h-full w-full flex justify-center items-center">Loading panels...</div>;
@@ -340,6 +352,8 @@ const PanelStructure = ({
               onExplainText={onExplainText}
               onScrollToPdfPosition={handleScrollToPdfPosition}
               onPdfPlusClick={handlePlusClick}
+              activePdfKey={activePdfKey}
+              allPdfKeys={allPdfKeys}
             />
           </div>
         )}
@@ -347,6 +361,8 @@ const PanelStructure = ({
         <MobileChatSheet 
           onScrollToPdfPosition={handleScrollToPdfPosition}
           explainText={explainText}
+          activePdfKey={activePdfKey}
+          allPdfKeys={allPdfKeys}
         />
       </div>
     </>

@@ -145,6 +145,9 @@ export const setCurrentPdf = async (pdfKey: string): Promise<void> => {
     
     await store.put({ id: 'currentPdf', data: pdfData });
     
+    // Store the active PDF key in a separate entry for tracking
+    await store.put({ id: 'activePdfKey', data: pdfKey });
+    
     return new Promise((resolve, reject) => {
       transaction.oncomplete = () => {
         db.close();
@@ -159,6 +162,72 @@ export const setCurrentPdf = async (pdfKey: string): Promise<void> => {
   } catch (error) {
     console.error('Error setting current PDF:', error);
     throw error;
+  }
+};
+
+// Get the currently active PDF key
+export const getActivePdfKey = async (): Promise<string | null> => {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction([PDF_STORE], 'readonly');
+    const store = transaction.objectStore(PDF_STORE);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.get('activePdfKey');
+      
+      request.onsuccess = () => {
+        db.close();
+        if (request.result) {
+          resolve(request.result.data);
+        } else {
+          resolve(null);
+        }
+      };
+      
+      request.onerror = () => {
+        db.close();
+        reject(new Error('Failed to retrieve active PDF key'));
+      };
+    });
+  } catch (error) {
+    console.error('Error retrieving active PDF key:', error);
+    return null;
+  }
+};
+
+// Get all available PDF keys
+export const getAllPdfKeys = async (): Promise<string[]> => {
+  try {
+    const results: string[] = [];
+    const db = await openDB();
+    const transaction = db.transaction([PDF_STORE], 'readonly');
+    const store = transaction.objectStore(PDF_STORE);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.openCursor();
+      
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          // Only add keys that are actual PDFs (not metadata entries like 'currentPdf' or 'activePdfKey')
+          if (cursor.key !== 'currentPdf' && cursor.key !== 'activePdfKey' && sessionStorage.getItem(`hasPdfData_${cursor.key}`)) {
+            results.push(cursor.key as string);
+          }
+          cursor.continue();
+        } else {
+          db.close();
+          resolve(results);
+        }
+      };
+      
+      request.onerror = () => {
+        db.close();
+        reject(new Error('Failed to get all PDF keys'));
+      };
+    });
+  } catch (error) {
+    console.error('Error getting all PDF keys:', error);
+    return [];
   }
 };
 
