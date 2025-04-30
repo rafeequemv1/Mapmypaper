@@ -10,26 +10,15 @@ import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-// Define the Summary type to match the structure returned by the API
+// Define a flexible interface to handle different document types
 interface Summary {
   Summary: string;
-  "Key Findings": string;
-  Objectives: string;
-  Methods: string;
-  Results: string;
-  Conclusions: string;
-  "Key Concepts": string;
+  [key: string]: string; // Allow for flexible fields based on document type
 }
 
-// Default empty summary
+// Default empty summary with just the required Summary field
 const emptyMappedSummary: Summary = {
-  Summary: "Loading...",
-  "Key Findings": "Loading...",
-  Objectives: "Loading...",
-  Methods: "Loading...",
-  Results: "Loading...",
-  Conclusions: "Loading...",
-  "Key Concepts": "Loading..."
+  Summary: "Loading..."
 };
 
 interface SummaryModalProps {
@@ -43,6 +32,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
+  const [documentType, setDocumentType] = useState<string>("document");
 
   // Generate summary when the modal is opened
   useEffect(() => {
@@ -56,8 +46,26 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     setIsLoading(true);
     try {
       const result = await generateStructuredSummary();
+      
+      // Try to detect the document type from the result keys
+      if (result["Key Findings"] && result["Methods"]) {
+        setDocumentType("research paper");
+      } else if (result["Implementation"] && result["Requirements"]) {
+        setDocumentType("technical document");
+      } else if (result["Business Context"] && result["Financial Implications"]) {
+        setDocumentType("business document");
+      } else if (result["Legal Framework"] && result["Parties & Obligations"]) {
+        setDocumentType("legal document");
+      } else if (result["Main Event"] && result["Key Players"]) {
+        setDocumentType("news article");
+      } else if (result["Themes"] && result["Characters/Elements"]) {
+        setDocumentType("creative work");
+      } else if (result["Main Points"] && result["Structure"]) {
+        setDocumentType("document");
+      }
+      
       // Cast the response to Summary type
-      setSummary(result as unknown as Summary);
+      setSummary(result as Summary);
     } catch (error) {
       console.error("Error generating summary:", error);
       toast({
@@ -161,6 +169,19 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     return acc;
   }, {} as Record<string, string>);
 
+  // Get a title based on the detected document type
+  const getModalTitle = () => {
+    switch(documentType) {
+      case "research paper": return "Research Paper Summary";
+      case "technical document": return "Technical Document Summary";
+      case "business document": return "Business Document Summary";
+      case "legal document": return "Legal Document Summary";
+      case "news article": return "News Article Summary";
+      case "creative work": return "Creative Work Summary";
+      default: return "Document Summary";
+    }
+  };
+
   // Download summary as PDF
   const downloadSummaryAsPDF = async () => {
     if (!summaryRef.current) return;
@@ -192,13 +213,13 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
 
       // Add title
       pdf.setFontSize(20);
-      pdf.text("Paper Summary", 105, 15, { align: 'center' });
+      pdf.text(getModalTitle(), 105, 15, { align: 'center' });
 
       // Add the captured content
       pdf.addImage(imgData, 'PNG', 0, 25, imgWidth, imgHeight - 25);
 
-      // Save the PDF
-      pdf.save("paper_summary.pdf");
+      // Save the PDF with appropriate filename
+      pdf.save(`${documentType.replace(/\s/g, "_")}_summary.pdf`);
 
       toast({
         title: "PDF Generated",
@@ -223,7 +244,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         >
           <DialogHeader>
             <DialogTitle className="flex justify-between items-center">
-              <span>Paper Summary</span>
+              <span>{getModalTitle()}</span>
               <div className="flex gap-2">
                 <Button 
                   size="sm"
@@ -258,7 +279,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             <div className="flex flex-col items-center justify-center h-full p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-center text-muted-foreground">
-                Generating comprehensive summary of the paper...
+                Generating comprehensive summary of the {documentType}...
               </p>
             </div>
           ) : (
@@ -300,7 +321,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Download Summary as PDF</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create a PDF document containing the complete summary of the paper.
+              This will create a PDF document containing the complete summary of the {documentType}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
