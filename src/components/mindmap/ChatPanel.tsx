@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -931,3 +932,11 @@ Feel free to ask me any questions! Here are some suggestions:`
             >
               <Send className="h-4 w-4" />
             </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatPanel;
