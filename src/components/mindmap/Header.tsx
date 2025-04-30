@@ -1,120 +1,89 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
-import { MindElixirInstance } from "mind-elixir";
-import { useToast } from "@/hooks/use-toast";
-import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
+import { Button } from "@/components/ui/button";
+import { Download, ArrowLeft } from "lucide-react";
 import HeaderSidebar from "./HeaderSidebar";
+import { MindElixirInstance } from "mind-elixir";
+import { exportMapToSVG, exportMapToPNG, exportMapToJSON } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMermaid: React.Dispatch<React.SetStateAction<boolean>>;
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
 }
 
-const Header: React.FC<HeaderProps> = ({
-  togglePdf,
-  toggleChat,
+const Header: React.FC<HeaderProps> = ({ 
+  togglePdf, 
+  toggleChat, 
   setShowSummary,
+  setShowMermaid,
   isPdfActive,
   isChatActive,
-  mindMap,
+  mindMap 
 }) => {
-  const [fileName, setFileName] = useState("mindmap");
-  const { toast } = useToast();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log("Mind map instance in Header:", mindMap);
-  }, [mindMap]);
+  
+  const handleExportSVG = () => {
+    if (mindMap) {
+      exportMapToSVG(mindMap);
+    }
+  };
 
   const handleExportPNG = () => {
     if (mindMap) {
-      console.log("Exporting as PNG with mind map:", mindMap);
-      downloadMindMapAsPNG(mindMap, fileName);
-      toast({
-        title: "Export successful",
-        description: `Mind map exported as ${fileName}.png`
-      });
-    } else {
-      console.error("Mind map instance not available for PNG export");
-      toast({
-        title: "Export failed",
-        description: "Mind map instance not available",
-        variant: "destructive"
-      });
+      exportMapToPNG(mindMap);
     }
   };
-
-  const handleExportSVG = () => {
-    if (mindMap) {
-      console.log("Exporting as SVG with mind map:", mindMap);
-      downloadMindMapAsSVG(mindMap, fileName);
-      toast({
-        title: "Export successful",
-        description: `Mind map exported as ${fileName}.svg`
-      });
-    } else {
-      console.error("Mind map instance not available for SVG export");
-      toast({
-        title: "Export failed",
-        description: "Mind map instance not available",
-        variant: "destructive"
-      });
-    }
-  };
-
+  
   const handleExportJSON = () => {
     if (mindMap) {
-      console.log("Exporting as JSON with mind map:", mindMap);
-      const data = mindMap.getData();
-      const dataStr = JSON.stringify(data, null, 2);
-      const blob = new Blob([dataStr], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.download = `${fileName}.json`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-      toast({
-        title: "Export successful",
-        description: `Mind map exported as ${fileName}.json`
-      });
-    } else {
-      console.error("Mind map instance not available for JSON export");
-      toast({
-        title: "Export failed",
-        description: "Mind map instance not available",
-        variant: "destructive"
-      });
+      exportMapToJSON(mindMap);
     }
   };
 
-  useEffect(() => {
-    const pdfData = sessionStorage.getItem("pdfData") || sessionStorage.getItem("uploadedPdfData");
-    if (!pdfData) {
-      toast({
-        title: "No PDF loaded",
-        description: "Please upload a PDF to use all features",
-        variant: "destructive"
-      });
-    }
-  }, [toast]);
-
   return (
-    <HeaderSidebar
-      isPdfActive={isPdfActive}
-      isChatActive={isChatActive}
-      togglePdf={togglePdf}
-      toggleChat={toggleChat}
-      setShowSummary={setShowSummary}
-      onExportSVG={handleExportSVG}
-      onExportPNG={handleExportPNG}
-      onExportJSON={handleExportJSON}
-    />
+    <div className="h-12 flex items-center justify-between px-4 border-b bg-white z-20 relative">
+      <div className="flex items-center">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="mr-2"
+          onClick={() => navigate('/')}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="ml-1">Back</span>
+        </Button>
+      </div>
+      <div>
+        <h1 className="text-lg font-medium">Mind Map Editor</h1>
+      </div>
+      <div className="flex items-center">
+        <Button 
+          variant="outline" 
+          size="sm"
+          disabled={!mindMap}
+        >
+          <Download className="h-4 w-4" />
+          <span className="ml-1">Export</span>
+        </Button>
+      </div>
+      <HeaderSidebar 
+        togglePdf={togglePdf}
+        toggleChat={toggleChat}
+        setShowSummary={setShowSummary}
+        setShowMermaid={setShowMermaid}
+        isPdfActive={isPdfActive}
+        isChatActive={isChatActive}
+        onExportSVG={handleExportSVG}
+        onExportPNG={handleExportPNG}
+        onExportJSON={handleExportJSON}
+      />
+    </div>
   );
 };
 

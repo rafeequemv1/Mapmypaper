@@ -4,6 +4,7 @@ import {
   FileCode,
   MessageSquare,
   FileText,
+  FlowArrow,
 } from "lucide-react";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
@@ -15,6 +16,7 @@ interface HeaderSidebarProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMermaid: React.Dispatch<React.SetStateAction<boolean>>;
   onExportSVG: () => void;
   onExportPNG: () => void;
   onExportJSON: () => void;
@@ -26,6 +28,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   togglePdf,
   toggleChat,
   setShowSummary,
+  setShowMermaid,
   onExportSVG,
   onExportPNG,
   onExportJSON,
@@ -53,8 +56,14 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
       onExportPNG={onExportPNG}
       onExportJSON={onExportJSON}
     />
+    
     {/* User Menu at the bottom */}
-    <div className="mt-auto mb-4">
+    <div className="mt-auto mb-4 flex flex-col gap-2">
+      <HeaderSidebarIcon
+        onClick={() => setShowMermaid(true)}
+        icon={<FlowArrow className="h-4 w-4" />}
+        title="Show Mermaid Flowchart"
+      />
       <UserMenu />
     </div>
   </div>
