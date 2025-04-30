@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -46,44 +45,19 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  // We're removing the top bar and only keeping the sidebar
   return (
-    <div className="h-12 flex items-center justify-between px-4 border-b bg-white z-20 relative">
-      <div className="flex items-center">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="mr-2"
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="ml-1">Back</span>
-        </Button>
-      </div>
-      <div>
-        <h1 className="text-lg font-medium">Mind Map Editor</h1>
-      </div>
-      <div className="flex items-center">
-        <Button 
-          variant="outline" 
-          size="sm"
-          disabled={!mindMap}
-        >
-          <Download className="h-4 w-4" />
-          <span className="ml-1">Export</span>
-        </Button>
-      </div>
-      <HeaderSidebar 
-        togglePdf={togglePdf}
-        toggleChat={toggleChat}
-        setShowSummary={setShowSummary}
-        setShowMermaid={setShowMermaid}
-        isPdfActive={isPdfActive}
-        isChatActive={isChatActive}
-        onExportSVG={handleExportSVG}
-        onExportPNG={handleExportPNG}
-        onExportJSON={handleExportJSON}
-      />
-    </div>
+    <HeaderSidebar 
+      togglePdf={togglePdf}
+      toggleChat={toggleChat}
+      setShowSummary={setShowSummary}
+      setShowMermaid={setShowMermaid}
+      isPdfActive={isPdfActive}
+      isChatActive={isChatActive}
+      onExportSVG={handleExportSVG}
+      onExportPNG={handleExportPNG}
+      onExportJSON={handleExportJSON}
+    />
   );
 };
 
