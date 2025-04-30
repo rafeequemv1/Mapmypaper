@@ -54,6 +54,7 @@
     "jspdf": "^3.0.1",
     "lucide-react": "^0.462.0",
     "markmap": "^0.6.1",
+    "mermaid": "^11.6.0",
     "mind-elixir": "^4.4.2",
     "next-themes": "^0.3.0",
     "pdfjs-dist": "^5.2.133",
