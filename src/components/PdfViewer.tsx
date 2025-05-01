@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -918,4 +919,158 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               title="Zoom Out"
             >
               <ZoomOut className="h-3 w-3" />
-            </Button
+            </Button>
+            <span className="text-xs w-10 text-center font-medium">
+              {Math.round(scale * 100)}%
+            </span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 text-black p-0" 
+              onClick={zoomIn}
+              title="Zoom In"
+            >
+              <ZoomIn className="h-3 w-3" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 text-black p-0" 
+              onClick={resetZoom}
+              title="Reset Zoom"
+            >
+              <RotateCw className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          {/* Search Input */}
+          <div className="flex-1 mx-0.5">
+            <div className="flex items-center">
+              <Input
+                placeholder="Search in document..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-6 text-xs mr-0.5"
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 flex items-center gap-0.5 text-black px-1"
+                onClick={handleSearch}
+              >
+                <Search className="h-3 w-3" />
+                <span className="text-xs">Search</span>
+              </Button>
+            </div>
+          </div>
+          
+          {/* Area Selection Button */}
+          <Button 
+            variant={isSelectionMode ? "secondary" : "ghost"}
+            size="sm" 
+            className={`h-6 px-1 text-black flex items-center gap-0.5 ${isSelectionMode ? 'bg-gray-200' : ''}`}
+            onClick={toggleSelectionMode}
+            title="Select Area"
+          >
+            <Crop className="h-3 w-3" />
+            <span className="text-xs">Select</span>
+          </Button>
+          
+          {/* Previous/Next Result Navigation */}
+          {searchResults.length > 0 && (
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1"
+                onClick={() => navigateSearch('prev')}
+                title="Previous Result"
+              >
+                <span className="text-xs">Prev</span>
+              </Button>
+              <span className="text-xs">
+                {currentSearchIndex + 1}/{searchResults.length}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1"
+                onClick={() => navigateSearch('next')}
+                title="Next Result"
+              >
+                <span className="text-xs">Next</span>
+              </Button>
+            </div>
+          )}
+        </div>
+        
+        {/* PDF Content with Selection and Search Tooltips */}
+        <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-gray-500">Loading PDF...</p>
+              </div>
+            </div>
+          ) : loadError ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center p-4 max-w-md">
+                <div className="bg-red-100 text-red-700 p-3 rounded-md mb-2">
+                  <p className="font-medium">{loadError}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Document
+                file={pdfData || ''}
+                onLoadSuccess={onDocumentLoadSuccess}
+                loading={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                  </div>
+                }
+                error={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="bg-red-100 text-red-700 p-3 rounded-md">
+                      <p>Failed to load PDF document.</p>
+                    </div>
+                  </div>
+                }
+                className="flex flex-col items-center"
+              >
+                {Array.from(new Array(numPages), (el, index) => (
+                  <div 
+                    key={`page_${index + 1}`}
+                    ref={setPageRef(index)}
+                    className="mb-2 shadow-md relative"
+                    data-page-number={index + 1}
+                  >
+                    <Page
+                      pageNumber={index + 1}
+                      scale={scale}
+                      width={getOptimalPageWidth()}
+                      onRenderSuccess={onPageRenderSuccess}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      className="shadow-lg"
+                    />
+                    <div className="absolute bottom-1 right-1 bg-gray-200 bg-opacity-75 rounded px-1 text-xs">
+                      {index + 1} / {numPages}
+                    </div>
+                  </div>
+                ))}
+              </Document>
+            </>
+          )}
+          {renderTextSelectionTooltip()}
+          {renderAreaSelectionTooltip()}
+        </ScrollArea>
+      </div>
+    );
+  }
+);
+
+export default PdfViewer;
