@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +6,9 @@ import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { getPdfData, getCurrentPdf } from "@/utils/pdfStorage";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -40,6 +42,12 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [pdfKey, setPdfKey] = useState<string | null>(null);
+    const [selectedText, setSelectedText] = useState<string>("");
+    const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
+    const [showTextTooltip, setShowTextTooltip] = useState(false);
+    const textTooltipRef = useRef<HTMLDivElement>(null);
+    const selectionTimeout = useRef<NodeJS.Timeout | null>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
 
     // Load PDF data from IndexedDB when active PDF changes
     const loadPdfData = async () => {
@@ -110,6 +118,86 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         window.removeEventListener('pdfSwitched', handlePdfSwitch);
       };
     }, [toast]);
+
+    // Handle text selection in the PDF
+    useEffect(() => {
+      const handleSelection = () => {
+        const selection = window.getSelection();
+        
+        if (selection && !selection.isCollapsed) {
+          const text = selection.toString().trim();
+          
+          if (text.length > 5) {  // Only show tooltip for meaningful selections
+            setSelectedText(text);
+            
+            // Get position for the tooltip
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            
+            setSelectionPosition({
+              x: rect.left + (rect.width / 2),
+              y: rect.top - 10  // Position above the selection
+            });
+            
+            setShowTextTooltip(true);
+            
+            // Clear any existing timeout
+            if (selectionTimeout.current) {
+              clearTimeout(selectionTimeout.current);
+            }
+            
+            // Hide tooltip after 5 seconds if not interacted with
+            selectionTimeout.current = setTimeout(() => {
+              setShowTextTooltip(false);
+            }, 5000);
+          }
+        }
+      };
+      
+      // Add listener for mouseup event within the PDF container
+      const pdfContainer = document.querySelector('[data-pdf-viewer]');
+      
+      if (pdfContainer) {
+        pdfContainer.addEventListener('mouseup', handleSelection);
+        
+        return () => {
+          pdfContainer.removeEventListener('mouseup', handleSelection);
+        };
+      }
+      
+      return undefined;
+    }, []);
+    
+    // Close tooltip when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          tooltipRef.current && 
+          !tooltipRef.current.contains(event.target as Node)
+        ) {
+          setShowTextTooltip(false);
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+
+    // Function to handle explanation request
+    const handleExplainText = () => {
+      if (selectedText && onTextSelected) {
+        // Dispatch a custom event to open the chat with the selected text
+        const event = new CustomEvent('openChatWithText', {
+          detail: { text: selectedText }
+        });
+        window.dispatchEvent(event);
+        
+        setShowTextTooltip(false);
+      }
+    };
 
     // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
@@ -440,75 +528,99 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         </div>
 
         {/* PDF Content */}
-        {pdfData ? (
-          <ScrollArea className="flex-1" ref={pdfContainerRef}>
-            <div 
-              className="flex flex-col items-center py-4 relative"
-            >
-              
-              <Document
-                file={pdfData}
-                onLoadSuccess={onDocumentLoadSuccess}
-                className="w-full"
-                loading={<div className="text-center py-4">Loading PDF...</div>}
-                error={
-                  <div className="text-center py-4 text-red-500">
-                    {loadError || "Failed to load PDF. Please try again."}
-                  </div>
-                }
+        <div className="relative flex-1">
+          {pdfData ? (
+            <ScrollArea className="flex-1" ref={pdfContainerRef}>
+              <div 
+                className="flex flex-col items-center py-4 relative"
               >
-                {Array.from(new Array(numPages), (_, index) => (
-                  <div
-                    key={`page_${index + 1}`}
-                    className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                    ref={setPageRef(index)}
-                    style={{ width: 'fit-content', maxWidth: '100%' }}
-                    data-page-number={index + 1}
-                  >
-                    <Page
-                      pageNumber={index + 1}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={false}
-                      onRenderSuccess={onPageRenderSuccess}
-                      scale={scale}
-                      width={getOptimalPageWidth()}
-                      className="mx-auto"
-                      loading={
-                        <div className="flex items-center justify-center h-[600px] w-full">
-                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
-                        </div>
-                      }
-                    />
-                    <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
-                      Page {index + 1} of {numPages}
+                
+                <Document
+                  file={pdfData}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  className="w-full"
+                  loading={<div className="text-center py-4">Loading PDF...</div>}
+                  error={
+                    <div className="text-center py-4 text-red-500">
+                      {loadError || "Failed to load PDF. Please try again."}
                     </div>
-                  </div>
-                ))}
-              </Document>
-            </div>
-          </ScrollArea>
-        ) : (
-          <div className="flex h-full items-center justify-center flex-col gap-4">
-            {isLoading ? (
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-500">Loading PDF...</p>
-              </div>
-            ) : (
-              <div className="text-center p-8">
-                <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
-                <p className="text-gray-500">Please return to the upload page and select a PDF document.</p>
-                <Button 
-                  onClick={() => window.location.href = '/'} 
-                  variant="outline" 
-                  className="mt-4"
+                  }
                 >
-                  Go to Upload Page
-                </Button>
+                  {Array.from(new Array(numPages), (_, index) => (
+                    <div
+                      key={`page_${index + 1}`}
+                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
+                      ref={setPageRef(index)}
+                      style={{ width: 'fit-content', maxWidth: '100%' }}
+                      data-page-number={index + 1}
+                    >
+                      <Page
+                        pageNumber={index + 1}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={false}
+                        onRenderSuccess={onPageRenderSuccess}
+                        scale={scale}
+                        width={getOptimalPageWidth()}
+                        className="mx-auto"
+                        loading={
+                          <div className="flex items-center justify-center h-[600px] w-full">
+                            <div className="animate-pulse bg-gray-200 h-full w-full"></div>
+                          </div>
+                        }
+                      />
+                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
+                        Page {index + 1} of {numPages}
+                      </div>
+                    </div>
+                  ))}
+                </Document>
               </div>
-            )}
-          </div>
-        )}
+            </ScrollArea>
+          ) : (
+            <div className="flex h-full items-center justify-center flex-col gap-4">
+              {isLoading ? (
+                <div className="flex flex-col items-center">
+                  <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-gray-500">Loading PDF...</p>
+                </div>
+              ) : (
+                <div className="text-center p-8">
+                  <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
+                  <p className="text-gray-500">Please return to the upload page and select a PDF document.</p>
+                  <Button 
+                    onClick={() => window.location.href = '/'} 
+                    variant="outline" 
+                    className="mt-4"
+                  >
+                    Go to Upload Page
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Selection Tooltip */}
+          {showTextTooltip && selectionPosition && (
+            <div 
+              ref={tooltipRef}
+              className="fixed z-50 bg-white rounded-md shadow-md border border-gray-200 p-2"
+              style={{
+                left: `${selectionPosition.x}px`,
+                top: `${selectionPosition.y - 40}px`,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              <Button 
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={handleExplainText}
+              >
+                Explain this text
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

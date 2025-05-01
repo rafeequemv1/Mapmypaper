@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable
@@ -57,6 +56,39 @@ export const analyzeImageWithGemini = async (imageBase64: string): Promise<strin
   } catch (error) {
     console.error("Error in analyzeImageWithGemini:", error);
     throw error;
+  }
+};
+
+/**
+ * Explains a selected text from a PDF using Gemini
+ * @param selectedText The text selected by the user
+ * @returns The explanation of the selected text
+ */
+export const explainSelectedText = async (selectedText: string): Promise<string> => {
+  try {
+    if (!selectedText || typeof selectedText !== 'string' || selectedText.trim() === '') {
+      throw new Error("Valid selected text is required.");
+    }
+    
+    console.log(`Explaining selected text (length: ${selectedText.length} characters)`);
+    
+    const prompt = `
+      Please explain the following text in clear, simple terms. If it contains academic or technical 
+      concepts, provide definitions and context. Use bullet points where appropriate.
+      
+      Selected text:
+      "${selectedText}"
+      
+      Provide your explanation with relevant emojis and citations if applicable.
+    `;
+    
+    const geminiModel = await getGeminiModel();
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error explaining selected text:", error);
+    throw new Error(`Failed to explain selected text: ${error.message}`);
   }
 };
 

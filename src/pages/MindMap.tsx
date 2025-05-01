@@ -31,6 +31,16 @@ const MindMap = () => {
     setShowChat(prev => !prev);
   }, []);
 
+  // Handle text selection from PDF
+  const handleTextSelected = useCallback((text: string) => {
+    if (text) {
+      setExplainText(text);
+      if (!showChat) {
+        setShowChat(true);
+      }
+    }
+  }, [showChat]);
+
   // Listen for text selection events that should activate chat
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
@@ -90,6 +100,7 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={setExplainText}
+        onTextSelected={handleTextSelected}
         activePdfKey={activePdfKey}
         onActivePdfKeyChange={setActivePdfKey}
       />
