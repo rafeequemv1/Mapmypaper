@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -217,7 +216,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Selection Mode Canvas Setup and Cleanup
     useEffect(() => {
-      if (isSelectionMode && pdfContainerRef.current && !selectionCanvas) {
+      let canvasInstance: fabric.Canvas | null = null;
+      
+      if (isSelectionMode && pdfContainerRef.current) {
         // Create a container for the fabric canvas that covers the entire PDF viewer
         if (!canvasContainerRef.current) {
           const container = document.createElement('div');
@@ -238,18 +239,27 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           canvas.style.height = '100%';
           
           container.appendChild(canvas);
-          pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]')?.appendChild(container);
           
-          canvasContainerRef.current = container;
-          selectionCanvasRef.current = canvas;
+          // Make sure we get the viewport element
+          const viewport = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
+          if (viewport) {
+            viewport.appendChild(container);
+            canvasContainerRef.current = container;
+            selectionCanvasRef.current = canvas;
+          }
         }
         
-        // Initialize the fabric canvas
+        // Initialize the fabric canvas only if we have valid references
         const viewport = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
         if (viewport && selectionCanvasRef.current) {
           const viewportRect = viewport.getBoundingClientRect();
           
-          const canvas = new fabric.Canvas(selectionCanvasRef.current, {
+          // Set canvas dimensions explicitly to match viewport
+          selectionCanvasRef.current.width = viewport.scrollWidth;
+          selectionCanvasRef.current.height = viewport.scrollHeight;
+          
+          // Create new fabric canvas instance
+          canvasInstance = new fabric.Canvas(selectionCanvasRef.current, {
             width: viewport.scrollWidth,
             height: viewport.scrollHeight,
             selection: false,
@@ -257,26 +267,28 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           });
           
           // Set cursor style
-          canvas.defaultCursor = 'crosshair';
+          canvasInstance.defaultCursor = 'crosshair';
           
           // Store the canvas instance
-          setSelectionCanvas(canvas);
+          setSelectionCanvas(canvasInstance);
+          
+          let startPoint = { x: 0, y: 0 };
           
           // Add selection rectangle creation on mouse down
-          canvas.on('mouse:down', (options) => {
+          canvasInstance.on('mouse:down', (options) => {
             // Clear any existing rectangle
             if (selectionRectRef.current) {
-              canvas.remove(selectionRectRef.current);
+              canvasInstance?.remove(selectionRectRef.current);
               selectionRectRef.current = null;
             }
             
-            // Get the pointer coordinates
-            const pointer = canvas.getPointer(options.e);
+            // Store start point
+            startPoint = canvasInstance!.getPointer(options.e);
             
             // Create a new rectangle
             const rect = new fabric.Rect({
-              left: pointer.x,
-              top: pointer.y,
+              left: startPoint.x,
+              top: startPoint.y,
               width: 0,
               height: 0,
               fill: 'rgba(0, 123, 255, 0.2)',
@@ -288,8 +300,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             });
             
             // Add the rectangle to the canvas
-            canvas.add(rect);
-            canvas.renderAll();
+            canvasInstance?.add(rect);
             
             // Store the rectangle
             selectionRectRef.current = rect;
@@ -297,7 +308,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             
             // Determine which page is being selected
             const pagesElements = document.querySelectorAll('[data-page-number]');
-            let activePage = null;
+            let activePage = 1; // Default to first page
             
             for (let i = 0; i < pagesElements.length; i++) {
               const pageElement = pagesElements[i] as HTMLElement;
@@ -314,38 +325,44 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           });
           
           // Update rectangle dimensions on mouse move
-          canvas.on('mouse:move', (options) => {
-            if (!selectionRectRef.current) return;
+          canvasInstance.on('mouse:move', (options) => {
+            if (!selectionRectRef.current || !canvasInstance) return;
             
-            const pointer = canvas.getPointer(options.e);
+            const currentPoint = canvasInstance.getPointer(options.e);
             const rect = selectionRectRef.current;
             
-            // Update width based on current pointer position
-            if (pointer.x > rect.left!) {
-              rect.set('width', pointer.x - rect.left!);
+            // Calculate width and height based on start point and current point
+            const width = Math.abs(currentPoint.x - startPoint.x);
+            const height = Math.abs(currentPoint.y - startPoint.y);
+            
+            // Set position based on direction of drag
+            if (currentPoint.x < startPoint.x) {
+              rect.set('left', currentPoint.x);
             } else {
-              rect.set('left', pointer.x);
-              rect.set('width', rect.left! - pointer.x);
+              rect.set('left', startPoint.x);
             }
             
-            // Update height based on current pointer position
-            if (pointer.y > rect.top!) {
-              rect.set('height', pointer.y - rect.top!);
+            if (currentPoint.y < startPoint.y) {
+              rect.set('top', currentPoint.y);
             } else {
-              rect.set('top', pointer.y);
-              rect.set('height', rect.top! - pointer.y);
+              rect.set('top', startPoint.y);
             }
             
-            canvas.renderAll();
+            // Update dimensions
+            rect.set('width', width);
+            rect.set('height', height);
+            
+            // Re-render canvas
+            canvasInstance.renderAll();
           });
           
           // Finalize selection on mouse up
-          canvas.on('mouse:up', (options) => {
-            if (!selectionRectRef.current) return;
+          canvasInstance.on('mouse:up', (options) => {
+            if (!selectionRectRef.current || !canvasInstance) return;
             
             const rect = selectionRectRef.current;
             
-            // Check if selection has width and height
+            // Check if selection has minimum size
             if (rect.width! > 10 && rect.height! > 10) {
               // Get position for tooltip
               setAreaTooltipPosition({
@@ -357,22 +374,24 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               setShowAreaTooltip(true);
             } else {
               // Remove tiny selections
-              canvas.remove(rect);
+              canvasInstance.remove(rect);
               selectionRectRef.current = null;
               setCurrentSelectionRect(null);
             }
             
-            canvas.renderAll();
+            canvasInstance.renderAll();
           });
         }
       }
       
-      // Cleanup when selection mode is turned off
+      // Cleanup when unmounting or when selection mode is turned off
       return () => {
-        if (!isSelectionMode && selectionCanvas) {
-          selectionCanvas.dispose();
+        if (canvasInstance) {
+          canvasInstance.dispose();
           setSelectionCanvas(null);
-          
+        }
+        
+        if (!isSelectionMode) {
           // Remove the canvas container
           if (canvasContainerRef.current) {
             canvasContainerRef.current.remove();
@@ -386,7 +405,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           setShowAreaTooltip(false);
         }
       };
-    }, [isSelectionMode, pdfContainerRef.current]);
+    }, [isSelectionMode]); // Removed pdfContainerRef.current from dependencies
 
     // Function to capture the selected area as image
     const captureSelectedArea = () => {
@@ -406,8 +425,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         }
         
         // Set the temp canvas dimensions to the selection dimensions
-        tempCanvas.width = rect.width as number;
-        tempCanvas.height = rect.height as number;
+        tempCanvas.width = Math.round(rect.width as number);
+        tempCanvas.height = Math.round(rect.height as number);
         
         // Find the PDF page that contains our selection
         const pdfPages = document.querySelectorAll('[data-page-number]');
@@ -430,18 +449,39 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const pageRect = targetPage.getBoundingClientRect();
         const scrollContainer = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
         const scrollTop = scrollContainer?.scrollTop || 0;
+        const scrollLeft = scrollContainer?.scrollLeft || 0;
+        
+        console.log('Capturing area:', {
+          rect: {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height
+          },
+          page: {
+            top: pageRect.top,
+            left: pageRect.left
+          },
+          scroll: {
+            top: scrollTop,
+            left: scrollLeft
+          }
+        });
         
         // Convert page element to image
         html2canvas(targetPage as HTMLElement, {
           backgroundColor: null,
           scale: window.devicePixelRatio, // Use device pixel ratio for better quality
           useCORS: true,
+          logging: true, // Enable logging for debugging
         }).then(pageCanvas => {
           // Calculate the offset within the page
           const canvasOffset = {
-            x: rect.left! - (pageRect.left - (scrollContainer?.getBoundingClientRect().left || 0)),
-            y: rect.top! - (pageRect.top - scrollTop)
+            x: Math.round(rect.left! - (pageRect.left - (scrollContainer?.getBoundingClientRect().left || 0)) + scrollLeft),
+            y: Math.round(rect.top! - (pageRect.top - scrollTop))
           };
+          
+          console.log('Canvas offset:', canvasOffset);
           
           // Draw only the selected portion to our temp canvas
           ctx.drawImage(
@@ -871,102 +911,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   loading={<div className="text-center py-4">Loading PDF...</div>}
                   error={
                     <div className="text-center py-4 text-red-500">
-                      {loadError || "Failed to load PDF. Please try again."}
-                    </div>
-                  }
-                >
-                  {Array.from(new Array(numPages), (_, index) => (
-                    <div
-                      key={`page_${index + 1}`}
-                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                      ref={setPageRef(index)}
-                      style={{ width: 'fit-content', maxWidth: '100%' }}
-                      data-page-number={index + 1}
-                    >
-                      <Page
-                        pageNumber={index + 1}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={false}
-                        onRenderSuccess={onPageRenderSuccess}
-                        scale={scale}
-                        width={getOptimalPageWidth()}
-                        className="mx-auto"
-                        loading={
-                          <div className="flex items-center justify-center h-[600px] w-full">
-                            <div className="animate-pulse bg-gray-200 h-full w-full"></div>
-                          </div>
-                        }
-                      />
-                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
-                        Page {index + 1} of {numPages}
-                      </div>
-                    </div>
-                  ))}
-                </Document>
-              </div>
-            </ScrollArea>
-          ) : (
-            <div className="flex h-full items-center justify-center flex-col gap-4">
-              <div className="text-center max-w-md p-6">
-                <h3 className="text-lg font-medium mb-2">No PDF Document Loaded</h3>
-                <p className="text-gray-600 mb-4">
-                  Please upload a PDF document from the upload page or select one from your existing documents.
-                </p>
-                <div className="text-sm text-gray-500">
-                  Supported formats: PDF documents
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {/* Text selection tooltip */}
-        {showTextTooltip && selectionPosition && (
-          <div
-            ref={tooltipRef}
-            className="absolute bg-white shadow-lg rounded-md border border-gray-200 p-2 z-50"
-            style={{
-              left: `${selectionPosition.x}px`,
-              top: `${selectionPosition.y}px`,
-              transform: 'translate(-50%, -100%)',
-            }}
-          >
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleExplainText}
-              className="text-xs"
-            >
-              Explain in Chat
-            </Button>
-          </div>
-        )}
-        
-        {/* Area selection tooltip */}
-        {showAreaTooltip && areaTooltipPosition && (
-          <div
-            className="absolute bg-white shadow-lg rounded-md border border-gray-200 p-2 z-50"
-            style={{
-              left: `${areaTooltipPosition.x}px`,
-              top: `${areaTooltipPosition.y}px`,
-              transform: 'translate(-50%, -120%)',
-            }}
-          >
-            <Button
-              variant="default"
-              size="sm"
-              onClick={captureSelectedArea}
-              className="text-xs"
-            >
-              Analyze Image in Chat
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+                      {load
