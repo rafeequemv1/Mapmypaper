@@ -105,6 +105,7 @@ const MindMap = () => {
       <MermaidModal 
         open={showMermaid}
         onOpenChange={setShowMermaid}
+        pdfKey={activePdfKey}
       />
     </div>
   );
