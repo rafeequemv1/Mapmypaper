@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -273,9 +272,12 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           setSelectionCanvas(canvasInstance);
           
           let startPoint = { x: 0, y: 0 };
+          let isDrawing = false; // Add this to track drawing state
           
           // Add selection rectangle creation on mouse down
           canvasInstance.on('mouse:down', (options) => {
+            isDrawing = true; // Set drawing state to true
+            
             // Clear any existing rectangle
             if (selectionRectRef.current) {
               canvasInstance?.remove(selectionRectRef.current);
@@ -326,7 +328,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           // Update rectangle dimensions on mouse move
           canvasInstance.on('mouse:move', (options) => {
-            if (!selectionRectRef.current || !canvasInstance) return;
+            if (!isDrawing || !selectionRectRef.current || !canvasInstance) return;
             
             const currentPoint = canvasInstance.getPointer(options.e);
             const rect = selectionRectRef.current;
@@ -358,9 +360,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           // Finalize selection on mouse up
           canvasInstance.on('mouse:up', (options) => {
-            if (!selectionRectRef.current || !canvasInstance) return;
+            if (!isDrawing || !selectionRectRef.current || !canvasInstance) return;
+            
+            isDrawing = false; // Reset drawing state
             
             const rect = selectionRectRef.current;
+            
+            // Make sure the rectangle is rendered one last time
+            canvasInstance.renderAll();
             
             // Check if selection has minimum size
             if (rect.width! > 10 && rect.height! > 10) {
@@ -378,9 +385,63 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               selectionRectRef.current = null;
               setCurrentSelectionRect(null);
             }
-            
-            canvasInstance.renderAll();
           });
+          
+          // Add global mouse up handler to finish drawing even if mouse up occurs outside canvas
+          const handleGlobalMouseUp = () => {
+            if (isDrawing && selectionRectRef.current && canvasInstance) {
+              isDrawing = false;
+              
+              const rect = selectionRectRef.current;
+              
+              // Make sure the rectangle is rendered one last time
+              canvasInstance.renderAll();
+              
+              // Check if selection has minimum size
+              if (rect.width! > 10 && rect.height! > 10) {
+                // Get position for tooltip
+                setAreaTooltipPosition({
+                  x: rect.left! + rect.width! / 2,
+                  y: rect.top!
+                });
+                
+                // Show tooltip
+                setShowAreaTooltip(true);
+              } else {
+                // Remove tiny selections
+                canvasInstance.remove(rect);
+                selectionRectRef.current = null;
+                setCurrentSelectionRect(null);
+              }
+            }
+          };
+          
+          // Add global mouse up listener
+          document.addEventListener('mouseup', handleGlobalMouseUp);
+          
+          // Clean up global mouse up listener
+          return () => {
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+            
+            if (canvasInstance) {
+              canvasInstance.dispose();
+              setSelectionCanvas(null);
+            }
+            
+            if (!isSelectionMode) {
+              // Remove the canvas container
+              if (canvasContainerRef.current) {
+                canvasContainerRef.current.remove();
+                canvasContainerRef.current = null;
+                selectionCanvasRef.current = null;
+              }
+              
+              // Clear selection state
+              setCurrentSelectionRect(null);
+              selectionRectRef.current = null;
+              setShowAreaTooltip(false);
+            }
+          };
         }
       }
       
@@ -857,168 +918,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               title="Zoom Out"
             >
               <ZoomOut className="h-3 w-3" />
-            </Button>
-            <span className="text-xs w-10 text-center font-medium">
-              {Math.round(scale * 100)}%
-            </span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 text-black p-0" 
-              onClick={zoomIn}
-              title="Zoom In"
-            >
-              <ZoomIn className="h-3 w-3" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 text-black p-0" 
-              onClick={resetZoom}
-              title="Reset Zoom"
-            >
-              <RotateCw className="h-3 w-3" />
-            </Button>
-          </div>
-          
-          {/* Search Input */}
-          <div className="flex-1 mx-0.5">
-            <div className="flex items-center">
-              <Input
-                placeholder="Search in document..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-6 text-xs mr-0.5"
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 flex items-center gap-0.5 text-black px-1"
-                onClick={handleSearch}
-              >
-                <Search className="h-3 w-3" />
-                <span className="text-xs">Search</span>
-              </Button>
-            </div>
-          </div>
-          
-          {/* Area Selection Button */}
-          <Button 
-            variant={isSelectionMode ? "secondary" : "ghost"}
-            size="sm" 
-            className={`h-6 px-1 text-black flex items-center gap-0.5 ${isSelectionMode ? 'bg-gray-200' : ''}`}
-            onClick={toggleSelectionMode}
-            title="Select Area"
-          >
-            <Crop className="h-3 w-3" />
-            <span className="text-xs">Select Area</span>
-          </Button>
-          
-          {/* Search Navigation */}
-          {searchResults.length > 0 && (
-            <div className="flex items-center gap-1">
-              <span className="text-xs">
-                {currentSearchIndex + 1} of {searchResults.length}
-              </span>
-              <div className="flex gap-0.5">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-1 text-black"
-                  onClick={() => navigateSearch('prev')}
-                >
-                  ←
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-1 text-black"
-                  onClick={() => navigateSearch('next')}
-                >
-                  →
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* PDF Content */}
-        <div className="relative flex-1">
-          {/* Text selection tooltip */}
-          {renderTextSelectionTooltip()}
-          
-          {/* Area selection tooltip */}
-          {renderAreaSelectionTooltip()}
-          
-          {pdfData ? (
-            <ScrollArea className="flex-1" ref={pdfContainerRef}>
-              <div className="flex flex-col items-center py-4 relative">
-                <Document
-                  file={pdfData}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  className="w-full"
-                  loading={<div className="text-center py-4">Loading PDF...</div>}
-                  error={
-                    <div className="text-center py-4 text-red-500">
-                      {loadError || "Failed to load PDF document"}
-                    </div>
-                  }
-                >
-                  {Array.from(new Array(numPages), (_, index) => (
-                    <div 
-                      key={`page_${index + 1}`} 
-                      ref={setPageRef(index)}
-                      className="mb-4 shadow-md relative border border-gray-300"
-                      data-page-number={index + 1}
-                    >
-                      <Page
-                        pageNumber={index + 1}
-                        width={getOptimalPageWidth()}
-                        scale={scale}
-                        onRenderSuccess={onPageRenderSuccess}
-                        className="border-gray-300"
-                        renderAnnotationLayer
-                        renderTextLayer
-                      />
-                    </div>
-                  ))}
-                </Document>
-              </div>
-            </ScrollArea>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              {isLoading ? (
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-gray-500">Loading PDF document...</p>
-                </div>
-              ) : loadError ? (
-                <div className="text-center max-w-md px-4">
-                  <div className="bg-red-100 text-red-700 p-3 rounded-md mb-2">
-                    <p className="font-semibold">Error loading PDF</p>
-                    <p className="text-sm">{loadError}</p>
-                  </div>
-                  <p className="text-gray-500 text-sm mt-2">
-                    Please upload a PDF document to view it here.
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center max-w-md px-4">
-                  <p className="text-gray-500 mb-4">No PDF document loaded</p>
-                  <p className="text-sm text-gray-400">
-                    Upload a PDF document to view it here
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+            </Button
