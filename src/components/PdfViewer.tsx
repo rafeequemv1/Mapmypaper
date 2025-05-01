@@ -6,7 +6,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { getCurrentPdfData } from "@/utils/pdfStorage";
+import { getPdfData, getCurrentPdf } from "@/utils/pdfStorage";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -45,15 +45,29 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
-        const data = await getCurrentPdfData();
         
-        if (data) {
-          setPdfData(data);
-          console.log("PDF data loaded successfully from IndexedDB");
+        // First, get the current PDF key
+        const currentPdfKey = getCurrentPdf();
+        
+        if (currentPdfKey) {
+          // Then get the actual PDF data using the key
+          const data = await getPdfData(currentPdfKey);
+          
+          if (data) {
+            setPdfData(data);
+            console.log("PDF data loaded successfully from IndexedDB");
+          } else {
+            setLoadError("No PDF found. Please upload a PDF document first.");
+            toast({
+              title: "No PDF Found",
+              description: "Please upload a PDF document first.",
+              variant: "destructive",
+            });
+          }
         } else {
-          setLoadError("No PDF found. Please upload a PDF document first.");
+          setLoadError("No PDF selected. Please upload a PDF document first.");
           toast({
-            title: "No PDF Found",
+            title: "No PDF Selected",
             description: "Please upload a PDF document first.",
             variant: "destructive",
           });

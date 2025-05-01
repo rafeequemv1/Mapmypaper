@@ -9,6 +9,7 @@ import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { getAllPdfs } from "@/components/PdfTabs";
+import { getPdfText } from "@/utils/pdfStorage";
 
 // Define a flexible interface to handle different document types
 interface Summary {
@@ -60,10 +61,26 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
 
   // Generate summary from PDF
   const generateSummary = async () => {
+    if (!pdfKey) {
+      toast({
+        title: "Error",
+        description: "No PDF selected for summary generation",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      // Update the call to match the function signature (no arguments)
-      const result = await generateStructuredSummary();
+      // Get PDF text first
+      const pdfText = await getPdfText(pdfKey);
+      
+      if (!pdfText) {
+        throw new Error("Could not extract text from the PDF");
+      }
+      
+      // Then generate the summary by passing the PDF text
+      const result = await generateStructuredSummary(pdfText);
       
       // Try to detect the document type from the result keys
       if (result["Key Findings"] && result["Methods"]) {
