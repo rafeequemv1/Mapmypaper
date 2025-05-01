@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -21,6 +22,7 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
+  onTextSelected: (text: string) => void; // Added the missing prop
   activePdfKey: string | null;
   onActivePdfKeyChange: (key: string | null) => void;
 }
