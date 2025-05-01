@@ -4,11 +4,12 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Access your API key as an environment variable
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
 
+// Updated model names for the current API version
 // Gemini Pro Vision model
-const modelVision = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+const modelVision = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
 
 // Gemini Pro model (text-only)
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 // Function to get the Gemini Pro model
 const getGeminiModel = async () => {
