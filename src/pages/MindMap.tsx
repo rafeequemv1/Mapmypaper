@@ -12,6 +12,7 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
+  const [explainImage, setExplainImage] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [showMermaid, setShowMermaid] = useState(false);
   const location = useLocation();
@@ -41,6 +42,16 @@ const MindMap = () => {
     }
   }, [showChat]);
 
+  // Handle image capture from PDF
+  const handleImageCaptured = useCallback((imageData: string) => {
+    if (imageData) {
+      setExplainImage(imageData);
+      if (!showChat) {
+        setShowChat(true);
+      }
+    }
+  }, [showChat]);
+
   // Listen for text selection events that should activate chat
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
@@ -56,6 +67,24 @@ const MindMap = () => {
     
     return () => {
       window.removeEventListener('openChatWithText', handleTextSelected as EventListener);
+    };
+  }, [showChat]);
+
+  // Listen for image capture events that should activate chat
+  useEffect(() => {
+    const handleImageCaptured = (e: CustomEvent) => {
+      if (e.detail?.imageData) {
+        setExplainImage(e.detail.imageData);
+        if (!showChat) {
+          setShowChat(true);
+        }
+      }
+    };
+    
+    window.addEventListener('openChatWithImage', handleImageCaptured as EventListener);
+    
+    return () => {
+      window.removeEventListener('openChatWithImage', handleImageCaptured as EventListener);
     };
   }, [showChat]);
 
@@ -99,8 +128,10 @@ const MindMap = () => {
         togglePdf={() => setShowPdf(!showPdf)}
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
+        explainImage={explainImage}
         onExplainText={setExplainText}
         onTextSelected={handleTextSelected}
+        onImageCaptured={handleImageCaptured}
         activePdfKey={activePdfKey}
         onActivePdfKeyChange={setActivePdfKey}
       />

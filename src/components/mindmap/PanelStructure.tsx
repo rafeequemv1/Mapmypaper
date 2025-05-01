@@ -21,8 +21,10 @@ interface PanelStructureProps {
   togglePdf: () => void;
   onMindMapReady: any;
   explainText: string;
+  explainImage?: string | null;
   onExplainText: (text: string) => void;
-  onTextSelected: (text: string) => void; // Added the missing prop
+  onTextSelected: (text: string) => void;
+  onImageCaptured?: (imageData: string) => void;
   activePdfKey: string | null;
   onActivePdfKeyChange: (key: string | null) => void;
 }
@@ -36,7 +38,9 @@ const PanelStructure = ({
   togglePdf,
   onMindMapReady,
   explainText,
+  explainImage,
   onExplainText,
+  onImageCaptured,
   activePdfKey,
   onActivePdfKeyChange,
 }: PanelStructureProps) => {
@@ -250,6 +254,18 @@ const PanelStructure = ({
     };
   }, [showChat, toggleChat, onExplainText]);
 
+  // Handle area image capture
+  const handlePdfAreaCaptured = (imageData: string) => {
+    if (onImageCaptured) {
+      onImageCaptured(imageData);
+    }
+    
+    // If chat is not showing, toggle it on
+    if (!showChat) {
+      toggleChat();
+    }
+  };
+
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
       try {
@@ -330,6 +346,7 @@ const PanelStructure = ({
               <PdfViewer 
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
+                onImageCaptured={handlePdfAreaCaptured}
               />
             </TooltipProvider>
           </div>
@@ -350,6 +367,7 @@ const PanelStructure = ({
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}
+              explainImage={explainImage}
               onExplainText={onExplainText}
               onScrollToPdfPosition={handleScrollToPdfPosition}
               onPdfPlusClick={handlePlusClick}
