@@ -2,7 +2,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
 
 // Gemini Pro Vision model
 const modelVision = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
@@ -12,8 +12,8 @@ const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 // Function to get the Gemini Pro model
 const getGeminiModel = async () => {
-  if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-    throw new Error("Gemini API key is missing. Please set the NEXT_PUBLIC_GEMINI_API_KEY environment variable.");
+  if (!import.meta.env.VITE_GEMINI_API_KEY) {
+    throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
   }
   return model;
 };
