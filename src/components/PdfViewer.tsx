@@ -108,6 +108,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    
     // Initial load
     useEffect(() => {
       loadPdfData();
@@ -134,6 +135,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, [toast]);
 
+    
     // Handle text selection in the PDF
     useEffect(() => {
       const handleSelection = () => {
@@ -201,6 +203,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
+    
     // Function to handle explanation request
     const handleExplainText = () => {
       if (selectedText && onTextSelected) {
@@ -281,7 +284,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               fill: 'rgba(0, 123, 255, 0.2)',
               stroke: 'rgba(0, 123, 255, 0.8)',
               strokeWidth: 2,
-              strokeDashArray: [5, 5],
+              strokeDashArray: [5, 5],\
               selectable: false,
               evented: false,
             });
@@ -558,7 +561,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       
       // Remove duplicates
       const uniqueResults = [...new Set(results)];
-      setSearchResults(uniqueResults);
+      setSearchResults(uniqueResults);\
       
       // Style for the highlights
       const style = document.createElement('style');
@@ -614,7 +617,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Helper function to scroll to position
     const scrollToPosition = (position: string) => {
       if (position.toLowerCase().startsWith('page')) {
-        const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);
+        const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);\
         if (!isNaN(pageNumber) && pageNumber > 0) {
           scrollToPage(pageNumber);
         }
@@ -905,4 +908,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex h-full items-center justify-center flex-col gap-4">
+            <div className="flex h-full items-center justify-
