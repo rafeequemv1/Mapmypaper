@@ -4,7 +4,7 @@ import {
   FileCode,
   MessageSquare,
   FileText,
-  FlowChart,
+  GitBranch, // Changed from FlowChart to GitBranch which exists in lucide-react
 } from "lucide-react";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
@@ -53,7 +53,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
     />
     <HeaderSidebarIcon
       onClick={() => setShowMermaid(true)}
-      icon={<FlowChart className="h-4 w-4" />}
+      icon={<GitBranch className="h-4 w-4" />}
       title="Show Document Flowchart"
     />
     <HeaderExportMenu

@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable
@@ -55,6 +56,104 @@ export const analyzeImageWithGemini = async (imageBase64: string): Promise<strin
   } catch (error) {
     console.error("Error in analyzeImageWithGemini:", error);
     throw error;
+  }
+};
+
+/**
+ * Generates a mind map structure from the extracted PDF text
+ * @param pdfText The text extracted from the PDF
+ * @returns A JSON structure representing the mind map
+ */
+export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
+  try {
+    // We'll use the first 10000 characters only to avoid token limits
+    const truncatedText = pdfText.slice(0, 10000);
+    
+    const prompt = `
+      Based on the following text from a research document, create a mind map structure in JSON format.
+      Focus on identifying the main topics, key concepts, and their relationships.
+      
+      Document text excerpt:
+      ${truncatedText}
+      
+      Return ONLY the JSON without any explanation or formatting.
+      The JSON should have this structure:
+      {
+        "root": {
+          "topic": "Main Topic",
+          "children": [
+            {
+              "topic": "Subtopic 1",
+              "children": [
+                {"topic": "Point 1.1"},
+                {"topic": "Point 1.2"}
+              ]
+            },
+            {
+              "topic": "Subtopic 2",
+              "children": []
+            }
+          ]
+        }
+      }
+    `;
+    
+    const model = await getGeminiModel();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const jsonText = response.text();
+    
+    try {
+      return JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error("Failed to parse JSON from Gemini response:", parseError);
+      return {
+        root: {
+          topic: "Document Structure",
+          children: [
+            { topic: "Unable to parse document structure" }
+          ]
+        }
+      };
+    }
+  } catch (error) {
+    console.error("Error generating mind map from text:", error);
+    throw new Error("Failed to generate mind map from text");
+  }
+};
+
+/**
+ * Generates a structured summary from the extracted PDF text
+ * @param pdfText The text extracted from the PDF
+ * @returns A structured summary of the document
+ */
+export const generateStructuredSummary = async (pdfText: string): Promise<any> => {
+  try {
+    // We'll use the first 10000 characters only to avoid token limits
+    const truncatedText = pdfText.slice(0, 10000);
+    
+    const prompt = `
+      Based on the following text from a research document, create a structured summary.
+      Include the following sections:
+      - Key Findings
+      - Main Arguments
+      - Methodology
+      - Conclusions
+      - Limitations (if mentioned)
+      
+      Document text excerpt:
+      ${truncatedText}
+      
+      Format the response with markdown headings for each section.
+    `;
+    
+    const model = await getGeminiModel();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error generating structured summary:", error);
+    throw new Error("Failed to generate structured summary from text");
   }
 };
 
