@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -108,7 +109,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    
     // Initial load
     useEffect(() => {
       loadPdfData();
@@ -134,7 +134,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         window.removeEventListener('pdfSwitched', handlePdfSwitch);
       };
     }, [toast]);
-
     
     // Handle text selection in the PDF
     useEffect(() => {
@@ -202,7 +201,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }, []);
-
     
     // Function to handle explanation request
     const handleExplainText = () => {
@@ -284,7 +282,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               fill: 'rgba(0, 123, 255, 0.2)',
               stroke: 'rgba(0, 123, 255, 0.8)',
               strokeWidth: 2,
-              strokeDashArray: [5, 5],\
+              strokeDashArray: [5, 5],
               selectable: false,
               evented: false,
             });
@@ -561,7 +559,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       
       // Remove duplicates
       const uniqueResults = [...new Set(results)];
-      setSearchResults(uniqueResults);\
+      setSearchResults(uniqueResults);
       
       // Style for the highlights
       const style = document.createElement('style');
@@ -617,7 +615,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Helper function to scroll to position
     const scrollToPosition = (position: string) => {
       if (position.toLowerCase().startsWith('page')) {
-        const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);\
+        const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);
         if (!isNaN(pageNumber) && pageNumber > 0) {
           scrollToPage(pageNumber);
         }
@@ -908,4 +906,67 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex h-full items-center justify-
+            <div className="flex h-full items-center justify-center flex-col gap-4">
+              <div className="text-center max-w-md p-6">
+                <h3 className="text-lg font-medium mb-2">No PDF Document Loaded</h3>
+                <p className="text-gray-600 mb-4">
+                  Please upload a PDF document from the upload page or select one from your existing documents.
+                </p>
+                <div className="text-sm text-gray-500">
+                  Supported formats: PDF documents
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Text selection tooltip */}
+        {showTextTooltip && selectionPosition && (
+          <div
+            ref={tooltipRef}
+            className="absolute bg-white shadow-lg rounded-md border border-gray-200 p-2 z-50"
+            style={{
+              left: `${selectionPosition.x}px`,
+              top: `${selectionPosition.y}px`,
+              transform: 'translate(-50%, -100%)',
+            }}
+          >
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleExplainText}
+              className="text-xs"
+            >
+              Explain in Chat
+            </Button>
+          </div>
+        )}
+        
+        {/* Area selection tooltip */}
+        {showAreaTooltip && areaTooltipPosition && (
+          <div
+            className="absolute bg-white shadow-lg rounded-md border border-gray-200 p-2 z-50"
+            style={{
+              left: `${areaTooltipPosition.x}px`,
+              top: `${areaTooltipPosition.y}px`,
+              transform: 'translate(-50%, -120%)',
+            }}
+          >
+            <Button
+              variant="default"
+              size="sm"
+              onClick={captureSelectedArea}
+              className="text-xs"
+            >
+              Analyze Image in Chat
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
