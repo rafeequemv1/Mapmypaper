@@ -64,7 +64,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const selectionRectRef = useRef<fabric.Rect | null>(null);
     const activePdfPageRef = useRef<number | null>(null);
 
-    // Load PDF data from IndexedDB when active PDF changes
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
@@ -405,7 +404,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           setShowAreaTooltip(false);
         }
       };
-    }, [isSelectionMode]); // Removed pdfContainerRef.current from dependencies
+    }, [isSelectionMode]);
 
     // Function to capture the selected area as image
     const captureSelectedArea = () => {
@@ -794,6 +793,53 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         });
       }
     };
+    
+    // Render text selection tooltip
+    const renderTextSelectionTooltip = () => {
+      if (!showTextTooltip || !selectionPosition) return null;
+      
+      return (
+        <div
+          ref={tooltipRef}
+          className="absolute bg-white rounded-md shadow-lg border border-gray-200 z-50 p-2"
+          style={{
+            left: `${selectionPosition.x}px`,
+            top: `${selectionPosition.y - 40}px`,
+            transform: 'translate(-50%, 0)'
+          }}
+        >
+          <button 
+            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+            onClick={handleExplainText}
+          >
+            Explain This Text
+          </button>
+        </div>
+      );
+    };
+    
+    // Render area selection tooltip
+    const renderAreaSelectionTooltip = () => {
+      if (!showAreaTooltip || !areaTooltipPosition) return null;
+      
+      return (
+        <div
+          className="absolute bg-white rounded-md shadow-lg border border-gray-200 z-50 p-2"
+          style={{
+            left: `${areaTooltipPosition.x}px`,
+            top: `${areaTooltipPosition.y - 40}px`,
+            transform: 'translate(-50%, 0)'
+          }}
+        >
+          <button 
+            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+            onClick={captureSelectedArea}
+          >
+            Capture This Area
+          </button>
+        </div>
+      );
+    };
 
     // PDF Toolbar (make even more compact)
     return (
@@ -863,52 +909,3 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             className={`h-6 px-1 text-black flex items-center gap-0.5 ${isSelectionMode ? 'bg-gray-200' : ''}`}
             onClick={toggleSelectionMode}
             title="Select Area"
-          >
-            <Crop className="h-3 w-3" />
-            <span className="text-xs">Select Area</span>
-          </Button>
-          
-          {/* Search Navigation */}
-          {searchResults.length > 0 && (
-            <div className="flex items-center gap-1">
-              <span className="text-xs">
-                {currentSearchIndex + 1} of {searchResults.length}
-              </span>
-              <div className="flex gap-0.5">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-1 text-black"
-                  onClick={() => navigateSearch('prev')}
-                >
-                  ←
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-1 text-black"
-                  onClick={() => navigateSearch('next')}
-                >
-                  →
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* PDF Content */}
-        <div className="relative flex-1">
-          {pdfData ? (
-            <ScrollArea className="flex-1" ref={pdfContainerRef}>
-              <div 
-                className="flex flex-col items-center py-4 relative"
-              >
-                
-                <Document
-                  file={pdfData}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  className="w-full"
-                  loading={<div className="text-center py-4">Loading PDF...</div>}
-                  error={
-                    <div className="text-center py-4 text-red-500">
-                      {load
