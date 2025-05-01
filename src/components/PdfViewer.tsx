@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -909,3 +910,115 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             className={`h-6 px-1 text-black flex items-center gap-0.5 ${isSelectionMode ? 'bg-gray-200' : ''}`}
             onClick={toggleSelectionMode}
             title="Select Area"
+          >
+            <Crop className="h-3 w-3" />
+            <span className="text-xs">Select Area</span>
+          </Button>
+          
+          {/* Search Navigation */}
+          {searchResults.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-xs">
+                {currentSearchIndex + 1} of {searchResults.length}
+              </span>
+              <div className="flex gap-0.5">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-1 text-black"
+                  onClick={() => navigateSearch('prev')}
+                >
+                  ←
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-1 text-black"
+                  onClick={() => navigateSearch('next')}
+                >
+                  →
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* PDF Content */}
+        <div className="relative flex-1">
+          {/* Text selection tooltip */}
+          {renderTextSelectionTooltip()}
+          
+          {/* Area selection tooltip */}
+          {renderAreaSelectionTooltip()}
+          
+          {pdfData ? (
+            <ScrollArea className="flex-1" ref={pdfContainerRef}>
+              <div className="flex flex-col items-center py-4 relative">
+                <Document
+                  file={pdfData}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  className="w-full"
+                  loading={<div className="text-center py-4">Loading PDF...</div>}
+                  error={
+                    <div className="text-center py-4 text-red-500">
+                      {loadError || "Failed to load PDF document"}
+                    </div>
+                  }
+                >
+                  {Array.from(new Array(numPages), (_, index) => (
+                    <div 
+                      key={`page_${index + 1}`} 
+                      ref={setPageRef(index)}
+                      className="mb-4 shadow-md relative border border-gray-300"
+                      data-page-number={index + 1}
+                    >
+                      <Page
+                        pageNumber={index + 1}
+                        width={getOptimalPageWidth()}
+                        scale={scale}
+                        onRenderSuccess={onPageRenderSuccess}
+                        className="border-gray-300"
+                        renderAnnotationLayer
+                        renderTextLayer
+                      />
+                    </div>
+                  ))}
+                </Document>
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              {isLoading ? (
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                  <p className="text-gray-500">Loading PDF document...</p>
+                </div>
+              ) : loadError ? (
+                <div className="text-center max-w-md px-4">
+                  <div className="bg-red-100 text-red-700 p-3 rounded-md mb-2">
+                    <p className="font-semibold">Error loading PDF</p>
+                    <p className="text-sm">{loadError}</p>
+                  </div>
+                  <p className="text-gray-500 text-sm mt-2">
+                    Please upload a PDF document to view it here.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center max-w-md px-4">
+                  <p className="text-gray-500 mb-4">No PDF document loaded</p>
+                  <p className="text-sm text-gray-400">
+                    Upload a PDF document to view it here
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
