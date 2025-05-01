@@ -74,7 +74,7 @@ const ApiTroubleshooter: React.FC<ApiTroubleshooterProps> = ({
           </div>
 
           {testStatus === 'success' && (
-            <Alert variant="success" className="bg-green-50 border-green-200">
+            <Alert variant="success">
               <CheckCircle className="h-4 w-4" />
               <AlertTitle>Connection successful</AlertTitle>
               <AlertDescription>
