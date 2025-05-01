@@ -66,6 +66,13 @@ export const analyzeImageWithGemini = async (imageBase64: string): Promise<strin
  */
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
+    if (!pdfText || typeof pdfText !== 'string') {
+      console.error("Invalid PDF text provided:", pdfText);
+      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
+    }
+    
+    console.log(`Processing PDF text length: ${pdfText.length} characters`);
+    
     // We'll use the first 10000 characters only to avoid token limits
     const truncatedText = pdfText.slice(0, 10000);
     
@@ -76,7 +83,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       Document text excerpt:
       ${truncatedText}
       
-      Return ONLY the JSON without any explanation or formatting.
+      Return ONLY valid JSON without any explanation or formatting.
       The JSON should have this structure:
       {
         "root": {
@@ -98,15 +105,30 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       }
     `;
     
-    const model = await getGeminiModel();
-    const result = await model.generateContent(prompt);
+    console.log("Sending request to Gemini API...");
+    const geminiModel = await getGeminiModel();
+    const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
     const jsonText = response.text();
     
+    console.log("Received response from Gemini API, parsing JSON...");
+    
     try {
-      return JSON.parse(jsonText);
+      // Try to clean the JSON text by removing any markdown formatting
+      let cleanedJsonText = jsonText;
+      // Remove markdown code block syntax if present
+      cleanedJsonText = cleanedJsonText.replace(/```(json)?|```/g, '');
+      // Trim whitespace
+      cleanedJsonText = cleanedJsonText.trim();
+      
+      const parsedJson = JSON.parse(cleanedJsonText);
+      console.log("Successfully parsed JSON response");
+      return parsedJson;
     } catch (parseError) {
       console.error("Failed to parse JSON from Gemini response:", parseError);
+      console.log("Raw response:", jsonText);
+      
+      // Return a fallback mind map structure
       return {
         root: {
           topic: "Document Structure",
@@ -118,7 +140,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     }
   } catch (error) {
     console.error("Error generating mind map from text:", error);
-    throw new Error("Failed to generate mind map from text");
+    throw new Error(`Failed to generate mind map from text: ${error.message}`);
   }
 };
 
@@ -129,6 +151,11 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
  */
 export const generateStructuredSummary = async (pdfText: string): Promise<any> => {
   try {
+    if (!pdfText || typeof pdfText !== 'string') {
+      console.error("Invalid PDF text provided:", pdfText);
+      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
+    }
+    
     // We'll use the first 10000 characters only to avoid token limits
     const truncatedText = pdfText.slice(0, 10000);
     
@@ -147,13 +174,13 @@ export const generateStructuredSummary = async (pdfText: string): Promise<any> =
       Format the response with markdown headings for each section.
     `;
     
-    const model = await getGeminiModel();
-    const result = await model.generateContent(prompt);
+    const geminiModel = await getGeminiModel();
+    const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
     return response.text();
   } catch (error) {
     console.error("Error generating structured summary:", error);
-    throw new Error("Failed to generate structured summary from text");
+    throw new Error(`Failed to generate structured summary from text: ${error.message}`);
   }
 };
 
@@ -164,6 +191,11 @@ export const generateStructuredSummary = async (pdfText: string): Promise<any> =
  */
 export const generateFlowchartFromText = async (pdfText: string): Promise<string> => {
   try {
+    if (!pdfText || typeof pdfText !== 'string') {
+      console.error("Invalid PDF text provided:", pdfText);
+      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
+    }
+    
     // We'll use the first 10000 characters only to avoid token limits
     const truncatedText = pdfText.slice(0, 10000);
     
@@ -182,8 +214,8 @@ export const generateFlowchartFromText = async (pdfText: string): Promise<string
       Return ONLY the mermaid syntax without any explanation or markdown code formatting.
     `;
     
-    const model = await getGeminiModel();
-    const result = await model.generateContent(prompt);
+    const geminiModel = await getGeminiModel();
+    const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
     const flowchartSyntax = response.text();
     
@@ -191,6 +223,6 @@ export const generateFlowchartFromText = async (pdfText: string): Promise<string
     return flowchartSyntax.replace(/```mermaid|```/g, '').trim();
   } catch (error) {
     console.error("Error generating flowchart from text:", error);
-    throw new Error("Failed to generate flowchart from text");
+    throw new Error(`Failed to generate flowchart from text: ${error.message}`);
   }
 };
