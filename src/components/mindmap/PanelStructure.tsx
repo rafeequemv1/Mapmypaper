@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -42,6 +41,7 @@ const PanelStructure = ({
   explainText,
   explainImage,
   onExplainText,
+  onTextSelected,
   onImageCaptured,
   activePdfKey,
   onActivePdfKeyChange,
@@ -512,16 +512,10 @@ const PanelStructure = ({
                 if (retryCount === 0) {
                   toast({
                     title: "Mind Map Error",
-                    description: (
-                      <div className="flex flex-col gap-2">
-                        <span>Failed to load mind map.</span>
-                        <Button size="sm" onClick={handleRetryMindMap} variant="outline">
-                          Retry Mind Map Generation
-                        </Button>
-                      </div>
-                    ),
+                    description: "Failed to load mind map. Try regenerating it.",
                     duration: 5000,
                   });
+                  handleRetryMindMap();
                 }
               }}
             />
