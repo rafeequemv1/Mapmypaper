@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -748,4 +749,24 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           {showSummary && (
             <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 text-sm max-h-[300px] overflow-auto">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Mind Map
+                <h3 className="font-semibold text-gray-900">Mind Map Summary</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSummary(false)}
+                >
+                  Close
+                </Button>
+              </div>
+              <div className="prose prose-sm max-w-none">
+                <pre className="whitespace-pre-wrap">{summary}</pre>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
