@@ -886,9 +886,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         <div className="relative flex-1">
           {pdfData ? (
             <ScrollArea className="flex-1" ref={pdfContainerRef}>
-              <div 
-                className="flex flex-col items-center py-4 relative"
-              >
+              <div className="flex flex-col items-center py-4 relative">
                 <Document
                   file={pdfData}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -910,4 +908,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     >
                       <Page
                         pageNumber={index + 1}
-                        renderTextLayer={true
+                        renderTextLayer={true}
