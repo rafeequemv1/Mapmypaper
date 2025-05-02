@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -437,8 +436,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         }
         
         // Set the temp canvas dimensions to the selection dimensions
-        tempCanvas.width = rect.width as number;
-        tempCanvas.height = rect.height as number;
+        tempCanvas.width = Math.abs(rect.width as number);
+        tempCanvas.height = Math.abs(rect.height as number);
         
         // Find the PDF page that contains our selection
         const pdfPages = document.querySelectorAll('[data-page-number]');
@@ -457,34 +456,60 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           return;
         }
         
-        // Calculate the offset of the PDF page relative to the viewport
+        // Get all necessary measurements
         const pageRect = targetPage.getBoundingClientRect();
         const scrollContainer = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
         const scrollTop = scrollContainer?.scrollTop || 0;
+        const scrollLeft = scrollContainer?.scrollLeft || 0;
+        const viewportRect = scrollContainer?.getBoundingClientRect() || { left: 0, top: 0 };
         
-        // Convert page element to image
+        // Convert page element to image with properly calculated offsets
         html2canvas(targetPage as HTMLElement, {
           backgroundColor: null,
-          scale: window.devicePixelRatio, // Use device pixel ratio for better quality
+          scale: window.devicePixelRatio,
           useCORS: true,
+          // Handle scroll position
+          scrollX: -scrollLeft,
+          scrollY: -scrollTop
         }).then(pageCanvas => {
-          // Calculate the offset within the page
-          const canvasOffset = {
-            x: rect.left! - (pageRect.left - (scrollContainer?.getBoundingClientRect().left || 0)),
-            y: rect.top! - (pageRect.top - scrollTop)
-          };
+          // Calculate the correct position on the page
+          // We need to account for the page position, scroll position, and device pixel ratio
+          const rectLeft = Math.min(rect.left!, rect.left! + rect.width!);
+          const rectTop = Math.min(rect.top!, rect.top! + rect.height!);
+          
+          // Calculate exact position where to start copying from the source image
+          // Need to account for the page's position relative to the viewport and scroll
+          const sourceX = (rectLeft - (pageRect.left - viewportRect.left) + scrollLeft) * window.devicePixelRatio;
+          const sourceY = (rectTop - (pageRect.top - viewportRect.top) + scrollTop) * window.devicePixelRatio;
+          
+          // Log debugging info
+          console.log('Capture details:', {
+            rectLeft, 
+            rectTop,
+            rectWidth: Math.abs(rect.width!),
+            rectHeight: Math.abs(rect.height!),
+            pageRectLeft: pageRect.left,
+            pageRectTop: pageRect.top,
+            viewportRectLeft: viewportRect.left,
+            viewportRectTop: viewportRect.top,
+            scrollTop,
+            scrollLeft,
+            sourceX,
+            sourceY,
+            devicePixelRatio: window.devicePixelRatio
+          });
           
           // Draw only the selected portion to our temp canvas
           ctx.drawImage(
-            pageCanvas, 
-            canvasOffset.x * window.devicePixelRatio, 
-            canvasOffset.y * window.devicePixelRatio, 
-            rect.width! * window.devicePixelRatio, 
-            rect.height! * window.devicePixelRatio,
-            0, 
-            0, 
-            rect.width as number, 
-            rect.height as number
+            pageCanvas,
+            sourceX,
+            sourceY,
+            Math.abs(rect.width!) * window.devicePixelRatio,
+            Math.abs(rect.height!) * window.devicePixelRatio,
+            0,
+            0,
+            Math.abs(rect.width as number),
+            Math.abs(rect.height as number)
           );
           
           // Convert to data URL
@@ -882,123 +907,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 variant="ghost" 
                 size="sm" 
                 className="h-6 flex items-center gap-0.5 text-black px-1"
-                onClick={handleSearch}
-              >
-                <Search className="h-3 w-3" />
-                <span className="text-xs">Search</span>
-              </Button>
-            </div>
-          </div>
-          
-          {/* Area Selection Button */}
-          <Button 
-            variant={isSelectionMode ? "secondary" : "ghost"}
-            size="sm" 
-            className={`h-6 px-1 text-black flex items-center gap-0.5 ${isSelectionMode ? 'bg-gray-200' : ''}`}
-            onClick={toggleSelectionMode}
-            title="Select Area"
-          >
-            <Crop className="h-3 w-3" />
-            <span className="text-xs">Select Area</span>
-          </Button>
-          
-          {/* Search Navigation */}
-          {searchResults.length > 0 && (
-            <div className="flex items-center gap-1">
-              <span className="text-xs">
-                {currentSearchIndex + 1} of {searchResults.length}
-              </span>
-              <div className="flex gap-0.5">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-1 text-black"
-                  onClick={() => navigateSearch('prev')}
-                >
-                  ←
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-1 text-black"
-                  onClick={() => navigateSearch('next')}
-                >
-                  →
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* PDF Content */}
-        <div className="relative flex-1">
-          {pdfData ? (
-            <ScrollArea className="flex-1" ref={pdfContainerRef}>
-              <div className="flex flex-col items-center py-4 relative">
-                <Document
-                  file={pdfData}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  className="w-full"
-                  loading={<div className="text-center py-4">Loading PDF...</div>}
-                  error={
-                    <div className="text-center py-4 text-red-500">
-                      {loadError || "Failed to load PDF. Please try again."}
-                    </div>
-                  }
-                >
-                  {Array.from(new Array(numPages), (_, index) => (
-                    <div
-                      key={`page_${index + 1}`}
-                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                      ref={setPageRef(index)}
-                      style={{ width: 'fit-content', maxWidth: '100%' }}
-                      data-page-number={index + 1}
-                    >
-                      <Page
-                        pageNumber={index + 1}
-                        renderTextLayer={true}
-                        width={getOptimalPageWidth()}
-                        scale={scale}
-                        onRenderSuccess={onPageRenderSuccess}
-                      />
-                    </div>
-                  ))}
-                </Document>
-              </div>
-            </ScrollArea>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-lg text-gray-600 mb-2">No PDF loaded</p>
-                <p className="text-sm text-gray-500">Please upload or select a PDF document.</p>
-              </div>
-            </div>
-          )}
-          
-          {/* Tooltips */}
-          <TextSelectionTooltip />
-          <AreaSelectionTooltip />
-          
-          {/* Custom tooltip for text selection */}
-          {showTextTooltip && selectionPosition && renderTooltipContent && (
-            <div
-              ref={textTooltipRef}
-              className="absolute bg-white shadow-lg rounded-lg p-2 z-50"
-              style={{
-                left: `${selectionPosition.x}px`,
-                top: `${selectionPosition.y}px`,
-                transform: "translate(-50%, -100%)"
-              }}
-            >
-              {renderTooltipContent()}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+                onClick={handleSearch
