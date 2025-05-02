@@ -161,7 +161,8 @@ const MindMap = () => {
   }, [location]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex overflow-hidden">
+      {/* Vertical sidebar with icons */}
       <Header 
         togglePdf={() => setShowPdf(!showPdf)}
         toggleChat={toggleChat}
@@ -171,58 +172,57 @@ const MindMap = () => {
         isChatActive={showChat}
         mindMap={mindMapInstance}
         apiStatus={apiStatus}
+        className="w-16 z-10"
       />
       
-      {apiStatus === 'error' && (
-        <Alert variant="destructive" className="mx-4 mt-2">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>API Connection Error</AlertTitle>
-          <AlertDescription className="flex justify-between items-center">
-            <span>
-              Failed to connect to Gemini API. Mindmap generation may not work correctly.
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowApiTroubleshooter(true)}
-            >
-              Troubleshoot
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+      <div className="flex-1 relative">
+        {apiStatus === 'error' && (
+          <Alert variant="destructive" className="absolute top-2 left-2 right-2 z-50">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>API Connection Error</AlertTitle>
+            <AlertDescription className="flex justify-between items-center">
+              <span>Failed to connect to Gemini API. Mindmap generation may not work correctly.</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowApiTroubleshooter(true)}
+              >
+                Troubleshoot
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <PanelStructure
+          showPdf={showPdf}
+          showChat={showChat}
+          toggleChat={toggleChat}
+          togglePdf={() => setShowPdf(!showPdf)}
+          onMindMapReady={handleMindMapReady}
+          explainText={explainText}
+          explainImage={explainImage}
+          onExplainText={setExplainText}
+          onTextSelected={handleTextSelected}
+          onImageCaptured={handleImageCaptured}
+          activePdfKey={activePdfKey}
+          onActivePdfKeyChange={setActivePdfKey}
+          onApiStatusChange={setApiStatus}
+        />
+      </div>
       
-      <PanelStructure
-        showPdf={showPdf}
-        showChat={showChat}
-        toggleChat={toggleChat}
-        togglePdf={() => setShowPdf(!showPdf)}
-        onMindMapReady={handleMindMapReady}
-        explainText={explainText}
-        explainImage={explainImage}
-        onExplainText={setExplainText}
-        onTextSelected={handleTextSelected}
-        onImageCaptured={handleImageCaptured}
-        activePdfKey={activePdfKey}
-        onActivePdfKeyChange={setActivePdfKey}
-        onApiStatusChange={setApiStatus}
-      />
-      
-      {/* Modal for Summary */}
+      {/* Modals */}
       <SummaryModal 
         open={showSummary}
         onOpenChange={setShowSummary}
         pdfKey={activePdfKey}
       />
       
-      {/* Modal for Mermaid Flowchart */}
       <MermaidModal 
         open={showMermaid}
         onOpenChange={setShowMermaid}
         pdfKey={activePdfKey}
       />
       
-      {/* API Troubleshooter Modal */}
       <ApiTroubleshooter
         open={showApiTroubleshooter}
         onOpenChange={setShowApiTroubleshooter}

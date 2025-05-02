@@ -1,88 +1,75 @@
 
 import React from "react";
-import {
-  Download,
-  Image,
-  FileJson
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MindElixirInstance } from "mind-elixir";
-import { exportMapToSVG, exportMapToPNG, exportMapToJSON } from "@/lib/export-utils";
-import { useToast } from "@/hooks/use-toast";
+import { exportMarkmap, exportPdf, exportPng, exportSvg } from "@/lib/export-utils";
 
 interface HeaderExportMenuProps {
   mindMap: MindElixirInstance | null;
+  vertical?: boolean;
 }
 
-const HeaderExportMenu: React.FC<HeaderExportMenuProps> = ({ mindMap }) => {
-  const { toast } = useToast();
-  
-  const handleExportSVG = () => {
-    if (!mindMap) {
-      toast({
-        title: "No Mind Map Available",
-        description: "Please upload a PDF document first to create a mind map.",
-        variant: "destructive",
-      });
-      return;
-    }
-    exportMapToSVG(mindMap, "mindmap");
-  };
-
-  const handleExportPNG = () => {
-    if (!mindMap) {
-      toast({
-        title: "No Mind Map Available",
-        description: "Please upload a PDF document first to create a mind map.",
-        variant: "destructive",
-      });
-      return;
-    }
-    exportMapToPNG(mindMap, "mindmap");
-  };
-
-  const handleExportJSON = () => {
-    if (!mindMap) {
-      toast({
-        title: "No Mind Map Available",
-        description: "Please upload a PDF document first to create a mind map.",
-        variant: "destructive",
-      });
-      return;
-    }
-    exportMapToJSON(mindMap, "mindmap");
-  };
+const HeaderExportMenu: React.FC<HeaderExportMenuProps> = ({ mindMap, vertical = false }) => {
+  if (!mindMap) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size={vertical ? "icon" : "default"} disabled className={vertical ? "" : "flex items-center gap-2"}>
+            <Download className="h-5 w-5" />
+            {!vertical && <span>Export</span>}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side={vertical ? "right" : "bottom"}>
+          <p>No mindmap to export</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          className="w-9 h-9 p-0 bg-transparent border-0 cursor-pointer flex items-center justify-center"
-          title="Export"
-        >
-          <Download className="h-4 w-4 text-black" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={handleExportSVG} className="flex items-center gap-2 cursor-pointer">
-          <Image className="h-4 w-4" />
-          <span>Export as SVG</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleExportPNG} className="flex items-center gap-2 cursor-pointer">
-          <Image className="h-4 w-4" />
-          <span>Export as PNG</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleExportJSON} className="flex items-center gap-2 cursor-pointer">
-          <FileJson className="h-4 w-4" />
-          <span>Export as JSON</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size={vertical ? "icon" : "default"} className={vertical ? "" : "flex items-center gap-2"}>
+          <Download className="h-5 w-5" />
+          {!vertical && <span>Export</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48" align={vertical ? "end" : "center"} side={vertical ? "right" : "bottom"}>
+        <div className="grid gap-1">
+          <Button
+            variant="ghost"
+            className="justify-start"
+            onClick={() => exportPng(mindMap)}
+          >
+            Export as PNG
+          </Button>
+          <Button
+            variant="ghost"
+            className="justify-start"
+            onClick={() => exportSvg(mindMap)}
+          >
+            Export as SVG
+          </Button>
+          <Button
+            variant="ghost"
+            className="justify-start"
+            onClick={() => exportPdf(mindMap)}
+          >
+            Export as PDF
+          </Button>
+          <Button
+            variant="ghost"
+            className="justify-start"
+            onClick={() => exportMarkmap(mindMap)}
+          >
+            Export as HTML
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
