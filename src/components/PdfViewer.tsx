@@ -43,7 +43,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
     const [isLoading, setIsLoading] = useState(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
+    const [loadError, setLoadError] = useState<string | null>(null);\
     const [pdfKey, setPdfKey] = useState<string | null>(null);
     const [selectedText, setSelectedText] = useState<string>("");
     const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
@@ -93,7 +93,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             title: "No PDF Selected",
             description: "Please upload a PDF document first.",
             variant: "destructive",
-          });
+            });
         }
       } catch (error) {
         console.error("Error retrieving PDF data:", error);
@@ -281,7 +281,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               fill: 'rgba(0, 123, 255, 0.2)',
               stroke: 'rgba(0, 123, 255, 0.8)',
               strokeWidth: 2,
-              strokeDashArray: [5, 5],
+              strokeDashArray: [5, 5],\
               selectable: false,
               evented: false,
             });
@@ -905,4 +905,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex h-full items-center justify-center flex-col gap-4">
+            <div className="flex h-full items-center justify-center flex-col gap-
