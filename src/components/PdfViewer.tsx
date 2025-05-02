@@ -65,7 +65,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const activePdfPageRef = useRef<number | null>(null);
     const isDrawingRef = useRef<boolean>(false); // Add ref to track drawing state
 
-    // Load PDF data from IndexedDB when active PDF changes
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
@@ -215,7 +214,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Selection Mode Canvas Setup and Cleanup
     useEffect(() => {
       if (isSelectionMode && pdfContainerRef.current && !selectionCanvas) {
         // Create a container for the fabric canvas that covers the entire PDF viewer
@@ -421,7 +419,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, [isSelectionMode, pdfContainerRef.current]);
 
-    // Function to capture the selected area as image
     const captureSelectedArea = () => {
       if (!selectionRectRef.current || !selectionCanvas) return;
       
@@ -532,7 +529,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
       if (!searchQuery.trim()) return;
       
@@ -624,7 +620,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Navigate through search results
     const navigateSearch = (direction: 'next' | 'prev') => {
       if (searchResults.length === 0) return;
       
@@ -645,7 +640,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       scrollToPosition(searchResults[newIndex]);
     };
 
-    // Helper function to scroll to position
     const scrollToPosition = (position: string) => {
       if (position.toLowerCase().startsWith('page')) {
         const pageNumber = parseInt(position.replace(/[^\d]/g, ''), 10);
@@ -655,7 +649,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Enhanced scroll to page functionality with highlighting
     const scrollToPage = (pageNumber: number) => {
       if (pageNumber < 1 || pageNumber > numPages) {
         console.warn(`Invalid page number: ${pageNumber}. Pages range from 1 to ${numPages}`);
@@ -712,7 +705,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Expose the scrollToPage method to parent components
     useImperativeHandle(ref, () => ({
       scrollToPage
     }), [numPages]);
@@ -734,7 +726,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, [numPages]);
 
-    // Handle document loaded
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
       setNumPages(numPages);
       // Initialize the array with the correct number of null elements
@@ -745,24 +736,20 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       setLoadError(null);
     };
 
-    // Handle page render success to adjust container height
     const onPageRenderSuccess = (page: any) => {
       setPageHeight(page.height);
     };
 
-    // Set page ref - use a stable callback that doesn't cause re-renders
     const setPageRef = (index: number) => (element: HTMLDivElement | null) => {
       if (pagesRef.current && index >= 0 && index < pagesRef.current.length) {
         pagesRef.current[index] = element;
       }
     };
 
-    // Zoom handlers
     const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
 
-    // Calculate optimal width for PDF pages
     const getOptimalPageWidth = () => {
       if (!pdfContainerRef.current) return undefined;
       
@@ -771,7 +758,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
-    // Toggle selection mode
     const toggleSelectionMode = () => {
       setIsSelectionMode(!isSelectionMode);
       
@@ -903,7 +889,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               <div 
                 className="flex flex-col items-center py-4 relative"
               >
-                
                 <Document
                   file={pdfData}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -912,3 +897,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   error={
                     <div className="text-center py-4 text-red-500">
                       {loadError || "Failed to load PDF. Please try again."}
+                    </div>
+                  }
+                >
+                  {Array.from(new Array(numPages), (_, index) => (
+                    <div
+                      key={`page_${index + 1}`}
+                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
+                      ref={setPageRef(index)}
+                      style={{ width: 'fit-content', maxWidth: '100%' }}
+                      data-page-number={index + 1}
+                    >
+                      <Page
+                        pageNumber={index + 1}
+                        renderTextLayer={true
