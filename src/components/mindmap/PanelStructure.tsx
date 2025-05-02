@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -343,10 +342,12 @@ const PanelStructure = ({
               onAddPdf={handlePlusClick} // The plus
             />
             <TooltipProvider>
-              <PdfViewer 
-                ref={pdfViewerRef}
+              <PdfViewer
+                pdfUrl=""
                 onTextSelected={onExplainText}
                 onImageCaptured={handlePdfAreaCaptured}
+                activePdfKey={activePdfKey}
+                onActivePdfKeyChange={onActivePdfKeyChange}
               />
             </TooltipProvider>
           </div>

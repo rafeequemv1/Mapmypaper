@@ -1,20 +1,11 @@
+
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Maximize2,
-  Minimize2,
-  Download,
-  RotateCw,
-  Selection,
-  X,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Maximize2, Minimize2, Download, RotateCw, Crop } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import html2canvas from 'html2canvas';
 import { useResizeDetector } from 'react-resize-detector';
@@ -27,17 +18,11 @@ interface PdfViewerProps {
   pdfUrl: string;
   onTextSelected?: (text: string) => void;
   onImageCaptured?: (imageData: string) => void;
-  activePdfKey: string;
+  activePdfKey: string | null;
   onActivePdfKeyChange: (key: string) => void;
 }
 
-const PdfViewer = ({ 
-  pdfUrl, 
-  onTextSelected, 
-  onImageCaptured,
-  activePdfKey,
-  onActivePdfKeyChange
-}: PdfViewerProps) => {
+const PdfViewer = ({ pdfUrl, onTextSelected, onImageCaptured, activePdfKey, onActivePdfKeyChange }: PdfViewerProps) => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
@@ -82,7 +67,10 @@ const PdfViewer = ({
   const activePdfPageRef = useRef<number | null>(null);
   const [selectionCanvas, setSelectionCanvas] = useState<HTMLCanvasElement | null>(null);
   const { toast } = useToast();
-  const { width, height } = useResizeDetector({ refreshMode: 'debounce', refreshRate: 250 });
+  const { width, height } = useResizeDetector({ 
+    refreshMode: 'debounce', 
+    refreshRate: 250 
+  });
   
   // Load PDF document
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -568,7 +556,7 @@ const PdfViewer = ({
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" onClick={startAreaSelection} disabled={isLoading}>
-                  <Selection className="h-4 w-4" />
+                  <Crop className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" align="center">
@@ -632,8 +620,16 @@ const PdfViewer = ({
                   onRenderSuccess={handleTextLayerRendered}
                   renderTextLayer={true}
                   renderAnnotationLayer={false}
-                  onTextSelection={handleTextSelection}
                   data-page-number={pageNumber}
+                  onLoadSuccess={(page) => {
+                    // Handle any text selection events here
+                    const textLayer = page.textLayer?.textLayerDiv;
+                    if (textLayer) {
+                      textLayer.addEventListener('mouseup', () => {
+                        handleTextSelection();
+                      });
+                    }
+                  }}
                 />
               </Document>
               
