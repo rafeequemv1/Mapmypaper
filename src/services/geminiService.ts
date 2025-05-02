@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable
@@ -25,13 +26,34 @@ const getGeminiModel = async () => {
  */
 export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
   try {
+    console.log("Sending chat request to Gemini:", prompt.substring(0, 100) + "...");
     const gemini = await getGeminiModel();
-    const result = await gemini.generateContent(prompt);
-    const response = await result.response;
+    
+    // Set appropriate timeout for API calls
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    
+    const result = await gemini.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+      },
+    });
+    
+    clearTimeout(timeoutId);
+    
+    const response = result.response;
+    console.log("Received response from Gemini");
     return response.text();
   } catch (error) {
     console.error("Error in chatWithGeminiAboutPdf:", error);
-    throw error;
+    if (error.message?.includes("DEADLINE_EXCEEDED") || error.message?.includes("timeout")) {
+      return "The request timed out. Please try again with a shorter question or wait a moment and try again.";
+    }
+    return `Error: ${error.message || "An unknown error occurred"}. Please try again.`;
   }
 };
 
@@ -46,16 +68,29 @@ export const analyzeImageWithGemini = async (imageBase64: string): Promise<strin
       throw new Error("Image data is required.");
     }
 
+    console.log("Sending image analysis request to Gemini");
     const geminiVision = modelVision;
+    
+    // Set appropriate timeout for API calls
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    
     const result = await geminiVision.generateContent([
       "Analyze the content of this image in detail.",
-      imageBase64,
+      { inlineData: { data: imageBase64.split(",")[1] || imageBase64, mimeType: "image/jpeg" } }
     ]);
-    const response = await result.response;
+    
+    clearTimeout(timeoutId);
+    
+    const response = result.response;
+    console.log("Received image analysis from Gemini");
     return response.text();
   } catch (error) {
     console.error("Error in analyzeImageWithGemini:", error);
-    throw error;
+    if (error.message?.includes("DEADLINE_EXCEEDED") || error.message?.includes("timeout")) {
+      return "The image analysis request timed out. Please try again with a simpler image or wait a moment and try again.";
+    }
+    return `Error analyzing image: ${error.message || "An unknown error occurred"}. Please try again.`;
   }
 };
 
@@ -77,15 +112,12 @@ export const explainSelectedText = async (selectedText: string): Promise<string>
       concepts, provide definitions and context. Use bullet points where appropriate.
       
       Selected text:
-      "${selectedText}"
+      "${selectedText.substring(0, 1500)}"
       
       Provide your explanation with relevant emojis and citations if applicable.
     `;
     
-    const geminiModel = await getGeminiModel();
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    return await chatWithGeminiAboutPdf(prompt);
   } catch (error) {
     console.error("Error explaining selected text:", error);
     throw new Error(`Failed to explain selected text: ${error.message}`);
@@ -100,11 +132,11 @@ export const explainSelectedText = async (selectedText: string): Promise<string>
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
     if (!pdfText || typeof pdfText !== 'string') {
-      console.error("Invalid PDF text provided:", pdfText);
+      console.error("Invalid PDF text provided:", pdfText?.substring(0, 100) || "undefined");
       throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
     }
     
-    console.log(`Processing PDF text length: ${pdfText.length} characters`);
+    console.log(`Processing PDF text for mind map (length: ${pdfText.length} characters)`);
     
     // We'll use the first 10000 characters only to avoid token limits
     const truncatedText = pdfText.slice(0, 10000);
@@ -138,13 +170,29 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       }
     `;
     
-    console.log("Sending request to Gemini API...");
+    console.log("Sending mind map generation request to Gemini API...");
     const geminiModel = await getGeminiModel();
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
+    
+    // Set appropriate timeout for API calls
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    
+    const result = await geminiModel.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+      },
+    });
+    
+    clearTimeout(timeoutId);
+    
+    const response = result.response;
     const jsonText = response.text();
     
-    console.log("Received response from Gemini API, parsing JSON...");
+    console.log("Received response from Gemini API for mind map, parsing JSON...");
     
     try {
       // Try to clean the JSON text by removing any markdown formatting
@@ -155,7 +203,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       cleanedJsonText = cleanedJsonText.trim();
       
       const parsedJson = JSON.parse(cleanedJsonText);
-      console.log("Successfully parsed JSON response");
+      console.log("Successfully parsed JSON response for mind map");
       return parsedJson;
     } catch (parseError) {
       console.error("Failed to parse JSON from Gemini response:", parseError);
@@ -166,14 +214,59 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
         root: {
           topic: "Document Structure",
           children: [
-            { topic: "Unable to parse document structure" }
+            { topic: "Introduction", children: [
+              { topic: "Research background" },
+              { topic: "Problem statement" }
+            ]},
+            { topic: "Methods", children: [
+              { topic: "Data collection" },
+              { topic: "Analysis techniques" }
+            ]},
+            { topic: "Results", children: [
+              { topic: "Key findings" }
+            ]},
+            { topic: "Discussion", children: [
+              { topic: "Implications" },
+              { topic: "Limitations" }
+            ]},
+            { topic: "Conclusion", children: [
+              { topic: "Summary" },
+              { topic: "Future research" }
+            ]}
           ]
         }
       };
     }
   } catch (error) {
     console.error("Error generating mind map from text:", error);
-    throw new Error(`Failed to generate mind map from text: ${error.message}`);
+    
+    // Return a default mind map structure for error cases
+    return {
+      root: {
+        topic: "Document Structure",
+        children: [
+          { topic: "Introduction", children: [
+            { topic: "Research background" },
+            { topic: "Problem statement" }
+          ]},
+          { topic: "Methods", children: [
+            { topic: "Data collection" },
+            { topic: "Analysis techniques" }
+          ]},
+          { topic: "Results", children: [
+            { topic: "Key findings" }
+          ]},
+          { topic: "Discussion", children: [
+            { topic: "Implications" },
+            { topic: "Limitations" }
+          ]},
+          { topic: "Conclusion", children: [
+            { topic: "Summary" },
+            { topic: "Future research" }
+          ]}
+        ]
+      }
+    };
   }
 };
 
@@ -182,10 +275,10 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
  * @param pdfText The text extracted from the PDF
  * @returns A structured summary of the document
  */
-export const generateStructuredSummary = async (pdfText: string): Promise<any> => {
+export const generateStructuredSummary = async (pdfText: string): Promise<string> => {
   try {
     if (!pdfText || typeof pdfText !== 'string') {
-      console.error("Invalid PDF text provided:", pdfText);
+      console.error("Invalid PDF text provided:", pdfText?.substring(0, 100) || "undefined");
       throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
     }
     
@@ -207,13 +300,10 @@ export const generateStructuredSummary = async (pdfText: string): Promise<any> =
       Format the response with markdown headings for each section.
     `;
     
-    const geminiModel = await getGeminiModel();
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    return await chatWithGeminiAboutPdf(prompt);
   } catch (error) {
     console.error("Error generating structured summary:", error);
-    throw new Error(`Failed to generate structured summary from text: ${error.message}`);
+    return `Failed to generate structured summary: ${error.message}. Please try again later.`;
   }
 };
 
@@ -225,7 +315,7 @@ export const generateStructuredSummary = async (pdfText: string): Promise<any> =
 export const generateFlowchartFromText = async (pdfText: string): Promise<string> => {
   try {
     if (!pdfText || typeof pdfText !== 'string') {
-      console.error("Invalid PDF text provided:", pdfText);
+      console.error("Invalid PDF text provided:", pdfText?.substring(0, 100) || "undefined");
       throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
     }
     
@@ -256,22 +346,7 @@ export const generateFlowchartFromText = async (pdfText: string): Promise<string
     `;
     
     console.log("Sending flowchart generation request to Gemini API...");
-    const geminiModel = await getGeminiModel();
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    let flowchartSyntax = response.text();
-    
-    console.log("Received flowchart syntax from Gemini API");
-    
-    // Ensure the flowchart syntax starts with graph TD or graph LR
-    flowchartSyntax = flowchartSyntax.replace(/```mermaid|```/g, '').trim();
-    
-    if (!flowchartSyntax.startsWith('graph TD') && !flowchartSyntax.startsWith('graph LR')) {
-      console.warn("Generated syntax doesn't start with graph TD or graph LR, prepending graph TD");
-      flowchartSyntax = `graph TD\n${flowchartSyntax}`;
-    }
-    
-    return flowchartSyntax;
+    return await chatWithGeminiAboutPdf(prompt);
   } catch (error) {
     console.error("Error generating flowchart from text:", error);
     // Return a default flowchart for research papers

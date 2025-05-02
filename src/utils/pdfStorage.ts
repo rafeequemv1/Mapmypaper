@@ -17,6 +17,9 @@ const openDatabase = async () => {
         if (!db.objectStoreNames.contains('pdfData')) {
           db.createObjectStore('pdfData');
         }
+        if (!db.objectStoreNames.contains('pdfText')) {
+          db.createObjectStore('pdfText');
+        }
       },
     });
   } catch (error) {
@@ -39,7 +42,31 @@ export const storePdfData = async (pdfKey: string, data: string) => {
   }
 };
 
+export const storePdfText = async (pdfKey: string, text: string) => {
+  try {
+    // Store in sessionStorage for immediate use
+    sessionStorage.setItem(`pdfText_${pdfKey}`, text);
+    
+    // Also store in IndexedDB for persistence
+    const db = await openDatabase();
+    const tx = db.transaction('pdfText', 'readwrite');
+    const store = tx.objectStore('pdfText');
+    await store.put(text, pdfKey);
+    await tx.done;
+    console.log('PDF text stored successfully!', pdfKey);
+    return true;
+  } catch (error) {
+    console.error('Error storing PDF text:', error);
+    return false;
+  }
+};
+
 export const getPdfData = async (pdfKey: string): Promise<string | undefined> => {
+  if (!pdfKey) {
+    console.warn('No PDF key provided to getPdfData');
+    return undefined;
+  }
+  
   try {
     console.log('Getting PDF data for key:', pdfKey);
     const db = await openDatabase();
@@ -68,6 +95,16 @@ export const deletePdfData = async (pdfKey: string) => {
     const store = tx.objectStore('pdfData');
     await store.delete(pdfKey);
     await tx.done;
+    
+    // Also delete from pdfText store
+    const textTx = db.transaction('pdfText', 'readwrite');
+    const textStore = textTx.objectStore('pdfText');
+    await textStore.delete(pdfKey);
+    await textTx.done;
+    
+    // Clear from session storage
+    sessionStorage.removeItem(`pdfText_${pdfKey}`);
+    
     console.log(`PDF data with key ${pdfKey} deleted successfully!`);
   } catch (error) {
     console.error(`Error deleting PDF data with key ${pdfKey}:`, error);
@@ -82,6 +119,13 @@ export const clearPdfData = async () => {
     const store = tx.objectStore('pdfData');
     await store.clear();
     await tx.done;
+    
+    // Also clear pdfText store
+    const textTx = db.transaction('pdfText', 'readwrite');
+    const textStore = textTx.objectStore('pdfText');
+    await textStore.clear();
+    await textTx.done;
+    
     console.log('All PDF data cleared successfully!');
   } catch (error) {
     console.error('Error clearing PDF data:', error);
@@ -132,27 +176,39 @@ export const getAllPdfKeys = async (): Promise<string[]> => {
  * @returns The extracted text from the PDF
  */
 export const getPdfText = async (pdfKey: string): Promise<string> => {
-  // Try to get it from sessionStorage first (this is where PdfToText stores it)
+  if (!pdfKey) {
+    console.warn('No PDF key provided to getPdfText');
+    return "";
+  }
+  
+  // Try to get it from sessionStorage first (faster)
   const sessionKey = `pdfText_${pdfKey}`;
   const sessionText = sessionStorage.getItem(sessionKey);
   
   if (sessionText) {
+    console.log('PDF text retrieved from sessionStorage:', pdfKey);
     return sessionText;
   }
   
   // If not in sessionStorage, try to get from IndexedDB
-  const db = await openDatabase();
-  const tx = db.transaction('pdfData', 'readonly');
-  const store = tx.objectStore('pdfData');
-  
   try {
-    const record = await store.get(`${pdfKey}_text`);
-    if (record && record.data) {
-      return record.data;
+    const db = await openDatabase();
+    const tx = db.transaction('pdfText', 'readonly');
+    const store = tx.objectStore('pdfText');
+    const text = await store.get(pdfKey);
+    await tx.done;
+    
+    if (text) {
+      // Store in session storage for faster access next time
+      sessionStorage.setItem(sessionKey, text);
+      console.log('PDF text retrieved from IndexedDB:', pdfKey);
+      return text;
     }
+    
+    console.warn('No PDF text found for key:', pdfKey);
+    return "";
   } catch (error) {
-    console.error("Error retrieving PDF text from IndexedDB:", error);
+    console.error("Error retrieving PDF text:", error);
+    return "";
   }
-  
-  return "";
 };
