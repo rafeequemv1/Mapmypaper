@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -781,6 +782,53 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Add text tooltip component
+    const TextSelectionTooltip = () => {
+      if (!showTextTooltip || !selectionPosition) return null;
+      
+      return (
+        <div
+          ref={tooltipRef}
+          className="absolute bg-white shadow-lg rounded-lg p-2 z-50"
+          style={{
+            left: `${selectionPosition.x}px`,
+            top: `${selectionPosition.y}px`,
+            transform: "translate(-50%, -100%)"
+          }}
+        >
+          <button
+            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+            onClick={handleExplainText}
+          >
+            Explain Selection
+          </button>
+        </div>
+      );
+    };
+
+    // Add area tooltip component
+    const AreaSelectionTooltip = () => {
+      if (!showAreaTooltip || !areaTooltipPosition) return null;
+      
+      return (
+        <div
+          className="absolute bg-white shadow-lg rounded-lg p-2 z-50"
+          style={{
+            left: `${areaTooltipPosition.x}px`,
+            top: `${areaTooltipPosition.y - 40}px`,
+            transform: "translate(-50%, -100%)"
+          }}
+        >
+          <button
+            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+            onClick={captureSelectedArea}
+          >
+            Capture Area
+          </button>
+        </div>
+      );
+    };
+
     // PDF Toolbar (make even more compact)
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
@@ -909,3 +957,48 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                       <Page
                         pageNumber={index + 1}
                         renderTextLayer={true}
+                        width={getOptimalPageWidth()}
+                        scale={scale}
+                        onRenderSuccess={onPageRenderSuccess}
+                      />
+                    </div>
+                  ))}
+                </Document>
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-lg text-gray-600 mb-2">No PDF loaded</p>
+                <p className="text-sm text-gray-500">Please upload or select a PDF document.</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Tooltips */}
+          <TextSelectionTooltip />
+          <AreaSelectionTooltip />
+          
+          {/* Custom tooltip for text selection */}
+          {showTextTooltip && selectionPosition && renderTooltipContent && (
+            <div
+              ref={textTooltipRef}
+              className="absolute bg-white shadow-lg rounded-lg p-2 z-50"
+              style={{
+                left: `${selectionPosition.x}px`,
+                top: `${selectionPosition.y}px`,
+                transform: "translate(-50%, -100%)"
+              }}
+            >
+              {renderTooltipContent()}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
