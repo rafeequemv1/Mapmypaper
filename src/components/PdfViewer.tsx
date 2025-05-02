@@ -1,5 +1,4 @@
-
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
@@ -420,6 +419,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, [isSelectionMode, pdfContainerRef.current]);
 
+    // Update this function to fix black images issue
     const captureSelectedArea = () => {
       if (!selectionRectRef.current || !selectionCanvas) return;
       
@@ -427,23 +427,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         // Get the coordinates of the selection rectangle
         const rect = selectionRectRef.current;
         
-        // Create a temporary canvas to crop the area
-        const tempCanvas = document.createElement('canvas');
-        const ctx = tempCanvas.getContext('2d');
-        
-        if (!ctx) {
-          console.error('Could not get 2D context for canvas');
-          return;
-        }
-        
-        // Set the temp canvas dimensions to the selection dimensions
-        tempCanvas.width = Math.abs(rect.width as number);
-        tempCanvas.height = Math.abs(rect.height as number);
-        
         // Find the PDF page that contains our selection
         const pdfPages = document.querySelectorAll('[data-page-number]');
         const pageNum = activePdfPageRef.current || 1;
-        let targetPage: Element | null = null;
+        let targetPage = null;
         
         for (let i = 0; i < pdfPages.length; i++) {
           if ((pdfPages[i] as HTMLElement).dataset.pageNumber === String(pageNum)) {
@@ -464,81 +451,162 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const scrollLeft = scrollContainer?.scrollLeft || 0;
         const viewportRect = scrollContainer?.getBoundingClientRect() || { left: 0, top: 0 };
         
-        // Convert page element to image with properly calculated offsets
-        html2canvas(targetPage as HTMLElement, {
+        // Use improved html2canvas options for better rendering
+        const htmlCanvasOptions = {
           backgroundColor: null,
-          scale: window.devicePixelRatio,
+          scale: window.devicePixelRatio || 1,
           useCORS: true,
-          // Handle scroll position
+          allowTaint: true,
           scrollX: -scrollLeft,
-          scrollY: -scrollTop
-        }).then(pageCanvas => {
+          scrollY: -scrollTop,
+          logging: false, // Reduce logging noise
+          onclone: (clonedDoc: Document) => {
+            // Fix styles in cloned document for better rendering
+            const clonedPage = clonedDoc.querySelector(`[data-page-number="${pageNum}"]`);
+            if (clonedPage) {
+              // Ensure text is visible in captured image
+              const textLayers = clonedPage.querySelectorAll('.react-pdf__Page__textContent');
+              textLayers.forEach((layer) => {
+                if (layer instanceof HTMLElement) {
+                  layer.style.transform = 'none';
+                  layer.style.opacity = '1';
+                  layer.style.display = 'block';
+                }
+              });
+            }
+            return clonedDoc;
+          },
+        };
+        
+        // First attempt with white background to avoid black images
+        html2canvas(targetPage as HTMLElement, {
+          ...htmlCanvasOptions,
+          backgroundColor: '#ffffff', // Set white background explicitly
+        }).then((pageCanvas) => {
           // Calculate the correct position on the page
-          // We need to account for the page position, scroll position, and device pixel ratio
           const rectLeft = Math.min(rect.left!, rect.left! + rect.width!);
           const rectTop = Math.min(rect.top!, rect.top! + rect.height!);
           
           // Calculate exact position where to start copying from the source image
-          // Need to account for the page's position relative to the viewport and scroll
           const sourceX = (rectLeft - (pageRect.left - viewportRect.left) + scrollLeft) * window.devicePixelRatio;
           const sourceY = (rectTop - (pageRect.top - viewportRect.top) + scrollTop) * window.devicePixelRatio;
           
-          // Log debugging info
-          console.log('Capture details:', {
-            rectLeft, 
-            rectTop,
-            rectWidth: Math.abs(rect.width!),
-            rectHeight: Math.abs(rect.height!),
-            pageRectLeft: pageRect.left,
-            pageRectTop: pageRect.top,
-            viewportRectLeft: viewportRect.left,
-            viewportRectTop: viewportRect.top,
-            scrollTop,
-            scrollLeft,
-            sourceX,
-            sourceY,
-            devicePixelRatio: window.devicePixelRatio
-          });
+          // Create a temporary canvas to crop the area
+          const tempCanvas = document.createElement('canvas');
+          const ctx = tempCanvas.getContext('2d');
           
-          // Draw only the selected portion to our temp canvas
-          ctx.drawImage(
-            pageCanvas,
-            sourceX,
-            sourceY,
-            Math.abs(rect.width!) * window.devicePixelRatio,
-            Math.abs(rect.height!) * window.devicePixelRatio,
-            0,
-            0,
-            Math.abs(rect.width as number),
-            Math.abs(rect.height as number)
-          );
-          
-          // Convert to data URL
-          const imageData = tempCanvas.toDataURL('image/png');
-          
-          // Store the captured image
-          setCapturedImage(imageData);
-          
-          // Send the captured image to parent component
-          if (onImageCaptured) {
-            onImageCaptured(imageData);
+          if (!ctx) {
+            console.error('Could not get 2D context for canvas');
+            return;
           }
           
-          // Dispatch a custom event to open the chat with the image
-          const event = new CustomEvent('openChatWithImage', {
-            detail: { imageData }
-          });
-          window.dispatchEvent(event);
+          // Set the temp canvas dimensions to the selection dimensions
+          const captureWidth = Math.abs(rect.width!);
+          const captureHeight = Math.abs(rect.height!);
+          tempCanvas.width = captureWidth;
+          tempCanvas.height = captureHeight;
           
-          // Hide tooltip and exit selection mode
-          setShowAreaTooltip(false);
-          setIsSelectionMode(false);
+          // Fill with white background first (prevents transparency issues)
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, captureWidth, captureHeight);
           
-          toast({
-            title: "Area captured",
-            description: "The selected area has been sent to the chat.",
-          });
-        }).catch(err => {
+          try {
+            // Draw the selected portion to our temp canvas
+            ctx.drawImage(
+              pageCanvas, 
+              sourceX, 
+              sourceY, 
+              captureWidth * window.devicePixelRatio, 
+              captureHeight * window.devicePixelRatio,
+              0, 
+              0, 
+              captureWidth, 
+              captureHeight
+            );
+            
+            // Convert to data URL with JPEG format (more compatible, no transparency issues)
+            const imageData = tempCanvas.toDataURL('image/jpeg', 0.95);
+            
+            // Store the captured image
+            setCapturedImage(imageData);
+            
+            // Send the captured image to parent component
+            if (onImageCaptured) {
+              onImageCaptured(imageData);
+            }
+            
+            // Dispatch a custom event to open the chat with the image
+            const event = new CustomEvent('openChatWithImage', {
+              detail: { imageData }
+            });
+            window.dispatchEvent(event);
+            
+            // Hide tooltip and exit selection mode
+            setShowAreaTooltip(false);
+            setIsSelectionMode(false);
+            
+            toast({
+              title: "Area captured",
+              description: "The selected area has been sent to the chat.",
+            });
+          } catch (drawError) {
+            console.error('Error drawing the image section:', drawError);
+            
+            // Fallback method - capture entire page and crop in JavaScript
+            try {
+              // Create a new image from the pageCanvas
+              const img = new Image();
+              img.onload = function() {
+                // Fill with white background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, captureWidth, captureHeight);
+                
+                // Draw the cropped portion
+                ctx.drawImage(
+                  img, 
+                  sourceX / window.devicePixelRatio, 
+                  sourceY / window.devicePixelRatio, 
+                  captureWidth, 
+                  captureHeight, 
+                  0, 
+                  0, 
+                  captureWidth, 
+                  captureHeight
+                );
+                
+                // Convert to JPEG data URL
+                const imageData = tempCanvas.toDataURL('image/jpeg', 0.95);
+                
+                // Store and send the image
+                setCapturedImage(imageData);
+                if (onImageCaptured) {
+                  onImageCaptured(imageData);
+                }
+                
+                // Dispatch custom event
+                window.dispatchEvent(new CustomEvent('openChatWithImage', {
+                  detail: { imageData }
+                }));
+                
+                setShowAreaTooltip(false);
+                setIsSelectionMode(false);
+                
+                toast({
+                  title: "Area captured (fallback method)",
+                  description: "The selected area has been sent to the chat.",
+                });
+              };
+              img.src = pageCanvas.toDataURL('image/jpeg', 0.95);
+            } catch (fallbackError) {
+              console.error('Fallback capture method failed:', fallbackError);
+              toast({
+                title: "Capture failed",
+                description: "Could not capture the selected area.",
+                variant: "destructive"
+              });
+            }
+          }
+        }).catch((err) => {
           console.error('Error capturing PDF area:', err);
           toast({
             title: "Capture failed",
@@ -852,188 +920,3 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             Capture Area
           </button>
         </div>
-      );
-    };
-
-    // PDF Toolbar
-    return (
-      <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
-        {/* PDF Toolbar */}
-        <div className="bg-white border-b px-1 py-0 flex flex-nowrap items-center gap-0.5 z-10 min-h-[30px] h-8">
-          {/* Zoom Controls with percentage display */}
-          <div className="flex items-center gap-0.5">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 text-black p-0" 
-              onClick={zoomOut}
-              title="Zoom Out"
-            >
-              <ZoomOut className="h-3 w-3" />
-            </Button>
-            <span className="text-xs w-10 text-center font-medium">
-              {Math.round(scale * 100)}%
-            </span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 text-black p-0" 
-              onClick={zoomIn}
-              title="Zoom In"
-            >
-              <ZoomIn className="h-3 w-3" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 text-black p-0" 
-              onClick={resetZoom}
-              title="Reset Zoom"
-            >
-              <RotateCw className="h-3 w-3" />
-            </Button>
-          </div>
-          
-          {/* Search Input */}
-          <div className="flex-1 mx-0.5">
-            <div className="flex items-center">
-              <Input
-                placeholder="Search in document..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-6 text-xs mr-0.5"
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 flex items-center gap-0.5 text-black px-1"
-                onClick={handleSearch}
-              >
-                <Search className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs"
-                onClick={() => navigateSearch('prev')}
-                disabled={searchResults.length === 0}
-              >
-                Prev
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs"
-                onClick={() => navigateSearch('next')}
-                disabled={searchResults.length === 0}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-          
-          {/* Area Selection Button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={isSelectionMode ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-6 w-6 text-black p-0 ml-1"
-                  onClick={toggleSelectionMode}
-                >
-                  <Crop className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">{isSelectionMode ? "Exit Selection Mode" : "Select Area"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        {/* PDF Content */}
-        {loadError ? (
-          <div className="h-full flex items-center justify-center p-4">
-            <div className="text-center">
-              <p className="text-red-500 mb-2">{loadError}</p>
-              <p className="text-sm text-gray-500">Please upload a PDF document to get started.</p>
-            </div>
-          </div>
-        ) : (
-          <ScrollArea className="flex-1 relative" ref={pdfContainerRef}>
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-                  <p className="mt-2 text-sm text-gray-500">Loading PDF...</p>
-                </div>
-              </div>
-            ) : pdfData ? (
-              <Document
-                file={pdfData}
-                onLoadSuccess={onDocumentLoadSuccess}
-                loading={
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-                      <p className="mt-2 text-sm text-gray-500">Loading PDF...</p>
-                    </div>
-                  </div>
-                }
-                error={
-                  <div className="h-full flex items-center justify-center p-4">
-                    <div className="text-center">
-                      <p className="text-red-500 mb-2">Failed to load PDF</p>
-                      <p className="text-sm text-gray-500">The document could not be loaded.</p>
-                    </div>
-                  </div>
-                }
-              >
-                <div className="flex flex-col items-center py-2">
-                  {Array.from(new Array(numPages), (el, index) => (
-                    <div 
-                      key={`page_${index + 1}`} 
-                      ref={setPageRef(index)} 
-                      className="mb-4 relative shadow-lg"
-                      data-page-number={index + 1}
-                    >
-                      <Page
-                        key={`page_${index + 1}_${scale}`}
-                        pageNumber={index + 1}
-                        width={getOptimalPageWidth()}
-                        scale={scale}
-                        onRenderSuccess={onPageRenderSuccess}
-                        loading={
-                          <div className="h-[500px] w-full bg-gray-100 flex items-center justify-center">
-                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-                          </div>
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </Document>
-            ) : (
-              <div className="h-full flex items-center justify-center p-4">
-                <div className="text-center">
-                  <p className="text-gray-500 mb-2">No PDF loaded</p>
-                  <p className="text-sm text-gray-400">Please upload a PDF document to get started.</p>
-                </div>
-              </div>
-            )}
-          </ScrollArea>
-        )}
-        
-        {/* Selection tooltips */}
-        <TextSelectionTooltip />
-        <AreaSelectionTooltip />
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
