@@ -122,6 +122,7 @@ export async function getAllPdfKeys(): Promise<string[]> {
 export async function setCurrentPdf(pdfKey: string) {
   try {
     const db = await openDBInstance();
+    // Fix: Use a properly formatted object for the current store
     await db.put('current', { id: 'currentPdf', value: pdfKey });
     
     // Also update sessionStorage for faster access
@@ -144,6 +145,7 @@ export async function getCurrentPdf(): Promise<string | null> {
     
     // Fall back to IndexedDB
     const db = await openDBInstance();
+    // Fix: Get the current record and extract its value field
     const current = await db.get('current', 'currentPdf');
     return current?.value || null;
   } catch (error) {
