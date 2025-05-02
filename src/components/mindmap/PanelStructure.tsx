@@ -57,6 +57,9 @@ const PanelStructure = ({
   const [processingPdfKey, setProcessingPdfKey] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState("");
+  
+  // Add a state for the PDF URL
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   // Fetch all PDF keys on mount
   useEffect(() => {
@@ -159,6 +162,9 @@ const PanelStructure = ({
         setProcessingStage("Storing PDF");
         await storePdfData(pdfKey, pdfData);
         
+        // Set the PDF URL for viewing
+        setPdfUrl(pdfData);
+        
         // Extract text from PDF
         setProcessingProgress(60);
         setProcessingStage("Extracting text");
@@ -172,6 +178,9 @@ const PanelStructure = ({
           });
           continue;
         }
+        
+        // Store the extracted text in sessionStorage for easier access
+        sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
         
         // Generate mindmap data
         setProcessingProgress(80);
@@ -347,6 +356,7 @@ const PanelStructure = ({
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
                 onImageCaptured={handlePdfAreaCaptured}
+                pdfUrl={pdfUrl}
               />
             </TooltipProvider>
           </div>
