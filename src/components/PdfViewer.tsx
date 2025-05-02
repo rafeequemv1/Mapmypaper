@@ -474,7 +474,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         }).then(pageCanvas => {
           // Calculate the correct position on the page
           // We need to account for the page position, scroll position, and device pixel ratio
-          const rectLeft = Math.min(rect.left!, rect.left! + rect.width!);
+          const rectLeft = Math.min(rect.left!, rect.left! + rect.width!);\
           const rectTop = Math.min(rect.top!, rect.top! + rect.height!);
           
           // Calculate exact position where to start copying from the source image
@@ -700,7 +700,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           targetPage.style.transition = 'background-color 0.5s ease-in-out';
           setTimeout(() => {
             targetPage.style.backgroundColor = '';
-          }, 1800);
+          }, 1800);\
           
           // If searching, find and highlight the active search result on this page
           if (searchQuery && searchResults.includes(`page${pageNumber}`)) {
@@ -854,7 +854,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       );
     };
 
-    // PDF Toolbar (make even more compact)
+    // PDF Toolbar
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
@@ -907,4 +907,5 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 variant="ghost" 
                 size="sm" 
                 className="h-6 flex items-center gap-0.5 text-black px-1"
-                onClick={handleSearch
+                onClick={handleSearch}
+              >
