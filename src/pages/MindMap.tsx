@@ -6,12 +6,7 @@ import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import MermaidModal from "@/components/mindmap/MermaidModal";
-import ApiTroubleshooter from "@/components/mindmap/ApiTroubleshooter";
-import { AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { MindElixirInstance } from "mind-elixir";
-import { testGeminiConnection } from "@/services/geminiService";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -20,7 +15,6 @@ const MindMap = () => {
   const [explainImage, setExplainImage] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [showMermaid, setShowMermaid] = useState(false);
-  const [showApiTroubleshooter, setShowApiTroubleshooter] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -38,8 +32,6 @@ const MindMap = () => {
   // Check if API key is available
   useEffect(() => {
     const checkApiKey = async () => {
-      setApiStatus('loading');
-      
       if (!import.meta.env.VITE_GEMINI_API_KEY) {
         setApiStatus('error');
         toast({
@@ -47,21 +39,8 @@ const MindMap = () => {
           description: "Gemini API key is missing. Please set VITE_GEMINI_API_KEY in your .env file.",
           variant: "destructive",
         });
-        return;
-      }
-      
-      try {
-        await testGeminiConnection();
-        setApiStatus('success');
-        console.log("API connection test successful");
-      } catch (error) {
-        setApiStatus('error');
-        console.error("API connection test failed:", error);
-        toast({
-          title: "API Connection Failed",
-          description: "Could not connect to Gemini API. Check your API key and internet connection.",
-          variant: "destructive",
-        });
+      } else {
+        setApiStatus('idle');
       }
     };
     
@@ -161,8 +140,7 @@ const MindMap = () => {
   }, [location]);
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Vertical sidebar with icons */}
+    <div className="h-screen flex flex-col overflow-hidden">
       <Header 
         togglePdf={() => setShowPdf(!showPdf)}
         toggleChat={toggleChat}
@@ -172,60 +150,35 @@ const MindMap = () => {
         isChatActive={showChat}
         mindMap={mindMapInstance}
         apiStatus={apiStatus}
-        className="w-16 z-10"
+      />
+      <PanelStructure
+        showPdf={showPdf}
+        showChat={showChat}
+        toggleChat={toggleChat}
+        togglePdf={() => setShowPdf(!showPdf)}
+        onMindMapReady={handleMindMapReady}
+        explainText={explainText}
+        explainImage={explainImage}
+        onExplainText={setExplainText}
+        onTextSelected={handleTextSelected}
+        onImageCaptured={handleImageCaptured}
+        activePdfKey={activePdfKey}
+        onActivePdfKeyChange={setActivePdfKey}
+        onApiStatusChange={setApiStatus}
       />
       
-      <div className="flex-1 relative">
-        {apiStatus === 'error' && (
-          <Alert variant="destructive" className="absolute top-2 left-2 right-2 z-50">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>API Connection Error</AlertTitle>
-            <AlertDescription className="flex justify-between items-center">
-              <span>Failed to connect to Gemini API. Mindmap generation may not work correctly.</span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowApiTroubleshooter(true)}
-              >
-                Troubleshoot
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        <PanelStructure
-          showPdf={showPdf}
-          showChat={showChat}
-          toggleChat={toggleChat}
-          togglePdf={() => setShowPdf(!showPdf)}
-          onMindMapReady={handleMindMapReady}
-          explainText={explainText}
-          explainImage={explainImage}
-          onExplainText={setExplainText}
-          onTextSelected={handleTextSelected}
-          onImageCaptured={handleImageCaptured}
-          activePdfKey={activePdfKey}
-          onActivePdfKeyChange={setActivePdfKey}
-          onApiStatusChange={setApiStatus}
-        />
-      </div>
-      
-      {/* Modals */}
+      {/* Modal for Summary */}
       <SummaryModal 
         open={showSummary}
         onOpenChange={setShowSummary}
         pdfKey={activePdfKey}
       />
       
+      {/* Modal for Mermaid Flowchart */}
       <MermaidModal 
         open={showMermaid}
         onOpenChange={setShowMermaid}
         pdfKey={activePdfKey}
-      />
-      
-      <ApiTroubleshooter
-        open={showApiTroubleshooter}
-        onOpenChange={setShowApiTroubleshooter}
       />
     </div>
   );

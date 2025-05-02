@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable
@@ -11,29 +10,9 @@ const modelVision = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" })
 // Gemini Pro model (text-only)
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-// Function to test the Gemini API connection
-export const testGeminiConnection = async (): Promise<boolean> => {
-  if (!import.meta.env.VITE_GEMINI_API_KEY) {
-    console.error("API key not found in environment variables");
-    throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
-  }
-  
-  try {
-    console.log("Testing connection to Gemini API...");
-    const result = await model.generateContent("Hello, this is a test message to verify the API connection.");
-    const response = await result.response;
-    console.log("Gemini API connection successful:", response.text().substring(0, 50) + "...");
-    return true;
-  } catch (error) {
-    console.error("Gemini API connection test failed:", error);
-    throw error;
-  }
-};
-
 // Function to get the Gemini model
 const getGeminiModel = async () => {
   if (!import.meta.env.VITE_GEMINI_API_KEY) {
-    console.error("API key not found in environment variables");
     throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
   }
   return model;
@@ -172,23 +151,11 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     
     console.log("Sending request to Gemini API for mindmap generation...");
     const geminiModel = await getGeminiModel();
-    
-    // Set a timeout for the API call
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Gemini API request timed out after 30 seconds")), 30000);
-    });
-    
-    // Race between the actual API call and the timeout
-    const result = await Promise.race([
-      geminiModel.generateContent(prompt),
-      timeoutPromise
-    ]) as any;
-    
+    const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
     const jsonText = response.text();
     
     console.log("Received response from Gemini API, parsing JSON...");
-    console.log("Raw response first 200 chars:", jsonText.substring(0, 200));
     
     try {
       // Try to clean the JSON text by removing any markdown formatting
@@ -199,8 +166,6 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       
       // Trim whitespace
       cleanedJsonText = cleanedJsonText.trim();
-      
-      console.log("Cleaned JSON first 200 chars:", cleanedJsonText.substring(0, 200));
       
       const parsedJson = JSON.parse(cleanedJsonText);
       console.log("Successfully parsed JSON response for mindmap");
@@ -236,17 +201,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
               children: [
                 { 
                   id: "error-1", 
-                  topic: "Could not generate mindmap from document. Please check your API key and try again."
-                },
-                {
-                  id: "error-2",
-                  topic: "Raw API Response",
-                  children: [
-                    {
-                      id: "error-2-1",
-                      topic: jsonText.substring(0, 500) + (jsonText.length > 500 ? "..." : "")
-                    }
-                  ]
+                  topic: "Could not generate mindmap from document. Please try again or check API key."
                 }
               ]
             },
@@ -276,7 +231,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
         children: [
           { 
             id: "error1", 
-            topic: `API Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+            topic: `API Error: ${error.message || "Unknown error"}`,
             direction: 0 
           },
           { 
@@ -286,8 +241,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
             children: [
               { id: "solution1", topic: "Check your internet connection" },
               { id: "solution2", topic: "Verify your Gemini API key is valid" },
-              { id: "solution3", topic: "Make sure VITE_GEMINI_API_KEY is set in .env file" },
-              { id: "solution4", topic: "Try uploading a different PDF" }
+              { id: "solution3", topic: "Try uploading a different PDF" }
             ] 
           }
         ]

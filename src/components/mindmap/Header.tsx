@@ -1,13 +1,19 @@
 
 import React from "react";
-import { BookOpen, MessageSquare, Download, Braces, Users, Brain, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { useNavigate } from "react-router-dom";
-import { MindElixirInstance } from "mind-elixir";
+import { 
+  PanelRight, 
+  PanelLeft, 
+  FileText, 
+  Download,
+  Text, 
+  GitBranch,
+  AlertTriangle
+} from "lucide-react";
 import HeaderExportMenu from "./HeaderExportMenu";
-import ApiStatusIndicator from "./ApiStatusIndicator";
-import { testGeminiConnection } from "@/services/geminiService";
+import HeaderSidebar from "./HeaderSidebar";
+import { useToast } from "@/hooks/use-toast";
+import { MindElixirInstance } from "mind-elixir";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -17,95 +23,101 @@ interface HeaderProps {
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
-  apiStatus: 'idle' | 'loading' | 'error' | 'success';
-  className?: string;
+  apiStatus?: 'idle' | 'loading' | 'error' | 'success';
 }
 
-const Header: React.FC<HeaderProps> = ({
-  togglePdf,
-  toggleChat,
-  setShowSummary,
-  setShowMermaid,
-  isPdfActive,
-  isChatActive,
+const Header = ({ 
+  togglePdf, 
+  toggleChat, 
+  setShowSummary, 
+  setShowMermaid, 
+  isPdfActive, 
+  isChatActive, 
   mindMap,
-  apiStatus,
-  className = "",
-}) => {
-  const navigate = useNavigate();
-
-  const handleApiRetry = async () => {
-    try {
-      await testGeminiConnection();
-    } catch (error) {
-      console.error("API connection retry failed:", error);
+  apiStatus = 'idle'
+}: HeaderProps) => {
+  const { toast } = useToast();
+  
+  const checkMindMap = (action: () => void) => {
+    if (!mindMap) {
+      toast({
+        title: "No Mind Map Available",
+        description: "Please upload a PDF document first to create a mind map.",
+        variant: "destructive",
+      });
+      return;
     }
+    action();
+  };
+
+  const handleExportClick = () => {
+    checkMindMap(() => {
+      // The export menu dropdown will handle the actual export options
+    });
+  };
+  
+  const handleShowSummary = () => {
+    checkMindMap(() => {
+      setShowSummary(true);
+    });
+  };
+  
+  const handleShowMermaid = () => {
+    checkMindMap(() => {
+      setShowMermaid(true);
+    });
   };
 
   return (
-    <div className={`flex flex-col h-full py-4 border-r bg-white ${className}`}>
-      <div className="flex flex-col items-center space-y-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/")}
-          title="Back to Home"
-          className="mb-2"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        
-        <Separator className="w-2/3 mx-auto" />
-        
-        <div className="flex items-center justify-center mb-2">
-          <Brain className="h-6 w-6 text-purple-600" />
-        </div>
-        
-        <ApiStatusIndicator 
-          status={apiStatus} 
-          onRetry={handleApiRetry} 
-          orientation="vertical"
-        />
-        
-        <Button
+    <div className="flex justify-between items-center border-b bg-white h-12 z-20">
+      <div className="flex items-center space-x-1 pl-12">
+        <Button 
           variant={isPdfActive ? "default" : "ghost"}
-          onClick={togglePdf}
-          size="icon"
-          className={`${isPdfActive ? "bg-gray-800" : ""}`}
-          title={isPdfActive ? "Hide PDF" : "Show PDF"}
-        >
-          <BookOpen className="h-5 w-5" />
+          size="sm"
+          className={isPdfActive ? "" : "text-gray-500"}
+          onClick={togglePdf}>
+          <FileText className="mr-1 h-4 w-4" />
+          <span className="hidden sm:inline">PDF</span>
         </Button>
         
-        <Button
+        <Button 
           variant={isChatActive ? "default" : "ghost"}
-          onClick={toggleChat}
-          size="icon"
-          className={`${isChatActive ? "bg-gray-800" : ""}`}
-          title={isChatActive ? "Hide Chat" : "Show Chat"}
-        >
-          <MessageSquare className="h-5 w-5" />
+          size="sm"
+          className={isChatActive ? "" : "text-gray-500"}
+          onClick={toggleChat}>
+          <PanelRight className="mr-1 h-4 w-4" />
+          <span className="hidden sm:inline">Chat</span>
         </Button>
         
         <Button
           variant="ghost"
-          onClick={() => setShowSummary(true)}
-          size="icon"
-          title="Generate Summary"
-        >
-          <BookOpen className="h-5 w-5" />
+          size="sm"
+          onClick={handleShowSummary}
+          className="text-gray-500">
+          <Text className="mr-1 h-4 w-4" />
+          <span className="hidden sm:inline">Summary</span>
         </Button>
         
         <Button
           variant="ghost"
-          onClick={() => setShowMermaid(true)}
-          size="icon"
-          title="Generate Flowchart"
-        >
-          <Braces className="h-5 w-5" />
+          size="sm"
+          onClick={handleShowMermaid}
+          className="text-gray-500">
+          <GitBranch className="mr-1 h-4 w-4" />
+          <span className="hidden sm:inline">Flowchart</span>
         </Button>
         
-        <HeaderExportMenu mindMap={mindMap} vertical />
+        {apiStatus === 'error' && (
+          <div className="ml-2 flex items-center text-red-500">
+            <AlertTriangle className="h-4 w-4 mr-1" />
+            <span className="text-xs">API Error</span>
+          </div>
+        )}
+      </div>
+      
+      <div className="flex items-center">
+        <HeaderExportMenu mindMap={mindMap} />
+        <HeaderSidebar />
       </div>
     </div>
   );
