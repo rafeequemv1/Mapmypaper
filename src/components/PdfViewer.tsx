@@ -621,14 +621,17 @@ const PdfViewer = ({ pdfUrl, onTextSelected, onImageCaptured, activePdfKey, onAc
                   renderTextLayer={true}
                   renderAnnotationLayer={false}
                   data-page-number={pageNumber}
-                  onLoadSuccess={(page) => {
-                    // Handle any text selection events here
-                    const textLayer = page.textLayer?.textLayerDiv;
-                    if (textLayer) {
-                      textLayer.addEventListener('mouseup', () => {
-                        handleTextSelection();
-                      });
-                    }
+                  onLoadSuccess={() => {
+                    // Use a timeout to attach the event listener after the page is rendered
+                    setTimeout(() => {
+                      const textLayerElements = document.querySelectorAll('.react-pdf__Page__textContent');
+                      if (textLayerElements.length > 0) {
+                        const textLayer = textLayerElements[0];
+                        textLayer.addEventListener('mouseup', () => {
+                          handleTextSelection();
+                        });
+                      }
+                    }, 100);
                   }}
                 />
               </Document>
