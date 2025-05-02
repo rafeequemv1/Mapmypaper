@@ -1,19 +1,34 @@
-import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { Document, Page, pdfjs } from "react-pdf";
-import { ArrowLeft, ArrowRight, Search, Download, ZoomIn, ZoomOut, RectangleHorizontal, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Search,
+  Download,
+  ZoomIn,
+  ZoomOut,
+  RectangleHorizontal,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import html2canvas from 'html2canvas';
-import 'react-pdf/dist/Page/TextLayer.css';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page.css';
 
 // Set PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
-  pdfUrl?: string;
+  pdfUrl: string;
   onTextSelected?: (text: string) => void;
   onImageCaptured?: (imageData: string) => void;
   onPdfLoaded?: () => void;
@@ -25,7 +40,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ pdfUrl, onTextSelected, onImageCaptured, onPdfLoaded, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onImageCaptured, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number | null>(null);
     const [pageNumber, setPageNumber] = useState(1);
     const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
@@ -94,16 +109,12 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     useEffect(() => {
       // Load PDF data when the component mounts
-      if (pdfUrl) {
-        loadPdfData(pdfUrl);
-      } else {
-        // Try to get from data attribute if no direct URL provided
-        const pdfURL = (document.querySelector("#pdf-url") as HTMLInputElement)?.value;
-        if (pdfURL) {
-          loadPdfData(pdfURL);
-        }
+      const pdfURL = (document.querySelector("#pdf-url") as HTMLInputElement)
+        ?.value;
+      if (pdfURL) {
+        loadPdfData(pdfURL);
       }
-    }, [loadPdfData, pdfUrl]);
+    }, [loadPdfData]);
 
     useEffect(() => {
       // Set up the selection canvas when selection mode is enabled
@@ -677,6 +688,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     renderTextLayer={true}
                     renderAnnotationLayer={false}
                     onRenderSuccess={handleTextLayerRendered}
+                    // canvasBackground="rgb(255,255,255)"
+                    //className="border border-gray-200"
                   >
                     <canvas
                       ref={selectionCanvasRef}
