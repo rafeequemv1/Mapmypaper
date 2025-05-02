@@ -43,6 +43,14 @@ const safetySettings = [
   },
 ];
 
+// Get model name based on availability
+function getModelName(isVision = false) {
+  // Use modern version of Gemini models
+  // For text generation, we'll use gemini-1.0-pro model
+  // For image analysis, we'll use gemini-1.0-pro-vision model
+  return isVision ? "gemini-1.0-pro-vision" : "gemini-1.0-pro";
+}
+
 // Generate mind map from text
 export async function generateMindMapFromText(text: string) {
   console.log("Generating mind map from text of length:", text.length);
@@ -63,7 +71,7 @@ export async function generateMindMapFromText(text: string) {
       : text;
     
     const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+      model: getModelName(),
       safetySettings,
     });
 
@@ -178,7 +186,7 @@ export async function generateFlowchartFromText(text: string) {
       : text;
     
     const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+      model: getModelName(),
       safetySettings,
     });
 
@@ -235,8 +243,6 @@ export async function generateFlowchartFromText(text: string) {
   }
 }
 
-// ADDING THE MISSING FUNCTIONS
-
 // Function to chat with Gemini about a PDF
 export async function chatWithGeminiAboutPdf(prompt: string) {
   console.log("Chatting with Gemini about PDF:", prompt.substring(0, 100) + "...");
@@ -251,7 +257,7 @@ export async function chatWithGeminiAboutPdf(prompt: string) {
   
   try {
     const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+      model: getModelName(),
       safetySettings,
     });
     
@@ -293,7 +299,7 @@ export async function analyzeImageWithGemini(imageData: string) {
   try {
     // Use Gemini-Pro-Vision model for image analysis
     const model = genAI!.getGenerativeModel({
-      model: "gemini-pro-vision",
+      model: getModelName(true), // Use vision model
       safetySettings,
     });
     
@@ -345,7 +351,7 @@ export async function explainSelectedText(text: string) {
   
   try {
     const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+      model: getModelName(),
       safetySettings,
     });
     
@@ -406,7 +412,7 @@ export async function generateStructuredSummary(pdfText: string) {
       : pdfText;
     
     const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+      model: getModelName(),
       safetySettings,
     });
     
