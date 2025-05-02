@@ -1,3 +1,4 @@
+
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -920,3 +921,19 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             Capture Area
           </button>
         </div>
+      );
+    };
+    
+    return (
+      <div className="flex flex-col h-full">
+        {/* Area selection tooltips */}
+        {showAreaTooltip && isSelectionMode && <AreaSelectionTooltip />}
+        {showTextTooltip && <TextSelectionTooltip />}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
