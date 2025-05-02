@@ -908,4 +908,3 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 size="sm" 
                 className="h-6 flex items-center gap-0.5 text-black px-1"
                 onClick={handleSearch}
-              >
