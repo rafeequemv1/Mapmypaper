@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -101,7 +100,14 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
       }
       
       // Cast the response to Summary type using type assertion
-      setSummary(result as Summary);
+      // Fix the type error by ensuring result is treated as a Summary object
+      if (typeof result === 'string') {
+        // If the result is a string, create a Summary object with just the Summary field
+        setSummary({ Summary: result });
+      } else {
+        // Otherwise, it's already an object, so cast it as Summary
+        setSummary(result as Summary);
+      }
     } catch (error) {
       console.error("Error generating summary:", error);
       toast({
@@ -266,7 +272,6 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
       });
     }
   };
-
   
   return (
     <>
