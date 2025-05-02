@@ -22,7 +22,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import html2canvas from 'html2canvas';
-import 'react-pdf/dist/Page.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
 // Set PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -688,8 +689,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     renderTextLayer={true}
                     renderAnnotationLayer={false}
                     onRenderSuccess={handleTextLayerRendered}
-                    // canvasBackground="rgb(255,255,255)"
-                    //className="border border-gray-200"
                   >
                     <canvas
                       ref={selectionCanvasRef}
