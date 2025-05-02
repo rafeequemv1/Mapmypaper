@@ -1,3 +1,4 @@
+
 import { openDB, DBSchema } from 'idb';
 
 interface PDFDB extends DBSchema {
@@ -10,16 +11,28 @@ interface PDFDB extends DBSchema {
       lastModified: number;
     };
   };
+  current: {
+    key: string;
+    value: string;
+  };
 }
 
 async function openDBInstance() {
   return openDB<PDFDB>('pdfs-db', 1, {
     upgrade(db) {
-      db.createObjectStore('pdfs', { keyPath: 'name' });
+      if (!db.objectStoreNames.contains('pdfs')) {
+        db.createObjectStore('pdfs', { keyPath: 'name' });
+      }
+      
+      // Create a store for the current PDF reference
+      if (!db.objectStoreNames.contains('current')) {
+        db.createObjectStore('current', { keyPath: 'id' });
+      }
     },
   });
 }
 
+// Original function - store PDF with ArrayBuffer data
 export async function storePdf(name: string, data: ArrayBuffer, size: number, lastModified: number) {
   try {
     const db = await openDBInstance();
@@ -30,6 +43,33 @@ export async function storePdf(name: string, data: ArrayBuffer, size: number, la
   }
 }
 
+// New function - store PDF with data URL (compatible with the components that expect this)
+export async function storePdfData(pdfKey: string, dataUrl: string) {
+  try {
+    // Convert data URL to ArrayBuffer if needed
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    
+    // Extract metadata from the key (format: name_size_lastModified)
+    const keyParts = pdfKey.split('_');
+    const name = pdfKey;
+    const size = parseInt(keyParts[keyParts.length - 2]) || 0;
+    const lastModified = parseInt(keyParts[keyParts.length - 1]) || Date.now();
+    
+    // Store using the original function
+    await storePdf(name, arrayBuffer, size, lastModified);
+    
+    // Store the key as "has PDF data" marker in sessionStorage for quick checks
+    sessionStorage.setItem(`hasPdfData_${pdfKey}`, 'true');
+    
+    return true;
+  } catch (error) {
+    console.error('Error storing PDF data:', error);
+    return false;
+  }
+}
+
 export async function getPdfData(name: string): Promise<ArrayBuffer | undefined> {
   try {
     const db = await openDBInstance();
@@ -37,6 +77,21 @@ export async function getPdfData(name: string): Promise<ArrayBuffer | undefined>
     return pdf?.data;
   } catch (error) {
     console.error('Error getting PDF data:', error);
+    return undefined;
+  }
+}
+
+// Get PDF as data URL (for browser viewing)
+export async function getPdfUrl(name: string): Promise<string | undefined> {
+  try {
+    const arrayBuffer = await getPdfData(name);
+    if (!arrayBuffer) return undefined;
+    
+    // Convert ArrayBuffer to data URL
+    const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+    return URL.createObjectURL(blob);
+  } catch (error) {
+    console.error('Error getting PDF URL:', error);
     return undefined;
   }
 }
@@ -60,5 +115,50 @@ export async function getAllPdfKeys(): Promise<string[]> {
   } catch (error) {
     console.error('Error getting all PDF keys:', error);
     return [];
+  }
+}
+
+// Set the current PDF for viewing
+export async function setCurrentPdf(pdfKey: string) {
+  try {
+    const db = await openDBInstance();
+    await db.put('current', { id: 'currentPdf', value: pdfKey });
+    
+    // Also update sessionStorage for faster access
+    sessionStorage.setItem('currentPdfKey', pdfKey);
+    
+    console.log('Current PDF set:', pdfKey);
+    return true;
+  } catch (error) {
+    console.error('Error setting current PDF:', error);
+    return false;
+  }
+}
+
+// Get the current PDF key
+export async function getCurrentPdf(): Promise<string | null> {
+  try {
+    // Try sessionStorage first for faster access
+    const sessionKey = sessionStorage.getItem('currentPdfKey');
+    if (sessionKey) return sessionKey;
+    
+    // Fall back to IndexedDB
+    const db = await openDBInstance();
+    const current = await db.get('current', 'currentPdf');
+    return current?.value || null;
+  } catch (error) {
+    console.error('Error getting current PDF:', error);
+    return null;
+  }
+}
+
+// Helper to get PDF text (looking in sessionStorage)
+export async function getPdfText(pdfKey: string): Promise<string | null> {
+  try {
+    const text = sessionStorage.getItem(`pdfText_${pdfKey}`);
+    return text;
+  } catch (error) {
+    console.error('Error getting PDF text:', error);
+    return null;
   }
 }
