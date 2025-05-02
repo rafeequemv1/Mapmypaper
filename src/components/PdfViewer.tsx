@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +44,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const activeHighlightRef = useRef<HTMLElement | null>(null);
     const [scale, setScale] = useState<number>(1);
     const [isLoading, setIsLoading] = useState(true);
-    const [loadError, setLoadError] = useState<string | null>(null);\
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [pdfKey, setPdfKey] = useState<string | null>(null);
     const [selectedText, setSelectedText] = useState<string>("");
     const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
@@ -93,7 +94,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             title: "No PDF Selected",
             description: "Please upload a PDF document first.",
             variant: "destructive",
-            });
+          });
         }
       } catch (error) {
         console.error("Error retrieving PDF data:", error);
@@ -281,7 +282,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               fill: 'rgba(0, 123, 255, 0.2)',
               stroke: 'rgba(0, 123, 255, 0.8)',
               strokeWidth: 2,
-              strokeDashArray: [5, 5],\
+              strokeDashArray: [5, 5],
               selectable: false,
               evented: false,
             });
@@ -905,4 +906,66 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex h-full items-center justify-center flex-col gap-
+            <div className="flex h-full items-center justify-center flex-col gap-4">
+              <div className="text-center p-4 max-w-md">
+                <h3 className="text-xl font-medium mb-2">No PDF Loaded</h3>
+                <p className="text-gray-600">
+                  Please upload a PDF document using the upload button or select one from the tabs above.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Text selection tooltip */}
+        {showTextTooltip && selectionPosition && (
+          <div 
+            ref={tooltipRef}
+            className="absolute bg-white p-2 rounded-lg shadow-lg border border-gray-200 z-50"
+            style={{
+              left: `${selectionPosition.x}px`,
+              top: `${selectionPosition.y - 50}px`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <button
+              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-md transition-colors"
+              onClick={handleExplainText}
+            >
+              Explain in Chat
+            </button>
+          </div>
+        )}
+        
+        {/* Area selection tooltip */}
+        {showAreaTooltip && areaTooltipPosition && (
+          <div 
+            className="absolute bg-white p-2 rounded-lg shadow-lg border border-gray-200 z-50"
+            style={{
+              left: `${areaTooltipPosition.x}px`,
+              top: `${areaTooltipPosition.y - 40}px`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <div className="flex gap-2">
+              <button
+                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-md transition-colors"
+                onClick={captureSelectedArea}
+              >
+                Send to Chat
+              </button>
+              <button
+                className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs rounded-md transition-colors"
+                onClick={() => setShowAreaTooltip(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+export default PdfViewer;
