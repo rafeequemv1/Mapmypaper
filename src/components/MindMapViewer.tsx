@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -185,6 +184,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string>('');
   const { toast } = useToast();
+  
+  // Debug pdfKey prop
+  useEffect(() => {
+    console.log("MindMapViewer current pdfKey:", pdfKey);
+  }, [pdfKey]);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -319,12 +323,20 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       try {
         // Try to load mindmap data for specific PDF if pdfKey is provided
-        const savedData = pdfKey 
-          ? sessionStorage.getItem(`mindMapData_${pdfKey}`)
-          : sessionStorage.getItem('mindMapData');
+        console.log("Attempting to load mindmap data for:", pdfKey);
+        const mindMapKey = pdfKey ? `mindMapData_${pdfKey}` : 'mindMapData';
+        const savedData = sessionStorage.getItem(mindMapKey);
           
         if (savedData) {
+          console.log(`Found mind map data in sessionStorage with key: ${mindMapKey}`);
           const parsedData = JSON.parse(savedData);
+          
+          if (!parsedData || !parsedData.nodeData) {
+            console.warn("Invalid mind map data structure:", parsedData);
+            throw new Error("Invalid mind map data structure");
+          }
+          
+          console.log("Successfully loaded mind map data:", parsedData.nodeData.topic);
           
           // Apply line breaks, emojis, and complete sentences to node topics
           const formatNodes = (node: any) => {
@@ -351,6 +363,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           
           data = parsedData;
         } else {
+          console.warn(`No mind map data found with key: ${mindMapKey}, using default`);
           // Default research paper structure with complete sentences and emojis
           data = {
             nodeData: {
@@ -594,14 +607,26 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
     const handlePdfSwitched = (event: CustomEvent) => {
       if (event.detail?.pdfKey && mindMapRef.current) {
         const newPdfKey = event.detail.pdfKey;
+        console.log(`PDF switched event received with key: ${newPdfKey}`);
         
         // Load the mindmap data for this PDF
         try {
-          const savedData = sessionStorage.getItem(`mindMapData_${newPdfKey}`);
+          const mindMapKey = `mindMapData_${newPdfKey}`;
+          const savedData = sessionStorage.getItem(mindMapKey);
+          
           if (savedData) {
+            console.log(`Found mind map data in sessionStorage with key: ${mindMapKey}`);
             const parsedData = JSON.parse(savedData);
+            
+            if (!parsedData || !parsedData.nodeData) {
+              console.warn("Invalid mind map data structure:", parsedData);
+              throw new Error("Invalid mind map data structure");
+            }
+            
             mindMapRef.current.init(parsedData);
             console.log(`Loaded mindmap for PDF: ${newPdfKey}`);
+          } else {
+            console.warn(`No mind map data found for PDF: ${newPdfKey}`);
           }
         } catch (error) {
           console.error(`Error loading mindmap for PDF ${newPdfKey}:`, error);
@@ -717,70 +742,4 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-1">No Mind Map Available</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Upload a document or start a chat to generate a mind map.
-          </p>
-        </div>
-      )}
-      
-      {isMapGenerated && (
-        <>
-          <div
-            ref={containerRef}
-            className="w-full flex-grow relative min-h-[300px] overflow-hidden"
-            style={{ 
-              backgroundColor: "#F9F7FF",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              transition: "all 0.3s ease",
-            }}
-          ></div>
-          
-          {showSummary && (
-            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 text-sm max-h-[300px] overflow-auto">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Mind Map Summary</h3>
-                <Button variant="ghost" size="sm" onClick={() => setShowSummary(false)}>Close</Button>
-              </div>
-              <div className="prose prose-sm">
-                {summary.split('\n').map((line, i) => (
-                  <div key={i} className="mb-1">
-                    {line.startsWith('#') ? (
-                      <h4 className="text-md font-bold">{line.replace(/^#+\s/, '')}</h4>
-                    ) : line.startsWith('-') ? (
-                      <div className="flex items-start">
-                        <span className="mr-2">•</span>
-                        <span>{line.replace(/^-\s/, '')}</span>
-                      </div>
-                    ) : (
-                      <p>{line}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={() => {
-                    if (onExplainText && summary) {
-                      onExplainText(summary);
-                    }
-                    if (onRequestOpenChat) {
-                      onRequestOpenChat();
-                    }
-                  }}
-                >
-                  <FileText size={16} />
-                  Send to Chat
-                </Button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-};
-
-export default MindMapViewer;
+            Upload a document or start a

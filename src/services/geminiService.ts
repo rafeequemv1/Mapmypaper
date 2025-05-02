@@ -1,419 +1,235 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 
-// Access your API key as an environment variable
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(API_KEY);
+// Initialize the Gemini API with the API key
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-// Updated model names for the current API version
-// Gemini Pro Vision model
-const modelVision = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
+let genAI: GoogleGenerativeAI | null = null;
 
-// Gemini Pro model (text-only)
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-
-// Function to check API key validity 
-const isValidApiKey = () => {
-  return API_KEY && API_KEY.length > 0 && API_KEY !== "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM";
-};
-
-// Function to get the Gemini Pro model
-const getGeminiModel = async () => {
-  if (!isValidApiKey()) {
-    throw new Error("Gemini API key is invalid or missing. Please set a valid VITE_GEMINI_API_KEY environment variable.");
-  }
-  return model;
-};
-
-/**
- * Sends a chat request to Gemini with the given prompt and PDF content.
- * @param prompt The user's question or prompt.
- * @returns The response text from Gemini.
- */
-export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
+// Initialize Gemini API
+export function initializeGeminiAPI() {
   try {
-    if (!API_KEY || API_KEY === "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM") {
-      console.error("Invalid Gemini API key:", API_KEY);
-      return "⚠️ The Gemini API key appears to be the default one or is missing. Please provide a valid API key in your environment variables.";
+    if (!API_KEY) {
+      throw new Error("Missing Gemini API key in .env file");
     }
-    
-    console.log("Sending request to Gemini API with prompt:", prompt.substring(0, 100) + "...");
-    const gemini = await getGeminiModel();
-    const result = await gemini.generateContent(prompt);
-    const response = await result.response;
-    console.log("Received response from Gemini API");
-    return response.text();
+    genAI = new GoogleGenerativeAI(API_KEY);
+    return true;
   } catch (error) {
-    console.error("Error in chatWithGeminiAboutPdf:", error);
-    
-    // Handle specific error types
-    if (error.message && error.message.includes("overloaded")) {
-      return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
-    } else if (error.message && error.message.includes("API key")) {
-      return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
-    } else if (error.message && error.message.includes("503")) {
-      return "⚠️ The Gemini API service is temporarily unavailable (503 error). Please try again later.";
-    }
-    
-    // Generic error
-    return `⚠️ An error occurred while processing your request: ${error.message}. Please try again later.`;
+    console.error("Failed to initialize Gemini API:", error);
+    return false;
   }
-};
+}
 
-/**
- * Analyzes an image with the Gemini Pro Vision model.
- * @param imageBase64 The base64 encoded image data.
- * @returns The response text from Gemini.
- */
-export const analyzeImageWithGemini = async (imageBase64: string): Promise<string> => {
-  try {
-    if (!imageBase64) {
-      throw new Error("Image data is required.");
-    }
+// Ensure API is initialized
+initializeGeminiAPI();
 
-    if (!isValidApiKey()) {
-      return "⚠️ The Gemini API key appears to be missing or invalid. Please provide a valid API key in your environment variables.";
-    }
+// Default safety settings
+const safetySettings = [
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+];
 
-    const geminiVision = modelVision;
-    const result = await geminiVision.generateContent([
-      "Analyze the content of this image in detail.",
-      imageBase64,
-    ]);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Error in analyzeImageWithGemini:", error);
-    
-    // Handle specific error types
-    if (error.message && error.message.includes("overloaded")) {
-      return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
-    } else if (error.message && error.message.includes("API key")) {
-      return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
-    } else if (error.message && error.message.includes("Image data")) {
-      return "⚠️ Invalid image data provided. Please try capturing the area again.";
+// Generate mind map from text
+export async function generateMindMapFromText(text: string) {
+  console.log("Generating mind map from text of length:", text.length);
+  
+  // Re-initialize API if needed
+  if (!genAI) {
+    const initialized = initializeGeminiAPI();
+    if (!initialized) {
+      throw new Error("Failed to initialize Gemini API");
     }
-    
-    // Generic error
-    return "⚠️ An error occurred while analyzing the image. Please try again later.";
   }
-};
-
-/**
- * Explains a selected text from a PDF using Gemini
- * @param selectedText The text selected by the user
- * @returns The explanation of the selected text
- */
-export const explainSelectedText = async (selectedText: string): Promise<string> => {
+  
   try {
-    if (!selectedText || typeof selectedText !== 'string' || selectedText.trim() === '') {
-      throw new Error("Valid selected text is required.");
-    }
+    // Trim the text if it's too long (Gemini has token limits)
+    const MAX_TEXT_LENGTH = 20000; // Adjust as needed
+    const trimmedText = text.length > MAX_TEXT_LENGTH 
+      ? text.substring(0, MAX_TEXT_LENGTH) + "... [TRUNCATED]" 
+      : text;
     
-    if (!API_KEY || API_KEY === "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM") {
-      console.error("Invalid Gemini API key:", API_KEY);
-      return "⚠️ The Gemini API key appears to be the default one or is missing. Please provide a valid API key in your environment variables.";
-    }
-    
-    console.log(`Explaining selected text (length: ${selectedText.length} characters)`);
-    
+    const model = genAI!.getGenerativeModel({
+      model: "gemini-pro",
+      safetySettings,
+    });
+
     const prompt = `
-      Please explain the following text in clear, simple terms. If it contains academic or technical 
-      concepts, provide definitions and context. Use bullet points where appropriate.
-      
-      Selected text:
-      "${selectedText}"
-      
-      Provide your explanation with relevant emojis and citations if applicable.
-    `;
+    Create a mind map of the following academic text.
+    Format the response as a JSON object representing a mind map.
+    Follow these guidelines:
+    1. The mind map should have a single root node representing the main title/topic of the text.
+    2. Include 5-7 main branches (children of the root) representing key sections or concepts in the text.
+    3. Each main branch should have 2-5 sub-branches with specific details or examples.
+    4. Use clear, concise language for all node topics.
+    5. Maintain hierarchical relationships between concepts.
     
-    console.log("Sending explain text request to Gemini API");
-    const geminiModel = await getGeminiModel();
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    console.log("Received explanation from Gemini API");
-    return response.text();
-  } catch (error) {
-    console.error("Error explaining selected text:", error);
-    
-    // Handle specific error types
-    if (error.message && error.message.includes("overloaded")) {
-      return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
-    } else if (error.message && error.message.includes("API key")) {
-      return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
-    } else if (error.message && error.message.includes("503")) {
-      return "⚠️ The Gemini API service is temporarily unavailable (503 error). Please try again later.";
-    } else if (error.message && error.message.includes("text is required")) {
-      return "⚠️ Please select valid text to explain.";
-    }
-    
-    return `⚠️ Failed to explain selected text: ${error.message}`;
-  }
-};
-
-/**
- * Generates a mind map structure from the extracted PDF text
- * @param pdfText The text extracted from the PDF
- * @returns A JSON structure representing the mind map
- */
-export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
-  try {
-    if (!pdfText || typeof pdfText !== 'string') {
-      console.error("Invalid PDF text provided:", pdfText);
-      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
-    }
-    
-    if (!isValidApiKey()) {
-      console.warn("Invalid Gemini API key - returning fallback structure");
-      return {
-        root: {
-          topic: "Document Structure (API Key Invalid)",
-          children: [
-            { topic: "Please set a valid Gemini API key" },
-            { topic: "Check the .env file and update VITE_GEMINI_API_KEY" }
-          ]
-        }
-      };
-    }
-    
-    console.log(`Processing PDF text length: ${pdfText.length} characters`);
-    
-    // We'll use the first 10000 characters only to avoid token limits
-    const truncatedText = pdfText.slice(0, 10000);
-    
-    const prompt = `
-      Based on the following text from a research document, create a mind map structure in JSON format.
-      Focus on identifying the main topics, key concepts, and their relationships.
-      
-      Document text excerpt:
-      ${truncatedText}
-      
-      Return ONLY valid JSON without any explanation or formatting.
-      The JSON should have this structure:
-      {
-        "root": {
-          "topic": "Main Topic",
-          "children": [
-            {
-              "topic": "Subtopic 1",
-              "children": [
-                {"topic": "Point 1.1"},
-                {"topic": "Point 1.2"}
-              ]
-            },
-            {
-              "topic": "Subtopic 2",
-              "children": []
-            }
-          ]
-        }
-      }
-    `;
-    
-    console.log("Sending request to Gemini API...");
-    const geminiModel = await getGeminiModel();
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    const jsonText = response.text();
-    
-    console.log("Received response from Gemini API, parsing JSON...");
-    
-    try {
-      // Try to clean the JSON text by removing any markdown formatting
-      let cleanedJsonText = jsonText;
-      // Remove markdown code block syntax if present
-      cleanedJsonText = cleanedJsonText.replace(/```(json)?|```/g, '');
-      // Trim whitespace
-      cleanedJsonText = cleanedJsonText.trim();
-      
-      const parsedJson = JSON.parse(cleanedJsonText);
-      console.log("Successfully parsed JSON response");
-      return parsedJson;
-    } catch (parseError) {
-      console.error("Failed to parse JSON from Gemini response:", parseError);
-      console.log("Raw response:", jsonText);
-      
-      // Return a fallback mind map structure
-      return {
-        root: {
-          topic: "Document Structure",
-          children: [
-            { topic: "Unable to parse document structure" },
-            { topic: "API response format error" }
-          ]
-        }
-      };
-    }
-  } catch (error) {
-    console.error("Error generating mind map from text:", error);
-    
-    // Return a fallback mind map structure with error information
-    return {
-      root: {
-        topic: "Error Processing Document",
-        children: [
-          { 
-            topic: "API Error", 
-            children: [
-              { topic: error.message || "Unknown error" },
-              { topic: "Check console for details" }
+    The mind map should be formatted exactly like this example:
+    {
+      "nodeData": {
+        "id": "root",
+        "topic": "Main Title/Topic",
+        "children": [
+          {
+            "id": "branch1",
+            "topic": "First Main Branch",
+            "direction": 0,
+            "children": [
+              {"id": "branch1-1", "topic": "Sub-branch 1 of First Branch"},
+              {"id": "branch1-2", "topic": "Sub-branch 2 of First Branch"}
             ]
           },
-          { 
-            topic: "Troubleshooting", 
-            children: [
-              { topic: "Verify API key is valid" },
-              { topic: "Check network connection" },
-              { topic: "Try again later if service is overloaded" }
+          {
+            "id": "branch2",
+            "topic": "Second Main Branch",
+            "direction": 0,
+            "children": [
+              {"id": "branch2-1", "topic": "Sub-branch 1 of Second Branch"},
+              {"id": "branch2-2", "topic": "Sub-branch 2 of Second Branch"}
             ]
           }
         ]
       }
-    };
-  }
-};
+    }
+    
+    Here's the text to analyze:
+    ${trimmedText}
+    
+    Return ONLY the JSON object, nothing else.
+    `;
 
-/**
- * Generates a structured summary from the extracted PDF text
- * @param pdfText The text extracted from the PDF
- * @returns A structured summary of the document
- */
-export const generateStructuredSummary = async (pdfText: string): Promise<string> => {
-  try {
-    if (!pdfText || typeof pdfText !== 'string') {
-      console.error("Invalid PDF text provided:", pdfText);
-      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
-    }
-    
-    if (!isValidApiKey()) {
-      return "⚠️ The Gemini API key appears to be invalid or missing. Please provide a valid API key in your environment variables.";
-    }
-    
-    // We'll use the first 10000 characters only to avoid token limits
-    const truncatedText = pdfText.slice(0, 10000);
-    
-    const prompt = `
-      Based on the following text from a research document, create a structured summary.
-      Include the following sections:
-      - Key Findings
-      - Main Arguments
-      - Methodology
-      - Conclusions
-      - Limitations (if mentioned)
-      
-      Document text excerpt:
-      ${truncatedText}
-      
-      Format the response with markdown headings for each section.
-    `;
-    
-    const geminiModel = await getGeminiModel();
-    const result = await geminiModel.generateContent(prompt);
+    const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Error generating structured summary:", error);
+    const text = response.text();
     
-    // Handle specific error types
-    if (error.message && error.message.includes("overloaded")) {
-      return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
-    } else if (error.message && error.message.includes("API key")) {
-      return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
+    console.log("Received response from Gemini API");
+    
+    // Extract JSON from response
+    let jsonStr = text;
+    
+    // Handle potential formatting issues in the response
+    if (jsonStr.includes("```json")) {
+      jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+    } else if (jsonStr.includes("```")) {
+      jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
     }
     
-    return `⚠️ Failed to generate structured summary from text: ${error.message}`;
+    // Parse the JSON
+    try {
+      const mindMapData = JSON.parse(jsonStr);
+      console.log("Successfully parsed mind map data");
+      return mindMapData;
+    } catch (parseError) {
+      console.error("Error parsing JSON from Gemini response:", parseError);
+      console.error("Raw response:", jsonStr);
+      throw new Error("Failed to parse mind map data from AI response");
+    }
+  } catch (error: any) {
+    console.error("Error generating mind map:", error);
+    
+    // Check for common API errors
+    if (error.message?.includes("429") || error.message?.includes("quota")) {
+      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
+    }
+    
+    if (error.message?.includes("403")) {
+      throw new Error("Gemini API access denied. Please check your API key.");
+    }
+    
+    if (error.message?.includes("503")) {
+      throw new Error("Gemini service unavailable. Please try again later.");
+    }
+    
+    // Default error with more information
+    throw new Error(`Failed to generate mind map: ${error.message || "Unknown error"}`);
   }
-};
+}
 
-/**
- * Generates a mermaid flowchart syntax from the extracted PDF text
- * @param pdfText The text extracted from the PDF
- * @returns A mermaid flowchart syntax string
- */
-export const generateFlowchartFromText = async (pdfText: string): Promise<string> => {
-  try {
-    if (!pdfText || typeof pdfText !== 'string') {
-      console.error("Invalid PDF text provided:", pdfText);
-      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
+// Generate a flowchart from text
+export async function generateFlowchartFromText(text: string) {
+  console.log("Generating flowchart from text of length:", text.length);
+  
+  // Re-initialize API if needed
+  if (!genAI) {
+    const initialized = initializeGeminiAPI();
+    if (!initialized) {
+      throw new Error("Failed to initialize Gemini API");
     }
-    
-    if (!isValidApiKey()) {
-      return `
-        graph TD
-          A[API Key Error] --> B[Invalid Gemini API Key]
-          B --> C[Check Environment Variables]
-          B --> D[Update VITE_GEMINI_API_KEY]
-          
-          classDef error fill:#f96,stroke:#333,stroke-width:2px;
-          class A,B error;
-      `;
-    }
-    
-    // We'll use the first 10000 characters only to avoid token limits
-    const truncatedText = pdfText.slice(0, 10000);
-    
-    const prompt = `
-      Based on the following text from a research document, create a mermaid.js flowchart syntax that represents the document's structure. 
-      Focus on identifying the main sections, their relationships, and key components. 
-      Use the graph TD (top-down) or LR (left-right) format.
-      Make the chart concise and readable, limited to the most important 15-20 nodes maximum.
-      
-      Use proper mermaid.js syntax with node IDs and clear labels.
-      Include styling with classDef for important nodes.
-      
-      Document text excerpt:
-      ${truncatedText}
-      
-      Return ONLY the mermaid syntax without any explanation or markdown code formatting.
-      The syntax must begin with 'graph TD' or 'graph LR'.
-      Example of valid syntax:
-      graph TD
-        A[Introduction] --> B[Methods]
-        B --> C[Results]
-        C --> D[Discussion]
-        classDef important fill:#f96,stroke:#333,stroke-width:2px;
-        class A,D important;
-    `;
-    
-    console.log("Sending flowchart generation request to Gemini API...");
-    const geminiModel = await getGeminiModel();
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    let flowchartSyntax = response.text();
-    
-    console.log("Received flowchart syntax from Gemini API");
-    
-    // Ensure the flowchart syntax starts with graph TD or graph LR
-    flowchartSyntax = flowchartSyntax.replace(/```mermaid|```/g, '').trim();
-    
-    if (!flowchartSyntax.startsWith('graph TD') && !flowchartSyntax.startsWith('graph LR')) {
-      console.warn("Generated syntax doesn't start with graph TD or graph LR, prepending graph TD");
-      flowchartSyntax = `graph TD\n${flowchartSyntax}`;
-    }
-    
-    return flowchartSyntax;
-  } catch (error) {
-    console.error("Error generating flowchart from text:", error);
-    // Return a default flowchart for research papers
-    return `
-      graph TD
-        title[Research Paper Structure] --> abstract[Abstract]
-        title --> intro[Introduction]
-        title --> methods[Methodology]
-        title --> results[Results]
-        title --> discuss[Discussion]
-        title --> concl[Conclusion]
-        title --> refs[References]
-        
-        intro --> background[Background & Context]
-        intro --> problem[Problem Statement]
-        methods --> design[Research Design]
-        methods --> data[Data Collection]
-        results --> findings[Key Findings]
-        discuss --> interpret[Interpretation]
-        concl --> summary[Summary of Findings]
-        
-        classDef highlight fill:#f9f,stroke:#333,stroke-width:2px;
-        class title highlight;
-    `;
   }
-};
+  
+  try {
+    // Trim the text if it's too long (Gemini has token limits)
+    const MAX_TEXT_LENGTH = 20000; // Adjust as needed
+    const trimmedText = text.length > MAX_TEXT_LENGTH 
+      ? text.substring(0, MAX_TEXT_LENGTH) + "... [TRUNCATED]" 
+      : text;
+    
+    const model = genAI!.getGenerativeModel({
+      model: "gemini-pro",
+      safetySettings,
+    });
+
+    const prompt = `
+    Create a flowchart diagram of the following academic text.
+    Format the response using Mermaid syntax.
+    Follow these guidelines:
+    1.  Identify the key steps, processes, or components described in the text.
+    2.  Represent each step/process/component as a node in the flowchart.
+    3.  Connect the nodes with arrows to show the flow of information or execution.
+    4.  Use labels on the arrows to describe the relationships between the nodes.
+    5.  Keep the diagram simple and easy to understand.
+    
+    Example Mermaid syntax:
+    \`\`\`
+    graph TD
+        A[Start] --> B(Process)
+        B --> C{Decision}
+        C -- Yes --> D[Result 1]
+        C -- No --> E[Result 2]
+    \`\`\`
+    
+    Here's the text to analyze:
+    ${trimmedText}
+    
+    Return ONLY the Mermaid syntax, nothing else.
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const mermaidSyntax = response.text();
+    
+    console.log("Received response from Gemini API");
+    
+    return mermaidSyntax;
+  } catch (error: any) {
+    console.error("Error generating flowchart:", error);
+    
+    // Check for common API errors
+    if (error.message?.includes("429") || error.message?.includes("quota")) {
+      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
+    }
+    
+    if (error.message?.includes("403")) {
+      throw new Error("Gemini API access denied. Please check your API key.");
+    }
+    
+    if (error.message?.includes("503")) {
+      throw new Error("Gemini service unavailable. Please try again later.");
+    }
+    
+    // Default error with more information
+    throw new Error(`Failed to generate flowchart: ${error.message || "Unknown error"}`);
+  }
+}
