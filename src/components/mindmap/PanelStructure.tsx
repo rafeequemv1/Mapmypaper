@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -7,7 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf, getAllPdfKeys } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf, getAllPdfKeys, getPdfData } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { useNavigate } from "react-router-dom";
@@ -47,6 +46,7 @@ const PanelStructure = ({
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
+  const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -67,13 +67,17 @@ const PanelStructure = ({
     fetchPdfKeys();
   }, []);
 
-  // Handle active PDF change
+  // Handle active PDF change and load PDF URL
   const handleTabChange = async (key: string) => {
     try {
       onActivePdfKeyChange(key);
       
       // Set the selected PDF as current in IndexedDB
       await setCurrentPdf(key);
+      
+      // Get the PDF data URL to pass to the PdfViewer
+      const pdfDataUrl = await getPdfData(key);
+      setCurrentPdfUrl(pdfDataUrl);
       
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
       toast({
@@ -89,6 +93,22 @@ const PanelStructure = ({
       });
     }
   };
+
+  // Load current PDF on mount
+  useEffect(() => {
+    const loadCurrentPdf = async () => {
+      if (activePdfKey) {
+        try {
+          const pdfDataUrl = await getPdfData(activePdfKey);
+          setCurrentPdfUrl(pdfDataUrl);
+        } catch (error) {
+          console.error("Error loading current PDF:", error);
+        }
+      }
+    };
+    
+    loadCurrentPdf();
+  }, [activePdfKey]);
 
   // Remove pdf logic
   function handleRemovePdf(key: string) {
@@ -187,6 +207,10 @@ const PanelStructure = ({
         // Optionally, select this tab
         onActivePdfKeyChange(pdfKey);
         await setCurrentPdf(pdfKey); // Set as current PDF
+        
+        // Load the PDF URL for the viewer
+        const newPdfUrl = await getPdfData(pdfKey);
+        setCurrentPdfUrl(newPdfUrl);
         
         setProcessingProgress(100);
         setProcessingStage("Complete");
@@ -345,6 +369,7 @@ const PanelStructure = ({
             <TooltipProvider>
               <PdfViewer 
                 ref={pdfViewerRef}
+                pdfUrl={currentPdfUrl || undefined}
                 onTextSelected={onExplainText}
                 onImageCaptured={handlePdfAreaCaptured}
               />
