@@ -42,10 +42,9 @@ const MindMap = () => {
     }
   }, [showChat]);
 
-  // Handle image capture from PDF - enhanced to handle the fixed capture function
+  // Handle image capture from PDF
   const handleImageCaptured = useCallback((imageData: string) => {
     if (imageData) {
-      console.log("Image captured and being processed");
       setExplainImage(imageData);
       if (!showChat) {
         setShowChat(true);
@@ -75,7 +74,6 @@ const MindMap = () => {
   useEffect(() => {
     const handleImageCaptured = (e: CustomEvent) => {
       if (e.detail?.imageData) {
-        console.log("Image capture event detected");
         setExplainImage(e.detail.imageData);
         if (!showChat) {
           setShowChat(true);
