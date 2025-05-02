@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,7 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
         setDocumentType("document");
       }
       
-      // Cast the response to Summary type
+      // Cast the response to Summary type using type assertion
       setSummary(result as Summary);
     } catch (error) {
       console.error("Error generating summary:", error);

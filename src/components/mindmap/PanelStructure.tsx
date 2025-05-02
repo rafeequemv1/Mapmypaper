@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -58,7 +57,7 @@ const PanelStructure = ({
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState("");
   
-  // Add a state for the PDF URL
+  // Add a state for the PDF URL (storing the data URL from IndexedDB)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   // Fetch all PDF keys on mount
@@ -356,7 +355,7 @@ const PanelStructure = ({
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
                 onImageCaptured={handlePdfAreaCaptured}
-                pdfUrl={pdfUrl}
+                // Remove the pdfUrl prop as it doesn't exist in the component interface
               />
             </TooltipProvider>
           </div>
