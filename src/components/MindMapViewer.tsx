@@ -13,7 +13,6 @@ interface MindMapViewerProps {
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
   pdfKey?: string | null; // Add the pdfKey prop
-  onError?: () => void; // Add the onError prop
 }
 
 // Enhanced helper function to format node text with line breaks and add emojis
@@ -179,7 +178,7 @@ const stringToColor = (str: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey, onError }: MindMapViewerProps) => {
+const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -434,11 +433,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
               ]
             }
           };
-          
-          // Call onError if provided because we couldn't load the mindmap data
-          if (onError) {
-            onError();
-          }
         }
       } catch (error) {
         console.error("Error parsing mind map data:", error);
@@ -451,11 +445,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             ]
           }
         };
-        
-        // Call onError if provided because we had an error parsing the mindmap data
-        if (onError) {
-          onError();
-        }
       }
 
       // Initialize the mind map with data
@@ -598,7 +587,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         observer.disconnect();
       };
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfKey, onError]);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfKey]);
 
   // Listen for PDF switching events and update mindmap
   useEffect(() => {
@@ -750,16 +739,41 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 text-sm max-h-[300px] overflow-auto">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900">Mind Map Summary</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSummary(false)}
-                >
-                  Close
-                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowSummary(false)}>Close</Button>
               </div>
-              <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap">{summary}</pre>
+              <div className="prose prose-sm">
+                {summary.split('\n').map((line, i) => (
+                  <div key={i} className="mb-1">
+                    {line.startsWith('#') ? (
+                      <h4 className="text-md font-bold">{line.replace(/^#+\s/, '')}</h4>
+                    ) : line.startsWith('-') ? (
+                      <div className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>{line.replace(/^-\s/, '')}</span>
+                      </div>
+                    ) : (
+                      <p>{line}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    if (onExplainText && summary) {
+                      onExplainText(summary);
+                    }
+                    if (onRequestOpenChat) {
+                      onRequestOpenChat();
+                    }
+                  }}
+                >
+                  <FileText size={16} />
+                  Send to Chat
+                </Button>
               </div>
             </div>
           )}

@@ -99,8 +99,8 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
         setDocumentType("document");
       }
       
-      // Cast the response to Summary type using type assertion
-      setSummary(result as unknown as Summary);
+      // Cast the response to Summary type
+      setSummary(result as Summary);
     } catch (error) {
       console.error("Error generating summary:", error);
       toast({

@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -6,13 +7,12 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf, getAllPdfKeys, storePdfText, getPdfText } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf, getAllPdfKeys } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { useNavigate } from "react-router-dom";
-import { Home, Loader2, AlertCircle } from "lucide-react";
+import { Home, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -27,7 +27,6 @@ interface PanelStructureProps {
   onImageCaptured?: (imageData: string) => void;
   activePdfKey: string | null;
   onActivePdfKeyChange: (key: string | null) => void;
-  pdfLoadError?: string | null;
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -41,11 +40,9 @@ const PanelStructure = ({
   explainText,
   explainImage,
   onExplainText,
-  onTextSelected,
   onImageCaptured,
   activePdfKey,
   onActivePdfKeyChange,
-  pdfLoadError,
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -61,7 +58,6 @@ const PanelStructure = ({
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState("");
   const [pdfLoaded, setPdfLoaded] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
 
   // Fetch all PDF keys on mount
   useEffect(() => {
@@ -116,7 +112,6 @@ const PanelStructure = ({
     sessionStorage.removeItem(`pdfMeta_${key}`);
     sessionStorage.removeItem(`mindMapData_${key}`);
     sessionStorage.removeItem(`hasPdfData_${key}`);
-    sessionStorage.removeItem(`pdfText_${key}`);
     const metas = getAllPdfs();
     if (activePdfKey === key) {
       if (metas.length > 0) {
@@ -170,7 +165,7 @@ const PanelStructure = ({
         const reader = new FileReader();
         const pdfDataPromise = new Promise<string>((resolve, reject) => {
           reader.onload = e => resolve(e.target?.result as string);
-          reader.onerror = () => reject(new Error("Failed to read PDF file"));
+          reader.onerror = () => reject();
           reader.readAsDataURL(file);
         });
         
@@ -185,26 +180,12 @@ const PanelStructure = ({
         // Extract text from PDF
         setProcessingProgress(60);
         setProcessingStage("Extracting text");
-        let extractedText;
-        try {
-          extractedText = await PdfToText(file);
-          
-          if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
-            toast({
-              title: "No extractable text",
-              description: "This PDF appears to be image-based or scanned.",
-              variant: "destructive"
-            });
-            continue;
-          }
-          
-          // Store the extracted text
-          await storePdfText(pdfKey, extractedText);
-        } catch (textError) {
-          console.error("Error extracting text from PDF:", textError);
+        const extractedText = await PdfToText(file);
+        
+        if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
           toast({
-            title: "Text Extraction Failed",
-            description: "Failed to extract text from the PDF.",
+            title: "No extractable text",
+            description: "This PDF appears to be image-based or scanned.",
             variant: "destructive"
           });
           continue;
@@ -213,18 +194,9 @@ const PanelStructure = ({
         // Generate mindmap data
         setProcessingProgress(80);
         setProcessingStage("Generating mind map");
-        try {
-          const mindMapData = await generateMindMapFromText(extractedText);
-          sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
-        } catch (mapError) {
-          console.error("Error generating mind map:", mapError);
-          toast({
-            title: "Mind Map Generation Failed",
-            description: "Could not generate mind map, but PDF was added.",
-            variant: "warning"
-          });
-          // Continue despite error - we can try to regenerate later
-        }
+        const mindMapData = await generateMindMapFromText(extractedText);
+        
+        sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
         
         // Update the list of all PDF keys
         const updatedKeys = await getAllPdfKeys();
@@ -271,72 +243,6 @@ const PanelStructure = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = ""; // reset for re-uploading same file
       fileInputRef.current.click();
-    }
-  };
-  
-  const handleRetryMindMap = async () => {
-    if (!activePdfKey) {
-      toast({
-        title: "No PDF Selected",
-        description: "Please select a PDF first.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setProcessingPdfKey(activePdfKey);
-    setProcessingProgress(50);
-    setProcessingStage("Regenerating mind map");
-    setRetryCount(prev => prev + 1);
-    
-    try {
-      // Get the PDF text
-      const pdfText = await getPdfText(activePdfKey);
-      
-      if (!pdfText || pdfText.trim() === "") {
-        toast({
-          title: "No PDF Text",
-          description: "No extractable text found for this PDF.",
-          variant: "destructive",
-        });
-        setProcessingPdfKey(null);
-        return;
-      }
-      
-      // Generate a new mind map
-      const mindMapData = await generateMindMapFromText(pdfText);
-      
-      // Store the new mind map
-      sessionStorage.setItem(`${mindMapKeyPrefix}${activePdfKey}`, JSON.stringify(mindMapData));
-      
-      // Trigger an update event
-      window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: activePdfKey } }));
-      
-      setProcessingProgress(100);
-      setProcessingStage("Complete");
-      
-      toast({
-        title: "Mind Map Regenerated",
-        description: "Mind map has been successfully regenerated.",
-      });
-      
-      // Reset processing state after a short delay
-      setTimeout(() => {
-        setProcessingPdfKey(null);
-        setProcessingProgress(0);
-        setProcessingStage("");
-      }, 1000);
-    } catch (error) {
-      console.error("Error regenerating mind map:", error);
-      setProcessingPdfKey(null);
-      setProcessingProgress(0);
-      setProcessingStage("");
-      
-      toast({
-        title: "Regeneration Failed",
-        description: "Failed to regenerate mind map.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -473,53 +379,12 @@ const PanelStructure = ({
 
         {/* Mind Map Panel - Takes up remaining space */}
         <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
-          {pdfLoadError ? (
-            <div className="h-full flex flex-col items-center justify-center p-8">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md text-center">
-                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                <h2 className="text-xl font-bold text-red-700 mb-2">Error Loading PDF</h2>
-                <p className="text-red-600 mb-6">{pdfLoadError}</p>
-                <div className="flex flex-col gap-3">
-                  <Button onClick={handlePlusClick} className="w-full">
-                    Upload a New PDF
-                  </Button>
-                  <Button onClick={handleRetryMindMap} variant="outline" className="w-full">
-                    Retry Mind Map Generation
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : !activePdfKey ? (
-            <div className="h-full flex flex-col items-center justify-center p-8">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md text-center">
-                <h2 className="text-xl font-bold text-blue-700 mb-2">No PDF Selected</h2>
-                <p className="text-blue-600 mb-6">
-                  Please upload a PDF file to view and analyze it.
-                </p>
-                <Button onClick={handlePlusClick}>
-                  Upload PDF
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <MindMapViewer
-              isMapGenerated={isMapGenerated}
-              onMindMapReady={onMindMapReady}
-              onExplainText={onExplainText}
-              pdfKey={activePdfKey}
-              onError={() => {
-                // If mind map generation fails, offer to retry
-                if (retryCount === 0) {
-                  toast({
-                    title: "Mind Map Error",
-                    description: "Failed to load mind map. Try regenerating it.",
-                    duration: 5000,
-                  });
-                  handleRetryMindMap();
-                }
-              }}
-            />
-          )}
+          <MindMapViewer
+            isMapGenerated={isMapGenerated}
+            onMindMapReady={onMindMapReady}
+            onExplainText={onExplainText}
+            pdfKey={activePdfKey}
+          />
         </div>
 
         {showChat && (
