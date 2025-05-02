@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +6,7 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import MermaidModal from "@/components/mindmap/MermaidModal";
 import { MindElixirInstance } from "mind-elixir";
+import { getCurrentPdf } from "@/utils/pdfStorage";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -20,6 +20,26 @@ const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
+
+  // On first load, check if there's a current PDF key
+  useEffect(() => {
+    const initialSetup = async () => {
+      // First check if we have a PDF key from the location state (used when coming from PdfUpload)
+      if (location.state?.pdfKey) {
+        console.log("Setting PDF key from location state:", location.state.pdfKey);
+        setActivePdfKey(location.state.pdfKey);
+      } else {
+        // Otherwise try to get the current PDF key from localStorage
+        const currentKey = getCurrentPdf();
+        console.log("Current PDF key from storage:", currentKey);
+        if (currentKey) {
+          setActivePdfKey(currentKey);
+        }
+      }
+    };
+    
+    initialSetup();
+  }, [location.state]);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -92,6 +112,7 @@ const MindMap = () => {
   useEffect(() => {
     const handlePdfSwitched = (e: CustomEvent) => {
       if (e.detail?.pdfKey) {
+        console.log("PDF switched to:", e.detail.pdfKey);
         setActivePdfKey(e.detail.pdfKey);
       }
     };
