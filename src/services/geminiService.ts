@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 
 // Initialize the Gemini API with the API key
@@ -112,12 +113,12 @@ export async function generateMindMapFromText(text: string) {
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    const responseText = response.text();
     
     console.log("Received response from Gemini API");
     
     // Extract JSON from response
-    let jsonStr = text;
+    let jsonStr = responseText;
     
     // Handle potential formatting issues in the response
     if (jsonStr.includes("```json")) {
@@ -231,5 +232,220 @@ export async function generateFlowchartFromText(text: string) {
     
     // Default error with more information
     throw new Error(`Failed to generate flowchart: ${error.message || "Unknown error"}`);
+  }
+}
+
+// ADDING THE MISSING FUNCTIONS
+
+// Function to chat with Gemini about a PDF
+export async function chatWithGeminiAboutPdf(prompt: string) {
+  console.log("Chatting with Gemini about PDF:", prompt.substring(0, 100) + "...");
+  
+  // Re-initialize API if needed
+  if (!genAI) {
+    const initialized = initializeGeminiAPI();
+    if (!initialized) {
+      throw new Error("Failed to initialize Gemini API");
+    }
+  }
+  
+  try {
+    const model = genAI!.getGenerativeModel({
+      model: "gemini-pro",
+      safetySettings,
+    });
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error: any) {
+    console.error("Error chatting with Gemini about PDF:", error);
+    
+    // Check for common API errors
+    if (error.message?.includes("429") || error.message?.includes("quota")) {
+      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
+    }
+    
+    if (error.message?.includes("403")) {
+      throw new Error("Gemini API access denied. Please check your API key.");
+    }
+    
+    if (error.message?.includes("503")) {
+      throw new Error("Gemini service unavailable. Please try again later.");
+    }
+    
+    throw new Error(`Failed to chat with Gemini: ${error.message || "Unknown error"}`);
+  }
+}
+
+// Function to analyze an image with Gemini Vision
+export async function analyzeImageWithGemini(imageData: string) {
+  console.log("Analyzing image with Gemini Vision");
+  
+  // Re-initialize API if needed
+  if (!genAI) {
+    const initialized = initializeGeminiAPI();
+    if (!initialized) {
+      throw new Error("Failed to initialize Gemini API");
+    }
+  }
+  
+  try {
+    // Use Gemini-Pro-Vision model for image analysis
+    const model = genAI!.getGenerativeModel({
+      model: "gemini-pro-vision",
+      safetySettings,
+    });
+    
+    const prompt = "Analyze this image and describe what you see in detail. If it contains text, please extract and summarize it. If it's a figure or diagram, explain what it represents.";
+    
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: imageData.split(",")[1], // Remove the "data:image/jpeg;base64," part
+          mimeType: "image/jpeg",
+        },
+      },
+    ]);
+    
+    const response = await result.response;
+    return response.text();
+  } catch (error: any) {
+    console.error("Error analyzing image with Gemini:", error);
+    
+    // Check for common API errors
+    if (error.message?.includes("429") || error.message?.includes("quota")) {
+      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
+    }
+    
+    if (error.message?.includes("403")) {
+      throw new Error("Gemini API access denied. Please check your API key.");
+    }
+    
+    if (error.message?.includes("503")) {
+      throw new Error("Gemini service unavailable. Please try again later.");
+    }
+    
+    throw new Error(`Failed to analyze image: ${error.message || "Unknown error"}`);
+  }
+}
+
+// Function to explain selected text
+export async function explainSelectedText(text: string) {
+  console.log("Explaining selected text:", text.substring(0, 100) + "...");
+  
+  // Re-initialize API if needed
+  if (!genAI) {
+    const initialized = initializeGeminiAPI();
+    if (!initialized) {
+      throw new Error("Failed to initialize Gemini API");
+    }
+  }
+  
+  try {
+    const model = genAI!.getGenerativeModel({
+      model: "gemini-pro",
+      safetySettings,
+    });
+    
+    const prompt = `
+    Explain the following text in clear, simple language:
+    
+    "${text}"
+    
+    Include:
+    1. Main concepts and terminology
+    2. Key points in bullet points
+    3. Simple analogies if appropriate
+    4. Why this information matters in the broader context
+    
+    Format your response with markdown for better readability.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error: any) {
+    console.error("Error explaining text with Gemini:", error);
+    
+    // Check for common API errors
+    if (error.message?.includes("429") || error.message?.includes("quota")) {
+      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
+    }
+    
+    if (error.message?.includes("403")) {
+      throw new Error("Gemini API access denied. Please check your API key.");
+    }
+    
+    if (error.message?.includes("503")) {
+      throw new Error("Gemini service unavailable. Please try again later.");
+    }
+    
+    throw new Error(`Failed to explain text: ${error.message || "Unknown error"}`);
+  }
+}
+
+// Function to generate a structured summary
+export async function generateStructuredSummary(pdfText: string) {
+  console.log("Generating structured summary from text of length:", pdfText.length);
+  
+  // Re-initialize API if needed
+  if (!genAI) {
+    const initialized = initializeGeminiAPI();
+    if (!initialized) {
+      throw new Error("Failed to initialize Gemini API");
+    }
+  }
+  
+  try {
+    // Trim the text if it's too long (Gemini has token limits)
+    const MAX_TEXT_LENGTH = 20000; // Adjust as needed
+    const trimmedText = pdfText.length > MAX_TEXT_LENGTH 
+      ? pdfText.substring(0, MAX_TEXT_LENGTH) + "... [TRUNCATED]" 
+      : pdfText;
+    
+    const model = genAI!.getGenerativeModel({
+      model: "gemini-pro",
+      safetySettings,
+    });
+    
+    const prompt = `
+    Create a comprehensive structured summary of the following academic text.
+    Format your response using markdown with clear headings.
+    
+    Include the following sections:
+    1. OVERVIEW - A brief overview of the document (2-3 sentences)
+    2. KEY FINDINGS - The main results or conclusions (3-5 bullet points)
+    3. METHODOLOGY - How the research was conducted (if applicable)
+    4. IMPLICATIONS - The significance of the work
+    5. LIMITATIONS - Any limitations mentioned or implied
+    
+    Make your summary informative yet concise. Add relevant emojis at the start of each section.
+    
+    Here's the text:
+    ${trimmedText}
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error: any) {
+    console.error("Error generating structured summary:", error);
+    
+    // Check for common API errors
+    if (error.message?.includes("429") || error.message?.includes("quota")) {
+      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
+    }
+    
+    if (error.message?.includes("403")) {
+      throw new Error("Gemini API access denied. Please check your API key.");
+    }
+    
+    if (error.message?.includes("503")) {
+      throw new Error("Gemini service unavailable. Please try again later.");
+    }
+    
+    throw new Error(`Failed to generate summary: ${error.message || "Unknown error"}`);
   }
 }
