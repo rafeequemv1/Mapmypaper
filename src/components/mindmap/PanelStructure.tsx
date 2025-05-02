@@ -7,13 +7,12 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf, getAllPdfKeys, getPdfText } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf, getAllPdfKeys } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { useNavigate } from "react-router-dom";
-import { Home, Loader2, AlertTriangle } from "lucide-react";
+import { Home, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -28,7 +27,6 @@ interface PanelStructureProps {
   onImageCaptured?: (imageData: string) => void;
   activePdfKey: string | null;
   onActivePdfKeyChange: (key: string | null) => void;
-  onApiStatusChange?: (status: 'idle' | 'loading' | 'error' | 'success') => void;
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -45,7 +43,6 @@ const PanelStructure = ({
   onImageCaptured,
   activePdfKey,
   onActivePdfKeyChange,
-  onApiStatusChange,
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -60,7 +57,6 @@ const PanelStructure = ({
   const [processingPdfKey, setProcessingPdfKey] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState("");
-  const [apiError, setApiError] = useState<string | null>(null);
 
   // Fetch all PDF keys on mount
   useEffect(() => {
@@ -78,43 +74,6 @@ const PanelStructure = ({
       
       // Set the selected PDF as current in IndexedDB
       await setCurrentPdf(key);
-      
-      // Check if the mindmap data already exists for this PDF
-      const mindmapData = sessionStorage.getItem(`${mindMapKeyPrefix}${key}`);
-      if (!mindmapData) {
-        // Try to generate the mindmap if it doesn't exist
-        try {
-          const pdfText = await getPdfText(key);
-          if (pdfText && pdfText.length > 0) {
-            setProcessingPdfKey(key);
-            setProcessingStage("Generating mindmap");
-            setProcessingProgress(50);
-            if (onApiStatusChange) onApiStatusChange('loading');
-            
-            const mindMapData = await generateMindMapFromText(pdfText);
-            sessionStorage.setItem(`${mindMapKeyPrefix}${key}`, JSON.stringify(mindMapData));
-            
-            setProcessingProgress(100);
-            setProcessingStage("Complete");
-            if (onApiStatusChange) onApiStatusChange('success');
-            
-            setTimeout(() => {
-              setProcessingPdfKey(null);
-              setProcessingProgress(0);
-              setProcessingStage("");
-            }, 500);
-          }
-        } catch (error) {
-          console.error("Error generating mindmap for existing PDF:", error);
-          setApiError(error.message || "Failed to generate mindmap");
-          if (onApiStatusChange) onApiStatusChange('error');
-          toast({
-            title: "Mindmap Generation Failed",
-            description: "Couldn't create a mindmap for this PDF. API may be unavailable.",
-            variant: "destructive",
-          });
-        }
-      }
       
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
       toast({
@@ -164,18 +123,6 @@ const PanelStructure = ({
       return;
     }
     
-    // Check if API key is available
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
-      toast({
-        title: "API Key Missing",
-        description: "Gemini API key is required to generate mindmaps. Please set it in your .env file.",
-        variant: "destructive",
-      });
-      setApiError("Missing API key");
-      if (onApiStatusChange) onApiStatusChange('error');
-      return;
-    }
-    
     for (const file of pdfFiles) {
       const pdfKey = getPdfKey({ name: file.name, size: file.size, lastModified: file.lastModified });
       // Prevent duplicates
@@ -191,10 +138,6 @@ const PanelStructure = ({
       );
       
       try {
-        // Reset any previous errors
-        setApiError(null);
-        if (onApiStatusChange) onApiStatusChange('loading');
-        
         // Set processing state
         setProcessingPdfKey(pdfKey);
         setProcessingProgress(0);
@@ -204,7 +147,7 @@ const PanelStructure = ({
         const reader = new FileReader();
         const pdfDataPromise = new Promise<string>((resolve, reject) => {
           reader.onload = e => resolve(e.target?.result as string);
-          reader.onerror = () => reject(new Error("Failed to read PDF file"));
+          reader.onerror = () => reject();
           reader.readAsDataURL(file);
         });
         
@@ -227,40 +170,13 @@ const PanelStructure = ({
             description: "This PDF appears to be image-based or scanned.",
             variant: "destructive"
           });
-          
-          // Create a basic mindmap for image-based PDFs
-          const basicMindmap = {
-            nodeData: {
-              id: "root",
-              topic: `📄 ${file.name}`,
-              children: [
-                {
-                  id: "img1",
-                  topic: "🖼️ Image-based PDF",
-                  direction: 0,
-                  children: [
-                    { id: "img1-1", topic: "This appears to be a scanned document or image-based PDF" },
-                    { id: "img1-2", topic: "Text extraction not possible" },
-                    { id: "img1-3", topic: "Try using the area selection tool to capture diagrams" }
-                  ]
-                }
-              ]
-            }
-          };
-          
-          sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(basicMindmap));
-          setProcessingProgress(100);
-          setProcessingStage("Complete");
           continue;
         }
         
         // Generate mindmap data
         setProcessingProgress(80);
         setProcessingStage("Generating mind map");
-        console.log("Sending PDF text to Gemini API for mindmap generation");
-        
         const mindMapData = await generateMindMapFromText(extractedText);
-        console.log("Received mindmap data from API:", mindMapData ? "success" : "failed");
         
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
         
@@ -278,8 +194,6 @@ const PanelStructure = ({
         window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
         
-        if (onApiStatusChange) onApiStatusChange('success');
-        
         toast({
           title: "Success",
           description: "Mind map generated and PDF added!",
@@ -291,18 +205,14 @@ const PanelStructure = ({
           setProcessingProgress(0);
           setProcessingStage("");
         }, 1000);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error processing PDF:", err);
         setProcessingPdfKey(null);
         setProcessingProgress(0);
         setProcessingStage("");
-        setApiError(err.message || "Unknown API error");
-        
-        if (onApiStatusChange) onApiStatusChange('error');
-        
         toast({
           title: "Failed to process PDF",
-          description: `Error: ${err.message || "Could not generate mindmap"}`,
+          description: "Could not process the selected PDF.",
           variant: "destructive",
         });
       }
@@ -394,19 +304,6 @@ const PanelStructure = ({
           </button>
         </div>
         
-        {/* API Error Alert */}
-        {apiError && (
-          <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md">
-            <Alert variant="destructive" className="border-red-500">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>API Error</AlertTitle>
-              <AlertDescription>
-                {apiError}. Please check your Gemini API key and internet connection.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-        
         {/* Loading overlay for processing PDFs */}
         {processingPdfKey && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -428,9 +325,7 @@ const PanelStructure = ({
                 </div>
                 
                 <p className="text-sm text-gray-500">
-                  {processingStage === "Generating mind map" 
-                    ? "Analyzing document content with AI. This may take a minute..."
-                    : "Please wait while we process your document. This may take a minute depending on the file size."}
+                  Please wait while we process your document. This may take a minute depending on the file size.
                 </p>
               </div>
             </div>
@@ -463,7 +358,6 @@ const PanelStructure = ({
             isMapGenerated={isMapGenerated}
             onMindMapReady={onMindMapReady}
             onExplainText={onExplainText}
-            onRequestOpenChat={toggleChat}
             pdfKey={activePdfKey}
           />
         </div>

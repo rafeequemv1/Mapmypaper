@@ -10,7 +10,7 @@ const modelVision = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" })
 // Gemini Pro model (text-only)
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-// Function to get the Gemini model
+// Function to get the Gemini Pro model
 const getGeminiModel = async () => {
   if (!import.meta.env.VITE_GEMINI_API_KEY) {
     throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
@@ -106,42 +106,31 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     
     console.log(`Processing PDF text length: ${pdfText.length} characters`);
     
-    // Ensure we have a valid API key
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
-      console.error("Missing Gemini API key");
-      throw new Error("VITE_GEMINI_API_KEY is not set in environment variables");
-    }
-    
     // We'll use the first 10000 characters only to avoid token limits
     const truncatedText = pdfText.slice(0, 10000);
     
     const prompt = `
       Based on the following text from a research document, create a mind map structure in JSON format.
       Focus on identifying the main topics, key concepts, and their relationships.
-      Use emojis at the start of topics to represent the content.
       
       Document text excerpt:
       ${truncatedText}
       
       Return ONLY valid JSON without any explanation or formatting.
-      The JSON must have this structure for direct compatibility with mind-elixir:
+      The JSON should have this structure:
       {
-        "nodeData": {
-          "id": "root",
-          "topic": "Main Document Title",
+        "root": {
+          "topic": "Main Topic",
           "children": [
             {
-              "id": "bd1",
-              "topic": "🔍 Introduction",
-              "direction": 0,
+              "topic": "Subtopic 1",
               "children": [
-                {"id": "bd1-1", "topic": "📘 Background"}
+                {"topic": "Point 1.1"},
+                {"topic": "Point 1.2"}
               ]
             },
             {
-              "id": "bd2",
-              "topic": "⚙️ Methodology",
-              "direction": 0,
+              "topic": "Subtopic 2",
               "children": []
             }
           ]
@@ -149,7 +138,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       }
     `;
     
-    console.log("Sending request to Gemini API for mindmap generation...");
+    console.log("Sending request to Gemini API...");
     const geminiModel = await getGeminiModel();
     const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
@@ -160,99 +149,38 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     try {
       // Try to clean the JSON text by removing any markdown formatting
       let cleanedJsonText = jsonText;
-      
       // Remove markdown code block syntax if present
       cleanedJsonText = cleanedJsonText.replace(/```(json)?|```/g, '');
-      
       // Trim whitespace
       cleanedJsonText = cleanedJsonText.trim();
       
       const parsedJson = JSON.parse(cleanedJsonText);
-      console.log("Successfully parsed JSON response for mindmap");
-      
-      // Ensure the structure matches what mind-elixir expects
-      if (!parsedJson.nodeData) {
-        // If the API returned just the root object without the nodeData wrapper
-        if (parsedJson.id === "root" && parsedJson.topic && Array.isArray(parsedJson.children)) {
-          return { nodeData: parsedJson };
-        }
-        
-        // If root is inside a "root" property (sometimes happens)
-        if (parsedJson.root && parsedJson.root.topic && Array.isArray(parsedJson.root.children)) {
-          return { nodeData: parsedJson.root };
-        }
-      }
-      
+      console.log("Successfully parsed JSON response");
       return parsedJson;
     } catch (parseError) {
       console.error("Failed to parse JSON from Gemini response:", parseError);
       console.log("Raw response:", jsonText);
       
-      // Return a default mind map structure with an error message
+      // Return a fallback mind map structure
       return {
-        nodeData: {
-          id: "root",
-          topic: "📄 Document Analysis",
+        root: {
+          topic: "Document Structure",
           children: [
-            { 
-              id: "error",
-              topic: "⚠️ API Processing Error",
-              direction: 0,
-              children: [
-                { 
-                  id: "error-1", 
-                  topic: "Could not generate mindmap from document. Please try again or check API key."
-                }
-              ]
-            },
-            {
-              id: "default",
-              topic: "📋 Document Structure",
-              direction: 1,
-              children: [
-                { 
-                  id: "default-1", 
-                  topic: "Upload or select a PDF to analyze its structure" 
-                }
-              ]
-            }
+            { topic: "Unable to parse document structure" }
           ]
         }
       };
     }
   } catch (error) {
     console.error("Error generating mind map from text:", error);
-    
-    // Return a structured error message as a mindmap
-    return {
-      nodeData: {
-        id: "root",
-        topic: "⚠️ Error Processing Document",
-        children: [
-          { 
-            id: "error1", 
-            topic: `API Error: ${error.message || "Unknown error"}`,
-            direction: 0 
-          },
-          { 
-            id: "solution", 
-            topic: "💡 Possible solutions",
-            direction: 1,
-            children: [
-              { id: "solution1", topic: "Check your internet connection" },
-              { id: "solution2", topic: "Verify your Gemini API key is valid" },
-              { id: "solution3", topic: "Try uploading a different PDF" }
-            ] 
-          }
-        ]
-      }
-    };
+    throw new Error(`Failed to generate mind map from text: ${error.message}`);
   }
 };
 
 /**
  * Generates a structured summary from the extracted PDF text
  * @param pdfText The text extracted from the PDF
+ * @returns A structured summary of the document
  */
 export const generateStructuredSummary = async (pdfText: string): Promise<any> => {
   try {
