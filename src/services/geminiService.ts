@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable
@@ -14,7 +13,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 // Function to check API key validity 
 const isValidApiKey = () => {
-  return API_KEY && API_KEY.length > 0 && API_KEY !== "AIzaSyAybTv2s4hmijfOuLSEoPeqdMQuuqUCS9c";
+  return API_KEY && API_KEY.length > 0 && API_KEY !== "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM";
 };
 
 // Function to get the Gemini Pro model
@@ -32,13 +31,16 @@ const getGeminiModel = async () => {
  */
 export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
   try {
-    if (!isValidApiKey()) {
-      return "⚠️ The Gemini API key appears to be missing or invalid. Please provide a valid API key in your environment variables.";
+    if (!API_KEY || API_KEY === "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM") {
+      console.error("Invalid Gemini API key:", API_KEY);
+      return "⚠️ The Gemini API key appears to be the default one or is missing. Please provide a valid API key in your environment variables.";
     }
     
+    console.log("Sending request to Gemini API with prompt:", prompt.substring(0, 100) + "...");
     const gemini = await getGeminiModel();
     const result = await gemini.generateContent(prompt);
     const response = await result.response;
+    console.log("Received response from Gemini API");
     return response.text();
   } catch (error) {
     console.error("Error in chatWithGeminiAboutPdf:", error);
@@ -48,10 +50,12 @@ export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> =>
       return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
     } else if (error.message && error.message.includes("API key")) {
       return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
+    } else if (error.message && error.message.includes("503")) {
+      return "⚠️ The Gemini API service is temporarily unavailable (503 error). Please try again later.";
     }
     
     // Generic error
-    return "⚠️ An error occurred while processing your request. Please try again later.";
+    return `⚠️ An error occurred while processing your request: ${error.message}. Please try again later.`;
   }
 };
 
@@ -105,8 +109,9 @@ export const explainSelectedText = async (selectedText: string): Promise<string>
       throw new Error("Valid selected text is required.");
     }
     
-    if (!isValidApiKey()) {
-      return "⚠️ The Gemini API key appears to be missing or invalid. Please provide a valid API key in your environment variables.";
+    if (!API_KEY || API_KEY === "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM") {
+      console.error("Invalid Gemini API key:", API_KEY);
+      return "⚠️ The Gemini API key appears to be the default one or is missing. Please provide a valid API key in your environment variables.";
     }
     
     console.log(`Explaining selected text (length: ${selectedText.length} characters)`);
@@ -121,9 +126,11 @@ export const explainSelectedText = async (selectedText: string): Promise<string>
       Provide your explanation with relevant emojis and citations if applicable.
     `;
     
+    console.log("Sending explain text request to Gemini API");
     const geminiModel = await getGeminiModel();
     const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
+    console.log("Received explanation from Gemini API");
     return response.text();
   } catch (error) {
     console.error("Error explaining selected text:", error);
@@ -133,6 +140,8 @@ export const explainSelectedText = async (selectedText: string): Promise<string>
       return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
     } else if (error.message && error.message.includes("API key")) {
       return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
+    } else if (error.message && error.message.includes("503")) {
+      return "⚠️ The Gemini API service is temporarily unavailable (503 error). Please try again later.";
     } else if (error.message && error.message.includes("text is required")) {
       return "⚠️ Please select valid text to explain.";
     }

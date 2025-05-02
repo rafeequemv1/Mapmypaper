@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini, explainSelectedText } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import ChatToolbar from "./ChatToolbar";
 import { Switch } from "@/components/ui/switch";
@@ -125,16 +124,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         setIsTyping(true);
         
         try {
-          // Build the prompt with context
-          let prompt = `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`;
-          
-          // If using all papers, add that context to the prompt
-          if (useAllPapers && allPdfKeys.length > 1) {
-            prompt = `Consider all uploaded documents when answering. ${prompt}`;
-          }
-          
-          // Call the API with the prompt
-          const response = await chatWithGeminiAboutPdf(prompt);
+          // Use the explainSelectedText function directly from geminiService
+          const response = await explainSelectedText(explainText);
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
@@ -397,7 +388,7 @@ Feel free to ask me any questions! Here are some suggestions:`
           prompt = `Consider all uploaded documents when answering. ${prompt}`;
         }
         
-        // Call the API with the prompt
+        // Make sure this is using the updated chatWithGeminiAboutPdf function
         const response = await chatWithGeminiAboutPdf(prompt);
         
         // Hide typing indicator and add AI response with enhanced formatting
