@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -742,4 +743,17 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-1">No Mind Map Available</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Upload a document or start a
+            Upload a document or start a new mind map to begin.
+          </p>
+        </div>
+      )}
+      
+      <div 
+        className={`mind-map-container h-full w-full ${isReady ? 'opacity-100' : 'opacity-0'}`} 
+        ref={containerRef}
+      />
+    </div>
+  );
+};
+
+export default MindMapViewer;
