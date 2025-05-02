@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +63,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const selectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const selectionRectRef = useRef<fabric.Rect | null>(null);
     const activePdfPageRef = useRef<number | null>(null);
+    const isDrawingRef = useRef<boolean>(false); // Add ref to track drawing state
 
     // Load PDF data from IndexedDB when active PDF changes
     const loadPdfData = async () => {
@@ -264,6 +264,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           // Add selection rectangle creation on mouse down
           canvas.on('mouse:down', (options) => {
+            // Set drawing flag to true
+            isDrawingRef.current = true;
+            
             // Clear any existing rectangle
             if (selectionRectRef.current) {
               canvas.remove(selectionRectRef.current);
@@ -315,7 +318,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           // Update rectangle dimensions on mouse move
           canvas.on('mouse:move', (options) => {
-            if (!selectionRectRef.current) return;
+            // Only update if we're drawing
+            if (!isDrawingRef.current || !selectionRectRef.current) return;
             
             const pointer = canvas.getPointer(options.e);
             const rect = selectionRectRef.current;
@@ -341,6 +345,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           // Finalize selection on mouse up
           canvas.on('mouse:up', (options) => {
+            // Stop drawing
+            isDrawingRef.current = false;
+            
             if (!selectionRectRef.current) return;
             
             const rect = selectionRectRef.current;
@@ -364,12 +371,32 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             
             canvas.renderAll();
           });
+          
+          // Add a global mouse up handler to ensure rectangle drawing stops
+          // even if mouseup happens outside the canvas
+          const handleGlobalMouseUp = () => {
+            if (isDrawingRef.current && selectionCanvas) {
+              isDrawingRef.current = false;
+              selectionCanvas.renderAll();
+            }
+          };
+          
+          document.addEventListener('mouseup', handleGlobalMouseUp);
+          
+          // Cleanup function will remove this event listener
+          return () => {
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+          };
         }
       }
       
       // Cleanup when selection mode is turned off
       return () => {
         if (!isSelectionMode && selectionCanvas) {
+          // Reset drawing flag
+          isDrawingRef.current = false;
+          
+          // Dispose canvas
           selectionCanvas.dispose();
           setSelectionCanvas(null);
           
@@ -384,6 +411,12 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           setCurrentSelectionRect(null);
           selectionRectRef.current = null;
           setShowAreaTooltip(false);
+          
+          // Ensure cursor is reset
+          const pdfContainer = document.querySelector('[data-pdf-viewer]');
+          if (pdfContainer instanceof HTMLElement) {
+            pdfContainer.style.cursor = 'default';
+          }
         }
       };
     }, [isSelectionMode, pdfContainerRef.current]);
@@ -746,6 +779,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         // Turn off selection mode
         setCurrentSelectionRect(null);
         setShowAreaTooltip(false);
+        isDrawingRef.current = false; // Ensure drawing state is reset
+        
+        // Reset cursor on the PDF container
+        const pdfContainer = document.querySelector('[data-pdf-viewer]');
+        if (pdfContainer instanceof HTMLElement) {
+          pdfContainer.style.cursor = 'default';
+        }
       } else {
         // Turn on selection mode
         toast({
@@ -872,100 +912,3 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   error={
                     <div className="text-center py-4 text-red-500">
                       {loadError || "Failed to load PDF. Please try again."}
-                    </div>
-                  }
-                >
-                  {Array.from(new Array(numPages), (_, index) => (
-                    <div
-                      key={`page_${index + 1}`}
-                      className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                      ref={setPageRef(index)}
-                      style={{ width: 'fit-content', maxWidth: '100%' }}
-                      data-page-number={index + 1}
-                    >
-                      <Page
-                        pageNumber={index + 1}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={false}
-                        onRenderSuccess={onPageRenderSuccess}
-                        scale={scale}
-                        width={getOptimalPageWidth()}
-                        className="mx-auto"
-                        loading={
-                          <div className="flex items-center justify-center h-[600px] w-full">
-                            <div className="animate-pulse bg-gray-200 h-full w-full"></div>
-                          </div>
-                        }
-                      />
-                      <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
-                        Page {index + 1} of {numPages}
-                      </div>
-                    </div>
-                  ))}
-                </Document>
-              </div>
-            </ScrollArea>
-          ) : (
-            <div className="flex h-full items-center justify-center flex-col gap-4">
-              <div className="text-center p-4 max-w-md">
-                <h3 className="text-xl font-medium mb-2">No PDF Loaded</h3>
-                <p className="text-gray-600">
-                  Please upload a PDF document using the upload button or select one from the tabs above.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {/* Text selection tooltip */}
-        {showTextTooltip && selectionPosition && (
-          <div 
-            ref={tooltipRef}
-            className="absolute bg-white p-2 rounded-lg shadow-lg border border-gray-200 z-50"
-            style={{
-              left: `${selectionPosition.x}px`,
-              top: `${selectionPosition.y - 50}px`,
-              transform: 'translateX(-50%)',
-            }}
-          >
-            <button
-              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-md transition-colors"
-              onClick={handleExplainText}
-            >
-              Explain in Chat
-            </button>
-          </div>
-        )}
-        
-        {/* Area selection tooltip */}
-        {showAreaTooltip && areaTooltipPosition && (
-          <div 
-            className="absolute bg-white p-2 rounded-lg shadow-lg border border-gray-200 z-50"
-            style={{
-              left: `${areaTooltipPosition.x}px`,
-              top: `${areaTooltipPosition.y - 40}px`,
-              transform: 'translateX(-50%)',
-            }}
-          >
-            <div className="flex gap-2">
-              <button
-                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-md transition-colors"
-                onClick={captureSelectedArea}
-              >
-                Send to Chat
-              </button>
-              <button
-                className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs rounded-md transition-colors"
-                onClick={() => setShowAreaTooltip(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-export default PdfViewer;
