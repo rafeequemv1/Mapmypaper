@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -246,6 +247,15 @@ const stringToColor = (str: string): string => {
   
   // Use the hash to select a color from palette
   return colors[Math.abs(hash) % colors.length];
+};
+
+// Generate summary of a node and its children
+const generateNodeSummary = (node: any) => {
+  // This function would generate a summary of a node and its children
+  console.log("Generating summary for node:", node);
+  
+  // This is a placeholder for actual AI-powered summary generation
+  return `Summary of ${node.topic}`;
 };
 
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey }: MindMapViewerProps) => {
@@ -662,3 +672,90 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           linkElements.forEach((link: Element) => {
             const linkElement = link as SVGElement;
             linkElement.setAttribute('stroke-width', colorfulTheme.cssVar['--line-width'].replace('px', ''));
+            linkElement.setAttribute('stroke', colorfulTheme.cssVar['--line-color']);
+            linkElement.setAttribute('marker-end', 'url(#arrowhead)');
+          });
+        }
+      };
+      
+      // Call enhanceConnectionLines after initialization and on data changes
+      setTimeout(enhanceConnectionLines, 500);
+      mind.bus.addListener('operation', enhanceConnectionLines);
+      
+      // Save mind map reference
+      mindMapRef.current = mind;
+      
+      // Notify parent component that mind map is ready
+      if (onMindMapReady) {
+        onMindMapReady(mind);
+      }
+      
+      // Set up a click handler for opening the chat with relevant text
+      mind.bus.addListener('selectNode', (nodeObj: any) => {
+        // When a node is selected, update explainText or open chat if needed
+        if (onExplainText && nodeObj && nodeObj.topic) {
+          // Either update the text, or if requested, also open chat
+          const topicText = nodeObj.topic.replace(/^\p{Emoji}\s*/u, ''); // Remove emoji from start
+          
+          if (onRequestOpenChat) {
+            // Only request opening chat on double-click
+            const now = Date.now();
+            if (mind.lastClickTime && now - mind.lastClickTime < 300) {
+              onExplainText(topicText);
+              onRequestOpenChat();
+            }
+            mind.lastClickTime = now;
+          }
+        }
+      });
+      
+      // Set ready state to true
+      setIsReady(true);
+      
+      // Return cleanup function to remove event listeners
+      return () => {
+        styleObserver.disconnect();
+        observer.disconnect();
+        
+        // Clean up all event listeners when unmounting
+        if (mind && mind.bus) {
+          mind.bus.clearListeners();
+        }
+        
+        // Clear mind map instance
+        mindMapRef.current = null;
+      };
+    }
+  }, [isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, activePdfKey]);
+  
+  // Create a timer to recheck/refresh the mind map periodically based on actual PDF changes
+  const activePdfKey = pdfKey;
+  
+  // Component render
+  return (
+    <div className="w-full h-full relative flex flex-col">
+      <div className="flex-grow relative">
+        <div 
+          ref={containerRef} 
+          className="w-full h-full" 
+          style={{ background: '#F9F7FF' }} // Match the theme background
+        />
+        
+        {!isMapGenerated && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80">
+            <div className="text-center">
+              <p className="text-lg font-medium mb-4">No mind map yet</p>
+              <p className="text-gray-500 mb-6">Upload a PDF document to generate a mind map</p>
+              <Button className="bg-purple-600 hover:bg-purple-700">
+                <FileText className="mr-2 h-4 w-4" />
+                Upload PDF
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MindMapViewer;
