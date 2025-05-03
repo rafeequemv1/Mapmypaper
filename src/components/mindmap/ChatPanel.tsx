@@ -32,7 +32,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 }) => {
   const [message, setMessage] = useState("");
   const [aiResponse, setAiResponse] = useState("");
-  const [chatHistory, setChatHistory<{ role: 'user' | 'assistant'; content: string }[]>([
+  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
     {
       role: 'assistant' as const,
       content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.\n\nFeel free to ask me any questions! Here are some suggestions:\n\n- What are the main topics covered in this paper?\n- Can you summarize the key findings?\n- What are the research methods used?\n- What are the limitations of this study?`
