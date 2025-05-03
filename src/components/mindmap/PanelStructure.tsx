@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
 import PdfViewer from "@/components/mindmap/PdfViewer";
-import MindMapComponent from "@/components/mindmap/MindMapComponent";
+import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MessageEmpty from "@/components/mindmap/MessageEmpty";
 
@@ -97,7 +97,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
 
         {/* Middle panel (mind map) */}
         <ResizablePanel defaultSize={50} minSize={10}>
-          <MindMapComponent
+          <MindMapViewer
             onMindMapReady={onMindMapReady}
             isMapGenerated={isMapGenerated}
             pdfKey={activePdfKey}
