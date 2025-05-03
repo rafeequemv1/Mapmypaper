@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ interface ChatPanelProps {
   allPdfKeys: string[];
 }
 
-const ChatPanel = ({
+const ChatPanel: React.FC<ChatPanelProps> = ({
   toggleChat,
   explainText,
   explainImage,
@@ -36,7 +37,7 @@ const ChatPanel = ({
   onPdfPlusClick,
   activePdfKey,
   allPdfKeys
-}: ChatPanelProps) => {
+}) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -277,7 +278,7 @@ Feel free to ask me any questions! Here are some suggestions:`
       }
       
       return fullText;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error extracting text from PDF:', error);
       return `Could not extract text from PDF: ${error.message}`;
     }
@@ -931,3 +932,28 @@ Feel free to ask me any questions! Here are some suggestions:`
             onKeyDown={handleKeyDown}
           />
           <div className="flex flex-col gap-2">
+            <Button
+              onClick={handleAttachClick}
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              title="Attach file"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={() => handleSendMessage()}
+              size="icon"
+              className="h-8 w-8"
+              title="Send message"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatPanel;
