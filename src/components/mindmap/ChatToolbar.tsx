@@ -1,38 +1,83 @@
 
 import React from "react";
-import { Plus, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Image, FileText, BrainCircuit } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatToolbarProps {
-  onPlus?: () => void;
-  micEnabled: boolean;
-  onMicToggle: () => void;
+  onAnalyzeImage?: () => void;
+  onSummarizeText?: () => void;
 }
 
-const ChatToolbar: React.FC<ChatToolbarProps> = ({ onPlus, micEnabled, onMicToggle }) => {
+const ChatToolbar: React.FC<ChatToolbarProps> = ({ 
+  onAnalyzeImage,
+  onSummarizeText
+}) => {
+  const { toast } = useToast();
+
+  const handleImageAnalysisClick = () => {
+    if (onAnalyzeImage) {
+      onAnalyzeImage();
+    } else {
+      toast({
+        title: "Feature not available",
+        description: "Image analysis functionality is not connected",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSummarizeClick = () => {
+    if (onSummarizeText) {
+      onSummarizeText();
+    } else {
+      toast({
+        title: "Feature not available",
+        description: "Text summarization functionality is not connected",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="flex gap-2 px-2 py-1 border-b bg-white items-center">
-      {onPlus && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={onPlus}
-          aria-label="Add PDF"
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
-      )}
-      <Button
-        variant={micEnabled ? "default" : "ghost"}
-        size="icon"
-        className="h-8 w-8"
-        onClick={onMicToggle}
-        aria-label="Toggle Microphone"
-      >
-        {micEnabled ? <Mic className="h-5 w-5 text-red-500" /> : <MicOff className="h-5 w-5" />}
-      </Button>
-      <span className="text-xs text-muted-foreground ml-2">{micEnabled ? "Listening..." : "Mic Off"}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 w-7 p-0" 
+            onClick={handleImageAnalysisClick}
+          >
+            <Image size={16} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Analyze image with Gemini Vision</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 w-7 p-0" 
+            onClick={handleSummarizeClick}
+          >
+            <FileText size={16} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Summarize document text</p>
+        </TooltipContent>
+      </Tooltip>
+      
+      <div className="ml-auto flex items-center text-xs text-muted-foreground">
+        <BrainCircuit size={14} className="mr-1" />
+        <span>Gemini AI</span>
+      </div>
     </div>
   );
 };

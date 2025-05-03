@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, Upload, AlertCircle, X } from "lucide-react";
+import { Brain, Upload, AlertCircle, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress"; 
+import { Skeleton } from "@/components/ui/skeleton";
 
 function getPdfKey(file: File) {
   // You could enhance this by hashing the file if needed, but name+size+lastModified is a good-enough ID for most use-cases.
@@ -38,8 +40,11 @@ const PdfUpload = () => {
   const maxRetries = 3;
   const retryDelay = 15000; // 15 seconds
   const [retryAttempt, setRetryAttempt] = useState(0);
+  
+  // New state for processing progress
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState("");
 
-  // Keep all mindMap data by pdfKey in sessionStorage
   const mindMapKeyPrefix = "mindMapData_";
 
   useEffect(() => {
@@ -141,7 +146,6 @@ const PdfUpload = () => {
     });
   }
 
-  // Remove PDF from list and storage
   const removePdf = (key: string) => {
     const idx = pdfFiles.findIndex(f => getPdfKey(f) === key);
     if (idx === -1) return;
@@ -173,6 +177,8 @@ const PdfUpload = () => {
     setIsProcessing(true);
     setExtractionError(null);
     setRetryAttempt(0);
+    setProcessingProgress(0);
+    setProcessingStage("Initializing");
 
     toast({
       title: "Processing PDF",
@@ -180,11 +186,15 @@ const PdfUpload = () => {
     });
 
     await processAndGenerateMindMap(selectedFile, activePdfKey);
-  }, [activePdfKey, pdfFiles, toast]);  
+  }, [activePdfKey, pdfFiles, toast]);
 
   async function processAndGenerateMindMap(selectedFile: File, pdfKey: string) {
     try {
-      // Read the PDF as DataURL for viewing
+      // Update processing stage
+      setProcessingStage("Reading PDF");
+      setProcessingProgress(10);
+
+      // Read the PDF as DataURL for viewing (same as before)
       const reader = new FileReader();
 
       const pdfDataPromise = new Promise<string>((resolve, reject) => {
@@ -200,6 +210,9 @@ const PdfUpload = () => {
       // Store the PDF data in IndexedDB with its unique key
       const pdfData = await pdfDataPromise;
       
+      setProcessingProgress(30);
+      setProcessingStage("Storing PDF data");
+      
       // Store in IndexedDB with the specific key
       await storePdfData(pdfKey, pdfData);
       
@@ -208,6 +221,9 @@ const PdfUpload = () => {
       
       console.log(`PDF data stored for: ${selectedFile.name}`);
 
+      setProcessingProgress(50);
+      setProcessingStage("Extracting text");
+      
       // Extract text
       const extractedText = await PdfToText(selectedFile);
 
@@ -215,32 +231,26 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
 
-      // Store the extracted text in sessionStorage for easier access later
-      sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
+      setProcessingProgress(70);
+      setProcessingStage("Generating mind map");
       
-      console.log(`Extracted text length: ${extractedText.length} characters`);
-      console.log(`Text sample: ${extractedText.substring(0, 150)}...`);
-
-      // Process via Gemini API to generate mind map
+      // Process via Gemini API
       try {
-        console.log("Calling Gemini API to generate mind map...");
         const mindMapData = await generateMindMapFromText(extractedText);
-        console.log("Mind map data generated:", mindMapData);
 
-        if (!mindMapData || !mindMapData.nodeData) {
-          throw new Error("Generated mind map data is invalid or empty");
-        }
-
+        setProcessingProgress(90);
+        setProcessingStage("Finalizing");
+        
         // Store generated mind map data in sessionStorage under dedicated key
-        const mindMapKey = `${mindMapKeyPrefix}${pdfKey}`;
-        sessionStorage.setItem(mindMapKey, JSON.stringify(mindMapData));
-        console.log(`Mind map data stored in sessionStorage with key: ${mindMapKey}`);
+        sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
+
+        setProcessingProgress(100);
+        setProcessingStage("Complete");
 
         toast({
           title: "Success",
           description: "Mind map generated successfully!",
         });
-        
         // Pass pdf key to mindmap page so that it knows which PDF/mindmap to show.
         navigate("/mindmap", { state: { pdfKey } });
       } catch (error: any) {
@@ -284,6 +294,8 @@ const PdfUpload = () => {
         variant: "destructive",
       });
       setIsProcessing(false);
+      setProcessingProgress(0);
+      setProcessingStage("");
     } finally {
       if (retryAttempt === 0 || retryAttempt >= maxRetries) {
         setIsProcessing(false);
@@ -384,16 +396,39 @@ const PdfUpload = () => {
                       {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
-                  <Button
-                    onClick={handleGenerateMindmap}
-                    className="w-full bg-[#333] hover:bg-[#444] text-white"
-                    disabled={isProcessing || activePdfKey !== getPdfKey(file)}
-                    size="lg"
-                  >
-                    {isProcessing && activePdfKey === getPdfKey(file)
-                      ? `Processing${retryAttempt > 0 ? ` (Retry ${retryAttempt}/${maxRetries})` : '...'}`
-                      : "Generate Mind Map"}
-                  </Button>
+                  
+                  {/* Loading states with progress */}
+                  {isProcessing && activePdfKey === getPdfKey(file) ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <span className="text-sm font-medium">
+                            {processingStage || "Processing..."}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500">{processingProgress}%</span>
+                      </div>
+                      
+                      <Progress value={processingProgress} className="h-2" />
+                      
+                      {retryAttempt > 0 && (
+                        <div className="text-xs text-amber-600 flex items-center gap-1 mt-1">
+                          <AlertCircle className="h-3 w-3" />
+                          <span>Retry {retryAttempt}/{maxRetries}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleGenerateMindmap}
+                      className="w-full bg-[#333] hover:bg-[#444] text-white"
+                      disabled={isProcessing || activePdfKey !== getPdfKey(file)}
+                      size="lg"
+                    >
+                      Generate Mind Map
+                    </Button>
+                  )}
                 </TabsContent>
               ))}
             </Tabs>

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 const Profile = () => {
   const { user, profile, signOut } = useAuth();
@@ -96,6 +96,17 @@ const Profile = () => {
 
   return (
     <div className="container max-w-2xl py-8">
+      <div className="mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+      </div>
       <Card>
         <CardHeader className="flex flex-row items-center gap-4">
           <div className="relative">

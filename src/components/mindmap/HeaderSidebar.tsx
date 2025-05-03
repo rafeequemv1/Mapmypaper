@@ -4,6 +4,7 @@ import {
   FileCode,
   MessageSquare,
   FileText,
+  GitBranch, // Changed from FlowChart to GitBranch which exists in lucide-react
 } from "lucide-react";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
@@ -15,6 +16,7 @@ interface HeaderSidebarProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMermaid: React.Dispatch<React.SetStateAction<boolean>>;
   onExportSVG: () => void;
   onExportPNG: () => void;
   onExportJSON: () => void;
@@ -26,6 +28,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   togglePdf,
   toggleChat,
   setShowSummary,
+  setShowMermaid,
   onExportSVG,
   onExportPNG,
   onExportJSON,
@@ -48,11 +51,17 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
       icon={<FileText className="h-4 w-4" />}
       title="Show Summary"
     />
+    <HeaderSidebarIcon
+      onClick={() => setShowMermaid(true)}
+      icon={<GitBranch className="h-4 w-4" />}
+      title="Show Document Flowchart"
+    />
     <HeaderExportMenu
       onExportSVG={onExportSVG}
       onExportPNG={onExportPNG}
       onExportJSON={onExportJSON}
     />
+    
     {/* User Menu at the bottom */}
     <div className="mt-auto mb-4">
       <UserMenu />
