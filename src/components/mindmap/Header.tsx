@@ -3,9 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
   PanelRight, 
-  PanelLeft, 
   FileText, 
-  Download,
   Text, 
   GitBranch,
   AlertTriangle
@@ -50,12 +48,6 @@ const Header = ({
     action();
   };
 
-  const handleExportClick = () => {
-    checkMindMap(() => {
-      // The export menu dropdown will handle the actual export options
-    });
-  };
-  
   const handleShowSummary = () => {
     checkMindMap(() => {
       setShowSummary(true);
