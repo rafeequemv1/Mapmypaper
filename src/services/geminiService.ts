@@ -1,5 +1,6 @@
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, GenerativeModel, Part } from "@google/generative-ai";
+import { enhanceMindMapWithEmojis } from "../utils/mindMapUtils";
 
 // Initialize the Gemini API with the provided API key
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
@@ -33,13 +34,13 @@ const generationConfig = {
 };
 
 // This extracts text from PDFs and generates a mind map structure
-export async function generateMindMapFromText(text: string) {
+export async function generateMindMapFromText(pdfText: string) {
   try {
     // Truncate text if it's too long (Gemini has input token limits)
-    let processedText = text;
-    if (text.length > 30000) {
+    let processedText = pdfText;
+    if (pdfText.length > 30000) {
       console.log("Text too long, truncating to 30,000 characters");
-      processedText = text.substring(0, 30000);
+      processedText = pdfText.substring(0, 30000);
     }
 
     // Create the model instance
@@ -49,44 +50,53 @@ export async function generateMindMapFromText(text: string) {
       generationConfig,
     });
 
-    // Enhanced prompt engineering for more detailed content extraction
+    // Enhanced prompt engineering for more detailed content extraction with emojis
     const prompt = `
-      You are an expert in creating hierarchical mind maps from academic papers.
+      You are an expert in creating highly detailed and visually engaging hierarchical mind maps from academic papers.
       
-      I'll provide you with text extracted from a PDF research paper. Your task is to carefully read this text and create a detailed mind map structure with ACTUAL CONTENT from the paper.
+      I'll provide you with text extracted from a PDF research paper. Your task is to carefully read this text and create a HIGHLY DETAILED mind map structure with EXTENSIVE CONTENT from the paper.
       
       Create a JSON structure that follows the Mind-Elixir format:
       
       {
         "nodeData": {
           "id": "root",
-          "topic": "PAPER_TITLE", // Extract the actual title of the paper here
+          "topic": "🔍 ACTUAL_PAPER_TITLE", // Extract the actual title and add an appropriate emoji
           "children": [
             {
               "id": "a unique id",
-              "topic": "ACTUAL_SECTION_CONTENT", // Extract real content from the paper
+              "topic": "EMOJI SECTION_CONTENT", // Add relevant emoji + real content from the paper
               "direction": 0,  // 0 for left branches, 1 for right branches
-              "children": [] // Nested concepts with actual content
+              "children": [] // Highly detailed nested concepts with actual paper content
             }
           ]
         }
       }
       
-      VERY IMPORTANT REQUIREMENTS:
-      1. Extract and use the ACTUAL TITLE of the paper for the root node.
-      2. Use REAL CONTENT from the paper for all topics - NOT generic placeholders.
-      3. Include specific facts, findings, methodologies mentioned in the paper.
-      4. Structure should reflect the paper's actual organization.
-      5. Look for headings, key sentences, and important statements to extract.
-      6. For each section, include 3-5 actual findings or statements from the paper.
-      7. Ensure every node contains SPECIFIC information from the paper, not generic labels.
+      SPECIFIC REQUIREMENTS:
+      1. ADD EMOJIS to EVERY topic node based on its content - use a relevant emoji that matches each topic
+      2. Extract and use the ACTUAL TITLE of the paper for the root node (with emoji)
+      3. Create a DEEP HIERARCHY with at least 3-4 levels of nested nodes for important sections
+      4. Include AT LEAST 5-7 main branches (sections from the paper)
+      5. Each main section should have AT LEAST 4-6 subsections
+      6. For important sections, create even deeper hierarchies with 3rd and 4th level nodes
+      7. Use REAL CONTENT from the paper for all topics - NOT generic placeholders
+      8. Include specific facts, findings, methodologies, and key terminology mentioned in the paper
+      9. Structure should reflect the paper's actual organization and flow of ideas
+      10. Use concise but informative node labels that capture the essence of each concept
+      11. Balance the mind map visually with roughly equal nodes on both sides
+      12. Use "direction": 0 for left branches and "direction": 1 for right branches
+      13. For research papers, typical left branches include Introduction, Literature Review, Methodology
+      14. For research papers, typical right branches include Results, Discussion, Conclusion
+      15. Include unique alphanumeric IDs for each node
       
-      Additional guidance:
-      - Use a maximum of 3-4 words for each topic (node label) to keep the mind map readable.
-      - Keep the structure balanced with roughly equal nodes on both sides.
-      - Use "direction": 0 for left branches (Introduction, Methodology) and "direction": 1 for right branches (Results, Discussion, Conclusion).
-      - Include ID fields that are unique (alphanumeric) for each node.
-      - DO NOT return explanations, just the valid JSON.
+      IMPORTANT FORMATTING GUIDELINES:
+      - Keep node topics concise but specific (3-7 words is ideal)
+      - Every node MUST start with an appropriate emoji that reflects its content
+      - Add formatting like "✅" for key findings, "❌" for limitations, "⚠️" for warnings
+      - Ensure all content is factual and actually present in the paper
+      
+      DO NOT RETURN ANY EXPLANATIONS, just the valid JSON.
       
       Here's the text: 
       ${processedText}
@@ -102,7 +112,12 @@ export async function generateMindMapFromText(text: string) {
       // Try to extract JSON if it's wrapped in markdown code blocks 
       const jsonMatch = responseText.match(/```(?:json)?([\s\S]*)```/);
       const jsonString = jsonMatch ? jsonMatch[1].trim() : responseText.trim();
-      return JSON.parse(jsonString);
+      const mindMapData = JSON.parse(jsonString);
+      
+      // Enhance the mind map with additional emojis where missing
+      const enhancedMindMap = enhanceMindMapWithEmojis(mindMapData);
+      
+      return enhancedMindMap;
     } catch (error) {
       console.error("Error parsing JSON:", error);
       throw new Error("Generated response was not valid JSON");

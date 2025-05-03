@@ -7,6 +7,7 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import MermaidModal from "@/components/mindmap/MermaidModal";
 import { MindElixirInstance } from "mind-elixir";
+import { enhanceMindMapWithEmojis, logMindMapDiagnostics } from "@/utils/mindMapUtils";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -25,7 +26,44 @@ const MindMap = () => {
     console.log("Mind map instance is ready:", instance);
     setIsMapGenerated(true);
     setMindMapInstance(instance);
-  }, []);
+    
+    // Add ability to enhance mind map with emojis
+    if (instance && activePdfKey) {
+      // Add a button to the toolbar for enhancing with emojis
+      const enhanceMindMapData = () => {
+        try {
+          // Get the current mind map data
+          const data = instance.getData();
+          
+          // Enhance with emojis
+          const enhancedData = enhanceMindMapWithEmojis({
+            nodeData: data.nodeData
+          });
+          
+          // Update the mind map
+          instance.init(enhancedData);
+          
+          // Save the enhanced mind map data
+          const mindMapKey = `mindMapData_${activePdfKey}`;
+          sessionStorage.setItem(mindMapKey, JSON.stringify(enhancedData));
+          
+          toast({
+            title: "Mind Map Enhanced",
+            description: "Added emojis to make the mind map more visual!",
+            duration: 3000
+          });
+          
+          // Log diagnostics
+          logMindMapDiagnostics(activePdfKey);
+        } catch (error) {
+          console.error("Error enhancing mind map:", error);
+        }
+      };
+      
+      // Expose the enhancement function to the window for debugging
+      (window as any).enhanceMindMap = enhanceMindMapData;
+    }
+  }, [toast, activePdfKey]);
 
   // Toggle chat function
   const toggleChat = useCallback(() => {
@@ -93,6 +131,11 @@ const MindMap = () => {
     const handlePdfSwitched = (e: CustomEvent) => {
       if (e.detail?.pdfKey) {
         setActivePdfKey(e.detail.pdfKey);
+        
+        // Log mind map diagnostics when PDF changes
+        setTimeout(() => {
+          logMindMapDiagnostics(e.detail.pdfKey);
+        }, 1000);
       }
     };
     
