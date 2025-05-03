@@ -94,13 +94,13 @@ export async function generateMindMapFromText(text: string) {
     // Generate the response
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    const responseText = response.text();
     
     // Parse the JSON from the response
     try {
       // Try to extract JSON if it's wrapped in markdown code blocks 
-      const jsonMatch = text.match(/```(?:json)?([\s\S]*)```/);
-      const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
+      const jsonMatch = responseText.match(/```(?:json)?([\s\S]*)```/);
+      const jsonString = jsonMatch ? jsonMatch[1].trim() : responseText.trim();
       return JSON.parse(jsonString);
     } catch (error) {
       console.error("Error parsing JSON:", error);
@@ -175,7 +175,7 @@ export async function generateFlowchartFromText(text: string): Promise<string> {
 // Chat with Gemini about a PDF
 export async function chatWithGeminiAboutPdf(
   question: string,
-  pdfText: string,
+  pdfText: string = "", // Make pdfText optional with default empty string
   chatHistory: Array<{ role: string; parts: string }> = []
 ): Promise<string> {
   try {
@@ -188,7 +188,7 @@ export async function chatWithGeminiAboutPdf(
 
     // Truncate text if too long
     let processedPdfText = pdfText;
-    if (pdfText.length > 25000) {
+    if (pdfText && pdfText.length > 25000) {
       console.log("PDF text too long, truncating to 25,000 characters");
       processedPdfText = pdfText.substring(0, 25000);
     }
@@ -204,16 +204,21 @@ export async function chatWithGeminiAboutPdf(
     });
 
     // Create the context-rich prompt
-    const prompt = `
-      I'm going to ask you questions about a document. Here's the document content:
-      
-      ${processedPdfText}
-      
-      My question is: ${question}
-      
-      Please provide a detailed answer based on the document content. If the answer isn't in the document, say so.
-      If you're referring to specific parts of the document, add references like [Page X] or use quotation marks.
-    `;
+    let prompt = question;
+    
+    // Only add PDF context if provided
+    if (processedPdfText) {
+      prompt = `
+        I'm going to ask you questions about a document. Here's the document content:
+        
+        ${processedPdfText}
+        
+        My question is: ${question}
+        
+        Please provide a detailed answer based on the document content. If the answer isn't in the document, say so.
+        If you're referring to specific parts of the document, add references like [Page X] or use quotation marks.
+      `;
+    }
 
     // Generate response
     const result = await chat.sendMessage(prompt);

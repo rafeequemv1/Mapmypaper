@@ -1,4 +1,7 @@
 
+// Fix for line 78 in PdfViewer.tsx
+// This is the part with the Promise<string> error
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -71,7 +74,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         setIsLoading(true);
         
         // First, get the current PDF key
-        const currentPdfKey = getCurrentPdf();
+        const currentPdfKey = await getCurrentPdf(); // Handle the Promise
         
         if (currentPdfKey) {
           // Then get the actual PDF data using the key
