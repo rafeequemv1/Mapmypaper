@@ -1,3 +1,4 @@
+
 import { openDB as openIDB, IDBPDatabase } from 'idb';
 
 let db: IDBPDatabase | null = null;
@@ -15,6 +16,9 @@ export const openDB = async () => {
         }
         if (!db.objectStoreNames.contains('current')) {
           db.createObjectStore('current');
+        }
+        if (!db.objectStoreNames.contains('pdf_text')) {
+          db.createObjectStore('pdf_text');
         }
       },
     });
@@ -39,6 +43,22 @@ export const storePdf = async (name: string, file: File) => {
   }
 };
 
+// Store PDF data (as a string, typically base64)
+export const storePdfData = async (name: string, data: string) => {
+  if (!db) await openDB();
+  try {
+    const tx = db!.transaction('pdfs', 'readwrite');
+    const store = tx.objectStore('pdfs');
+    await store.put({ name, data });
+    await tx.done;
+    console.log(`PDF data for "${name}" stored successfully`);
+    return true;
+  } catch (error) {
+    console.error('Error storing PDF data:', error);
+    return false;
+  }
+};
+
 // Get a PDF file by name
 export const getPdf = async (name: string): Promise<File | undefined> => {
   if (!db) await openDB();
@@ -51,6 +71,52 @@ export const getPdf = async (name: string): Promise<File | undefined> => {
   } catch (error) {
     console.error('Error getting PDF:', error);
     return undefined;
+  }
+};
+
+// Get PDF data (string/base64) by name
+export const getPdfData = async (name: string): Promise<string | null> => {
+  if (!db) await openDB();
+  try {
+    const tx = db!.transaction('pdfs', 'readonly');
+    const store = tx.objectStore('pdfs');
+    const pdfData = await store.get(name);
+    await tx.done;
+    return pdfData && pdfData.data ? pdfData.data : null;
+  } catch (error) {
+    console.error('Error getting PDF data:', error);
+    return null;
+  }
+};
+
+// Store extracted PDF text
+export const storePdfText = async (name: string, text: string) => {
+  if (!db) await openDB();
+  try {
+    const tx = db!.transaction('pdf_text', 'readwrite');
+    const store = tx.objectStore('pdf_text');
+    await store.put(text, name);
+    await tx.done;
+    console.log(`Text for PDF "${name}" stored successfully`);
+    return true;
+  } catch (error) {
+    console.error('Error storing PDF text:', error);
+    return false;
+  }
+};
+
+// Get extracted PDF text
+export const getPdfText = async (name: string): Promise<string | null> => {
+  if (!db) await openDB();
+  try {
+    const tx = db!.transaction('pdf_text', 'readonly');
+    const store = tx.objectStore('pdf_text');
+    const text = await store.get(name);
+    await tx.done;
+    return text || null;
+  } catch (error) {
+    console.error('Error getting PDF text:', error);
+    return null;
   }
 };
 
