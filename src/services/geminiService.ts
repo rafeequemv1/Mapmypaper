@@ -1,469 +1,405 @@
 
-import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, GenerativeModel, Part } from "@google/generative-ai";
 
-// Initialize the Gemini API with the API key
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+// Initialize the Gemini API with the provided API key
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
 
-let genAI: GoogleGenerativeAI | null = null;
-
-// Initialize Gemini API
-export function initializeGeminiAPI() {
-  try {
-    if (!API_KEY) {
-      throw new Error("Missing Gemini API key in .env file");
-    }
-    genAI = new GoogleGenerativeAI(API_KEY);
-    return true;
-  } catch (error) {
-    console.error("Failed to initialize Gemini API:", error);
-    return false;
-  }
-}
-
-// Ensure API is initialized
-initializeGeminiAPI();
-
-// Default safety settings
+// Configure safety settings to allow academic content
 const safetySettings = [
   {
-    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-  },
-  {
     category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
   },
   {
     category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
   },
   {
     category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
   },
 ];
 
-// Generate mind map from text
+// Generation config
+const generationConfig = {
+  temperature: 0.7,
+  topK: 40,
+  topP: 0.95,
+  maxOutputTokens: 8192,
+};
+
+// This extracts text from PDFs and generates a mind map structure
 export async function generateMindMapFromText(text: string) {
-  console.log("Generating mind map from text of length:", text.length);
-  
-  // Re-initialize API if needed
-  if (!genAI) {
-    const initialized = initializeGeminiAPI();
-    if (!initialized) {
-      throw new Error("Failed to initialize Gemini API");
-    }
-  }
-  
   try {
-    // Trim the text if it's too long (Gemini has token limits)
-    const MAX_TEXT_LENGTH = 20000; // Adjust as needed
-    const trimmedText = text.length > MAX_TEXT_LENGTH 
-      ? text.substring(0, MAX_TEXT_LENGTH) + "... [TRUNCATED]" 
-      : text;
-    
-    const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+    // Truncate text if it's too long (Gemini has input token limits)
+    let processedText = text;
+    if (text.length > 30000) {
+      console.log("Text too long, truncating to 30,000 characters");
+      processedText = text.substring(0, 30000);
+    }
+
+    // Create the model instance
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro",
       safetySettings,
+      generationConfig,
     });
 
+    // Prompt engineering for the mind map generation task
     const prompt = `
-    Create a mind map of the following academic text.
-    Format the response as a JSON object representing a mind map.
-    Follow these guidelines:
-    1. The mind map should have a single root node representing the main title/topic of the text.
-    2. Include 5-7 main branches (children of the root) representing key sections or concepts in the text.
-    3. Each main branch should have 2-5 sub-branches with specific details or examples.
-    4. Use clear, concise language for all node topics.
-    5. Maintain hierarchical relationships between concepts.
-    
-    The mind map should be formatted exactly like this example:
-    {
-      "nodeData": {
-        "id": "root",
-        "topic": "Main Title/Topic",
-        "children": [
-          {
-            "id": "branch1",
-            "topic": "First Main Branch",
-            "direction": 0,
-            "children": [
-              {"id": "branch1-1", "topic": "Sub-branch 1 of First Branch"},
-              {"id": "branch1-2", "topic": "Sub-branch 2 of First Branch"}
-            ]
-          },
-          {
-            "id": "branch2",
-            "topic": "Second Main Branch",
-            "direction": 0,
-            "children": [
-              {"id": "branch2-1", "topic": "Sub-branch 1 of Second Branch"},
-              {"id": "branch2-2", "topic": "Sub-branch 2 of Second Branch"}
-            ]
-          }
-        ]
+      You are an expert in creating hierarchical mind maps from academic papers.
+      
+      I'll provide you with text extracted from a PDF research paper. Please analyze it and create a mind map structure 
+      that captures the key concepts and their relationships. 
+      
+      Create a JSON structure that follows the Mind-Elixir format:
+      
+      {
+        "nodeData": {
+          "id": "root",
+          "topic": "Paper Title", // Main paper title from the text
+          "children": [
+            {
+              "id": "a unique id",
+              "topic": "The key concept", // Keep topics concise but meaningful
+              "direction": 0,  // 0 for left branches, 1 for right branches
+              "children": [] // Nested concepts
+            }
+          ]
+        }
       }
-    }
-    
-    Here's the text to analyze:
-    ${trimmedText}
-    
-    Return ONLY the JSON object, nothing else.
+      
+      Organize the structure with:
+      - The paper title as the root node 
+      - Main sections as first-level nodes (i.e., Introduction, Methodology, Results, Discussion, Conclusion)
+      - Key concepts, findings, and details as child nodes
+      - Make sure to capture the essence of the paper's content while maintaining a clean hierarchy
+      
+      IMPORTANT:
+      - Return ONLY the valid JSON structure. No additional explanations.
+      - Use a maximum of 3-4 words for each topic (node label) to keep the mind map readable.
+      - Ensure proper nesting of concepts (usually 3-4 levels deep is sufficient).
+      - Keep the mind map balanced with roughly equal nodes on both sides.
+      - Use "direction": 0 for left branches (Introduction, Methodology, Results) and "direction": 1 for right branches (Discussion, Conclusion, References).
+      - Include ID fields that are unique (alphanumeric) for each node.
+      
+      Here's the text: 
+      ${processedText}
     `;
+
+    // Generate the response
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
     
+    // Parse the JSON from the response
+    try {
+      // Try to extract JSON if it's wrapped in markdown code blocks 
+      const jsonMatch = text.match(/```(?:json)?([\s\S]*)```/);
+      const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
+      return JSON.parse(jsonString);
+    } catch (error) {
+      console.error("Error parsing JSON:", error);
+      throw new Error("Generated response was not valid JSON");
+    }
+  } catch (error) {
+    console.error("Error generating mind map:", error);
+    throw error;
+  }
+}
+
+// Generate a flowchart using Mermaid syntax
+export async function generateFlowchartFromText(text: string): Promise<string> {
+  try {
+    // Truncate text if it's too long
+    let processedText = text;
+    if (text.length > 30000) {
+      console.log("Text too long for flowchart generation, truncating to 30,000 characters");
+      processedText = text.substring(0, 30000);
+    }
+
+    // Create the model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro",
+      safetySettings,
+      generationConfig
+    });
+
+    // Prompt for flowchart generation
+    const prompt = `
+      You are an expert in creating visual representations of document structures.
+      
+      Analyze the following text from a research paper or document and create a flowchart that maps out its structure
+      using Mermaid flowchart syntax (graph TD). The flowchart should clearly show:
+      
+      1. The main sections of the document
+      2. Key subsections and their relationships
+      3. Important components within each section
+      
+      Focus on creating a clean, hierarchical structure that helps visualize how the document is organized.
+      
+      Do not include the document's detailed content - instead focus on the structural elements.
+      
+      Return ONLY valid Mermaid syntax that would generate a good flowchart (TD direction).
+      The output should start with "graph TD" and use proper Mermaid syntax.
+      
+      Here's the document text:
+      ${processedText}
+    `;
+
+    // Generate the response
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const responseText = response.text();
     
-    console.log("Received response from Gemini API");
+    // Clean the response to ensure it's valid Mermaid syntax
+    const mermaidMatch = responseText.match(/```(?:mermaid)?([\s\S]*)```/);
+    const mermaidCode = mermaidMatch ? mermaidMatch[1].trim() : responseText.trim();
     
-    // Extract JSON from response
-    let jsonStr = responseText;
-    
-    // Handle potential formatting issues in the response
-    if (jsonStr.includes("```json")) {
-      jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
-    } else if (jsonStr.includes("```")) {
-      jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+    // Ensure the code starts with graph TD
+    if (!mermaidCode.startsWith('graph TD')) {
+      return 'graph TD\n' + mermaidCode;
     }
     
-    // Parse the JSON
-    try {
-      const mindMapData = JSON.parse(jsonStr);
-      console.log("Successfully parsed mind map data");
-      return mindMapData;
-    } catch (parseError) {
-      console.error("Error parsing JSON from Gemini response:", parseError);
-      console.error("Raw response:", jsonStr);
-      throw new Error("Failed to parse mind map data from AI response");
-    }
-  } catch (error: any) {
-    console.error("Error generating mind map:", error);
-    
-    // Check for common API errors
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
-    }
-    
-    if (error.message?.includes("403")) {
-      throw new Error("Gemini API access denied. Please check your API key.");
-    }
-    
-    if (error.message?.includes("503")) {
-      throw new Error("Gemini service unavailable. Please try again later.");
-    }
-    
-    // Default error with more information
-    throw new Error(`Failed to generate mind map: ${error.message || "Unknown error"}`);
-  }
-}
-
-// Generate a flowchart from text
-export async function generateFlowchartFromText(text: string) {
-  console.log("Generating flowchart from text of length:", text.length);
-  
-  // Re-initialize API if needed
-  if (!genAI) {
-    const initialized = initializeGeminiAPI();
-    if (!initialized) {
-      throw new Error("Failed to initialize Gemini API");
-    }
-  }
-  
-  try {
-    // Trim the text if it's too long (Gemini has token limits)
-    const MAX_TEXT_LENGTH = 20000; // Adjust as needed
-    const trimmedText = text.length > MAX_TEXT_LENGTH 
-      ? text.substring(0, MAX_TEXT_LENGTH) + "... [TRUNCATED]" 
-      : text;
-    
-    const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
-      safetySettings,
-    });
-
-    const prompt = `
-    Create a flowchart diagram of the following academic text.
-    Format the response using Mermaid syntax.
-    Follow these guidelines:
-    1.  Identify the key steps, processes, or components described in the text.
-    2.  Represent each step/process/component as a node in the flowchart.
-    3.  Connect the nodes with arrows to show the flow of information or execution.
-    4.  Use labels on the arrows to describe the relationships between the nodes.
-    5.  Keep the diagram simple and easy to understand.
-    
-    Example Mermaid syntax:
-    \`\`\`
-    graph TD
-        A[Start] --> B(Process)
-        B --> C{Decision}
-        C -- Yes --> D[Result 1]
-        C -- No --> E[Result 2]
-    \`\`\`
-    
-    Here's the text to analyze:
-    ${trimmedText}
-    
-    Return ONLY the Mermaid syntax, nothing else.
-    `;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const mermaidSyntax = response.text();
-    
-    console.log("Received response from Gemini API");
-    
-    return mermaidSyntax;
-  } catch (error: any) {
+    return mermaidCode;
+  } catch (error) {
     console.error("Error generating flowchart:", error);
-    
-    // Check for common API errors
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
-    }
-    
-    if (error.message?.includes("403")) {
-      throw new Error("Gemini API access denied. Please check your API key.");
-    }
-    
-    if (error.message?.includes("503")) {
-      throw new Error("Gemini service unavailable. Please try again later.");
-    }
-    
-    // Default error with more information
-    throw new Error(`Failed to generate flowchart: ${error.message || "Unknown error"}`);
+    throw error;
   }
 }
 
 // Chat with Gemini about a PDF
-export async function chatWithGeminiAboutPdf(question: string) {
-  console.log("Chatting with Gemini about PDF with question:", question);
-  
-  // Re-initialize API if needed
-  if (!genAI) {
-    const initialized = initializeGeminiAPI();
-    if (!initialized) {
-      throw new Error("Failed to initialize Gemini API");
-    }
-  }
-  
+export async function chatWithGeminiAboutPdf(
+  question: string,
+  pdfText: string,
+  chatHistory: Array<{ role: string; parts: string }> = []
+): Promise<string> {
   try {
-    const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+    // Create the model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro",
+      safetySettings,
+      generationConfig
+    });
+
+    // Truncate text if too long
+    let processedPdfText = pdfText;
+    if (pdfText.length > 25000) {
+      console.log("PDF text too long, truncating to 25,000 characters");
+      processedPdfText = pdfText.substring(0, 25000);
+    }
+
+    // Create chat session with history
+    const chat = model.startChat({
+      history: chatHistory.map(entry => ({
+        role: entry.role as "user" | "model",
+        parts: [{ text: entry.parts }]
+      })),
+      generationConfig,
       safetySettings,
     });
 
+    // Create the context-rich prompt
     const prompt = `
-    You are a research assistant helping with a PDF document. Answer the following question 
-    based on the PDF content. If you don't know the answer, say so politely. Use markdown
-    formatting for better readability. When referencing specific content from the document,
-    provide page citations in the format [citation:page1] where the number indicates the page.
-    Add relevant emojis to make your response more engaging.
-    
-    Question:
-    ${question}
+      I'm going to ask you questions about a document. Here's the document content:
+      
+      ${processedPdfText}
+      
+      My question is: ${question}
+      
+      Please provide a detailed answer based on the document content. If the answer isn't in the document, say so.
+      If you're referring to specific parts of the document, add references like [Page X] or use quotation marks.
     `;
 
-    const result = await model.generateContent(prompt);
+    // Generate response
+    const result = await chat.sendMessage(prompt);
     const response = await result.response;
-    const responseText = response.text();
-    
-    console.log("Received response from Gemini API");
-    
-    return responseText;
-  } catch (error: any) {
-    console.error("Error chatting with Gemini:", error);
-    
-    // Check for common API errors
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
+    return response.text();
+  } catch (error) {
+    console.error("Error in chat with Gemini:", error);
+    throw error;
+  }
+}
+
+// Analyze an image with Gemini
+export async function analyzeImageWithGemini(
+  imageData: string,
+  question: string = "What does this image show? Please describe it in detail."
+): Promise<string> {
+  try {
+    // Create model specifically for vision tasks
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro-vision",
+      safetySettings,
+      generationConfig
+    });
+
+    // Clean up the base64 string if needed
+    let cleanImageData = imageData;
+    if (imageData.includes('base64,')) {
+      cleanImageData = imageData.split('base64,')[1];
     }
-    
-    if (error.message?.includes("403")) {
-      throw new Error("Gemini API access denied. Please check your API key.");
-    }
-    
-    if (error.message?.includes("503")) {
-      throw new Error("Gemini service unavailable. Please try again later.");
-    }
-    
-    // Default error with more information
-    throw new Error(`Failed to chat with Gemini: ${error.message || "Unknown error"}`);
+
+    // Prepare the content parts (image + question)
+    const parts: Part[] = [
+      {
+        inlineData: {
+          mimeType: "image/jpeg", // Assuming JPEG format - adjust if needed
+          data: cleanImageData
+        }
+      },
+      { text: question }
+    ];
+
+    // Generate response
+    const result = await model.generateContent(parts);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error analyzing image with Gemini:", error);
+    throw error;
   }
 }
 
 // Explain selected text
-export async function explainSelectedText(selectedText: string) {
-  console.log("Explaining selected text of length:", selectedText.length);
-  
-  // Re-initialize API if needed
-  if (!genAI) {
-    const initialized = initializeGeminiAPI();
-    if (!initialized) {
-      throw new Error("Failed to initialize Gemini API");
-    }
-  }
-  
+export async function explainSelectedText(
+  selectedText: string,
+  pdfContext: string = ""
+): Promise<string> {
   try {
-    const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+    // Create the model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro",
       safetySettings,
+      generationConfig: {
+        ...generationConfig,
+        maxOutputTokens: 4096 // Using a smaller size for explanations
+      } 
     });
 
-    const prompt = `
-    Please explain this text in detail. Use complete sentences with relevant emojis and provide specific 
-    page citations in [citation:pageX] format: "${selectedText}". Add emojis relevant to the content.
-    `;
+    // Truncate context if too long
+    let processedContext = pdfContext;
+    if (pdfContext && pdfContext.length > 15000) {
+      processedContext = pdfContext.substring(0, 15000);
+    }
 
+    // Create the prompt based on whether we have context
+    let prompt = "";
+    if (processedContext) {
+      prompt = `
+        I've selected the following text from a research paper:
+        
+        "${selectedText}"
+        
+        Here's some context from the paper:
+        
+        ${processedContext}
+        
+        Please explain the selected text in detail. Consider:
+        1. What does this text mean in plain language?
+        2. How does it relate to the main topics of the paper?
+        3. Why is this point significant?
+        4. Are there any technical terms that need explanation?
+        
+        Format your answer as follows:
+        
+        ## Explanation
+        [Your explanation here...]
+        
+        ## Key Concepts
+        - [List key concepts mentioned]
+        
+        ## Context
+        [How this fits into the broader paper]
+      `;
+    } else {
+      prompt = `
+        I've selected the following text from a research paper:
+        
+        "${selectedText}"
+        
+        Please explain this text in detail. Consider:
+        1. What does this text mean in plain language?
+        2. What are the key concepts mentioned?
+        3. Why might this point be significant?
+        4. Are there any technical terms that need explanation?
+        
+        Format your answer in clear sections.
+      `;
+    }
+
+    // Generate response
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const responseText = response.text();
-    
-    console.log("Received explanation from Gemini API");
-    
-    return responseText;
-  } catch (error: any) {
+    return response.text();
+  } catch (error) {
     console.error("Error explaining text with Gemini:", error);
-    
-    // Check for common API errors
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
-    }
-    
-    throw new Error(`Failed to explain text: ${error.message || "Unknown error"}`);
+    throw error;
   }
 }
 
-// Generate structured summary
-export async function generateStructuredSummary(pdfText: string) {
-  console.log("Generating structured summary of text length:", pdfText.length);
-  
-  // Re-initialize API if needed
-  if (!genAI) {
-    const initialized = initializeGeminiAPI();
-    if (!initialized) {
-      throw new Error("Failed to initialize Gemini API");
-    }
-  }
-  
+// Generate a structured summary of a paper
+export async function generateStructuredSummary(
+  pdfText: string
+): Promise<string> {
   try {
-    // Trim the text if it's too long (Gemini has token limits)
-    const MAX_TEXT_LENGTH = 20000; // Adjust as needed
-    const trimmedText = pdfText.length > MAX_TEXT_LENGTH 
-      ? pdfText.substring(0, MAX_TEXT_LENGTH) + "... [TRUNCATED]" 
-      : pdfText;
-    
-    const model = genAI!.getGenerativeModel({
-      model: "gemini-pro",
+    // Truncate text if too long
+    let processedText = pdfText;
+    if (pdfText.length > 30000) {
+      console.log("Text too long, truncating to 30,000 characters");
+      processedText = pdfText.substring(0, 30000);
+    }
+
+    // Create the model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro",
       safetySettings,
+      generationConfig
     });
 
+    // Prompt for structured summary
     const prompt = `
-    Create a structured summary of the following academic text.
-    Identify the document type (research paper, technical document, legal document, etc.) and format your summary accordingly.
-    Always include a "Summary" section and 4-6 other relevant sections based on the document type.
-    For academic papers, include sections like "Key Findings", "Methods", "Contributions", "Implications".
-    For technical documents, include sections like "Requirements", "Implementation", "Technical Details".
-    For each part, provide specific page citations in [citation:pageX] format where relevant.
-    Use complete sentences and add relevant emojis for better engagement.
-    
-    Return your response as a JSON object with section names as keys and section content as values:
-    
-    {
-      "Summary": "Overall summary of the document... [citation:page1]",
-      "Key Findings": "The main findings are... [citation:page3]",
-      "Methods": "The authors used... [citation:page2]",
-      ...
-    }
-    
-    Here's the text to analyze:
-    ${trimmedText}
+      You're an academic research assistant tasked with creating a structured summary of this research paper.
+
+      Here's the paper content:
+      
+      ${processedText}
+      
+      Please generate a comprehensive but concise summary with the following structure:
+      
+      # Paper Summary
+      
+      ## 1. Key Takeaways
+      [3-5 bullet points of the most important findings/contributions]
+      
+      ## 2. Research Question
+      [The main research question(s) addressed]
+      
+      ## 3. Methodology
+      [Summary of the research approach and methods]
+      
+      ## 4. Main Findings
+      [The key results and their significance]
+      
+      ## 5. Limitations
+      [Any stated limitations of the research]
+      
+      ## 6. Future Work
+      [Suggestions for future research mentioned in the paper]
+      
+      Make your summary informative but concise, focusing on what would be most useful for someone deciding whether to read the full paper.
     `;
 
+    // Generate response
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const responseText = response.text();
-    
-    console.log("Received structured summary from Gemini API");
-    
-    // Extract JSON from response
-    let jsonStr = responseText;
-    
-    // Handle potential formatting issues in the response
-    if (jsonStr.includes("```json")) {
-      jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
-    } else if (jsonStr.includes("```")) {
-      jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
-    }
-    
-    // Parse the JSON
-    try {
-      const summaryData = JSON.parse(jsonStr);
-      console.log("Successfully parsed structured summary data");
-      return summaryData;
-    } catch (parseError) {
-      console.error("Error parsing JSON from Gemini response:", parseError);
-      console.error("Raw response:", jsonStr);
-      // Fall back to returning the raw text if JSON parsing fails
-      return { "Summary": responseText };
-    }
-  } catch (error: any) {
+    return response.text();
+  } catch (error) {
     console.error("Error generating structured summary:", error);
-    
-    // Check for common API errors
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
-    }
-    
-    // Default error with more information
-    throw new Error(`Failed to generate summary: ${error.message || "Unknown error"}`);
-  }
-}
-
-// Analyze image with Gemini Vision
-export async function analyzeImageWithGemini(imageBase64: string) {
-  console.log("Analyzing image with Gemini Vision API");
-  
-  // Re-initialize API if needed
-  if (!genAI) {
-    const initialized = initializeGeminiAPI();
-    if (!initialized) {
-      throw new Error("Failed to initialize Gemini API");
-    }
-  }
-  
-  try {
-    // Get the Gemini Pro Vision model
-    const model = genAI!.getGenerativeModel({
-      model: "gemini-pro-vision", // Use the vision-capable model
-      safetySettings,
-    });
-
-    // Format the prompt with the image
-    const prompt = "Please analyze and describe this image in detail. If it contains text, include that text in your response. If it's a chart, diagram or graph, explain what it's showing.";
-    
-    // Need to create parts array for multimodal input
-    const parts = [
-      { text: prompt },
-      { inlineData: { mimeType: "image/jpeg", data: imageBase64.split(',')[1] } }
-    ];
-    
-    // Generate content with image
-    const result = await model.generateContent(parts);
-    const response = await result.response;
-    const responseText = response.text();
-    
-    console.log("Received image analysis from Gemini Vision API");
-    
-    return responseText;
-  } catch (error: any) {
-    console.error("Error analyzing image with Gemini:", error);
-    
-    // Check for common API errors
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("Gemini API rate limit exceeded. Please try again in a few minutes.");
-    }
-    
-    throw new Error(`Failed to analyze image: ${error.message || "Unknown error"}`);
+    throw error;
   }
 }
