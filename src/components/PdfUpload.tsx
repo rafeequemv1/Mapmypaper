@@ -194,7 +194,7 @@ const PdfUpload = () => {
       setProcessingStage("Reading PDF");
       setProcessingProgress(10);
 
-      // Read the PDF as DataURL for viewing (same as before)
+      // Read the PDF as DataURL for viewing
       const reader = new FileReader();
 
       const pdfDataPromise = new Promise<string>((resolve, reject) => {
@@ -224,18 +224,40 @@ const PdfUpload = () => {
       setProcessingProgress(50);
       setProcessingStage("Extracting text");
       
-      // Extract text
-      const extractedText = await PdfToText(selectedFile);
+      // Extract text with improved error handling
+      let extractedText;
+      try {
+        console.log("Extracting text from PDF...");
+        extractedText = await PdfToText(selectedFile);
+        
+        // Debug the extracted text
+        if (extractedText && typeof extractedText === "string") {
+          console.log(`Extracted ${extractedText.length} characters from PDF`);
+          console.log("First 100 characters:", extractedText.substring(0, 100));
+        } else {
+          console.error("PdfToText returned unexpected result:", extractedText);
+        }
+      } catch (extractionError) {
+        console.error("Error in PdfToText extraction:", extractionError);
+        throw new Error(`Failed to extract text from PDF: ${extractionError.message || "Unknown extraction error"}`);
+      }
 
       if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
+        console.error("No text extracted from PDF");
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
+      
+      console.log(`Successfully extracted ${extractedText.length} characters from PDF`);
+      
+      // Store the extracted text for future reference
+      sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
 
       setProcessingProgress(70);
       setProcessingStage("Generating mind map");
       
-      // Process via Gemini API
+      // Process via Gemini API with enhanced error handling
       try {
+        console.log("Calling generateMindMapFromText with extracted text");
         const mindMapData = await generateMindMapFromText(extractedText);
 
         setProcessingProgress(90);
@@ -253,21 +275,24 @@ const PdfUpload = () => {
         });
         // Pass pdf key to mindmap page so that it knows which PDF/mindmap to show.
         navigate("/mindmap", { state: { pdfKey } });
-      } catch (error: any) {
+      } catch (apiError) {
+        console.error("Error in Gemini API processing:", apiError);
+        
         // API rate limit/retry logic
         if (
-          error instanceof Error &&
-          (error.message.includes("quota") ||
-            error.message.includes("429") ||
-            error.message.includes("rate limit"))
+          apiError instanceof Error &&
+          (apiError.message.includes("quota") ||
+            apiError.message.includes("429") ||
+            apiError.message.includes("rate limit") ||
+            apiError.message.includes("Invalid API"))
         ) {
           if (retryAttempt < maxRetries) {
             const nextRetry = retryAttempt + 1;
             setRetryAttempt(nextRetry);
 
             toast({
-              title: `API Rate Limit Exceeded (Attempt ${nextRetry}/${maxRetries})`,
-              description: `Retrying in ${retryDelay / 1000} seconds...`,
+              title: `API Rate Limit or Key Issue (Attempt ${nextRetry}/${maxRetries})`,
+              description: `Retrying in ${retryDelay / 1000} seconds... Check your API key in .env file.`,
               variant: "warning",
               duration: retryDelay,
             });
@@ -278,11 +303,11 @@ const PdfUpload = () => {
             return;
           } else {
             throw new Error(
-              "Gemini API rate limit exceeded. Please wait a few minutes and try again. This can happen due to free tier limitations (15 requests per minute)."
+              "Gemini API issue: Please check your API key in .env file. This error could be due to rate limits (15 requests per minute) or an invalid key."
             );
           }
         } else {
-          throw error;
+          throw apiError;
         }
       }
     } catch (error: any) {
@@ -302,13 +327,6 @@ const PdfUpload = () => {
       }
     }
   }
-
-  const presetQuestions = [
-    "What are the main topics covered in this paper?",
-    "Can you summarize the key findings?",
-    "What are the research methods used?",
-    "What are the limitations of this study?",
-  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8f8]">

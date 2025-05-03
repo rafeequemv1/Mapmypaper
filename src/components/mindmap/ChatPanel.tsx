@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
 import * as pdfjs from 'pdfjs-dist';
+import MessageEmpty from "./MessageEmpty";
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -34,7 +35,7 @@ const ChatPanel = ({
   onExplainText,
   onPdfPlusClick,
   activePdfKey,
-  allPdfKeys,
+  allPdfKeys
 }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -666,6 +667,30 @@ Feel free to ask me any questions! Here are some suggestions:`
     }
   };
 
+  // Show message empty state if no PDF is available
+  if (allPdfKeys.length === 0 || !activePdfKey) {
+    return (
+      <div className="flex flex-col h-full border-l">
+        <div className="flex items-center justify-between p-3 border-b bg-white">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            <h3 className="font-medium text-sm">Research Assistant</h3>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8" 
+            onClick={toggleChat}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        <MessageEmpty onUploadClick={onPdfPlusClick} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full border-l">
       {/* File input for attachments (hidden) */}
@@ -906,28 +931,3 @@ Feel free to ask me any questions! Here are some suggestions:`
             onKeyDown={handleKeyDown}
           />
           <div className="flex flex-col gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleAttachClick}
-              title="Attach file"
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <Button 
-              className="shrink-0" 
-              size="sm" 
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() && !attachedFile}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ChatPanel;
