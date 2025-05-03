@@ -49,43 +49,44 @@ export async function generateMindMapFromText(text: string) {
       generationConfig,
     });
 
-    // Prompt engineering for the mind map generation task
+    // Enhanced prompt engineering for more detailed content extraction
     const prompt = `
       You are an expert in creating hierarchical mind maps from academic papers.
       
-      I'll provide you with text extracted from a PDF research paper. Please analyze it and create a mind map structure 
-      that captures the key concepts and their relationships. 
+      I'll provide you with text extracted from a PDF research paper. Your task is to carefully read this text and create a detailed mind map structure with ACTUAL CONTENT from the paper.
       
       Create a JSON structure that follows the Mind-Elixir format:
       
       {
         "nodeData": {
           "id": "root",
-          "topic": "Paper Title", // Main paper title from the text
+          "topic": "PAPER_TITLE", // Extract the actual title of the paper here
           "children": [
             {
               "id": "a unique id",
-              "topic": "The key concept", // Keep topics concise but meaningful
+              "topic": "ACTUAL_SECTION_CONTENT", // Extract real content from the paper
               "direction": 0,  // 0 for left branches, 1 for right branches
-              "children": [] // Nested concepts
+              "children": [] // Nested concepts with actual content
             }
           ]
         }
       }
       
-      Organize the structure with:
-      - The paper title as the root node 
-      - Main sections as first-level nodes (i.e., Introduction, Methodology, Results, Discussion, Conclusion)
-      - Key concepts, findings, and details as child nodes
-      - Make sure to capture the essence of the paper's content while maintaining a clean hierarchy
+      VERY IMPORTANT REQUIREMENTS:
+      1. Extract and use the ACTUAL TITLE of the paper for the root node.
+      2. Use REAL CONTENT from the paper for all topics - NOT generic placeholders.
+      3. Include specific facts, findings, methodologies mentioned in the paper.
+      4. Structure should reflect the paper's actual organization.
+      5. Look for headings, key sentences, and important statements to extract.
+      6. For each section, include 3-5 actual findings or statements from the paper.
+      7. Ensure every node contains SPECIFIC information from the paper, not generic labels.
       
-      IMPORTANT:
-      - Return ONLY the valid JSON structure. No additional explanations.
+      Additional guidance:
       - Use a maximum of 3-4 words for each topic (node label) to keep the mind map readable.
-      - Ensure proper nesting of concepts (usually 3-4 levels deep is sufficient).
-      - Keep the mind map balanced with roughly equal nodes on both sides.
-      - Use "direction": 0 for left branches (Introduction, Methodology, Results) and "direction": 1 for right branches (Discussion, Conclusion, References).
+      - Keep the structure balanced with roughly equal nodes on both sides.
+      - Use "direction": 0 for left branches (Introduction, Methodology) and "direction": 1 for right branches (Results, Discussion, Conclusion).
       - Include ID fields that are unique (alphanumeric) for each node.
+      - DO NOT return explanations, just the valid JSON.
       
       Here's the text: 
       ${processedText}
