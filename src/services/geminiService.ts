@@ -23,6 +23,24 @@ function getGeminiGenerationConfig() {
     topK: 40,
     topP: 0.95,
     maxOutputTokens: 8192,
+    safetySettings: [
+      {
+        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+      },
+    ],
   };
 }
 
@@ -82,12 +100,12 @@ export async function generateMindMapFromText(text: string): Promise<any> {
     console.log("Sending prompt to Gemini API...");
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const responseText = response.text();
+    const text = response.text();
     
     console.log("Received response from Gemini API");
     
     // Extract just the JSON part from the response
-    let jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    let jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("Could not extract valid JSON from the API response");
     }
@@ -116,11 +134,7 @@ export async function chatWithGeminiAboutPdf(prompt: string): Promise<string> {
     
     console.log("Sending chat prompt to Gemini API:", prompt.substring(0, 100) + "...");
     
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: config,
-    });
-    
+    const result = await model.generateContent(prompt, config);
     const response = await result.response;
     const text = response.text();
     
@@ -186,124 +200,13 @@ export async function explainSelectedText(text: string): Promise<string> {
     `;
     
     console.log("Sending explanation prompt to Gemini API");
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: config,
-    });
-    
+    const result = await model.generateContent(prompt, config);
     const response = await result.response;
     
     console.log("Received explanation from Gemini API");
     return response.text();
   } catch (error) {
     console.error("Error in explainSelectedText:", error);
-    throw error;
-  }
-}
-
-// Add the missing functions needed by SummaryModal and MermaidModal
-export async function generateStructuredSummary(pdfText: string): Promise<any> {
-  try {
-    console.log("Generating structured summary...");
-    
-    // Trim very long texts to avoid API limits
-    const trimmedText = pdfText.length > 100000 ? pdfText.substring(0, 100000) + "..." : pdfText;
-    
-    const genAI = getGeminiApi();
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-    
-    const prompt = `Create a structured summary of the following academic document or research paper.
-    Analyze the content and return a JSON object with the following structure:
-
-    {
-      "Summary": "Brief overall summary of the document in 3-5 sentences",
-      "Key Findings": "List the main findings or conclusions",
-      "Methods": "Brief description of the methodology used",
-      "Significance": "Explain the importance of this research",
-      "Limitations": "Note any limitations mentioned in the document"
-    }
-
-    If the document is not a research paper, adapt the structure to fit the document type.
-    For business documents, include "Business Context" and "Financial Implications" instead of "Methods".
-    For legal documents, include "Legal Framework" and "Parties & Obligations".
-    For creative works, include "Themes" and "Characters/Elements".
-    Always include the key points in bullet form where appropriate.
-
-    Here's the document to analyze:
-    
-    ${trimmedText}
-
-    Return ONLY a valid JSON object with the appropriate structure.`;
-    
-    console.log("Sending summary prompt to Gemini API...");
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: getGeminiGenerationConfig(),
-    });
-    
-    const response = await result.response;
-    const responseText = response.text();
-    
-    // Extract just the JSON part from the response
-    let jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return { Summary: responseText }; // Return the raw text if JSON parsing fails
-    }
-    
-    try {
-      const parsedJson = JSON.parse(jsonMatch[0]);
-      return parsedJson;
-    } catch (jsonError) {
-      console.error("Error parsing JSON from API response:", jsonError);
-      return { Summary: responseText }; // Return the raw text if JSON parsing fails
-    }
-  } catch (error) {
-    console.error("Error in generateStructuredSummary:", error);
-    throw error;
-  }
-}
-
-export async function generateFlowchartFromText(pdfText: string): Promise<string> {
-  try {
-    console.log("Generating flowchart from text...");
-    
-    // Trim very long texts to avoid API limits
-    const trimmedText = pdfText.length > 100000 ? pdfText.substring(0, 100000) + "..." : pdfText;
-    
-    const genAI = getGeminiApi();
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-    
-    const prompt = `Create a Mermaid.js flowchart diagram that represents the structure and flow of the following document.
-    Focus on the main sections, processes, or arguments and their relationships.
-    
-    Use the 'graph TD' (top-down) or 'graph LR' (left-right) syntax, whichever best represents the document's structure.
-    Use clear, concise labels for nodes (no more than 5-7 words each).
-    Include 5-10 main nodes with appropriate connections.
-    Add descriptive relationship labels between nodes when helpful.
-    
-    Here's the document text to analyze:
-    
-    ${trimmedText}
-    
-    Return ONLY the valid Mermaid.js flowchart syntax, nothing else.`;
-    
-    console.log("Sending flowchart prompt to Gemini API...");
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: getGeminiGenerationConfig(),
-    });
-    
-    const response = await result.response;
-    const flowchartText = response.text();
-    
-    // Basic validation - ensure it contains graph TD or graph LR
-    if (!flowchartText.includes('graph TD') && !flowchartText.includes('graph LR')) {
-      console.warn("Generated flowchart may not be valid Mermaid syntax");
-    }
-    
-    return flowchartText;
-  } catch (error) {
-    console.error("Error in generateFlowchartFromText:", error);
     throw error;
   }
 }

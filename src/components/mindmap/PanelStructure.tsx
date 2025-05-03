@@ -1,13 +1,11 @@
-
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
 import PdfViewer from "@/components/mindmap/PdfViewer";
-import MindMapViewer from "@/components/MindMapViewer";
+import MindMapComponent from "@/components/mindmap/MindMapComponent";
 import ChatPanel from "@/components/mindmap/ChatPanel";
-import MessageEmpty from "@/components/mindmap/MessageEmpty";
 
 interface PanelStructureProps {
   showPdf: boolean;
@@ -97,7 +95,7 @@ const PanelStructure: React.FC<PanelStructureProps> = ({
 
         {/* Middle panel (mind map) */}
         <ResizablePanel defaultSize={50} minSize={10}>
-          <MindMapViewer
+          <MindMapComponent
             onMindMapReady={onMindMapReady}
             isMapGenerated={isMapGenerated}
             pdfKey={activePdfKey}

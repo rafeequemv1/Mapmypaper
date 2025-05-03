@@ -1,26 +1,30 @@
 
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { FileUp, BookOpen } from "lucide-react";
+import { FileText, Upload } from "lucide-react";
 
 interface MessageEmptyProps {
-  onUploadClick: () => void;
+  onUploadClick?: () => void;
 }
 
 const MessageEmpty: React.FC<MessageEmptyProps> = ({ onUploadClick }) => {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-4">
-      <div className="p-4 bg-blue-50 rounded-full">
-        <BookOpen className="h-10 w-10 text-blue-500" />
+    <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+      <div className="rounded-full bg-gray-100 p-3 mb-4">
+        <FileText className="h-6 w-6 text-gray-500" />
       </div>
-      <h3 className="text-xl font-medium">No documents loaded</h3>
-      <p className="text-gray-500 max-w-md">
-        Upload a PDF document to start analyzing it with the research assistant
+      <h3 className="text-lg font-medium mb-2">No PDF Uploaded</h3>
+      <p className="text-sm text-gray-500 mb-4 max-w-sm">
+        Please provide me with the study you would like me to analyze. I need the text of the study to identify its limitations and provide page citations.
       </p>
-      <Button onClick={onUploadClick} className="flex items-center space-x-2">
-        <FileUp className="h-4 w-4 mr-2" />
-        Upload Document
-      </Button>
+      {onUploadClick && (
+        <button
+          onClick={onUploadClick}
+          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          Upload a PDF
+        </button>
+      )}
     </div>
   );
 };
