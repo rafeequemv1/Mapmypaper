@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -5,7 +6,6 @@ import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
-import { enhanceMindMapWithEmojis, validateMindMapContent } from "@/utils/mindMapUtils";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -39,9 +39,7 @@ const formatNodeText = (text: string, wordsPerLine: number = 5, isRoot: boolean 
     }
   } else {
     // Add emoji based on topic content if one doesn't exist already
-    if (!/^\p{Emoji}/u.test(processedText)) {
-      processedText = addEmoji(text);
-    }
+    processedText = addEmoji(text);
     // Ensure the topic text is a complete sentence
     processedText = ensureCompleteSentence(processedText);
   }
@@ -59,7 +57,7 @@ const formatNodeText = (text: string, wordsPerLine: number = 5, isRoot: boolean 
   return result;
 };
 
-// Add emoji based on topic content - more detailed version
+// Add emoji based on topic content
 const addEmoji = (topic: string): string => {
   // Check if the topic already starts with an emoji
   if (/^\p{Emoji}/u.test(topic)) {
@@ -82,84 +80,38 @@ const addEmoji = (topic: string): string => {
   if (topicLower.includes('motivation') || topicLower.includes('problem')) return '⚠️ ' + topic;
   if (topicLower.includes('gap')) return '🧩 ' + topic;
   if (topicLower.includes('objective') || topicLower.includes('hypothesis')) return '🎯 ' + topic;
-  if (topicLower.includes('purpose') || topicLower.includes('aim')) return '🏹 ' + topic;
-  if (topicLower.includes('scope')) return '🔭 ' + topic;
   
   // Methodology subsections
-  if (topicLower.includes('experimental') || topicLower.includes('experiment')) return '🧪 ' + topic;
-  if (topicLower.includes('data collection') || topicLower.includes('sampling')) return '📥 ' + topic;
+  if (topicLower.includes('experimental') || topicLower.includes('data collection')) return '🧪 ' + topic;
   if (topicLower.includes('model') || topicLower.includes('theory') || topicLower.includes('framework')) return '🔬 ' + topic;
   if (topicLower.includes('procedure') || topicLower.includes('algorithm')) return '📋 ' + topic;
   if (topicLower.includes('variable') || topicLower.includes('parameter')) return '🔢 ' + topic;
-  if (topicLower.includes('participant') || topicLower.includes('subject')) return '👥 ' + topic;
-  if (topicLower.includes('equipment') || topicLower.includes('device')) return '🔧 ' + topic;
-  if (topicLower.includes('design')) return '📐 ' + topic;
-  if (topicLower.includes('protocol')) return '📜 ' + topic;
-  if (topicLower.includes('technique')) return '🛠️ ' + topic;
   
   // Results subsections
-  if (topicLower.includes('key finding') || topicLower.includes('main result')) return '✨ ' + topic;
-  if (topicLower.includes('figure') || topicLower.includes('chart') || topicLower.includes('visualization')) return '📈 ' + topic;
-  if (topicLower.includes('table') || topicLower.includes('data')) return '📊 ' + topic;
+  if (topicLower.includes('key finding')) return '✨ ' + topic;
+  if (topicLower.includes('figure') || topicLower.includes('table') || topicLower.includes('visualization')) return '📈 ' + topic;
   if (topicLower.includes('statistical') || topicLower.includes('analysis')) return '📏 ' + topic;
-  if (topicLower.includes('measurement')) return '📏 ' + topic;
   if (topicLower.includes('observation')) return '👁️ ' + topic;
-  if (topicLower.includes('outcome') || topicLower.includes('output')) return '🏆 ' + topic;
-  if (topicLower.includes('performance')) return '🏃 ' + topic;
-  if (topicLower.includes('accuracy') || topicLower.includes('precision')) return '🎯 ' + topic;
-  if (topicLower.includes('comparison')) return '⚖️ ' + topic;
-  if (topicLower.includes('trend')) return '📉 ' + topic;
-  if (topicLower.includes('calculation')) return '🧮 ' + topic;
   
   // Discussion subsections
   if (topicLower.includes('interpretation')) return '🔎 ' + topic;
   if (topicLower.includes('comparison') || topicLower.includes('previous work')) return '🔄 ' + topic;
   if (topicLower.includes('implication')) return '💡 ' + topic;
   if (topicLower.includes('limitation')) return '🛑 ' + topic;
-  if (topicLower.includes('strength') || topicLower.includes('advantage')) return '💪 ' + topic;
-  if (topicLower.includes('weakness') || topicLower.includes('disadvantage')) return '⚠️ ' + topic;
-  if (topicLower.includes('explanation')) return '💬 ' + topic;
-  if (topicLower.includes('significance')) return '✅ ' + topic;
-  if (topicLower.includes('insight')) return '🔮 ' + topic;
   
   // Conclusion subsections
   if (topicLower.includes('summary') || topicLower.includes('contribution')) return '✅ ' + topic;
-  if (topicLower.includes('future work') || topicLower.includes('future direction')) return '🔮 ' + topic;
-  if (topicLower.includes('recommendation')) return '📝 ' + topic;
+  if (topicLower.includes('future work')) return '🔮 ' + topic;
   if (topicLower.includes('final') || topicLower.includes('remark')) return '🏁 ' + topic;
-  if (topicLower.includes('impact')) return '💥 ' + topic;
-  if (topicLower.includes('takeaway')) return '🔑 ' + topic;
   
   // References subsections
   if (topicLower.includes('key paper') || topicLower.includes('cited')) return '📄 ' + topic;
   if (topicLower.includes('dataset') || topicLower.includes('tool')) return '🛠️ ' + topic;
-  if (topicLower.includes('author')) return '✍️ ' + topic;
-  if (topicLower.includes('journal')) return '📰 ' + topic;
-  if (topicLower.includes('publication')) return '📑 ' + topic;
   
   // Supplementary subsections
   if (topicLower.includes('additional') || topicLower.includes('experiment')) return '🧮 ' + topic;
   if (topicLower.includes('appendix') || topicLower.includes('appendices')) return '📑 ' + topic;
   if (topicLower.includes('code') || topicLower.includes('data availability')) return '💾 ' + topic;
-  if (topicLower.includes('detail')) return '🔍 ' + topic;
-  if (topicLower.includes('resource')) return '📦 ' + topic;
-  
-  // Research methods
-  if (topicLower.includes('survey')) return '📝 ' + topic;
-  if (topicLower.includes('interview')) return '🎤 ' + topic;
-  if (topicLower.includes('observation')) return '👁️ ' + topic;
-  if (topicLower.includes('case study')) return '🔍 ' + topic;
-  if (topicLower.includes('simulation')) return '🖥️ ' + topic;
-  if (topicLower.includes('test')) return '🧪 ' + topic;
-  
-  // Analysis techniques
-  if (topicLower.includes('regression')) return '📉 ' + topic;
-  if (topicLower.includes('classification')) return '🔠 ' + topic;
-  if (topicLower.includes('clustering')) return '🔣 ' + topic;
-  if (topicLower.includes('neural network') || topicLower.includes('deep learning')) return '🧠 ' + topic;
-  if (topicLower.includes('machine learning')) return '🤖 ' + topic;
-  if (topicLower.includes('natural language') || topicLower.includes('nlp')) return '💬 ' + topic;
-  if (topicLower.includes('computer vision')) return '👁️ ' + topic;
   
   // Generic topics
   if (topicLower.includes('start') || topicLower.includes('begin')) return '🚀 ' + topic;
@@ -185,30 +137,8 @@ const addEmoji = (topic: string): string => {
   if (topicLower.includes('problem')) return '⚠️ ' + topic;
   if (topicLower.includes('solution')) return '🔧 ' + topic;
   
-  // Domain-specific topics
-  if (topicLower.includes('medicine') || topicLower.includes('health')) return '🏥 ' + topic;
-  if (topicLower.includes('biology') || topicLower.includes('gene')) return '🧬 ' + topic;
-  if (topicLower.includes('physics')) return '⚛️ ' + topic;
-  if (topicLower.includes('chemistry')) return '⚗️ ' + topic;
-  if (topicLower.includes('astronomy') || topicLower.includes('space')) return '🌌 ' + topic;
-  if (topicLower.includes('earth') || topicLower.includes('geology')) return '🌍 ' + topic;
-  if (topicLower.includes('climate')) return '🌡️ ' + topic;
-  if (topicLower.includes('psychology')) return '🧠 ' + topic;
-  if (topicLower.includes('sociology')) return '👥 ' + topic;
-  if (topicLower.includes('economics') || topicLower.includes('finance')) return '💰 ' + topic;
-  if (topicLower.includes('business')) return '💼 ' + topic;
-  if (topicLower.includes('education')) return '🎓 ' + topic;
-  if (topicLower.includes('history')) return '📜 ' + topic;
-  if (topicLower.includes('art')) return '🎨 ' + topic;
-  if (topicLower.includes('music')) return '🎵 ' + topic;
-  if (topicLower.includes('technology')) return '💻 ' + topic;
-  
   // Default emoji for unmatched topics
-  const defaultEmojis = ['📌', '🔹', '💠', '🔸', '✨', '🔆', '📍', '🔶', '🔷', '💫'];
-  const hash = topic.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const emojiIndex = hash % defaultEmojis.length;
-  
-  return defaultEmojis[emojiIndex] + ' ' + topic;
+  return '📌 ' + topic;
 };
 
 // Ensure the topic text is a complete sentence 
@@ -248,35 +178,13 @@ const stringToColor = (str: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Generate summary of a node and its children
-const generateNodeSummary = (node: any) => {
-  // This function would generate a summary of a node and its children
-  console.log("Generating summary for node:", node);
-  
-  // This is a placeholder for actual AI-powered summary generation
-  return `Summary of ${node.topic}`;
-};
-
-// Add this interface to extend MindElixirInstance with lastClickTime property
-interface ExtendedMindElixir extends MindElixirInstance {
-  lastClickTime?: number;
-}
-
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mindMapRef = useRef<ExtendedMindElixir | null>(null);
+  const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string>('');
   const { toast } = useToast();
-  
-  // Create the activePdfKey at the top BEFORE it's used
-  const activePdfKey = pdfKey;
-  
-  // Debug pdfKey prop
-  useEffect(() => {
-    console.log("MindMapViewer current pdfKey:", pdfKey);
-  }, [pdfKey]);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -381,7 +289,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       const styleObserver = observeStylePanel();
       
       // Create the mind map instance
-      const mind = new MindElixir(options) as ExtendedMindElixir;
+      const mind = new MindElixir(options);
       
       // Install the node menu plugin with full styling support
       const customNodeMenu = nodeMenu;
@@ -400,18 +308,6 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           }
         });
         
-        // Add emoji enhancement option
-        menus.push({
-          name: '🎨 Enhance with Emoji',
-          onclick: () => {
-            // Add emoji to this node if it doesn't have one
-            if (node && node.topic && !/^\p{Emoji}/u.test(node.topic)) {
-              node.topic = addEmoji(node.topic);
-              mindInstance.refresh();
-            }
-          }
-        });
-        
         return menus;
       };
       
@@ -423,29 +319,16 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       
       try {
         // Try to load mindmap data for specific PDF if pdfKey is provided
-        console.log("Attempting to load mindmap data for:", pdfKey);
-        const mindMapKey = pdfKey ? `mindMapData_${pdfKey}` : 'mindMapData';
-        const savedData = sessionStorage.getItem(mindMapKey);
+        const savedData = pdfKey 
+          ? sessionStorage.getItem(`mindMapData_${pdfKey}`)
+          : sessionStorage.getItem('mindMapData');
           
         if (savedData) {
-          console.log(`Found mind map data in sessionStorage with key: ${mindMapKey}`);
           const parsedData = JSON.parse(savedData);
-          
-          if (!parsedData || !parsedData.nodeData) {
-            console.warn("Invalid mind map data structure:", parsedData);
-            throw new Error("Invalid mind map data structure");
-          }
-          
-          console.log("Successfully loaded mind map data:", parsedData.nodeData.topic);
           
           // Apply line breaks, emojis, and complete sentences to node topics
           const formatNodes = (node: any) => {
             if (node.topic) {
-              // Add emoji if missing
-              if (!/^\p{Emoji}/u.test(node.topic)) {
-                node.topic = addEmoji(node.topic);
-              }
-              
               // Special handling for root node - only keep title with 3-4 words per line
               if (node.id === 'root') {
                 node.topic = formatNodeText(node.topic, 3, true);
@@ -466,20 +349,8 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
             formatNodes(parsedData.nodeData);
           }
           
-          // Validate content richness
-          const validation = validateMindMapContent(parsedData);
-          console.log("Mind map validation:", validation);
-          
-          // If map has low emoji count, enhance it - FIX: Create a new enhanced data instead of reassigning
-          let enhancedData = parsedData;
-          if (validation.emojiCount < validation.specificTermCount / 2) {
-            console.log("Enhancing mind map with more emojis");
-            enhancedData = enhanceMindMapWithEmojis(parsedData);
-          }
-          
-          data = enhancedData;
+          data = parsedData;
         } else {
-          console.warn(`No mind map data found with key: ${mindMapKey}, using default`);
           // Default research paper structure with complete sentences and emojis
           data = {
             nodeData: {
@@ -686,11 +557,11 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         }
       };
       
-      // Call enhanceConnectionLines after initialization and on data changes
-      setTimeout(enhanceConnectionLines, 500);
-      mind.bus.addListener('operation', enhanceConnectionLines);
+      // Apply enhanced connections after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        enhanceConnectionLines();
+      }, 100);
       
-      // Save mind map reference
       mindMapRef.current = mind;
       
       // Notify parent component that mind map is ready
@@ -698,69 +569,216 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         onMindMapReady(mind);
       }
       
-      // Set up a click handler for opening the chat with relevant text
-      mind.bus.addListener('selectNode', (nodeObj: any) => {
-        // When a node is selected, update explainText or open chat if needed
-        if (onExplainText && nodeObj && nodeObj.topic) {
-          // Either update the text, or if requested, also open chat
-          const topicText = nodeObj.topic.replace(/^\p{Emoji}\s*/u, ''); // Remove emoji from start
-          
-          if (onRequestOpenChat) {
-            // Only request opening chat on double-click
-            const now = Date.now();
-            if (mind.lastClickTime && now - mind.lastClickTime < 300) {
-              onExplainText(topicText);
-              onRequestOpenChat();
-            }
-            mind.lastClickTime = now;
-          }
-        }
+      // Show a toast notification to inform users about right-click functionality
+      toast({
+        title: "Mind Map Ready",
+        description: "Click on any node to edit it. Right-click for more options.",
+        duration: 5000,
       });
       
-      // Set ready state to true
-      setIsReady(true);
+      // Set a timeout to ensure the mind map is rendered before scaling
+      setTimeout(() => {
+        setIsReady(true);
+      }, 300);
       
-      // Return cleanup function to remove event listeners
+      // Cleanup function
       return () => {
         styleObserver.disconnect();
         observer.disconnect();
-        
-        // Clean up all event listeners when unmounting
-        if (mind && mind.bus) {
-          // Fix: instead of clearListeners, remove each listener individually
-          mind.bus.removeListener('selectNode', () => {});
-          mind.bus.removeListener('operation', () => {});
-        }
-        
-        // Clear mind map instance
-        mindMapRef.current = null;
       };
     }
-  }, [isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey]);
-  
-  // Component render
-  return (
-    <div className="w-full h-full relative flex flex-col">
-      <div className="flex-grow relative">
-        <div 
-          ref={containerRef} 
-          className="w-full h-full" 
-          style={{ background: '#F9F7FF' }} // Match the theme background
-        />
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfKey]);
+
+  // Listen for PDF switching events and update mindmap
+  useEffect(() => {
+    const handlePdfSwitched = (event: CustomEvent) => {
+      if (event.detail?.pdfKey && mindMapRef.current) {
+        const newPdfKey = event.detail.pdfKey;
         
-        {!isMapGenerated && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80">
-            <div className="text-center">
-              <p className="text-lg font-medium mb-4">No mind map yet</p>
-              <p className="text-gray-500 mb-6">Upload a PDF document to generate a mind map</p>
-              <Button className="bg-purple-600 hover:bg-purple-700">
-                <FileText className="mr-2 h-4 w-4" />
-                Upload PDF
-              </Button>
-            </div>
+        // Load the mindmap data for this PDF
+        try {
+          const savedData = sessionStorage.getItem(`mindMapData_${newPdfKey}`);
+          if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            mindMapRef.current.init(parsedData);
+            console.log(`Loaded mindmap for PDF: ${newPdfKey}`);
+          }
+        } catch (error) {
+          console.error(`Error loading mindmap for PDF ${newPdfKey}:`, error);
+        }
+      }
+    };
+    
+    // Listen for PDF switching events
+    window.addEventListener('pdfSwitched', handlePdfSwitched as EventListener);
+    
+    return () => {
+      window.removeEventListener('pdfSwitched', handlePdfSwitched as EventListener);
+    };
+  }, []);
+
+  // Function to generate summaries for nodes and their children
+  const generateNodeSummary = (nodeData: any) => {
+    if (!nodeData) return;
+    
+    // Generate a simple summary from the node hierarchy
+    let summaryText = `## Summary of "${nodeData.topic}"\n\n`;
+    
+    // Helper function to extract node topics and build a hierarchical summary
+    const extractTopics = (node: any, level: number = 0) => {
+      if (!node) return '';
+      
+      let indent = '';
+      for (let i = 0; i < level; i++) {
+        indent += '  ';
+      }
+      
+      // Get clean topic text without emojis and formatting
+      let topicText = node.topic || '';
+      
+      // Remove emojis
+      topicText = topicText.replace(/[\p{Emoji}]/gu, '').trim();
+      
+      // Remove line breaks
+      topicText = topicText.replace(/\n/g, ' ');
+      
+      let result = `${indent}- ${topicText}\n`;
+      
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          result += extractTopics(child, level + 1);
+        }
+      }
+      
+      return result;
+    };
+    
+    // Count the number of nodes for statistics
+    const countNodes = (node: any): number => {
+      if (!node) return 0;
+      
+      let count = 1; // Count this node
+      
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          count += countNodes(child);
+        }
+      }
+      
+      return count;
+    };
+    
+    const hierarchySummary = extractTopics(nodeData);
+    const totalNodes = countNodes(nodeData);
+    
+    summaryText += hierarchySummary;
+    summaryText += `\n\n### Statistics\n`;
+    summaryText += `- Total topics: ${totalNodes}\n`;
+    summaryText += `- Depth: ${nodeData.children ? Math.max(...nodeData.children.map((c: any) => countNodes(c))) : 1}\n`;
+    
+    setSummary(summaryText);
+    setShowSummary(true);
+    
+    // If there's an onExplainText callback, send the summary
+    if (onExplainText) {
+      onExplainText(summaryText);
+    }
+    
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+    
+    toast({
+      title: "Summary Generated",
+      description: "The summary has been sent to the chat panel.",
+      duration: 3000,
+    });
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col min-h-[300px]">
+      {!isMapGenerated && (
+        <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+          <div className="mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-gray-400"
+            >
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+            </svg>
           </div>
-        )}
-      </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">No Mind Map Available</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Upload a document or start a chat to generate a mind map.
+          </p>
+        </div>
+      )}
+      
+      {isMapGenerated && (
+        <>
+          <div
+            ref={containerRef}
+            className="w-full flex-grow relative min-h-[300px] overflow-hidden"
+            style={{ 
+              backgroundColor: "#F9F7FF",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              transition: "all 0.3s ease",
+            }}
+          ></div>
+          
+          {showSummary && (
+            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 text-sm max-h-[300px] overflow-auto">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900">Mind Map Summary</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowSummary(false)}>Close</Button>
+              </div>
+              <div className="prose prose-sm">
+                {summary.split('\n').map((line, i) => (
+                  <div key={i} className="mb-1">
+                    {line.startsWith('#') ? (
+                      <h4 className="text-md font-bold">{line.replace(/^#+\s/, '')}</h4>
+                    ) : line.startsWith('-') ? (
+                      <div className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>{line.replace(/^-\s/, '')}</span>
+                      </div>
+                    ) : (
+                      <p>{line}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    if (onExplainText && summary) {
+                      onExplainText(summary);
+                    }
+                    if (onRequestOpenChat) {
+                      onRequestOpenChat();
+                    }
+                  }}
+                >
+                  <FileText size={16} />
+                  Send to Chat
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

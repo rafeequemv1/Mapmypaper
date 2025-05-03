@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -180,11 +181,12 @@ const PdfUpload = () => {
     });
 
     await processAndGenerateMindMap(selectedFile, activePdfKey);
+  // eslint-disable-next-line
   }, [activePdfKey, pdfFiles, toast]);  
 
   async function processAndGenerateMindMap(selectedFile: File, pdfKey: string) {
     try {
-      // Read the PDF as DataURL for viewing
+      // Read the PDF as DataURL for viewing (same as before)
       const reader = new FileReader();
 
       const pdfDataPromise = new Promise<string>((resolve, reject) => {
@@ -215,32 +217,17 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
 
-      // Store the extracted text in sessionStorage for easier access later
-      sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
-      
-      console.log(`Extracted text length: ${extractedText.length} characters`);
-      console.log(`Text sample: ${extractedText.substring(0, 150)}...`);
-
-      // Process via Gemini API to generate mind map
+      // Process via Gemini API
       try {
-        console.log("Calling Gemini API to generate mind map...");
         const mindMapData = await generateMindMapFromText(extractedText);
-        console.log("Mind map data generated:", mindMapData);
-
-        if (!mindMapData || !mindMapData.nodeData) {
-          throw new Error("Generated mind map data is invalid or empty");
-        }
 
         // Store generated mind map data in sessionStorage under dedicated key
-        const mindMapKey = `${mindMapKeyPrefix}${pdfKey}`;
-        sessionStorage.setItem(mindMapKey, JSON.stringify(mindMapData));
-        console.log(`Mind map data stored in sessionStorage with key: ${mindMapKey}`);
+        sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
 
         toast({
           title: "Success",
           description: "Mind map generated successfully!",
         });
-        
         // Pass pdf key to mindmap page so that it knows which PDF/mindmap to show.
         navigate("/mindmap", { state: { pdfKey } });
       } catch (error: any) {

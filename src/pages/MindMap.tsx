@@ -7,7 +7,6 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import MermaidModal from "@/components/mindmap/MermaidModal";
 import { MindElixirInstance } from "mind-elixir";
-import { enhanceMindMapWithEmojis, logMindMapDiagnostics } from "@/utils/mindMapUtils";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -21,49 +20,32 @@ const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
+  const [apiStatus, setApiStatus] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
     setIsMapGenerated(true);
     setMindMapInstance(instance);
+    setApiStatus('success');
+  }, []);
+
+  // Check if API key is available
+  useEffect(() => {
+    const checkApiKey = async () => {
+      if (!import.meta.env.VITE_GEMINI_API_KEY) {
+        setApiStatus('error');
+        toast({
+          title: "API Key Missing",
+          description: "Gemini API key is missing. Please set VITE_GEMINI_API_KEY in your .env file.",
+          variant: "destructive",
+        });
+      } else {
+        setApiStatus('idle');
+      }
+    };
     
-    // Add ability to enhance mind map with emojis
-    if (instance && activePdfKey) {
-      // Add a button to the toolbar for enhancing with emojis
-      const enhanceMindMapData = () => {
-        try {
-          // Get the current mind map data
-          const data = instance.getData();
-          
-          // Enhance with emojis
-          const enhancedData = enhanceMindMapWithEmojis({
-            nodeData: data.nodeData
-          });
-          
-          // Update the mind map
-          instance.init(enhancedData);
-          
-          // Save the enhanced mind map data
-          const mindMapKey = `mindMapData_${activePdfKey}`;
-          sessionStorage.setItem(mindMapKey, JSON.stringify(enhancedData));
-          
-          toast({
-            title: "Mind Map Enhanced",
-            description: "Added emojis to make the mind map more visual!",
-            duration: 3000
-          });
-          
-          // Log diagnostics
-          logMindMapDiagnostics(activePdfKey);
-        } catch (error) {
-          console.error("Error enhancing mind map:", error);
-        }
-      };
-      
-      // Expose the enhancement function to the window for debugging
-      (window as any).enhanceMindMap = enhanceMindMapData;
-    }
-  }, [toast, activePdfKey]);
+    checkApiKey();
+  }, [toast]);
 
   // Toggle chat function
   const toggleChat = useCallback(() => {
@@ -131,11 +113,6 @@ const MindMap = () => {
     const handlePdfSwitched = (e: CustomEvent) => {
       if (e.detail?.pdfKey) {
         setActivePdfKey(e.detail.pdfKey);
-        
-        // Log mind map diagnostics when PDF changes
-        setTimeout(() => {
-          logMindMapDiagnostics(e.detail.pdfKey);
-        }, 1000);
       }
     };
     
@@ -145,6 +122,15 @@ const MindMap = () => {
       window.removeEventListener('pdfSwitched', handlePdfSwitched as EventListener);
     };
   }, []);
+
+  // Handle API status changes for logging/debugging
+  useEffect(() => {
+    console.log(`Mindmap API status changed to: ${apiStatus}`);
+    
+    if (apiStatus === 'error') {
+      console.error("Gemini API integration is not working correctly");
+    }
+  }, [apiStatus]);
 
   useEffect(() => {
     if (location.state?.presetQuestion) {
@@ -163,6 +149,7 @@ const MindMap = () => {
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
+        apiStatus={apiStatus}
       />
       <PanelStructure
         showPdf={showPdf}
@@ -177,6 +164,7 @@ const MindMap = () => {
         onImageCaptured={handleImageCaptured}
         activePdfKey={activePdfKey}
         onActivePdfKeyChange={setActivePdfKey}
+        onApiStatusChange={setApiStatus}
       />
       
       {/* Modal for Summary */}
