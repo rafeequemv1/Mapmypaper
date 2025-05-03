@@ -7,6 +7,7 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import MermaidModal from "@/components/mindmap/MermaidModal";
 import { MindElixirInstance } from "mind-elixir";
+import { getCurrentPdf } from "@/utils/pdfStorage";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -21,6 +22,19 @@ const MindMap = () => {
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
+
+  // Check for current PDF on mount
+  useEffect(() => {
+    const loadCurrentPdf = async () => {
+      const currentPdfKey = getCurrentPdf();
+      if (currentPdfKey) {
+        setActivePdfKey(currentPdfKey);
+        console.log("Loaded current PDF key:", currentPdfKey);
+      }
+    };
+    
+    loadCurrentPdf();
+  }, []);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);

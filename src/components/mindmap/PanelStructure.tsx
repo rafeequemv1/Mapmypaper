@@ -108,9 +108,35 @@ const PanelStructure = ({
           console.error("Error generating mindmap for existing PDF:", error);
           setApiError(error.message || "Failed to generate mindmap");
           if (onApiStatusChange) onApiStatusChange('error');
+          
+          // Create a default mindmap so something is displayed
+          const defaultMindMap = {
+            nodeData: {
+              id: 'root',
+              topic: '📄 Document Analysis',
+              children: [
+                {
+                  id: 'error1',
+                  topic: '⚠️ Could not generate mindmap from document content.',
+                  direction: 0,
+                  children: [
+                    { id: 'error1-1', topic: 'API error or connection issue prevented mindmap generation.' }
+                  ]
+                },
+                {
+                  id: 'suggest1',
+                  topic: '💡 Use the chat to ask questions about the document.',
+                  direction: 0
+                }
+              ]
+            }
+          };
+          
+          sessionStorage.setItem(`${mindMapKeyPrefix}${key}`, JSON.stringify(defaultMindMap));
+          
           toast({
             title: "Mindmap Generation Failed",
-            description: "Couldn't create a mindmap for this PDF. API may be unavailable.",
+            description: "Couldn't create a complete mindmap for this PDF. Using a basic structure instead.",
             variant: "destructive",
           });
         }
@@ -220,6 +246,11 @@ const PanelStructure = ({
         setProcessingProgress(60);
         setProcessingStage("Extracting text");
         const extractedText = await PdfToText(file);
+        
+        // Store extracted text in sessionStorage for quick access
+        if (extractedText && typeof extractedText === "string") {
+          sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
+        }
         
         if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
           toast({
