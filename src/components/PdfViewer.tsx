@@ -1,414 +1,335 @@
-import { GoogleGenerativeAI, GenerativeModel, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
-import { toast } from "sonner";
 
-// Initialize the API
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(apiKey);
+import React, { forwardRef, useEffect, useState, useRef } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getPdfData, getCurrentPdf } from "@/utils/pdfStorage";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ImageIcon, TextIcon } from "lucide-react";
+import html2canvas from "html2canvas";
 
-// Updated model name to use correctly supported versions
-const modelName = "gemini-1.5-flash";  // Updated from gemini-1.0-pro
-const visionModelName = "gemini-1.5-flash-vision";  // For handling images
+// Initialize PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-// Create the model instances
-const model = genAI.getGenerativeModel({
-  model: modelName,
-  safetySettings: [
-    {
-      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-  ],
-});
-
-const visionModel = genAI.getGenerativeModel({
-  model: visionModelName,
-  safetySettings: [
-    {
-      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-  ],
-});
-
-interface MindNode {
-  id: string;
-  topic: string;
-  direction?: number;
-  children?: MindNode[];
+interface PdfViewerProps {
+  onTextSelected?: (text: string) => void;
+  onImageCaptured?: (imageData: string) => void;
 }
 
-interface MindMapData {
-  nodeData: MindNode;
-}
+const PdfViewer = forwardRef<any, PdfViewerProps>(
+  ({ onTextSelected, onImageCaptured }, ref) => {
+    const [numPages, setNumPages] = useState<number | null>(null);
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+    const [isLoadingPdf, setIsLoadingPdf] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const pdfContainerRef = useRef<HTMLDivElement>(null);
+    const { toast } = useToast();
+    const [isAreaSelectMode, setIsAreaSelectMode] = useState(false);
+    const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
+    const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
+    const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
+    const [isMouseDown, setIsMouseDown] = useState(false);
 
-export async function generateMindMapFromText(text: string): Promise<MindMapData> {
-  try {
-    const prompt = `
-    You are an expert at creating mind maps for academic papers and research documents. Based on the text provided:
-
-    1. Extract the key topics and subtopics
-    2. Structure them in a hierarchical tree format
-    3. Use emojis at the beginning of topics where appropriate
-    4. Keep topic names concise but informative
-    5. Include all important sections from the paper
-    
-    Respond ONLY with JSON representing a mind map with this structure:
-    {
-      "nodeData": {
-        "id": "root",
-        "topic": "Main Topic",
-        "children": [
-          {
-            "id": "child1",
-            "topic": "Subtopic 1",
-            "direction": 0,
-            "children": [
-              { "id": "child1-1", "topic": "Detail point 1" }
-            ]
-          },
-          {
-            "id": "child2",
-            "topic": "Subtopic 2",
-            "direction": 1,
-            "children": []
+    // Load current PDF from IndexedDB
+    useEffect(() => {
+      const loadCurrentPdf = async () => {
+        try {
+          setIsLoadingPdf(true);
+          const currentPdfKey = await getCurrentPdf();
+          if (currentPdfKey) {
+            const pdfData = await getPdfData(currentPdfKey);
+            if (pdfData) {
+              setPdfUrl(pdfData);
+            } else {
+              setPdfUrl(null);
+              console.error("No PDF data found for key:", currentPdfKey);
+            }
+          } else {
+            // No current PDF
+            setPdfUrl(null);
           }
-        ]
-      }
-    }
-
-    Direction values: 0 = left side of mind map, 1 = right side of mind map
-
-    The text to analyze is:
-    ${text.substring(0, 100000)}
-    `;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const rawText = response.text();
-    
-    console.log("Raw Gemini response:", rawText);
-
-    // Extract JSON from the response - it might be enclosed in triple backticks
-    let jsonText = rawText;
-    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonMatch && jsonMatch[1]) {
-      jsonText = jsonMatch[1];
-    }
-
-    try {
-      // Parse the JSON response
-      const mindMapData = JSON.parse(jsonText);
-      
-      // Validate the structure minimally
-      if (!mindMapData || !mindMapData.nodeData || !mindMapData.nodeData.id) {
-        throw new Error("Invalid mind map structure returned");
-      }
-      
-      console.log("Mind map data generated successfully");
-      return mindMapData;
-    } catch (jsonError) {
-      console.error("Error parsing JSON:", jsonError);
-      throw new Error("Failed to parse mind map data");
-    }
-  } catch (error) {
-    console.error("Error generating mind map:", error);
-    throw new Error(`Failed to generate mind map: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-// Function to analyze an image with Gemini
-export const analyzeImageWithGemini = async (imageData: string, prompt?: string) => {
-  try {
-    const userPrompt = prompt || "Describe what you see in this image in detail. If it's a part of a research paper or document, analyze the content and explain what it shows.";
-    
-    // Generate content with the image as part of the input
-    const parts = [
-      { text: userPrompt },
-      {
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: imageData.split(',')[1] // Remove the data:image/jpeg;base64, prefix
+        } catch (error) {
+          console.error("Error loading current PDF:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load PDF",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingPdf(false);
         }
-      }
-    ];
-
-    // Generate content from the vision model
-    const result = await visionModel.generateContent({ contents: [{ role: "user", parts }] });
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Error analyzing image with Gemini:", error);
-    throw new Error(`Failed to analyze image: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
-
-// Function to explain selected text
-export const explainSelectedText = async (text: string, mode: string = "explain") => {
-  try {
-    let prompt = "";
-    
-    switch (mode) {
-      case "explain":
-        prompt = `You are an academic assistant helping a researcher understand a complex paper. 
-        Explain the following text in simpler terms while preserving all the important information:
-        
-        "${text}"
-        
-        Provide a clear, concise explanation that would help someone understand this concept.`;
-        break;
-        
-      case "summarize":
-        prompt = `Summarize the following text from an academic paper in a concise way:
-        
-        "${text}"
-        
-        Create a brief summary that captures the key points.`;
-        break;
-        
-      case "critique":
-        prompt = `You are a critical academic reviewer. Analyze the following text from a research paper:
-        
-        "${text}"
-        
-        Provide a constructive critique discussing the strengths and potential weaknesses of this content.`;
-        break;
-        
-      default:
-        prompt = `Explain the following text in clear terms:
-        
-        "${text}"`;
-    }
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error(`Error in ${mode} mode with Gemini:`, error);
-    throw new Error(`Failed to process text: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
-
-// Function to chat with Gemini about a PDF
-export const chatWithGeminiAboutPdf = async (
-  message: string, 
-  pdfText: string | null = null, 
-  chatHistory: { role: "user" | "model"; content: string }[] = []
-) => {
-  try {
-    let prompt = message;
-    
-    // If we have PDF text to provide context
-    if (pdfText) {
-      // Trim PDF text if it's too long
-      const trimmedPdfText = pdfText.length > 15000 
-        ? pdfText.substring(0, 15000) + "... (text truncated due to length)"
-        : pdfText;
-      
-      prompt = `I'm asking about a PDF document with the following content:
-      ---
-      ${trimmedPdfText}
-      ---
-      
-      Based on this content, please answer: ${message}`;
-    }
-    
-    // Create a chat session with history
-    const chat = model.startChat({
-      history: chatHistory.map(msg => ({
-        role: msg.role,
-        parts: [{ text: msg.content }]
-      })),
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
-      },
-    });
-    
-    // Send the message
-    const result = await chat.sendMessage(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Error chatting with Gemini about PDF:", error);
-    throw new Error(`Failed to get response: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
-
-// Function to generate structured summary from PDF text
-export const generateStructuredSummary = async (text: string) => {
-  try {
-    const prompt = `
-    You are a professional academic summarizer who creates detailed, structured summaries of research papers and documents.
-    
-    Please analyze the following text and create a comprehensive summary with the following sections, adapting them based on the document type:
-    
-    For research papers:
-    - Summary: A concise overview of the entire document with key takeaways.
-    - Key Findings: The main results and discoveries.
-    - Methods: The approach used in the research.
-    - Significance: Why this research matters.
-    - Limitations: Constraints or weaknesses of the study.
-    
-    For business documents:
-    - Summary: A concise overview of the entire document with key takeaways.
-    - Business Context: The business situation or problem being addressed.
-    - Key Points: Main arguments or information presented.
-    - Financial Implications: Any monetary or resource considerations.
-    - Action Items: Recommended next steps.
-    
-    For legal documents:
-    - Summary: A concise overview of the entire document with key takeaways.
-    - Legal Framework: The laws or regulations involved.
-    - Parties & Obligations: Who is involved and what they must do.
-    - Key Clauses: Important provisions or terms.
-    - Potential Issues: Possible legal concerns or ambiguities.
-    
-    Choose the most appropriate structure based on the document type, and use [citation:pageX] format to reference specific pages where appropriate.
-    
-    Document text:
-    ${text.substring(0, 15000)}... (text truncated for processing)
-    `;
-
-    // Generate the summary
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const responseText = response.text();
-    
-    // Try to parse the response as structured data
-    try {
-      // First try to handle the case where the response is a properly formatted JSON
-      if (responseText.includes('{') && responseText.includes('}')) {
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          return JSON.parse(jsonMatch[0]);
-        }
-      }
-      
-      // If not JSON, parse the sections manually
-      const sections: Record<string, string> = { 
-        Summary: "" 
       };
-      
-      // Split by markdown headers
-      const sectionMatches = responseText.split(/##\s+([^#\n]+)/);
-      
-      // Process the sections
-      for (let i = 1; i < sectionMatches.length; i += 2) {
-        if (i + 1 < sectionMatches.length) {
-          const sectionName = sectionMatches[i].trim();
-          const sectionContent = sectionMatches[i + 1].trim();
-          sections[sectionName] = sectionContent;
-        }
-      }
-      
-      // If no sections were found using ## headers, try with headings in the text
-      if (Object.keys(sections).length <= 1) {
-        const lines = responseText.split('\n');
-        let currentSection = "Summary";
-        sections[currentSection] = "";
-        
-        for (const line of lines) {
-          // Check if this line looks like a section heading
-          if (line.match(/^[A-Z][A-Za-z\s]+:/) || line.match(/^[A-Z][A-Za-z\s]+$/)) {
-            currentSection = line.replace(':', '').trim();
-            sections[currentSection] = "";
-          } else if (currentSection) {
-            sections[currentSection] += line + "\n";
+
+      loadCurrentPdf();
+
+      // Listen for PDF switch events
+      const handlePdfSwitch = async (event: any) => {
+        try {
+          setIsLoadingPdf(true);
+          const { pdfKey } = event.detail;
+          if (pdfKey) {
+            const pdfData = await getPdfData(pdfKey);
+            if (pdfData) {
+              setPdfUrl(pdfData);
+              setCurrentPage(1); // Reset to first page when switching PDFs
+            } else {
+              setPdfUrl(null);
+              console.error("No PDF data found for key:", pdfKey);
+            }
           }
+        } catch (error) {
+          console.error("Error switching PDF:", error);
+        } finally {
+          setIsLoadingPdf(false);
         }
+      };
+
+      window.addEventListener("pdfSwitched", handlePdfSwitch);
+      return () => window.removeEventListener("pdfSwitched", handlePdfSwitch);
+    }, [toast]);
+
+    function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+      setNumPages(numPages);
+      setIsLoadingPdf(false);
+    }
+
+    function handleTextSelection() {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim() !== "" && onTextSelected) {
+        onTextSelected(selection.toString().trim());
+      }
+    }
+
+    // Scroll to specific page method (exposed via ref)
+    const scrollToPage = (pageNumber: number) => {
+      if (pageNumber < 1 || (numPages && pageNumber > numPages)) {
+        console.error("Invalid page number:", pageNumber);
+        return;
+      }
+
+      setCurrentPage(pageNumber);
+      
+      // Find the page element and scroll to it
+      const pageElement = document.getElementById(`page_${pageNumber}`);
+      if (pageElement) {
+        pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+
+    // Toggle area selection mode
+    const toggleAreaSelectMode = () => {
+      setIsAreaSelectMode(!isAreaSelectMode);
+      setSelectionRect(null);
+      setSelectionStart(null);
+      setSelectionEnd(null);
+    };
+
+    // Handle mouse down for area selection
+    const handleMouseDown = (e: React.MouseEvent) => {
+      if (!isAreaSelectMode) return;
+      
+      const rect = pdfContainerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      setIsMouseDown(true);
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setSelectionStart({ x, y });
+      setSelectionEnd({ x, y });
+    };
+
+    // Handle mouse move for area selection
+    const handleMouseMove = (e: React.MouseEvent) => {
+      if (!isAreaSelectMode || !isMouseDown || !selectionStart) return;
+      
+      const rect = pdfContainerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setSelectionEnd({ x, y });
+      
+      // Calculate selection rectangle
+      const selRect = new DOMRect(
+        Math.min(selectionStart.x, x),
+        Math.min(selectionStart.y, y),
+        Math.abs(x - selectionStart.x),
+        Math.abs(y - selectionStart.y)
+      );
+      
+      setSelectionRect(selRect);
+    };
+
+    // Handle mouse up for area selection
+    const handleMouseUp = async () => {
+      if (!isAreaSelectMode || !isMouseDown || !selectionRect || !onImageCaptured) {
+        setIsMouseDown(false);
+        return;
       }
       
-      // Clean up the sections
-      Object.keys(sections).forEach(key => {
-        sections[key] = sections[key].trim();
-      });
+      try {
+        if (selectionRect.width < 10 || selectionRect.height < 10) {
+          // Ignore tiny selections
+          setIsMouseDown(false);
+          return;
+        }
+
+        const element = pdfContainerRef.current;
+        if (!element) {
+          setIsMouseDown(false);
+          return;
+        }
+        
+        // Convert the selected area to an image
+        const canvas = await html2canvas(element, {
+          x: selectionRect.x,
+          y: selectionRect.y,
+          width: selectionRect.width,
+          height: selectionRect.height,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff"
+        });
+        
+        // Convert canvas to data URL
+        const imageData = canvas.toDataURL("image/jpeg");
+        onImageCaptured(imageData);
+        
+        // Reset selection
+        setSelectionRect(null);
+        setSelectionStart(null);
+        setSelectionEnd(null);
+        setIsAreaSelectMode(false);
+      } catch (error) {
+        console.error("Error capturing area:", error);
+        toast({
+          title: "Capture Failed",
+          description: "Failed to capture the selected area",
+          variant: "destructive",
+        });
+      }
       
-      return sections;
-    } catch (e) {
-      // If parsing fails, return the plain text
-      console.error("Failed to parse structured summary:", e);
-      return { Summary: responseText };
-    }
-  } catch (error) {
-    console.error("Error generating structured summary:", error);
-    throw new Error(`Failed to generate summary: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
+      setIsMouseDown(false);
+    };
 
-// Function to generate a mermaid flowchart from text
-export const generateFlowchartFromText = async (text: string) => {
-  try {
-    const prompt = `
-    You are an expert at creating mermaid.js flowcharts for academic papers and research documents.
-    
-    Based on the text provided, create a mermaid.js flowchart that:
-    1. Visualizes the key processes, methods, or workflows described in the document
-    2. Uses appropriate flowchart symbols and connections
-    3. Is well-structured and easy to follow
-    4. Includes only the most important elements (maximum 15 nodes)
-    5. Uses descriptive but concise node labels
-    
-    Respond ONLY with valid mermaid.js flowchart syntax, nothing else. Use the flowchart LR (left to right) or TD (top down) format depending on which better suits the content.
-    
-    Example of expected output format:
-    \`\`\`mermaid
-    flowchart TD
-      A[Start] --> B{Decision}
-      B -->|Yes| C[Process 1]
-      B -->|No| D[Process 2]
-      C --> E[End]
-      D --> E
-    \`\`\`
-    
-    The text to analyze is:
-    ${text.substring(0, 12000)}... (text truncated for processing)
-    `;
+    // Expose methods via ref
+    React.useImperativeHandle(ref, () => ({
+      scrollToPage,
+    }));
 
-    // Generate the flowchart
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const responseText = response.text();
-    
-    // Extract just the mermaid code
-    const mermaidMatch = responseText.match(/```mermaid\s*([\s\S]*?)```/);
-    if (mermaidMatch && mermaidMatch[1]) {
-      return mermaidMatch[1].trim();
+    if (!pdfUrl) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center p-8 bg-gray-50 text-gray-500">
+          <p>No PDF loaded. Please upload or select a PDF.</p>
+        </div>
+      );
     }
-    
-    // If no mermaid code block is found, check if the response is already just mermaid code
-    if (responseText.includes('flowchart') || responseText.includes('graph')) {
-      return responseText.trim();
-    }
-    
-    throw new Error("Failed to generate valid mermaid flowchart");
-  } catch (error) {
-    console.error("Error generating flowchart:", error);
-    throw new Error(`Failed to generate flowchart: ${error instanceof Error ? error.message : String(error)}`);
+
+    return (
+      <div className="pdf-viewer h-full flex flex-col overflow-hidden">
+        {/* Toolbar */}
+        <div className="border-b bg-white p-2 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            {numPages && `Page ${currentPage} of ${numPages}`}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  className={`p-1 rounded-md ${isAreaSelectMode ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'}`}
+                  onClick={toggleAreaSelectMode}
+                >
+                  <ImageIcon className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Select area to analyze image</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  className="p-1 rounded-md hover:bg-gray-100"
+                  onClick={() => toast({
+                    title: "Text Selection",
+                    description: "Select text in the PDF and it will be automatically captured",
+                  })}
+                >
+                  <TextIcon className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Select text to analyze</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+        
+        {/* PDF Document */}
+        <div 
+          className="flex-1 overflow-auto relative"
+          ref={pdfContainerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={() => isMouseDown && handleMouseUp()}
+        >
+          {isLoadingPdf && (
+            <div className="p-4">
+              <Skeleton className="h-[800px] w-full rounded-md" />
+            </div>
+          )}
+          
+          <Document
+            file={pdfUrl}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={(error) => {
+              console.error("Error loading PDF:", error);
+              setIsLoadingPdf(false);
+            }}
+            className="flex flex-col items-center"
+          >
+            {Array.from(new Array(numPages || 0), (_, index) => (
+              <div 
+                key={`page_${index + 1}`} 
+                id={`page_${index + 1}`}
+                className="mb-4"
+                onMouseUp={handleTextSelection}
+              >
+                <Page 
+                  pageNumber={index + 1} 
+                  renderAnnotationLayer={true}
+                  renderTextLayer={true}
+                  onRenderSuccess={() => setCurrentPage(index + 1)}
+                  className="shadow-md"
+                />
+              </div>
+            ))}
+          </Document>
+          
+          {/* Selection overlay */}
+          {selectionRect && isAreaSelectMode && (
+            <div
+              style={{
+                position: 'absolute',
+                border: '2px dashed #3b82f6',
+                background: 'rgba(59, 130, 246, 0.1)',
+                left: selectionRect.x,
+                top: selectionRect.y,
+                width: selectionRect.width,
+                height: selectionRect.height,
+                pointerEvents: 'none'
+              }}
+            />
+          )}
+        </div>
+      </div>
+    );
   }
-};
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;

@@ -146,7 +146,7 @@ export const analyzeImageWithGemini = async (imageData: string, prompt?: string)
   try {
     const userPrompt = prompt || "Describe what you see in this image in detail. If it's a part of a research paper or document, analyze the content and explain what it shows.";
     
-    // Generate content with the image as part of the input
+    // Generate content with the image as part of the input - fixed format
     const parts = [
       { text: userPrompt },
       {
