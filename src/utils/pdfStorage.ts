@@ -13,10 +13,7 @@ interface PDFDB extends DBSchema {
   };
   current: {
     key: string;
-    value: {
-      id: string;
-      value: string;
-    };
+    value: string;
   };
 }
 
@@ -125,7 +122,6 @@ export async function getAllPdfKeys(): Promise<string[]> {
 export async function setCurrentPdf(pdfKey: string) {
   try {
     const db = await openDBInstance();
-    // Fix: Store the current PDF key with the correct object structure
     await db.put('current', { id: 'currentPdf', value: pdfKey });
     
     // Also update sessionStorage for faster access
@@ -148,9 +144,8 @@ export async function getCurrentPdf(): Promise<string | null> {
     
     // Fall back to IndexedDB
     const db = await openDBInstance();
-    // Fix: Get the current record as the defined interface type
     const current = await db.get('current', 'currentPdf');
-    return current?.value || null;
+    return current || null;
   } catch (error) {
     console.error('Error getting current PDF:', error);
     return null;

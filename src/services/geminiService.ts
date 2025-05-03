@@ -45,10 +45,10 @@ const safetySettings = [
 
 // Get model name based on availability
 function getModelName(isVision = false) {
-  // Use modern version of Gemini models
-  // For text generation, we'll use gemini-1.0-pro model
-  // For image analysis, we'll use gemini-1.0-pro-vision model
-  return isVision ? "gemini-1.0-pro-vision" : "gemini-1.0-pro";
+  // Updated model names to use the current Gemini API version
+  // For text generation, we'll use gemini-pro model
+  // For image analysis, we'll use gemini-pro-vision model
+  return isVision ? "gemini-pro-vision" : "gemini-pro";
 }
 
 // Generate mind map from text
@@ -427,7 +427,7 @@ export async function generateStructuredSummary(pdfText: string) {
     4. IMPLICATIONS - The significance of the work
     5. LIMITATIONS - Any limitations mentioned or implied
     
-    Make your summary informative yet concise. Add relevant emojis at the start of each section.
+    Make your summary informative yet concise. Add relevant emojis to your response to make it more engaging.
     
     Here's the text:
     ${trimmedText}
