@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -182,7 +183,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [summary, setSummary] = useState<string>('');
+  const [summary, setSummary] = useState<string>("");
   const { toast } = useToast();
   
   // Debug pdfKey prop
@@ -742,4 +743,59 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-1">No Mind Map Available</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Upload a document or start a
+            Upload a document or start a new mind map to get started.
+          </p>
+        </div>
+      )}
+      
+      {isMapGenerated && (
+        <div
+          ref={containerRef}
+          className={`flex-grow w-full overflow-hidden relative ${isReady ? 'opacity-100' : 'opacity-30'} transition-opacity duration-300`}
+          style={{ minHeight: '300px' }}
+        ></div>
+      )}
+      
+      {showSummary && summary && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-3xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Node Summary</h2>
+              <button
+                onClick={() => setShowSummary(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="prose">
+              {summary.split('\n').map((line, i) => {
+                if (line.startsWith('## ')) {
+                  return <h2 key={i} className="text-xl font-bold mt-2">{line.replace('## ', '')}</h2>;
+                }
+                if (line.startsWith('### ')) {
+                  return <h3 key={i} className="text-lg font-semibold mt-4">{line.replace('### ', '')}</h3>;
+                }
+                if (line.startsWith('- ')) {
+                  // Count leading spaces to determine indentation level
+                  const indentLevel = (line.match(/^\s+/) || [''])[0].length / 2;
+                  return (
+                    <div key={i} style={{ marginLeft: `${indentLevel * 1.5}rem` }} className="py-0.5">
+                      {line}
+                    </div>
+                  );
+                }
+                return <p key={i} className={line === '' ? 'my-2' : ''}>{line}</p>;
+              })}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => setShowSummary(false)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
