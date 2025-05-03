@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +96,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     [input, toast, onScrollToPdfPosition]
   );
 
+  // Fix the event handler type mismatch by creating a wrapper function
+  const handleSendClick = () => {
+    handleSend();
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -160,7 +166,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               className="flex-grow"
               disabled={isLoading}
             />
-            <Button onClick={handleSend} disabled={isLoading}>
+            <Button onClick={handleSendClick} disabled={isLoading}>
               {isLoading ? (
                 <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -173,9 +179,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             <Button onClick={onPdfPlusClick}>
               <FilePlus className="h-4 w-4" />
             </Button>
-          </div>
-          <div className="flex flex-col gap-2">
-            {/* Any content inside this div */}
           </div>
         </div>
       )}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Search, XCircle, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { setCurrentPdf } from "@/utils/pdfStorage";
+import html2canvas from "html2canvas";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -25,7 +26,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ onTextSelected, onImageCaptured, 
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedText, setHighlightedText] = useState('');
   const { toast } = useToast();
-  const textLayerRefs: { [key: number]: React.RefObject<HTMLDivElement> } = useRef({}).current;
+  const textLayerRefs = useRef<{ [key: number]: React.RefObject<HTMLDivElement> }>({});
   const [scale, setScale] = useState(1.0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -64,8 +65,19 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ onTextSelected, onImageCaptured, 
     loadPdf();
   }, [pdfKey, toast]);
 
+  // Initialize textLayerRefs for each page
+  useEffect(() => {
+    if (numPages) {
+      const refs: { [key: number]: React.RefObject<HTMLDivElement> } = {};
+      for (let i = 1; i <= numPages; i++) {
+        refs[i] = React.createRef<HTMLDivElement>();
+      }
+      textLayerRefs.current = refs;
+    }
+  }, [numPages]);
+
   // Handle PDF loaded successfully
-  const onDocumentLoadSuccess = ({ numPages }) => {
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setPageNumber(1);
   };
@@ -129,19 +141,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ onTextSelected, onImageCaptured, 
 
   // Scroll to function
   useEffect(() => {
-    if (scrollTo && textLayerRefs[pageNumber] && textLayerRefs[pageNumber].current) {
-      const textLayer = textLayerRefs[pageNumber].current;
-      const element = textLayer.querySelector(`[data-annotation-id="${scrollTo}"]`);
+    if (scrollTo && textLayerRefs.current[pageNumber] && textLayerRefs.current[pageNumber].current) {
+      const textLayer = textLayerRefs.current[pageNumber].current;
+      if (textLayer) {
+        const element = textLayer.querySelector(`[data-annotation-id="${scrollTo}"]`);
 
-      if (element) {
-        element.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest',
-        });
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        }
       }
     }
-  }, [scrollTo, pageNumber, textLayerRefs]);
+  }, [scrollTo, pageNumber]);
 
   // Reset search
   const resetSearch = () => {
@@ -192,7 +206,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ onTextSelected, onImageCaptured, 
               pageNumber={pageNumber}
               scale={scale}
               onRenderSuccess={handleTextLayerRendered}
-              inputRef={(ref) => (textLayerRefs[pageNumber] = ref)}
+              inputRef={(ref) => {
+                if (textLayerRefs.current[pageNumber]) {
+                  // We need to cast because inputRef expects an MutableRefObject but we're using RefObject
+                  (textLayerRefs.current[pageNumber] as any).current = ref;
+                }
+              }}
             />
           </Document>
         ) : (
