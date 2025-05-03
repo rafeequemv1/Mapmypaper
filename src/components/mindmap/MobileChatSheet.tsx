@@ -1,3 +1,4 @@
+
 import { MessageSquare, Copy, Check, FileText, Paperclip, X, Send } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -544,9 +545,8 @@ Feel free to ask me any questions! Here are some suggestions:`
           </div>
         )}
         
-        {/* Make sure ScrollArea is used properly to ensure scrollable content */}
-        <ScrollArea className="flex-1">
-          <div className="flex flex-col gap-4 p-4">
+        <ScrollArea className="flex-1 p-4">
+          <div className="flex flex-col gap-4">
             {messages.map((message, i) => {
               // Skip system messages from rendering
               if (message.role === 'system') return null;

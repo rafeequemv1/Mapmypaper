@@ -7,7 +7,6 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import MermaidModal from "@/components/mindmap/MermaidModal";
 import { MindElixirInstance } from "mind-elixir";
-import { getCurrentPdf } from "@/utils/pdfStorage";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -21,45 +20,12 @@ const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
-  const [apiStatus, setApiStatus] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
-
-  // Check for current PDF on mount
-  useEffect(() => {
-    const loadCurrentPdf = async () => {
-      const currentPdfKey = getCurrentPdf();
-      if (currentPdfKey) {
-        setActivePdfKey(currentPdfKey);
-        console.log("Loaded current PDF key:", currentPdfKey);
-      }
-    };
-    
-    loadCurrentPdf();
-  }, []);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
     setIsMapGenerated(true);
     setMindMapInstance(instance);
-    setApiStatus('success');
   }, []);
-
-  // Check if API key is available
-  useEffect(() => {
-    const checkApiKey = async () => {
-      if (!import.meta.env.VITE_GEMINI_API_KEY) {
-        setApiStatus('error');
-        toast({
-          title: "API Key Missing",
-          description: "Gemini API key is missing. Please set VITE_GEMINI_API_KEY in your .env file.",
-          variant: "destructive",
-        });
-      } else {
-        setApiStatus('idle');
-      }
-    };
-    
-    checkApiKey();
-  }, [toast]);
 
   // Toggle chat function
   const toggleChat = useCallback(() => {
@@ -137,15 +103,6 @@ const MindMap = () => {
     };
   }, []);
 
-  // Handle API status changes for logging/debugging
-  useEffect(() => {
-    console.log(`Mindmap API status changed to: ${apiStatus}`);
-    
-    if (apiStatus === 'error') {
-      console.error("Gemini API integration is not working correctly");
-    }
-  }, [apiStatus]);
-
   useEffect(() => {
     if (location.state?.presetQuestion) {
       setExplainText(location.state.presetQuestion);
@@ -163,7 +120,6 @@ const MindMap = () => {
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
-        apiStatus={apiStatus}
       />
       <PanelStructure
         showPdf={showPdf}
@@ -178,7 +134,6 @@ const MindMap = () => {
         onImageCaptured={handleImageCaptured}
         activePdfKey={activePdfKey}
         onActivePdfKeyChange={setActivePdfKey}
-        onApiStatusChange={setApiStatus}
       />
       
       {/* Modal for Summary */}

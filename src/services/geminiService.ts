@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Access your API key as an environment variable
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Updated model names for the current API version
 // Gemini Pro Vision model
@@ -10,10 +11,15 @@ const modelVision = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" })
 // Gemini Pro model (text-only)
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-// Function to get the Gemini model
+// Function to check API key validity 
+const isValidApiKey = () => {
+  return API_KEY && API_KEY.length > 0 && API_KEY !== "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM";
+};
+
+// Function to get the Gemini Pro model
 const getGeminiModel = async () => {
-  if (!import.meta.env.VITE_GEMINI_API_KEY) {
-    throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+  if (!isValidApiKey()) {
+    throw new Error("Gemini API key is invalid or missing. Please set a valid VITE_GEMINI_API_KEY environment variable.");
   }
   return model;
 };
@@ -25,13 +31,31 @@ const getGeminiModel = async () => {
  */
 export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
   try {
+    if (!API_KEY || API_KEY === "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM") {
+      console.error("Invalid Gemini API key:", API_KEY);
+      return "⚠️ The Gemini API key appears to be the default one or is missing. Please provide a valid API key in your environment variables.";
+    }
+    
+    console.log("Sending request to Gemini API with prompt:", prompt.substring(0, 100) + "...");
     const gemini = await getGeminiModel();
     const result = await gemini.generateContent(prompt);
     const response = await result.response;
+    console.log("Received response from Gemini API");
     return response.text();
   } catch (error) {
     console.error("Error in chatWithGeminiAboutPdf:", error);
-    throw error;
+    
+    // Handle specific error types
+    if (error.message && error.message.includes("overloaded")) {
+      return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
+    } else if (error.message && error.message.includes("API key")) {
+      return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
+    } else if (error.message && error.message.includes("503")) {
+      return "⚠️ The Gemini API service is temporarily unavailable (503 error). Please try again later.";
+    }
+    
+    // Generic error
+    return `⚠️ An error occurred while processing your request: ${error.message}. Please try again later.`;
   }
 };
 
@@ -46,6 +70,10 @@ export const analyzeImageWithGemini = async (imageBase64: string): Promise<strin
       throw new Error("Image data is required.");
     }
 
+    if (!isValidApiKey()) {
+      return "⚠️ The Gemini API key appears to be missing or invalid. Please provide a valid API key in your environment variables.";
+    }
+
     const geminiVision = modelVision;
     const result = await geminiVision.generateContent([
       "Analyze the content of this image in detail.",
@@ -55,7 +83,18 @@ export const analyzeImageWithGemini = async (imageBase64: string): Promise<strin
     return response.text();
   } catch (error) {
     console.error("Error in analyzeImageWithGemini:", error);
-    throw error;
+    
+    // Handle specific error types
+    if (error.message && error.message.includes("overloaded")) {
+      return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
+    } else if (error.message && error.message.includes("API key")) {
+      return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
+    } else if (error.message && error.message.includes("Image data")) {
+      return "⚠️ Invalid image data provided. Please try capturing the area again.";
+    }
+    
+    // Generic error
+    return "⚠️ An error occurred while analyzing the image. Please try again later.";
   }
 };
 
@@ -70,6 +109,11 @@ export const explainSelectedText = async (selectedText: string): Promise<string>
       throw new Error("Valid selected text is required.");
     }
     
+    if (!API_KEY || API_KEY === "AIzaSyDfWToKg6oWlw1vAMAi-nNUFoqSnFoy7zM") {
+      console.error("Invalid Gemini API key:", API_KEY);
+      return "⚠️ The Gemini API key appears to be the default one or is missing. Please provide a valid API key in your environment variables.";
+    }
+    
     console.log(`Explaining selected text (length: ${selectedText.length} characters)`);
     
     const prompt = `
@@ -82,13 +126,27 @@ export const explainSelectedText = async (selectedText: string): Promise<string>
       Provide your explanation with relevant emojis and citations if applicable.
     `;
     
+    console.log("Sending explain text request to Gemini API");
     const geminiModel = await getGeminiModel();
     const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
+    console.log("Received explanation from Gemini API");
     return response.text();
   } catch (error) {
     console.error("Error explaining selected text:", error);
-    throw new Error(`Failed to explain selected text: ${error.message}`);
+    
+    // Handle specific error types
+    if (error.message && error.message.includes("overloaded")) {
+      return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
+    } else if (error.message && error.message.includes("API key")) {
+      return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
+    } else if (error.message && error.message.includes("503")) {
+      return "⚠️ The Gemini API service is temporarily unavailable (503 error). Please try again later.";
+    } else if (error.message && error.message.includes("text is required")) {
+      return "⚠️ Please select valid text to explain.";
+    }
+    
+    return `⚠️ Failed to explain selected text: ${error.message}`;
   }
 };
 
@@ -104,13 +162,20 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
     }
     
-    console.log(`Processing PDF text length: ${pdfText.length} characters`);
-    
-    // Ensure we have a valid API key
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
-      console.error("Missing Gemini API key");
-      throw new Error("VITE_GEMINI_API_KEY is not set in environment variables");
+    if (!isValidApiKey()) {
+      console.warn("Invalid Gemini API key - returning fallback structure");
+      return {
+        root: {
+          topic: "Document Structure (API Key Invalid)",
+          children: [
+            { topic: "Please set a valid Gemini API key" },
+            { topic: "Check the .env file and update VITE_GEMINI_API_KEY" }
+          ]
+        }
+      };
     }
+    
+    console.log(`Processing PDF text length: ${pdfText.length} characters`);
     
     // We'll use the first 10000 characters only to avoid token limits
     const truncatedText = pdfText.slice(0, 10000);
@@ -118,30 +183,25 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     const prompt = `
       Based on the following text from a research document, create a mind map structure in JSON format.
       Focus on identifying the main topics, key concepts, and their relationships.
-      Use emojis at the start of topics to represent the content.
       
       Document text excerpt:
       ${truncatedText}
       
       Return ONLY valid JSON without any explanation or formatting.
-      The JSON must have this structure for direct compatibility with mind-elixir:
+      The JSON should have this structure:
       {
-        "nodeData": {
-          "id": "root",
-          "topic": "Main Document Title",
+        "root": {
+          "topic": "Main Topic",
           "children": [
             {
-              "id": "bd1",
-              "topic": "🔍 Introduction",
-              "direction": 0,
+              "topic": "Subtopic 1",
               "children": [
-                {"id": "bd1-1", "topic": "📘 Background"}
+                {"topic": "Point 1.1"},
+                {"topic": "Point 1.2"}
               ]
             },
             {
-              "id": "bd2",
-              "topic": "⚙️ Methodology",
-              "direction": 0,
+              "topic": "Subtopic 2",
               "children": []
             }
           ]
@@ -149,7 +209,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       }
     `;
     
-    console.log("Sending request to Gemini API for mindmap generation...");
+    console.log("Sending request to Gemini API...");
     const geminiModel = await getGeminiModel();
     const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
@@ -160,62 +220,25 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     try {
       // Try to clean the JSON text by removing any markdown formatting
       let cleanedJsonText = jsonText;
-      
       // Remove markdown code block syntax if present
       cleanedJsonText = cleanedJsonText.replace(/```(json)?|```/g, '');
-      
       // Trim whitespace
       cleanedJsonText = cleanedJsonText.trim();
       
       const parsedJson = JSON.parse(cleanedJsonText);
-      console.log("Successfully parsed JSON response for mindmap");
-      
-      // Ensure the structure matches what mind-elixir expects
-      if (!parsedJson.nodeData) {
-        // If the API returned just the root object without the nodeData wrapper
-        if (parsedJson.id === "root" && parsedJson.topic && Array.isArray(parsedJson.children)) {
-          return { nodeData: parsedJson };
-        }
-        
-        // If root is inside a "root" property (sometimes happens)
-        if (parsedJson.root && parsedJson.root.topic && Array.isArray(parsedJson.root.children)) {
-          return { nodeData: parsedJson.root };
-        }
-      }
-      
+      console.log("Successfully parsed JSON response");
       return parsedJson;
     } catch (parseError) {
       console.error("Failed to parse JSON from Gemini response:", parseError);
       console.log("Raw response:", jsonText);
       
-      // Return a default mind map structure with an error message
+      // Return a fallback mind map structure
       return {
-        nodeData: {
-          id: "root",
-          topic: "📄 Document Analysis",
+        root: {
+          topic: "Document Structure",
           children: [
-            { 
-              id: "error",
-              topic: "⚠️ API Processing Error",
-              direction: 0,
-              children: [
-                { 
-                  id: "error-1", 
-                  topic: "Could not generate mindmap from document. Please try again or check API key."
-                }
-              ]
-            },
-            {
-              id: "default",
-              topic: "📋 Document Structure",
-              direction: 1,
-              children: [
-                { 
-                  id: "default-1", 
-                  topic: "Upload or select a PDF to analyze its structure" 
-                }
-              ]
-            }
+            { topic: "Unable to parse document structure" },
+            { topic: "API response format error" }
           ]
         }
       };
@@ -223,26 +246,25 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
   } catch (error) {
     console.error("Error generating mind map from text:", error);
     
-    // Return a structured error message as a mindmap
+    // Return a fallback mind map structure with error information
     return {
-      nodeData: {
-        id: "root",
-        topic: "⚠️ Error Processing Document",
+      root: {
+        topic: "Error Processing Document",
         children: [
           { 
-            id: "error1", 
-            topic: `API Error: ${error.message || "Unknown error"}`,
-            direction: 0 
+            topic: "API Error", 
+            children: [
+              { topic: error.message || "Unknown error" },
+              { topic: "Check console for details" }
+            ]
           },
           { 
-            id: "solution", 
-            topic: "💡 Possible solutions",
-            direction: 1,
+            topic: "Troubleshooting", 
             children: [
-              { id: "solution1", topic: "Check your internet connection" },
-              { id: "solution2", topic: "Verify your Gemini API key is valid" },
-              { id: "solution3", topic: "Try uploading a different PDF" }
-            ] 
+              { topic: "Verify API key is valid" },
+              { topic: "Check network connection" },
+              { topic: "Try again later if service is overloaded" }
+            ]
           }
         ]
       }
@@ -253,12 +275,17 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
 /**
  * Generates a structured summary from the extracted PDF text
  * @param pdfText The text extracted from the PDF
+ * @returns A structured summary of the document
  */
-export const generateStructuredSummary = async (pdfText: string): Promise<any> => {
+export const generateStructuredSummary = async (pdfText: string): Promise<string> => {
   try {
     if (!pdfText || typeof pdfText !== 'string') {
       console.error("Invalid PDF text provided:", pdfText);
       throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
+    }
+    
+    if (!isValidApiKey()) {
+      return "⚠️ The Gemini API key appears to be invalid or missing. Please provide a valid API key in your environment variables.";
     }
     
     // We'll use the first 10000 characters only to avoid token limits
@@ -285,7 +312,15 @@ export const generateStructuredSummary = async (pdfText: string): Promise<any> =
     return response.text();
   } catch (error) {
     console.error("Error generating structured summary:", error);
-    throw new Error(`Failed to generate structured summary from text: ${error.message}`);
+    
+    // Handle specific error types
+    if (error.message && error.message.includes("overloaded")) {
+      return "⚠️ The Gemini API is currently overloaded. Please try again in a few minutes.";
+    } else if (error.message && error.message.includes("API key")) {
+      return "⚠️ The Gemini API key is invalid. Please check your API key and try again.";
+    }
+    
+    return `⚠️ Failed to generate structured summary from text: ${error.message}`;
   }
 };
 
@@ -299,6 +334,18 @@ export const generateFlowchartFromText = async (pdfText: string): Promise<string
     if (!pdfText || typeof pdfText !== 'string') {
       console.error("Invalid PDF text provided:", pdfText);
       throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
+    }
+    
+    if (!isValidApiKey()) {
+      return `
+        graph TD
+          A[API Key Error] --> B[Invalid Gemini API Key]
+          B --> C[Check Environment Variables]
+          B --> D[Update VITE_GEMINI_API_KEY]
+          
+          classDef error fill:#f96,stroke:#333,stroke-width:2px;
+          class A,B error;
+      `;
     }
     
     // We'll use the first 10000 characters only to avoid token limits

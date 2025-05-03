@@ -99,8 +99,15 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
         setDocumentType("document");
       }
       
-      // Cast the response to Summary type
-      setSummary(result as Summary);
+      // Cast the response to Summary type using type assertion
+      // Fix the type error by ensuring result is treated as a Summary object
+      if (typeof result === 'string') {
+        // If the result is a string, create a Summary object with just the Summary field
+        setSummary({ Summary: result });
+      } else {
+        // Otherwise, it's already an object, so cast it as Summary
+        setSummary(result as Summary);
+      }
     } catch (error) {
       console.error("Error generating summary:", error);
       toast({
@@ -265,7 +272,6 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
       });
     }
   };
-
   
   return (
     <>
