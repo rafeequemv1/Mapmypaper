@@ -1,6 +1,7 @@
 
-import React from "react";
-import { FileText, Upload } from "lucide-react";
+import React from 'react';
+import { Plus, FileText, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MessageEmptyProps {
   onUploadClick?: () => void;
@@ -8,23 +9,25 @@ interface MessageEmptyProps {
 
 const MessageEmpty: React.FC<MessageEmptyProps> = ({ onUploadClick }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center h-full">
-      <div className="rounded-full bg-gray-100 p-3 mb-4">
-        <FileText className="h-6 w-6 text-gray-500" />
+    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+        <FileText className="h-8 w-8 text-gray-400" />
       </div>
-      <h3 className="text-lg font-medium mb-2">No PDF Uploaded</h3>
-      <p className="text-sm text-gray-500 mb-4 max-w-sm">
-        Please provide me with the study you would like me to analyze. I need the text of the study to identify its limitations and provide page citations.
+      
+      <h3 className="text-lg font-medium mb-2">No documents loaded</h3>
+      
+      <p className="text-gray-500 mb-6 max-w-md">
+        Upload a PDF document to chat with the research assistant about its contents.
       </p>
-      {onUploadClick && (
-        <button
-          onClick={onUploadClick}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          <Upload className="mr-2 h-4 w-4" />
-          Upload a PDF
-        </button>
-      )}
+      
+      <Button 
+        onClick={onUploadClick} 
+        className="gap-2"
+      >
+        <Plus className="h-4 w-4" />
+        Upload PDF
+        <ArrowRight className="h-4 w-4 ml-1" />
+      </Button>
     </div>
   );
 };

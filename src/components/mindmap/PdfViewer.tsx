@@ -1,14 +1,14 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "../ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ZoomIn, ZoomOut, RotateCw, Search, Crop } from "lucide-react";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getPdfData, getCurrentPdf } from "@/utils/pdfStorage";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "../ui/hover-card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { fabric } from "fabric";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -910,5 +910,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               <Input
                 placeholder="Search in document..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-6 text-xs mr
+                onChange={(e) => setSearchQuery(e.target
