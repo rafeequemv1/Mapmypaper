@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -258,13 +257,21 @@ const generateNodeSummary = (node: any) => {
   return `Summary of ${node.topic}`;
 };
 
+// Add this interface to extend MindElixirInstance with lastClickTime property
+interface ExtendedMindElixir extends MindElixirInstance {
+  lastClickTime?: number;
+}
+
 const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey }: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mindMapRef = useRef<MindElixirInstance | null>(null);
+  const mindMapRef = useRef<ExtendedMindElixir | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string>('');
   const { toast } = useToast();
+  
+  // Create the activePdfKey at the top BEFORE it's used
+  const activePdfKey = pdfKey;
   
   // Debug pdfKey prop
   useEffect(() => {
@@ -374,7 +381,7 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
       const styleObserver = observeStylePanel();
       
       // Create the mind map instance
-      const mind = new MindElixir(options);
+      const mind = new MindElixir(options) as ExtendedMindElixir;
       
       // Install the node menu plugin with full styling support
       const customNodeMenu = nodeMenu;
@@ -463,13 +470,14 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
           const validation = validateMindMapContent(parsedData);
           console.log("Mind map validation:", validation);
           
-          // If map has low emoji count, enhance it
+          // If map has low emoji count, enhance it - FIX: Create a new enhanced data instead of reassigning
+          let enhancedData = parsedData;
           if (validation.emojiCount < validation.specificTermCount / 2) {
             console.log("Enhancing mind map with more emojis");
-            parsedData = enhanceMindMapWithEmojis(parsedData);
+            enhancedData = enhanceMindMapWithEmojis(parsedData);
           }
           
-          data = parsedData;
+          data = enhancedData;
         } else {
           console.warn(`No mind map data found with key: ${mindMapKey}, using default`);
           // Default research paper structure with complete sentences and emojis
@@ -719,17 +727,16 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
         
         // Clean up all event listeners when unmounting
         if (mind && mind.bus) {
-          mind.bus.clearListeners();
+          // Fix: instead of clearListeners, remove each listener individually
+          mind.bus.removeListener('selectNode', () => {});
+          mind.bus.removeListener('operation', () => {});
         }
         
         // Clear mind map instance
         mindMapRef.current = null;
       };
     }
-  }, [isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, activePdfKey]);
-  
-  // Create a timer to recheck/refresh the mind map periodically based on actual PDF changes
-  const activePdfKey = pdfKey;
+  }, [isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey]);
   
   // Component render
   return (
