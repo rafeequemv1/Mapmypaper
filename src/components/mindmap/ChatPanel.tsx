@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { X, Send, Loader2, Clipboard, Image, Upload, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 }) => {
   const [message, setMessage] = useState("");
   const [aiResponse, setAiResponse] = useState("");
-  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [chatHistory, setChatHistory<{ role: 'user' | 'assistant'; content: string }[]>([
+    {
+      role: 'assistant' as const,
+      content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.\n\nFeel free to ask me any questions! Here are some suggestions:\n\n- What are the main topics covered in this paper?\n- Can you summarize the key findings?\n- What are the research methods used?\n- What are the limitations of this study?`
+    }
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("chat");
   const [pdfText, setPdfText] = useState<string>("");
@@ -273,10 +277,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </TabsList>
         </div>
 
-        <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden m-0">
-          {/* Chat Messages - Using ScrollArea with fixed height container */}
-          <div className="flex-1 relative overflow-hidden">
-            <ScrollArea className="absolute inset-0 p-4">
+        <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden m-0 h-0">
+          {/* Chat Messages - Using ScrollArea with fixed max height */}
+          <div className="flex-1 relative overflow-hidden flex flex-col">
+            <ScrollArea className="absolute inset-0 p-4" style={{ maxHeight: '100%', height: '100%' }}>
               <div className="space-y-4">
                 {chatHistory.map((chat, index) => (
                   <div key={index} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
