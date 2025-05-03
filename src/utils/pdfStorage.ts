@@ -1,164 +1,104 @@
+import { openDB } from 'idb';
 
-import { openDB, DBSchema } from 'idb';
-
-interface PDFDB extends DBSchema {
-  pdfs: {
-    key: string;
-    value: {
-      name: string;
-      data: ArrayBuffer;
-      size: number;
-      lastModified: number;
-    };
-  };
-  current: {
-    key: string;
-    value: string;
-  };
+interface PdfMeta {
+  name: string;
+  size: number;
+  lastModified: number;
 }
 
-async function openDBInstance() {
-  return openDB<PDFDB>('pdfs-db', 1, {
+const DB_NAME = 'pdfDB';
+const DB_VERSION = 1;
+
+const openDatabase = async () => {
+  return openDB(DB_NAME, DB_VERSION, {
     upgrade(db) {
-      if (!db.objectStoreNames.contains('pdfs')) {
-        db.createObjectStore('pdfs', { keyPath: 'name' });
-      }
-      
-      // Create a store for the current PDF reference
-      if (!db.objectStoreNames.contains('current')) {
-        db.createObjectStore('current', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('pdfData')) {
+        db.createObjectStore('pdfData');
       }
     },
   });
-}
+};
 
-// Original function - store PDF with ArrayBuffer data
-export async function storePdf(name: string, data: ArrayBuffer, size: number, lastModified: number) {
-  try {
-    const db = await openDBInstance();
-    await db.put('pdfs', { name, data, size, lastModified });
-    console.log('PDF stored successfully:', name);
-  } catch (error) {
-    console.error('Error storing PDF:', error);
-  }
-}
+export const storePdfData = async (pdfKey: string, data: string) => {
+  const db = await openDatabase();
+  const tx = db.transaction('pdfData', 'readwrite');
+  const store = tx.objectStore('pdfData');
+  await store.put(data, pdfKey);
+  await tx.done;
+  console.log('PDF data stored successfully!');
+};
 
-// New function - store PDF with data URL (compatible with the components that expect this)
-export async function storePdfData(pdfKey: string, dataUrl: string) {
-  try {
-    // Convert data URL to ArrayBuffer if needed
-    const response = await fetch(dataUrl);
-    const blob = await response.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    
-    // Extract metadata from the key (format: name_size_lastModified)
-    const keyParts = pdfKey.split('_');
-    const name = pdfKey;
-    const size = parseInt(keyParts[keyParts.length - 2]) || 0;
-    const lastModified = parseInt(keyParts[keyParts.length - 1]) || Date.now();
-    
-    // Store using the original function
-    await storePdf(name, arrayBuffer, size, lastModified);
-    
-    // Store the key as "has PDF data" marker in sessionStorage for quick checks
-    sessionStorage.setItem(`hasPdfData_${pdfKey}`, 'true');
-    
-    return true;
-  } catch (error) {
-    console.error('Error storing PDF data:', error);
-    return false;
-  }
-}
+export const getPdfData = async (pdfKey: string): Promise<string | undefined> => {
+  const db = await openDatabase();
+  const tx = db.transaction('pdfData', 'readonly');
+  const store = tx.objectStore('pdfData');
+  const pdfData = await store.get(pdfKey);
+  await tx.done;
+  return pdfData;
+};
 
-export async function getPdfData(name: string): Promise<ArrayBuffer | undefined> {
-  try {
-    const db = await openDBInstance();
-    const pdf = await db.get('pdfs', name);
-    return pdf?.data;
-  } catch (error) {
-    console.error('Error getting PDF data:', error);
-    return undefined;
-  }
-}
+export const deletePdfData = async (pdfKey: string) => {
+  const db = await openDatabase();
+  const tx = db.transaction('pdfData', 'readwrite');
+  const store = tx.objectStore('pdfData');
+  await store.delete(pdfKey);
+  await tx.done;
+  console.log(`PDF data with key ${pdfKey} deleted successfully!`);
+};
 
-// Get PDF as data URL (for browser viewing)
-export async function getPdfUrl(name: string): Promise<string | undefined> {
-  try {
-    const arrayBuffer = await getPdfData(name);
-    if (!arrayBuffer) return undefined;
-    
-    // Convert ArrayBuffer to data URL
-    const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-    return URL.createObjectURL(blob);
-  } catch (error) {
-    console.error('Error getting PDF URL:', error);
-    return undefined;
-  }
-}
+export const clearPdfData = async () => {
+  const db = await openDatabase();
+  const tx = db.transaction('pdfData', 'readwrite');
+  const store = tx.objectStore('pdfData');
+  await store.clear();
+  await tx.done;
+  console.log('All PDF data cleared successfully!');
+};
 
-export async function deletePdf(name: string) {
-  try {
-    const db = await openDBInstance();
-    await db.delete('pdfs', name);
-    console.log('PDF deleted successfully:', name);
-  } catch (error) {
-    console.error('Error deleting PDF:', error);
-  }
-}
+export const setCurrentPdf = async (pdfKey: string) => {
+  localStorage.setItem('currentPdfKey', pdfKey);
+};
 
-export async function getAllPdfKeys(): Promise<string[]> {
-  try {
-    const db = await openDBInstance();
-    const store = db.transaction('pdfs', 'readonly').objectStore('pdfs');
-    const keys = await store.getAllKeys();
-    return keys.map(key => key.toString()); // Convert IDBValidKey[] to string[]
-  } catch (error) {
-    console.error('Error getting all PDF keys:', error);
-    return [];
-  }
-}
+export const getCurrentPdf = (): string | null => {
+  return localStorage.getItem('currentPdfKey');
+};
 
-// Set the current PDF for viewing
-export async function setCurrentPdf(pdfKey: string) {
-  try {
-    const db = await openDBInstance();
-    await db.put('current', { id: 'currentPdf', value: pdfKey });
-    
-    // Also update sessionStorage for faster access
-    sessionStorage.setItem('currentPdfKey', pdfKey);
-    
-    console.log('Current PDF set:', pdfKey);
-    return true;
-  } catch (error) {
-    console.error('Error setting current PDF:', error);
-    return false;
-  }
-}
+export const getAllPdfKeys = async (): Promise<string[]> => {
+  const db = await openDatabase();
+  const tx = db.transaction('pdfData', 'readonly');
+  const store = tx.objectStore('pdfData');
+  const keys = await store.getAllKeys();
+  await tx.done;
+  return keys.map(key => key.toString()).filter(key => !key.endsWith('_text'));
+};
 
-// Get the current PDF key
-export async function getCurrentPdf(): Promise<string | null> {
-  try {
-    // Try sessionStorage first for faster access
-    const sessionKey = sessionStorage.getItem('currentPdfKey');
-    if (sessionKey) return sessionKey;
-    
-    // Fall back to IndexedDB
-    const db = await openDBInstance();
-    const current = await db.get('current', 'currentPdf');
-    return current || null;
-  } catch (error) {
-    console.error('Error getting current PDF:', error);
-    return null;
+/**
+ * Get the text extracted from a PDF by its key
+ * @param pdfKey The unique key for the PDF
+ * @returns The extracted text from the PDF
+ */
+export const getPdfText = async (pdfKey: string): Promise<string> => {
+  // Try to get it from sessionStorage first (this is where PdfToText stores it)
+  const sessionKey = `pdfText_${pdfKey}`;
+  const sessionText = sessionStorage.getItem(sessionKey);
+  
+  if (sessionText) {
+    return sessionText;
   }
-}
-
-// Helper to get PDF text (looking in sessionStorage)
-export async function getPdfText(pdfKey: string): Promise<string | null> {
+  
+  // If not in sessionStorage, try to get from IndexedDB
+  const db = await openDatabase();
+  const tx = db.transaction('pdfData', 'readonly');
+  const store = tx.objectStore('pdfData');
+  
   try {
-    const text = sessionStorage.getItem(`pdfText_${pdfKey}`);
-    return text;
+    const record = await store.get(`${pdfKey}_text`);
+    if (record && record.data) {
+      return record.data;
+    }
   } catch (error) {
-    console.error('Error getting PDF text:', error);
-    return null;
+    console.error("Error retrieving PDF text from IndexedDB:", error);
   }
-}
+  
+  return "";
+};

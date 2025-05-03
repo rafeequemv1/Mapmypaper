@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -20,10 +21,8 @@ interface PanelStructureProps {
   togglePdf: () => void;
   onMindMapReady: any;
   explainText: string;
-  explainImage?: string | null;
   onExplainText: (text: string) => void;
-  onTextSelected: (text: string) => void;
-  onImageCaptured?: (imageData: string) => void;
+  onTextSelected: (text: string) => void; // Added the missing prop
   activePdfKey: string | null;
   onActivePdfKeyChange: (key: string | null) => void;
 }
@@ -37,9 +36,7 @@ const PanelStructure = ({
   togglePdf,
   onMindMapReady,
   explainText,
-  explainImage,
   onExplainText,
-  onImageCaptured,
   activePdfKey,
   onActivePdfKeyChange,
 }: PanelStructureProps) => {
@@ -56,9 +53,6 @@ const PanelStructure = ({
   const [processingPdfKey, setProcessingPdfKey] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState("");
-  
-  // Add a state for the PDF URL (storing the data URL from IndexedDB)
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   // Fetch all PDF keys on mount
   useEffect(() => {
@@ -161,9 +155,6 @@ const PanelStructure = ({
         setProcessingStage("Storing PDF");
         await storePdfData(pdfKey, pdfData);
         
-        // Set the PDF URL for viewing
-        setPdfUrl(pdfData);
-        
         // Extract text from PDF
         setProcessingProgress(60);
         setProcessingStage("Extracting text");
@@ -177,9 +168,6 @@ const PanelStructure = ({
           });
           continue;
         }
-        
-        // Store the extracted text in sessionStorage for easier access
-        sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
         
         // Generate mindmap data
         setProcessingProgress(80);
@@ -262,18 +250,6 @@ const PanelStructure = ({
     };
   }, [showChat, toggleChat, onExplainText]);
 
-  // Handle area image capture
-  const handlePdfAreaCaptured = (imageData: string) => {
-    if (onImageCaptured) {
-      onImageCaptured(imageData);
-    }
-    
-    // If chat is not showing, toggle it on
-    if (!showChat) {
-      toggleChat();
-    }
-  };
-
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
       try {
@@ -354,8 +330,6 @@ const PanelStructure = ({
               <PdfViewer 
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
-                onImageCaptured={handlePdfAreaCaptured}
-                // Remove the pdfUrl prop as it doesn't exist in the component interface
               />
             </TooltipProvider>
           </div>
@@ -376,7 +350,6 @@ const PanelStructure = ({
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}
-              explainImage={explainImage}
               onExplainText={onExplainText}
               onScrollToPdfPosition={handleScrollToPdfPosition}
               onPdfPlusClick={handlePlusClick}
