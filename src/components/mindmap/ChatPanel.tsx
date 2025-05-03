@@ -274,51 +274,53 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
 
         <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden m-0">
-          {/* Chat Messages - Replace the div with ScrollArea component */}
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {chatHistory.map((chat, index) => (
-                <div key={index} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div 
-                    className={`max-w-[85%] p-3 rounded-lg ${
-                      chat.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                    }`}
-                  >
+          {/* Chat Messages - Using ScrollArea with fixed height container */}
+          <div className="flex-1 relative overflow-hidden">
+            <ScrollArea className="absolute inset-0 p-4">
+              <div className="space-y-4">
+                {chatHistory.map((chat, index) => (
+                  <div key={index} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div 
-                      className="prose prose-sm dark:prose-invert max-w-none"
-                      onClick={() => handleContentClick(chat.content)}
-                      dangerouslySetInnerHTML={{ __html: chat.content }}
-                    />
-                    
-                    {chat.role === 'assistant' && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="mt-2 h-6 px-2"
-                        onClick={() => handleCopyClick(chat.content)}
-                      >
-                        <Clipboard className="h-3 w-3 mr-1" />
-                        <span className="text-xs">Copy</span>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] p-3 rounded-lg bg-muted">
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <p className="text-sm">Thinking...</p>
+                      className={`max-w-[85%] p-3 rounded-lg ${
+                        chat.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                      }`}
+                    >
+                      <div 
+                        className="prose prose-sm dark:prose-invert max-w-none"
+                        onClick={() => handleContentClick(chat.content)}
+                        dangerouslySetInnerHTML={{ __html: chat.content }}
+                      />
+                      
+                      {chat.role === 'assistant' && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="mt-2 h-6 px-2"
+                          onClick={() => handleCopyClick(chat.content)}
+                        >
+                          <Clipboard className="h-3 w-3 mr-1" />
+                          <span className="text-xs">Copy</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
+                ))}
+                
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] p-3 rounded-lg bg-muted">
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <p className="text-sm">Thinking...</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+          </div>
 
           {/* Suggestion pills (only show if chat is empty) */}
           {chatHistory.length <= 1 && (
@@ -364,7 +366,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           )}
 
           {/* Input Area */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t mt-auto">
             <div className="flex space-x-2">
               <Textarea
                 placeholder="Ask me about the document..."
