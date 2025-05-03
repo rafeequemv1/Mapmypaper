@@ -1,13 +1,12 @@
-
 import React, { useState, useRef, useEffect } from "react";
-import { X, Send, Loader2, Clipboard, Image, Upload } from "lucide-react";
+import { X, Send, Loader2, Clipboard, Image, Upload, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini, explainSelectedText } from "@/services/geminiService";
 import { useToast } from "@/hooks/use-toast";
 import { getPdfText } from "@/utils/pdfStorage";
-import formatAiResponse from "@/utils/formatAiResponse";
+import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -132,7 +131,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       }
       
       // Format response with Markdown
-      const formattedResponse = formatAiResponse(response);
+      const formattedResponse = formatAIResponse(response);
       setAiResponse(formattedResponse);
       
       // Add AI response to chat history
@@ -179,7 +178,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       const response = await analyzeImageWithGemini(imageData);
       
       // Format response with Markdown
-      const formattedResponse = formatAiResponse(response);
+      const formattedResponse = formatAIResponse(response);
       setAiResponse(formattedResponse);
       
       // Add AI response to chat history
