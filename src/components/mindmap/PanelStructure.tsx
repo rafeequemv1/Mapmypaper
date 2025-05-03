@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +7,7 @@ import { cn } from "@/lib/utils";
 import PdfViewer from "@/components/mindmap/PdfViewer";
 import MindMapComponent from "@/components/mindmap/MindMapComponent";
 import ChatPanel from "@/components/mindmap/ChatPanel";
+import MessageEmpty from "@/components/mindmap/MessageEmpty";
 
 interface PanelStructureProps {
   showPdf: boolean;
