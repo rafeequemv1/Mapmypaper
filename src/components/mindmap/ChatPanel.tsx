@@ -22,7 +22,7 @@ interface ChatPanelProps {
   explainImage?: string;
   onScrollToPdfPosition?: (position: string) => void;
   onExplainText?: (text: string) => void;
-  onPdfPlusClick?: () => void;
+  onPdfPlusClick: () => void;
   activePdfKey: string | null;
   allPdfKeys: string[];
 }
