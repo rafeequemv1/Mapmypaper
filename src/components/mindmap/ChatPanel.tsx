@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,14 +10,11 @@ import ChatToolbar from "./ChatToolbar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
-import * as pdfjs from 'pdfjs-dist';
+import { pdfjs } from 'pdfjs-dist';
 import MessageEmpty from "./MessageEmpty";
 
-// Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url,
-).toString();
+// Initialize PDF.js worker using CDN
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -257,7 +253,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // New function to extract text from PDF
+  // New function to extract text from PDF with better error handling
   const extractTextFromPdf = async (file: File): Promise<string> => {
     try {
       // Convert the file to an ArrayBuffer
@@ -265,7 +261,24 @@ Feel free to ask me any questions! Here are some suggestions:`
       
       // Load the PDF document using the correct API
       const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
+      
+      // Add explicit error handling for worker
+      loadingTask.onUnsupportedFeature = (feature) => {
+        console.warn('Unsupported PDF feature:', feature);
+      };
+      
+      let pdf;
+      try {
+        pdf = await loadingTask.promise;
+      } catch (workerError) {
+        console.error('PDF.js worker error:', workerError);
+        toast({
+          title: "PDF Worker Error",
+          description: "The PDF processing worker failed to load. Please try again.",
+          variant: "destructive"
+        });
+        return `Could not extract text from PDF: PDF.js worker failed to initialize. Error: ${workerError.message}`;
+      }
       
       let fullText = '';
       
@@ -386,7 +399,7 @@ Feel free to ask me any questions! Here are some suggestions:`
         }
         
         // Add citation instructions
-        prompt += ` Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`;
+        prompt += ` Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`;
         
         // If using all papers, add that context to the prompt
         if (useAllPapers && allPdfKeys.length > 1) {
@@ -917,48 +930,4 @@ Feel free to ask me any questions! Here are some suggestions:`
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 shrink-0"
-              onClick={removeAttachedFile}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        
-        {/* Input controls */}
-        <div className="flex gap-2">
-          <Textarea
-            className="flex-1 min-h-10 max-h-32 resize-none"
-            placeholder={`Ask about ${useAllPapers ? 'all documents' : 'the document'}...`}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleAttachClick}
-              title="Attach file"
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="default"
-              size="icon"
-              className="h-8 w-8 bg-primary"
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() && !attachedFile}
-              title="Send message"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ChatPanel;
+              className="h-6 w-6 shrink-0

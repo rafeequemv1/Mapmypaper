@@ -11,11 +11,8 @@ import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
 import { pdfjs } from 'react-pdf';
 
-// Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url,
-).toString();
+// Initialize PDF.js worker using CDN
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
@@ -193,7 +190,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     processExplainText();
   }, [explainText, isSheetOpen, toast, activePdfKey, useAllPapers, allPdfKeys]);
   
-  // New function to extract text from PDF
+  // New function to extract text from PDF with enhanced error handling
   const extractTextFromPdf = async (file: File): Promise<string> => {
     try {
       // Convert the file to an ArrayBuffer
@@ -201,7 +198,19 @@ Feel free to ask me any questions! Here are some suggestions:`
       
       // Load the PDF document using the correct API
       const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
+      
+      // Add explicit error handling for worker
+      loadingTask.onUnsupportedFeature = (feature) => {
+        console.warn('Unsupported PDF feature:', feature);
+      };
+      
+      let pdf;
+      try {
+        pdf = await loadingTask.promise;
+      } catch (workerError) {
+        console.error('PDF.js worker error:', workerError);
+        return `Could not extract text from PDF: PDF.js worker failed to initialize. Error: ${workerError.message}`;
+      }
       
       let fullText = '';
       
@@ -217,7 +226,7 @@ Feel free to ask me any questions! Here are some suggestions:`
       }
       
       return fullText;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error extracting text from PDF:', error);
       return `Could not extract text from PDF: ${error.message}`;
     }

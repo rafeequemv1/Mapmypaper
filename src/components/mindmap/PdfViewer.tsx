@@ -3,11 +3,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { useToast } from '@/hooks/use-toast';
 import html2canvas from 'html2canvas';
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url,
-).toString();
+// Configure PDF.js worker using CDN
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
   onTextSelected: (text: string) => void;
@@ -57,6 +54,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           }
         } catch (error) {
           console.error('Error loading PDF data:', error);
+          toast({
+            title: 'Error Loading PDF',
+            description: 'Could not load PDF data from storage.',
+            variant: 'destructive'
+          });
         } finally {
           setIsLoading(false);
         }
