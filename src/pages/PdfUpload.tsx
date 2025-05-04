@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -217,6 +216,17 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
 
+      // Store the extracted text in session storage
+      if (extractedText) {
+        try {
+          // Import the storePdfText function
+          const { storePdfText } = await import('@/utils/pdfStorage');
+          storePdfText(pdfKey, extractedText);
+        } catch (error) {
+          console.warn('Failed to store PDF text in session storage:', error);
+        }
+      }
+      
       // Process via Gemini API
       try {
         const mindMapData = await generateMindMapFromText(extractedText);
