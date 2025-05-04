@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -933,4 +934,31 @@ Feel free to ask me any questions! Here are some suggestions:`
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <div
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleAttachClick}
+              title="Attach file"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="default"
+              size="icon"
+              className="h-8 w-8 bg-primary"
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() && !attachedFile}
+              title="Send message"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatPanel;
