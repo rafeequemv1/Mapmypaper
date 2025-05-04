@@ -77,19 +77,23 @@ export function activateCitations(
       }
       
       // Add new click event listener
-      clone.addEventListener('click', (e) => {
-        e.preventDefault();
-        const pageNumber = (clone as HTMLElement).dataset.page;
-        if (pageNumber) {
-          onCitationClick(pageNumber);
-          
-          // Highlight the clicked citation
-          document.querySelectorAll('.citation-link-active').forEach(el => {
-            el.classList.remove('citation-link-active');
-          });
-          clone.classList.add('citation-link-active');
-        }
-      });
+      if (clone instanceof HTMLElement) {
+        clone.addEventListener('click', (e) => {
+          e.preventDefault();
+          const pageNumber = clone.dataset.page;
+          if (pageNumber) {
+            onCitationClick(pageNumber);
+            
+            // Highlight the clicked citation
+            document.querySelectorAll('.citation-link-active').forEach(el => {
+              if (el instanceof HTMLElement) {
+                el.classList.remove('citation-link-active');
+              }
+            });
+            clone.classList.add('citation-link-active');
+          }
+        });
+      }
     }
   });
 }

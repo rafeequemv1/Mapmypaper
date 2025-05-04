@@ -124,3 +124,37 @@ export const deletePdfData = async (key: string): Promise<void> => {
     throw error;
   }
 };
+
+// Get PDF text - uses sessionStorage as a cache for extracted text
+export const getPdfText = async (pdfKey: string): Promise<string | null> => {
+  try {
+    // Check if we have the text cached in sessionStorage
+    const cachedText = sessionStorage.getItem(`pdfText_${pdfKey}`);
+    if (cachedText) {
+      return cachedText;
+    }
+    
+    // If not cached, get the PDF data and extract text
+    // Note: In a real-world app, you would implement text extraction here
+    // For now, we'll return a placeholder message since text extraction
+    // would typically be done during upload/processing
+    
+    console.log(`Text for PDF ${pdfKey} not found in cache`);
+    
+    // Return null to indicate that the text needs to be extracted
+    return null;
+  } catch (error) {
+    console.error('Failed to get PDF text:', error);
+    return null;
+  }
+};
+
+// Store PDF text in session storage for quick access
+export const storePdfText = (pdfKey: string, text: string): void => {
+  try {
+    sessionStorage.setItem(`pdfText_${pdfKey}`, text);
+    console.log(`Stored PDF text for ${pdfKey} in session storage`);
+  } catch (error) {
+    console.error('Failed to store PDF text in session storage:', error);
+  }
+};
