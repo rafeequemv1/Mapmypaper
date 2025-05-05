@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
-import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 
@@ -12,7 +11,6 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
-  const [showFlowchart, setShowFlowchart] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
@@ -72,7 +70,6 @@ const MindMap = () => {
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
-        openFlowchart={() => setShowFlowchart(true)}
       />
       <PanelStructure
         showPdf={showPdf}
@@ -84,12 +81,6 @@ const MindMap = () => {
         onExplainText={handleExplainText}
       />
       
-      {/* Modal for Flowchart */}
-      <FlowchartModal 
-        open={showFlowchart} 
-        onOpenChange={setShowFlowchart}
-      />
-
       {/* Modal for Summary */}
       <SummaryModal 
         open={showSummary}

@@ -4,7 +4,6 @@ import {
   FileCode,
   MessageSquare,
   FileText,
-  FileBarChart,
 } from "lucide-react";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
@@ -16,7 +15,6 @@ interface HeaderSidebarProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
-  openFlowchart?: () => void;
   onExportSVG: () => void;
   onExportPNG: () => void;
   onExportJSON: () => void;
@@ -28,7 +26,6 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   togglePdf,
   toggleChat,
   setShowSummary,
-  openFlowchart,
   onExportSVG,
   onExportPNG,
   onExportJSON,
@@ -50,11 +47,6 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
       onClick={() => setShowSummary(true)}
       icon={<FileText className="h-4 w-4" />}
       title="Show Summary"
-    />
-    <HeaderSidebarIcon
-      onClick={openFlowchart}
-      icon={<FileBarChart className="h-4 w-4" />}
-      title="Open Flowchart"
     />
     <HeaderExportMenu
       onExportSVG={onExportSVG}
