@@ -2,13 +2,12 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, Camera } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { getCurrentPdfData } from "@/utils/pdfStorage";
-import { createSelectionRect, captureElementArea } from "@/utils/captureUtils";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -18,7 +17,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
-  onImageCaptured?: (imageData: string) => void;
   renderTooltipContent?: () => React.ReactNode;
 }
 
@@ -27,7 +25,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, onImageCaptured, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -53,10 +51,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const [showSelectionTooltip, setShowSelectionTooltip] = useState(false);
     const tooltipTextRef = useRef<string>("");
-    
-    // New snapshot mode state
-    const [isSnapshotMode, setIsSnapshotMode] = useState(false);
-    const selectionRectRef = useRef<ReturnType<typeof createSelectionRect> | null>(null);
 
     const loadPdfData = async () => {
       try {
@@ -179,98 +173,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         if (selectionTimeout) window.clearTimeout(selectionTimeout);
       };
     }, []);
-
-    // New effect for snapshot mode
-    useEffect(() => {
-      if (!pdfContainerRef.current || !viewportRef.current) return;
-      
-      // Clean up any existing selection rect
-      if (selectionRectRef.current) {
-        selectionRectRef.current.destroy();
-        selectionRectRef.current = null;
-      }
-      
-      if (isSnapshotMode) {
-        // Create new selection rect handler when entering snapshot mode
-        selectionRectRef.current = createSelectionRect(pdfContainerRef.current);
-        
-        // Add mouse event handlers for snapshot mode
-        const viewport = viewportRef.current;
-        
-        const handleMouseDown = (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current) return;
-          selectionRectRef.current.startSelection(e.clientX, e.clientY);
-        };
-        
-        const handleMouseMove = (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current) return;
-          selectionRectRef.current.moveSelection(e.clientX, e.clientY);
-        };
-        
-        const handleMouseUp = async (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current || !pdfContainerRef.current) return;
-          
-          const rect = selectionRectRef.current.endSelection(e.clientX, e.clientY);
-          
-          if (rect && rect.width > 10 && rect.height > 10) {
-            try {
-              // Capture the selected area
-              const imageData = await captureElementArea(pdfContainerRef.current, rect);
-              
-              if (imageData && onImageCaptured) {
-                // Send captured image to chat
-                onImageCaptured(imageData);
-                
-                toast({
-                  title: "Area captured",
-                  description: "The selected area has been sent to chat",
-                });
-              }
-            } catch (error) {
-              console.error("Error capturing area:", error);
-              toast({
-                title: "Capture failed",
-                description: "Failed to capture the selected area",
-                variant: "destructive"
-              });
-            }
-          }
-          
-          // Exit snapshot mode after capturing
-          setIsSnapshotMode(false);
-        };
-        
-        const handleKeyDown = (e: KeyboardEvent) => {
-          if (e.key === "Escape" && isSnapshotMode) {
-            // Cancel selection on Escape key
-            if (selectionRectRef.current) {
-              selectionRectRef.current.cancelSelection();
-            }
-            setIsSnapshotMode(false);
-          }
-        };
-        
-        // Add event listeners
-        viewport.addEventListener("mousedown", handleMouseDown);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
-        window.addEventListener("keydown", handleKeyDown);
-        
-        // Set cursor to crosshair when in snapshot mode
-        viewport.style.cursor = "crosshair";
-        
-        return () => {
-          // Remove event listeners when cleaning up
-          viewport.removeEventListener("mousedown", handleMouseDown);
-          window.removeEventListener("mousemove", handleMouseMove);
-          window.removeEventListener("mouseup", handleMouseUp);
-          window.removeEventListener("keydown", handleKeyDown);
-          
-          // Reset cursor
-          viewport.style.cursor = "";
-        };
-      }
-    }, [isSnapshotMode, toast, onImageCaptured]);
 
     const handleExplainText = () => {
       if (selectedText && onTextSelected) {
@@ -508,18 +410,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
-    
-    // New function to toggle snapshot mode
-    const toggleSnapshotMode = () => {
-      setIsSnapshotMode(prev => !prev);
-      
-      if (!isSnapshotMode) {
-        toast({
-          title: "Snapshot Mode Activated",
-          description: "Click and drag to capture an area of the PDF",
-        });
-      }
-    };
 
     // Calculate optimal width for PDF pages
     const getOptimalPageWidth = () => {
@@ -533,7 +423,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
-        <div className="bg-white border-b px-1 py-0 flex flex-nowrap items-center justify-between gap-0.5 z-10 min-h-[30px] h-8">
+        <div className="bg-white border-b px-1 py-0 flex flex-nowrap items-center gap-0.5 z-10 min-h-[30px] h-8">
           {/* Zoom Controls with percentage display */}
           <div className="flex items-center gap-0.5">
             <Button 
@@ -565,17 +455,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               title="Reset Zoom"
             >
               <RotateCw className="h-3 w-3" />
-            </Button>
-            
-            {/* Add snapshot button */}
-            <Button 
-              variant={isSnapshotMode ? "default" : "ghost"}
-              size="icon"
-              className={`h-6 w-6 p-0 ml-2 ${isSnapshotMode ? 'bg-blue-500 text-white' : 'text-black'}`}
-              onClick={toggleSnapshotMode}
-              title="Take Snapshot"
-            >
-              <Camera className="h-3 w-3" />
             </Button>
           </div>
           
@@ -635,22 +514,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div 
               className="flex flex-col items-center py-4 relative"
             >
-              {/* Snapshot mode indicator */}
-              {isSnapshotMode && (
-                <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  <span>Draw to capture area</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="ml-2 bg-blue-600 hover:bg-blue-700 p-1 h-6" 
-                    onClick={() => setIsSnapshotMode(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
-              
               {/* NEW Selection Tooltip - positioned absolutely within the PDF container */}
               {showSelectionTooltip && (
                 <PositionedTooltip

@@ -12,6 +12,7 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
+  const [activePdfKey, setActivePdfKey] = useState<string>("");
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -34,6 +35,11 @@ const MindMap = () => {
       });
     }
   }, [showChat, toast]);
+
+  // Handle active PDF change
+  const handleActivePdfChange = useCallback((pdfKey: string) => {
+    setActivePdfKey(pdfKey);
+  }, []);
 
   // Listen for text selection events that should activate chat
   useEffect(() => {
@@ -61,26 +67,6 @@ const MindMap = () => {
     }
   }, [location]);
 
-  // Listen for tab changes to update PDF text in session storage
-  useEffect(() => {
-    const handleTabChange = (e: CustomEvent) => {
-      if (e.detail?.activeKey) {
-        const key = e.detail.activeKey;
-        // Get PDF text for this specific PDF and store it as the main text
-        const pdfText = sessionStorage.getItem(`pdfText_${key}`);
-        if (pdfText) {
-          sessionStorage.setItem('pdfText', pdfText);
-        }
-      }
-    };
-    
-    window.addEventListener('pdfTabChanged', handleTabChange as EventListener);
-    
-    return () => {
-      window.removeEventListener('pdfTabChanged', handleTabChange as EventListener);
-    };
-  }, []);
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header 
@@ -99,6 +85,8 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={handleExplainText}
+        onActivePdfChange={handleActivePdfChange}
+        activePdfKey={activePdfKey}
       />
       
       {/* Modal for Summary */}
