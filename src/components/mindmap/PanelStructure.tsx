@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -35,13 +34,13 @@ const PanelStructure = ({
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
+  
   const [isLoadingMindMap, setIsLoadingMindMap] = useState(false);
   const { toast } = useToast();
   
-  // New state for captured image
+  // New state for captured image with flag to prevent double processing
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  // Flag to prevent duplicate image submissions
-  const [isCapturingImage, setIsCapturingImage] = useState(false);
+  const [processingCapture, setProcessingCapture] = useState(false);
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -99,13 +98,6 @@ const PanelStructure = ({
       await setCurrentPdf(key);
       
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
-      
-      // Dispatch an event to inform chat components about tab change
-      window.dispatchEvent(
-        new CustomEvent('pdfTabChanged', { 
-          detail: { activeKey: key } 
-        })
-      );
       
       // Only display the toast for switching if we're not loading a new mindmap
       if (isMindMapReady(key)) {
@@ -264,10 +256,13 @@ const PanelStructure = ({
 
   // Handle image captured from PDF viewer
   const handleImageCaptured = (imageData: string) => {
-    // Prevent duplicate submissions
-    if (isCapturingImage) return;
+    // Exit if we're currently processing an image to prevent duplicates
+    if (processingCapture) return;
     
-    setIsCapturingImage(true);
+    // Set processing flag to true to prevent duplicate captures
+    setProcessingCapture(true);
+    
+    // Store the image data
     setCapturedImage(imageData);
     
     // Open chat panel if not already open
@@ -280,9 +275,9 @@ const PanelStructure = ({
       new CustomEvent('openChatWithImage', { detail: { imageData } })
     );
     
-    // Reset the capturing flag after a brief delay
+    // Reset processing flag after a delay to prevent rapid successive captures
     setTimeout(() => {
-      setIsCapturingImage(false);
+      setProcessingCapture(false);
     }, 500);
   };
 
@@ -312,6 +307,36 @@ const PanelStructure = ({
       window.removeEventListener('openChatWithText', handleOpenChat);
     };
   }, [showChat, toggleChat, onExplainText]);
+
+  // Add new effect to handle openChatWithImage event coming from outside sources
+  useEffect(() => {
+    const handleOpenChatWithImage = (event: CustomEvent) => {
+      // Only process if we're not already handling an image capture
+      if (processingCapture) return;
+      
+      if (event.detail?.imageData) {
+        setProcessingCapture(true);
+        setCapturedImage(event.detail.imageData);
+        
+        // Open chat if not already open
+        if (!showChat) {
+          toggleChat();
+        }
+        
+        // Reset processing flag after a delay
+        setTimeout(() => {
+          setProcessingCapture(false);
+        }, 500);
+      }
+    };
+    
+    // Add event listener with correct typing
+    window.addEventListener('openChatWithImage', handleOpenChatWithImage as EventListener);
+    
+    return () => {
+      window.removeEventListener('openChatWithImage', handleOpenChatWithImage as EventListener);
+    };
+  }, [showChat, toggleChat, processingCapture]);
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
