@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { MindElixirInstance } from "mind-elixir";
+import React from "react";
 
 interface UseGenerateMindMapProps {
   onMindMapReady?: (instance: MindElixirInstance) => void;
@@ -9,13 +10,20 @@ interface UseGenerateMindMapProps {
 export function useGenerateMindMap({ onMindMapReady }: UseGenerateMindMapProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // Mock component that will be replaced with actual implementation
+  // Create a function component instead of inline JSX
   const MindMapComponent = useCallback(() => {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-gray-500">Mind map will be displayed here</div>
-      </div>
-    );
+    // Return a React functional component
+    return function MockMindMapComponent() {
+      return React.createElement(
+        "div",
+        { className: "w-full h-full flex items-center justify-center" },
+        React.createElement(
+          "div",
+          { className: "text-gray-500" },
+          "Mind map will be displayed here"
+        )
+      );
+    };
   }, []);
 
   const handlePdfLoaded = useCallback(() => {
