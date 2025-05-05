@@ -6,6 +6,8 @@ import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
+import { setCurrentPdfKey } from "@/utils/pdfStorage";
+import { getAllPdfs } from "@/components/PdfTabs";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -66,6 +68,9 @@ const MindMap = () => {
     const handleTabChange = (e: CustomEvent) => {
       if (e.detail?.activeKey) {
         const key = e.detail.activeKey;
+        // Update the current PDF key
+        setCurrentPdfKey(key);
+        
         // Get PDF text for this specific PDF and store it as the main text
         const pdfText = sessionStorage.getItem(`pdfText_${key}`);
         if (pdfText) {
@@ -79,6 +84,19 @@ const MindMap = () => {
     return () => {
       window.removeEventListener('pdfTabChanged', handleTabChange as EventListener);
     };
+  }, []);
+
+  // Initialize with the first PDF if available
+  useEffect(() => {
+    const pdfs = getAllPdfs();
+    if (pdfs.length > 0) {
+      // Use the first PDF as default if no current PDF is set
+      const currentPdfKey = sessionStorage.getItem('currentPdfKey');
+      if (!currentPdfKey) {
+        const firstPdfKey = `${pdfs[0].name}_${pdfs[0].size}_${pdfs[0].lastModified}`;
+        setCurrentPdfKey(firstPdfKey);
+      }
+    }
   }, []);
 
   return (
