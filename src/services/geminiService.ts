@@ -192,7 +192,9 @@ export const chatWithGeminiAboutPdf = async (message: string, useAllPdfs = false
     
     if (useAllPdfs) {
       // Get text from all PDFs using the imported function from pdfStorage.ts
-      pdfText = await getAllPdfText();
+      const allPdfTexts = await getAllPdfText();
+      // Join all PDF texts with a separator to create a single string
+      pdfText = allPdfTexts.join('\n\n--- NEW DOCUMENT ---\n\n');
     } else {
       // Get text from the active PDF
       pdfText = sessionStorage.getItem('pdfText') || "";
