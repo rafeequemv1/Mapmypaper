@@ -82,20 +82,18 @@ export function MermaidModal({ isOpen, onClose, mindMapInstance, pdfKey }: Merma
       
       if (activeTab === "flowchart" && flowchartContainerRef.current && mermaidFlowchart) {
         flowchartContainerRef.current.innerHTML = '';
-        await mermaid.render('flowchart-diagram', mermaidFlowchart, (svgCode) => {
-          if (flowchartContainerRef.current) {
-            flowchartContainerRef.current.innerHTML = svgCode;
-          }
-        });
+        const { svg } = await mermaid.render('flowchart-diagram', mermaidFlowchart);
+        if (flowchartContainerRef.current) {
+          flowchartContainerRef.current.innerHTML = svg;
+        }
       }
       
       if (activeTab === "mindmap" && mindmapContainerRef.current && mermaidMindmap) {
         mindmapContainerRef.current.innerHTML = '';
-        await mermaid.render('mindmap-diagram', mermaidMindmap, (svgCode) => {
-          if (mindmapContainerRef.current) {
-            mindmapContainerRef.current.innerHTML = svgCode;
-          }
-        });
+        const { svg } = await mermaid.render('mindmap-diagram', mermaidMindmap);
+        if (mindmapContainerRef.current) {
+          mindmapContainerRef.current.innerHTML = svg;
+        }
       }
     } catch (err) {
       console.error("Error rendering mermaid:", err);

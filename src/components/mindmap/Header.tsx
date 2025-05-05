@@ -2,7 +2,7 @@
 import React from "react";
 import HeaderSidebar from "@/components/mindmap/HeaderSidebar";
 import { MindElixirInstance } from 'mind-elixir';
-import { exportSvg, exportPng, exportData } from '@/lib/export-utils';
+import { downloadMindMapAsSVG, downloadMindMapAsPNG } from '@/lib/export-utils';
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -25,19 +25,29 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const handleExportSVG = () => {
     if (mindMap) {
-      exportSvg(mindMap);
+      downloadMindMapAsSVG(mindMap);
     }
   };
 
   const handleExportPNG = () => {
     if (mindMap) {
-      exportPng(mindMap);
+      downloadMindMapAsPNG(mindMap);
     }
   };
 
   const handleExportJSON = () => {
     if (mindMap) {
-      exportData(mindMap);
+      const data = mindMap.getData();
+      const dataStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'mindmap-data.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
   };
 

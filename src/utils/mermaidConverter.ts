@@ -32,9 +32,9 @@ export const convertToMermaidFlowchart = (data: MindElixirData): string => {
     }
   };
 
-  // Start with the root node
-  if (data && data.root) {
-    processNode(data.root);
+  // Start with the root node (data structure has changed from .root to directly accessing the data object)
+  if (data && data.nodeData) {
+    processNode(data.nodeData);
   }
 
   return mermaidCode;
@@ -69,9 +69,9 @@ export const convertToMermaidMindmap = (data: MindElixirData): string => {
     }
   };
 
-  // Start with the root node
-  if (data && data.root) {
-    processNode(data.root);
+  // Start with the root node (data structure has changed from .root to directly accessing the data object)
+  if (data && data.nodeData) {
+    processNode(data.nodeData);
   }
 
   return mermaidCode;
