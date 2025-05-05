@@ -11,6 +11,7 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
+  const [explainImage, setExplainImage] = useState("");
   const [showSummary, setShowSummary] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
@@ -31,6 +32,18 @@ const MindMap = () => {
       toast({
         title: "Explain Feature",
         description: "Opening chat to explain selected text.",
+      });
+    }
+  }, [showChat, toast]);
+  
+  // Handle image selected for explanation
+  const handleExplainImage = useCallback((imageData: string) => {
+    setExplainImage(imageData);
+    if (!showChat) {
+      setShowChat(true);
+      toast({
+        title: "Image Analysis",
+        description: "Opening chat to analyze selected area.",
       });
     }
   }, [showChat, toast]);
@@ -78,7 +91,9 @@ const MindMap = () => {
         togglePdf={() => setShowPdf(!showPdf)}
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
+        explainImage={explainImage}
         onExplainText={handleExplainText}
+        onExplainImage={handleExplainImage}
       />
       
       {/* Modal for Summary */}
