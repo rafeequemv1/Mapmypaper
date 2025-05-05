@@ -44,9 +44,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     
     // Text selection tooltip states
     const [selectedText, setSelectedText] = useState<string>("");
-    const [selectionPosition, setSelectionPosition] = useState<{x: number, y: number} | null>(null);
+    const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
     const [showSelectionTooltip, setShowSelectionTooltip] = useState<boolean>(false);
     const selectionTooltipRef = useRef<HTMLDivElement>(null);
+    const viewportRef = useRef<HTMLDivElement | null>(null);
 
     const loadPdfData = async () => {
       try {
@@ -101,7 +102,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, [toast]);
 
-    // Improved text selection handling
+    // Store the viewport ref when the scroll area is mounted
+    useEffect(() => {
+      if (pdfContainerRef.current) {
+        viewportRef.current = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      }
+    }, [pdfContainerRef.current]);
+
+    // Improved text selection handling with scroll position awareness
     useEffect(() => {
       let selectionTimeout: number | null = null;
       
@@ -114,9 +122,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           selectionTimeout = null;
         }
         
-        // Hide tooltip immediately when selection changes
-        setShowSelectionTooltip(false);
-        
         // Only proceed if we have a valid selection
         if (selection && !selection.isCollapsed) {
           const text = selection.toString().trim();
@@ -127,61 +132,69 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             const range = selection.getRangeAt(0);
             const rect = range.getBoundingClientRect();
             
-            // Get scroll position to make position absolute in the document
-            const scrollContainer = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-            const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-            
-            // Calculate position relative to the viewport, adjust for scroll
-            const tooltipX = rect.x + (rect.width / 2);
-            const tooltipY = rect.y - 10;
-            
-            // Set the tooltip position
-            setSelectionPosition({
-              x: tooltipX,
-              y: tooltipY
-            });
+            // Store the selection rectangle for repositioning during scroll
+            setSelectionRect(rect);
             
             // Show tooltip with slight delay to ensure position is updated
             selectionTimeout = window.setTimeout(() => {
               setShowSelectionTooltip(true);
             }, 50);
+          } else {
+            setShowSelectionTooltip(false);
+          }
+        } else {
+          // No text is selected
+          if (!selection || selection.isCollapsed) {
+            // Only hide tooltip if user clicked elsewhere (not on the tooltip itself)
+            if (selectionTooltipRef.current && 
+                document.activeElement !== selectionTooltipRef.current &&
+                !selectionTooltipRef.current.contains(document.activeElement)) {
+              setShowSelectionTooltip(false);
+            }
           }
         }
       };
-
-      const handleClickOutside = (e: MouseEvent) => {
-        if (
-          showSelectionTooltip && 
-          selectionTooltipRef.current && 
-          !selectionTooltipRef.current.contains(e.target as Node)
-        ) {
-          setShowSelectionTooltip(false);
-        }
-      };
       
-      // Use mouseup instead of selectionchange for more reliable positioning
       document.addEventListener('mouseup', handleTextSelection);
-      document.addEventListener('mousedown', handleClickOutside);
       
       return () => {
         document.removeEventListener('mouseup', handleTextSelection);
-        document.removeEventListener('mousedown', handleClickOutside);
         if (selectionTimeout) window.clearTimeout(selectionTimeout);
       };
-    }, [showSelectionTooltip]);
+    }, []);
+
+    // Handle scroll events to reposition the tooltip
+    useEffect(() => {
+      if (!viewportRef.current || !selectionRect || !showSelectionTooltip) return;
+      
+      const handleScroll = () => {
+        if (selectionRect && viewportRef.current) {
+          // We don't need to update the selection rect here
+          // Just force a re-render to update the tooltip position
+          setSelectionRect(prevRect => prevRect ? {...prevRect} : null);
+        }
+      };
+      
+      viewportRef.current.addEventListener('scroll', handleScroll);
+      
+      return () => {
+        if (viewportRef.current) {
+          viewportRef.current.removeEventListener('scroll', handleScroll);
+        }
+      };
+    }, [viewportRef.current, selectionRect, showSelectionTooltip]);
 
     const handleExplainText = () => {
       if (selectedText && onTextSelected) {
         onTextSelected(selectedText);
-        setShowSelectionTooltip(false);
         
         // Dispatch custom event for opening chat with text
         window.dispatchEvent(
           new CustomEvent('openChatWithText', { detail: { text: selectedText } })
         );
         
-        // Clear selection
-        window.getSelection()?.removeAllRanges();
+        // Do NOT clear selection or hide tooltip - keep it visible
+        setShowSelectionTooltip(true);
       }
     };
 
@@ -368,7 +381,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       scrollToPage
     }), [numPages]);
     
-    // Listen for custom events to scroll to specific pages (from citations)
     useEffect(() => {
       const handleScrollToPdfPage = (event: any) => {
         const { pageNumber } = event.detail;
@@ -515,14 +527,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div 
               className="flex flex-col items-center py-4 relative"
             >
-              {/* Improved Selection Tooltip - positioned at the selection point */}
-              {selectionPosition && (
+              {/* Selection Tooltip - positioned using selection rectangle to stay with text on scroll */}
+              {selectionRect && showSelectionTooltip && (
                 <div
                   ref={selectionTooltipRef}
-                  className={`fixed bg-white rounded-md shadow-md border border-gray-200 z-50 p-1 transition-opacity duration-200 ${showSelectionTooltip ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  className="fixed bg-white rounded-md shadow-md border border-gray-200 z-50 p-1 transition-opacity duration-200"
                   style={{
-                    left: `${selectionPosition.x}px`,
-                    top: `${selectionPosition.y}px`,
+                    left: `${selectionRect.left + (selectionRect.width / 2)}px`,
+                    top: `${selectionRect.top - 10}px`,
                     transform: 'translate(-50%, -100%)'
                   }}
                 >
