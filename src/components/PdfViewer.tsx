@@ -48,7 +48,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [showSelectionTooltip, setShowSelectionTooltip] = useState<boolean>(false);
     const selectionTooltipRef = useRef<HTMLDivElement>(null);
 
-    // Load PDF data from IndexedDB when active PDF changes
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
@@ -78,12 +77,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Initial load
     useEffect(() => {
       loadPdfData();
     }, []);
     
-    // Listen for PDF switch events
     useEffect(() => {
       const handlePdfSwitch = (event: Event) => {
         const customEvent = event as CustomEvent;
@@ -104,31 +101,48 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, [toast]);
 
-    // Handle text selection in PDF
+    // Improved text selection handling
     useEffect(() => {
+      let selectionTimeout: number | null = null;
+      
       const handleTextSelection = () => {
         const selection = window.getSelection();
         
-        // Always hide previous tooltip when a new selection is made
+        // Clear any existing timeout
+        if (selectionTimeout) {
+          window.clearTimeout(selectionTimeout);
+          selectionTimeout = null;
+        }
+        
+        // Hide tooltip immediately when selection changes
         setShowSelectionTooltip(false);
         
+        // Only proceed if we have a valid selection
         if (selection && !selection.isCollapsed) {
           const text = selection.toString().trim();
           if (text) {
             setSelectedText(text);
             
-            // Get position for tooltip
+            // Get the precise position for tooltip
             const range = selection.getRangeAt(0);
             const rect = range.getBoundingClientRect();
             
-            // Update tooltip position
+            // Get scroll position to make position absolute in the document
+            const scrollContainer = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+            const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+            
+            // Calculate position relative to the viewport, adjust for scroll
+            const tooltipX = rect.x + (rect.width / 2);
+            const tooltipY = rect.y - 10;
+            
+            // Set the tooltip position
             setSelectionPosition({
-              x: rect.x + rect.width / 2,
-              y: rect.y - 10
+              x: tooltipX,
+              y: tooltipY
             });
             
-            // Show tooltip with slight delay to prevent flickering
-            setTimeout(() => {
+            // Show tooltip with slight delay to ensure position is updated
+            selectionTimeout = window.setTimeout(() => {
               setShowSelectionTooltip(true);
             }, 50);
           }
@@ -141,23 +155,21 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           selectionTooltipRef.current && 
           !selectionTooltipRef.current.contains(e.target as Node)
         ) {
-          const selection = window.getSelection();
-          if (!selection || selection.isCollapsed) {
-            setShowSelectionTooltip(false);
-          }
+          setShowSelectionTooltip(false);
         }
       };
-
-      document.addEventListener('selectionchange', handleTextSelection);
+      
+      // Use mouseup instead of selectionchange for more reliable positioning
+      document.addEventListener('mouseup', handleTextSelection);
       document.addEventListener('mousedown', handleClickOutside);
       
       return () => {
-        document.removeEventListener('selectionchange', handleTextSelection);
+        document.removeEventListener('mouseup', handleTextSelection);
         document.removeEventListener('mousedown', handleClickOutside);
+        if (selectionTimeout) window.clearTimeout(selectionTimeout);
       };
     }, [showSelectionTooltip]);
 
-    // Handle explanation request
     const handleExplainText = () => {
       if (selectedText && onTextSelected) {
         onTextSelected(selectedText);
@@ -173,7 +185,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
       if (!searchQuery.trim()) return;
       
@@ -296,7 +307,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Enhanced scroll to page functionality with highlighting
     const scrollToPage = (pageNumber: number) => {
       if (pageNumber < 1 || pageNumber > numPages) {
         console.warn(`Invalid page number: ${pageNumber}. Pages range from 1 to ${numPages}`);
@@ -375,7 +385,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, [numPages]);
 
-    // Handle document loaded
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
       setNumPages(numPages);
       // Initialize the array with the correct number of null elements
@@ -412,7 +421,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
-    // PDF Toolbar (make even more compact)
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
@@ -507,11 +515,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div 
               className="flex flex-col items-center py-4 relative"
             >
-              {/* Selection Tooltip - Now with conditional opacity and transition */}
+              {/* Improved Selection Tooltip - positioned at the selection point */}
               {selectionPosition && (
                 <div
                   ref={selectionTooltipRef}
-                  className={`absolute bg-white rounded-md shadow-md border border-gray-200 z-50 p-1 transition-opacity duration-200 ${showSelectionTooltip ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  className={`fixed bg-white rounded-md shadow-md border border-gray-200 z-50 p-1 transition-opacity duration-200 ${showSelectionTooltip ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                   style={{
                     left: `${selectionPosition.x}px`,
                     top: `${selectionPosition.y}px`,
