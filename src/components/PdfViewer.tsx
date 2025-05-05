@@ -341,6 +341,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Handle area selection toggling
     const toggleAreaSelection = () => {
       setIsAreaSelectActive(prev => !prev);
+      if (!isAreaSelectActive) {
+        // Show instructions toast when activating
+        toast({
+          title: "Area Selection Mode",
+          description: "Click and drag to select an area of the PDF you want to explain",
+        });
+      }
     };
 
     // Handle area captured from the PdfAreaSelector
@@ -457,12 +464,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <Button
               variant={isAreaSelectActive ? "secondary" : "ghost"}
               size="sm"
-              className="h-6 px-2 flex items-center gap-0.5"
+              className={`h-6 px-2 flex items-center gap-0.5 ${isAreaSelectActive ? 'bg-blue-100 border border-blue-300' : ''}`}
               onClick={toggleAreaSelection}
-              title="Select area"
+              title="Select area to explain"
             >
-              <RectangleHorizontal className="h-3 w-3" />
-              <span className="text-xs">{isAreaSelectActive ? "Exit Select" : "Select Area"}</span>
+              <RectangleHorizontal className={`h-3 w-3 ${isAreaSelectActive ? 'text-blue-600' : ''}`} />
+              <span className={`text-xs ${isAreaSelectActive ? 'text-blue-600 font-medium' : ''}`}>
+                {isAreaSelectActive ? "Exit Select" : "Select Area"}
+              </span>
             </Button>
           </div>
         </div>
@@ -524,6 +533,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             </div>
           </ScrollArea>
           
+          {/* No PDF content message */}
           {pdfData ? null : (
             <div className="absolute inset-0 flex items-center justify-center flex-col gap-4 bg-gray-50">
               {isLoading ? (

@@ -283,7 +283,7 @@ const PdfAreaSelector: React.FC<PdfAreaSelectorProps> = ({
                 className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                 onClick={handleCaptureArea}
               >
-                Explain this
+                Capture This Area
               </button>
             </div>
           </div>
