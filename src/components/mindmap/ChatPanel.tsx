@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Image, Paperclip, FileText, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,10 +10,6 @@ import ChatToolbar from "./ChatToolbar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
-import * as pdfjs from 'react-pdf';
-
-// Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -47,9 +43,6 @@ const ChatPanel = ({
     image?: string; 
     pdfKey?: string | null;
     attachedFile?: File | null;
-    filePreview?: string | null;
-    fileType?: string;
-    pdfText?: string | null;
   }[]>([
     { 
       role: 'assistant', 
@@ -66,9 +59,7 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [useAllPapers, setUseAllPapers] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [fileType, setFileType] = useState<string>("");
-  const [pdfText, setPdfText] = useState<string | null>(null);
-
+  
   useEffect(() => {
     // Scroll to bottom when messages change
     if (scrollAreaRef.current) {
@@ -260,135 +251,32 @@ Feel free to ask me any questions! Here are some suggestions:`
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // New function to extract text from PDF
-  const extractTextFromPdf = async (file: File): Promise<string> => {
-    try {
-      // Convert the file to an ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-      
-      // Load the PDF document
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-      
-      let fullText = '';
-      
-      // Extract text from each page
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        
-        fullText += `Page ${i}: ${pageText}\n\n`;
-      }
-      
-      return fullText;
-    } catch (error) {
-      console.error('Error extracting text from PDF:', error);
-      return `Could not extract text from PDF: ${error.message}`;
-    }
-  };
-
-  // Handle file selection - enhanced to handle PDFs and images differently
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setAttachedFile(file);
-      
-      // Determine file type
-      const type = file.type;
-      setFileType(type);
-      
-      if (type.startsWith('image/')) {
-        // For image files, create a preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (e.target?.result) {
-            setFilePreview(e.target.result as string);
-          }
-        };
-        reader.readAsDataURL(file);
-        setPdfText(null);
-      } 
-      else if (type === 'application/pdf') {
-        // For PDF files, create a thumbnail and extract text
-        try {
-          // Create PDF thumbnail
-          const pdfUrl = URL.createObjectURL(file);
-          setFilePreview(pdfUrl);
-          
-          // Extract text from PDF
-          const extractedText = await extractTextFromPdf(file);
-          setPdfText(extractedText);
-          
-          console.log('Extracted PDF text:', extractedText.substring(0, 200) + '...');
-        } catch (error) {
-          console.error('Error processing PDF:', error);
-          toast({
-            title: "PDF Processing Error",
-            description: "Failed to process the PDF file properly.",
-            variant: "destructive"
-          });
-        }
-      } 
-      else {
-        // For other file types, just show the name
-        setFilePreview(null);
-        setPdfText(null);
-      }
-      
-      toast({
-        title: "File attached",
-        description: `${file.name} added to your message`,
-      });
-    }
-  };
-
   const handleSendMessage = async () => {
     if (inputValue.trim() || attachedFile) {
       // Add user message with possible attachment
       const userMessage = inputValue.trim();
-      const newUserMessage = { 
-        role: 'user' as const, 
+      setMessages(prev => [...prev, { 
+        role: 'user', 
         content: userMessage || (attachedFile ? `Attached file: ${attachedFile.name}` : ""),
         pdfKey: activePdfKey,
-        attachedFile: attachedFile,
-        filePreview: filePreview,
-        fileType: fileType,
-        pdfText: pdfText
-      };
-      
-      setMessages(prev => [...prev, newUserMessage]);
+        attachedFile: attachedFile
+      }]);
       
       // Clear input and attachment
       setInputValue('');
       setAttachedFile(null);
       setFilePreview(null);
-      setPdfText(null);
-      setFileType("");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
       
       // Show typing indicator
       setIsTyping(true);
       
       try {
-        // Build the prompt with context, including PDF text if available
-        let prompt = `${userMessage}`;
+        // Build the prompt with context
+        let prompt = `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`;
         
         if (attachedFile) {
-          if (fileType === 'application/pdf' && pdfText) {
-            prompt = `I've attached a PDF named ${attachedFile.name}. Here's the extracted text from it:\n\n${pdfText}\n\nPlease respond to this: ${userMessage || 'Could you analyze this PDF?'}`;
-          } else if (fileType.startsWith('image/')) {
-            prompt = `I've attached an image named ${attachedFile.name}. ${userMessage || 'Could you describe what you see in this image?'}`;
-          } else {
-            prompt = `I've attached a file named ${attachedFile.name}. ${userMessage || 'Can you help me with this file?'}`;
-          }
+          prompt = `I've attached a file named ${attachedFile.name}. ${prompt}`;
         }
-        
-        // Add citation instructions
-        prompt += ` Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`;
         
         // If using all papers, add that context to the prompt
         if (useAllPapers && allPdfKeys.length > 1) {
@@ -525,12 +413,37 @@ Feel free to ask me any questions! Here are some suggestions:`
     }
   };
 
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAttachedFile(file);
+      
+      // Create preview for image files
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setFilePreview(e.target.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For non-image files, just show the name
+        setFilePreview(null);
+      }
+      
+      toast({
+        title: "File attached",
+        description: `${file.name} added to your message`,
+      });
+    }
+  };
+
   // Remove attached file
   const removeAttachedFile = () => {
     setAttachedFile(null);
     setFilePreview(null);
-    setPdfText(null);
-    setFileType("");
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -556,7 +469,6 @@ Feel free to ask me any questions! Here are some suggestions:`
         type="file"
         ref={fileInputRef}
         style={{ display: 'none' }}
-        accept="image/*,application/pdf"
         onChange={handleFileChange}
       />
       
@@ -631,34 +543,8 @@ Feel free to ask me any questions! Here are some suggestions:`
                     </div>
                   )}
                   
-                  {/* Display attached file preview */}
-                  {message.filePreview && message.fileType?.startsWith('image/') && (
-                    <div className="mb-2">
-                      <img 
-                        src={message.filePreview} 
-                        alt="Attached image" 
-                        className="max-w-full rounded-md border border-gray-200"
-                        style={{ maxHeight: '300px' }} 
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Display PDF thumbnail */}
-                  {message.filePreview && message.fileType === 'application/pdf' && (
-                    <div className="mb-2 flex items-center gap-2 p-2 bg-gray-100 rounded-md border">
-                      <FileText className="h-10 w-10 text-red-500" />
-                      <div>
-                        <p className="font-medium">{message.attachedFile?.name}</p>
-                        <p className="text-xs text-gray-500">
-                          PDF Document {message.attachedFile && 
-                            `(${(message.attachedFile.size / 1024).toFixed(1)} KB)`}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Display other attached file information */}
-                  {message.attachedFile && !message.filePreview && (
+                  {/* Display attached file information if present */}
+                  {message.attachedFile && (
                     <div className="mb-2 flex items-center gap-2">
                       <FileText className="h-4 w-4" />
                       <span className="text-sm">
@@ -746,14 +632,12 @@ Feel free to ask me any questions! Here are some suggestions:`
         {attachedFile && (
           <div className="mb-2 p-2 bg-gray-50 rounded-md border flex items-center justify-between">
             <div className="flex items-center gap-2 overflow-hidden">
-              {fileType.startsWith('image/') && filePreview ? (
+              {filePreview ? (
                 <img 
                   src={filePreview} 
                   alt="Preview" 
                   className="h-10 w-10 object-cover rounded"
                 />
-              ) : fileType === 'application/pdf' ? (
-                <FileText className="h-5 w-5 text-red-500" />
               ) : (
                 <FileText className="h-5 w-5 text-gray-500" />
               )}
@@ -761,7 +645,6 @@ Feel free to ask me any questions! Here are some suggestions:`
                 <p className="text-sm font-medium truncate">{attachedFile.name}</p>
                 <p className="text-xs text-gray-500">
                   {(attachedFile.size / 1024).toFixed(1)} KB
-                  {fileType === 'application/pdf' && pdfText ? ' • PDF text extracted' : ''}
                 </p>
               </div>
             </div>
