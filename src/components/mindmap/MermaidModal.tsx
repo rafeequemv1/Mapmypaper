@@ -8,7 +8,7 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, AlertCircle, RefreshCw, Code } from "lucide-react";
+import { Download, AlertCircle, RefreshCw } from "lucide-react";
 import mermaid from "mermaid";
 import { getPdfText } from "@/utils/pdfStorage";
 import { generateFlowchartFromText } from "@/services/geminiService";
@@ -30,27 +30,7 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [mermaidCode, setMermaidCode] = useState<string>("");
-  const [showCode, setShowCode] = useState<boolean>(false);
   const { toast } = useToast();
-
-  // Initialize mermaid as soon as component mounts
-  useEffect(() => {
-    try {
-      mermaid.initialize({
-        startOnLoad: true,
-        theme: "default",
-        securityLevel: "loose",
-        flowchart: {
-          htmlLabels: true,
-          useMaxWidth: false,
-          curve: 'basis'
-        },
-      });
-      console.log("Mermaid initialized successfully");
-    } catch (error) {
-      console.error("Error initializing mermaid:", error);
-    }
-  }, []);
 
   // Generate flowchart when modal opens or PDF changes
   useEffect(() => {
@@ -85,14 +65,9 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
         return;
       }
       
-      console.log(`Generating flowchart for PDF: ${pdfKey}`);
-      console.log(`PDF text length: ${pdfText.length} characters`);
-      
       // Generate flowchart syntax using Gemini
       const flowchartSyntax = await generateFlowchartFromText(pdfText);
       setMermaidCode(flowchartSyntax);
-      
-      console.log("Flowchart syntax received:", flowchartSyntax.substring(0, 100) + "...");
       
       // Render the generated flowchart
       renderMermaidDiagram(flowchartSyntax);
@@ -162,14 +137,16 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
     mermaidRef.current.innerHTML = '';
     
     try {
-      console.log("Rendering mermaid diagram with syntax:", diagram.substring(0, 100) + "...");
-      
-      // Check if diagram starts with graph TD or graph LR
-      const sanitizedDiagram = diagram.trim();
-      if (!sanitizedDiagram.startsWith('graph TD') && !sanitizedDiagram.startsWith('graph LR')) {
-        console.warn("Diagram doesn't start with graph TD or graph LR, prepending graph TD");
-        diagram = `graph TD\n${diagram}`;
-      }
+      // Initialize mermaid with configuration
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "default",
+        securityLevel: "loose",
+        flowchart: {
+          htmlLabels: true,
+          useMaxWidth: false,
+        },
+      });
       
       // Render the diagram
       mermaid.render("mermaid-diagram", diagram)
@@ -178,36 +155,15 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
             mermaidRef.current.innerHTML = svg;
             setSvgContent(svg);
             setRenderError(null);
-            console.log("Mermaid diagram rendered successfully");
           }
         })
         .catch(error => {
           console.error("Mermaid rendering promise error:", error);
-          setRenderError(`Failed to render the diagram: ${error.message}`);
-          
-          // Try with a simplified diagram as a fallback
-          try {
-            const fallbackDiagram = getDefaultDiagram();
-            mermaid.render("mermaid-fallback", fallbackDiagram)
-              .then(({ svg }) => {
-                if (mermaidRef.current) {
-                  mermaidRef.current.innerHTML = svg;
-                  setSvgContent(svg);
-                  setRenderError("Original diagram failed to render. Showing default diagram instead.");
-                  console.log("Fallback diagram rendered successfully");
-                }
-              })
-              .catch(fallbackError => {
-                console.error("Fallback mermaid rendering failed:", fallbackError);
-                setRenderError("All rendering attempts failed. Please try again or report this issue.");
-              });
-          } catch (fallbackError) {
-            console.error("Error in fallback rendering attempt:", fallbackError);
-          }
+          setRenderError("Failed to render the diagram. The generated syntax may be invalid.");
         });
     } catch (error) {
       console.error("Mermaid rendering failed:", error);
-      setRenderError(`Error initializing the diagram renderer: ${error.message}`);
+      setRenderError("Error initializing the diagram renderer.");
     }
   };
 
@@ -227,10 +183,6 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
 
   const handleRegenerateFlowchart = () => {
     generateFlowchart();
-  };
-
-  const toggleShowCode = () => {
-    setShowCode(!showCode);
   };
 
   return (
@@ -265,40 +217,27 @@ const MermaidModal: React.FC<MermaidModalProps> = ({
                 Try Again
               </Button>
             </div>
-          ) : showCode ? (
-            <div className="bg-gray-100 p-4 rounded-md overflow-auto">
-              <pre className="text-xs text-gray-800 whitespace-pre-wrap">{mermaidCode}</pre>
-            </div>
           ) : (
             <div ref={mermaidRef} className="flex justify-center w-full min-h-[300px] items-center" />
           )}
         </div>
         
         <div className="flex justify-between mt-4">
-          <div className="flex gap-2">
-            {pdfKey && (
-              <Button 
-                variant="outline" 
-                onClick={handleRegenerateFlowchart}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> 
-                Regenerate
-              </Button>
-            )}
+          {pdfKey && (
             <Button 
-              variant="ghost" 
-              onClick={toggleShowCode}
+              variant="outline" 
+              onClick={handleRegenerateFlowchart}
+              disabled={isLoading}
             >
-              <Code className="mr-2 h-4 w-4" /> 
-              {showCode ? "Show Diagram" : "Show Code"}
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> 
+              Regenerate
             </Button>
-          </div>
-          <div>
+          )}
+          <div className="ml-auto">
             <Button 
               variant="outline" 
               onClick={handleDownloadSVG}
-              disabled={!svgContent || showCode || !!renderError || isLoading}
+              disabled={!svgContent || !!renderError || isLoading}
             >
               <Download className="mr-2 h-4 w-4" /> Download SVG
             </Button>
