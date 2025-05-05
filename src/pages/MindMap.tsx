@@ -5,30 +5,23 @@ import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
-import { MermaidModal } from "@/components/mindmap/MermaidModal";
 import { MindElixirInstance } from "mind-elixir";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
+  const [explainImage, setExplainImage] = useState("");
   const [showSummary, setShowSummary] = useState(false);
-  const [showMermaid, setShowMermaid] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
-  const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
     setIsMapGenerated(true);
     setMindMapInstance(instance);
-  }, []);
-
-  // Get current PDF key from MindMapViewer
-  const handlePdfKeyUpdate = useCallback((key: string | null) => {
-    setActivePdfKey(key);
   }, []);
 
   // Handle text selected for explanation
@@ -39,6 +32,18 @@ const MindMap = () => {
       toast({
         title: "Explain Feature",
         description: "Opening chat to explain selected text.",
+      });
+    }
+  }, [showChat, toast]);
+  
+  // Handle image selected for explanation
+  const handleExplainImage = useCallback((imageData: string) => {
+    setExplainImage(imageData);
+    if (!showChat) {
+      setShowChat(true);
+      toast({
+        title: "Image Analysis",
+        description: "Opening chat to analyze selected area.",
       });
     }
   }, [showChat, toast]);
@@ -75,7 +80,6 @@ const MindMap = () => {
         togglePdf={() => setShowPdf(!showPdf)}
         toggleChat={() => setShowChat(!showChat)}
         setShowSummary={setShowSummary}
-        setShowMermaid={setShowMermaid}
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
@@ -87,22 +91,15 @@ const MindMap = () => {
         togglePdf={() => setShowPdf(!showPdf)}
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
+        explainImage={explainImage}
         onExplainText={handleExplainText}
-        onPdfKeyUpdate={handlePdfKeyUpdate}
+        onExplainImage={handleExplainImage}
       />
       
       {/* Modal for Summary */}
       <SummaryModal 
         open={showSummary}
         onOpenChange={setShowSummary}
-      />
-      
-      {/* Modal for Mermaid Diagram */}
-      <MermaidModal
-        isOpen={showMermaid}
-        onClose={() => setShowMermaid(false)}
-        mindMapInstance={mindMapInstance}
-        pdfKey={activePdfKey}
       />
     </div>
   );
