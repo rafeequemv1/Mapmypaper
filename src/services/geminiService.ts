@@ -92,9 +92,9 @@ export const chatWithGeminiAboutPdf = async (prompt: string, pdfKey: string | nu
       // Get all PDFs content
       const allPdfs = getAllPdfs();
       const pdfContents = await Promise.all(
-        allPdfs.map(async (pdf) => {
-          const content = await getPdfData(pdf.key);
-          return content ? `[Document: ${pdf.title}]\n${content}\n\n` : "";
+        allPdfs.map(async (pdfKey) => {
+          const content = await getPdfData(pdfKey);
+          return content ? `[Document: ${pdfKey}]\n${content}\n\n` : "";
         })
       );
       pdfContent = pdfContents.join("");
@@ -220,5 +220,86 @@ export const analyzeFileWithGemini = async (
   } catch (error) {
     console.error("Error analyzing file with Gemini:", error);
     throw new Error("Failed to analyze file");
+  }
+};
+
+// Add the missing function for structured summary generation
+export const generateStructuredSummary = async (): Promise<object> => {
+  try {
+    // Get the current PDF content
+    const currentPdfKey = sessionStorage.getItem('currentPdfKey');
+    if (!currentPdfKey) {
+      throw new Error("No PDF is currently selected");
+    }
+    
+    const pdfContent = await getPdfData(currentPdfKey);
+    if (!pdfContent) {
+      throw new Error("Failed to retrieve PDF content");
+    }
+    
+    // Truncate PDF content if it's too large
+    const maxLength = 30000;
+    const truncatedContent = pdfContent.length > maxLength
+      ? pdfContent.substring(0, maxLength) + "\n\n[Content truncated due to length limitations]"
+      : pdfContent;
+    
+    // Use the Gemini Pro model for text generation
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    
+    const prompt = `
+      Create a structured summary of the following research paper. 
+      Analyze the content and output a JSON object with the following structure:
+      
+      {
+        "Summary": "Brief overview of the paper",
+        "Key Findings": "Main discoveries or conclusions",
+        "Objectives": "Goals and aims of the research",
+        "Methods": "Methodology and approach",
+        "Results": "Key outcomes and data",
+        "Conclusions": "Final interpretations and implications",
+        "Key Concepts": "Important terms and ideas"
+      }
+      
+      For each section, provide 3-5 sentences of concise, informative content.
+      Include page references when appropriate in the format [citation:pageX].
+      
+      Here is the paper content to analyze:
+      
+      ${truncatedContent}
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const textResponse = response.text();
+    
+    // Extract JSON from the response
+    const jsonMatch = textResponse.match(/```json\n([\s\S]*?)\n```/) || 
+                      textResponse.match(/```\n([\s\S]*?)\n```/) ||
+                      textResponse.match(/{[\s\S]*}/);
+                      
+    if (jsonMatch) {
+      const jsonString = jsonMatch[0].replace(/```json\n|```\n|```/g, '');
+      return JSON.parse(jsonString);
+    } else {
+      try {
+        // Try parsing the entire response as JSON
+        return JSON.parse(textResponse);
+      } catch (e) {
+        console.error("Failed to parse JSON from response:", textResponse);
+        // Return a simplified object with error information
+        return {
+          "Summary": "Error parsing AI response",
+          "Key Findings": "Could not extract structured data from the AI response.",
+          "Objectives": "Please try again or check the paper manually.",
+          "Methods": "",
+          "Results": "",
+          "Conclusions": "",
+          "Key Concepts": ""
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Error generating structured summary:", error);
+    throw new Error("Failed to generate summary");
   }
 };

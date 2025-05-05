@@ -1,6 +1,7 @@
+
 import React, { useState, useCallback } from "react";
-import PdfViewer from "@/components/mindmap/PdfViewer";
-import MindMapViewer from "@/components/mindmap/MindMapViewer";
+import PdfViewer from "@/components/PdfViewer";
+import MindMapViewer from "@/components/MindMapViewer";
 import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import PdfTabs from "@/components/PdfTabs";
@@ -52,7 +53,7 @@ const PanelStructure = ({
           className={`${showChat ? 'w-full md:w-1/2 lg:w-3/5' : 'w-full'} h-full flex flex-col overflow-hidden border-r`}
         >
           <PdfTabs onTabChange={handleTabChange} />
-          <PdfViewer onScrollToPdfPosition={scrollToPdfPosition} />
+          <PdfViewer onScrollToPdfPosition={handleScrollToPdfPosition} />
         </div>
       )}
 
@@ -62,7 +63,7 @@ const PanelStructure = ({
           toggleChat={toggleChat}
           explainText={explainText}
           explainImage={explainImage}
-          onScrollToPdfPosition={scrollToPdfPosition}
+          onScrollToPdfPosition={handleScrollToPdfPosition}
           onExplainText={onExplainText}
           activePdfKey={activePdfKey}
         />
@@ -74,7 +75,7 @@ const PanelStructure = ({
 
       {/* Mobile chat sheet */}
       <MobileChatSheet 
-        onScrollToPdfPosition={scrollToPdfPosition}
+        onScrollToPdfPosition={handleScrollToPdfPosition}
         explainText={explainText}
         activePdfKey={activePdfKey} 
       />
