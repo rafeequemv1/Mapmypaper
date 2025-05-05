@@ -36,7 +36,7 @@ const PdfAreaSelector: React.FC<PdfAreaSelectorProps> = ({
     canvas.width = containerRect.width;
     canvas.height = containerRect.height;
     
-    // Initialize fabric.js canvas
+    // Initialize fabric.js canvas with semi-transparent overlay
     const fabricInstance = new fabric.Canvas(canvas, {
       selection: false,
       preserveObjectStacking: true,
@@ -44,6 +44,12 @@ const PdfAreaSelector: React.FC<PdfAreaSelectorProps> = ({
     });
     
     setFabricCanvas(fabricInstance);
+    
+    // Clear any toast messages that might be showing from previous attempts
+    toast({
+      title: "Selection Mode",
+      description: "Click and drag to select an area of the PDF",
+    });
     
     // Clean up function
     return () => {
@@ -102,9 +108,15 @@ const PdfAreaSelector: React.FC<PdfAreaSelectorProps> = ({
         selectable: false
       });
       
+      // Remove any existing rectangles to ensure only one at a time
+      if (selectionRect) {
+        fabricCanvas.remove(selectionRect);
+      }
+      
       fabricCanvas.add(rect);
       fabricCanvas.renderAll();
       setSelectionRect(rect);
+      setShowTooltip(false); // Hide tooltip when starting a new selection
     });
 
     fabricCanvas.on('mouse:move', (options) => {
@@ -238,7 +250,7 @@ const PdfAreaSelector: React.FC<PdfAreaSelectorProps> = ({
       <canvas
         ref={canvasRef}
         className="absolute inset-0"
-        style={{ pointerEvents: 'all' }}
+        style={{ pointerEvents: 'all', cursor: 'crosshair' }}
       />
       
       {showTooltip && (

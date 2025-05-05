@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -360,6 +359,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Handle cancel area selection
+    const handleCancelAreaSelection = () => {
+      setIsAreaSelectActive(false);
+    };
+
     // PDF Toolbar (make even more compact)
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
@@ -514,7 +518,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   containerRef={pdfContainerRef}
                   isActive={isAreaSelectActive}
                   onCapture={handleAreaCaptured}
-                  onCancel={() => setIsAreaSelectActive(false)}
+                  onCancel={handleCancelAreaSelection}
                 />
               )}
             </div>
