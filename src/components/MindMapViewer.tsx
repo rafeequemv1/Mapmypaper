@@ -1,18 +1,20 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, LoaderCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
   onMindMapReady?: (mindMap: MindElixirInstance) => void;
   onExplainText?: (text: string) => void;
   onRequestOpenChat?: () => void;
-  pdfKey?: string | null; // Add the pdfKey prop
+  pdfKey?: string | null;
+  isLoading?: boolean; // New prop for loading state
 }
 
 // Enhanced helper function to format node text with line breaks and add emojis
@@ -178,13 +180,50 @@ const stringToColor = (str: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onRequestOpenChat, pdfKey }: MindMapViewerProps) => {
+const MindMapViewer = ({ 
+  isMapGenerated, 
+  onMindMapReady, 
+  onExplainText, 
+  onRequestOpenChat, 
+  pdfKey,
+  isLoading = false 
+}: MindMapViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string>('');
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const { toast } = useToast();
+
+  // Simulate loading progress when isLoading is true
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isLoading) {
+      setLoadingProgress(0);
+      interval = setInterval(() => {
+        setLoadingProgress(prev => {
+          const next = prev + 10;
+          return next > 90 ? 90 : next; // Cap at 90% until actually loaded
+        });
+      }, 100);
+    } else if (loadingProgress > 0 && loadingProgress < 100) {
+      // Complete the loading when isLoading becomes false
+      setLoadingProgress(100);
+      
+      // Reset after animation completes
+      const timeout = setTimeout(() => {
+        setLoadingProgress(0);
+      }, 1000);
+      
+      return () => clearTimeout(timeout);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoading, loadingProgress]);
 
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
@@ -696,91 +735,24 @@ const MindMapViewer = ({ isMapGenerated, onMindMapReady, onExplainText, onReques
   };
 
   return (
-    <div className="w-full h-full flex flex-col min-h-[300px]">
+    <div className="w-full h-full flex flex-col min-h-[300px] relative">
+      {/* Loading overlay - show when isLoading is true */}
+      {(isLoading || loadingProgress > 0) && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center">
+          <LoaderCircle className="h-12 w-12 text-purple-600 animate-spin mb-4" />
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Loading Mind Map</h3>
+          <div className="w-64">
+            <Progress value={loadingProgress} className="h-2" />
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            Preparing visualization...
+          </p>
+        </div>
+      )}
+      
       {!isMapGenerated && (
         <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
           <div className="mb-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-gray-400"
-            >
-              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No Mind Map Available</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Upload a document or start a chat to generate a mind map.
-          </p>
-        </div>
-      )}
-      
-      {isMapGenerated && (
-        <>
-          <div
-            ref={containerRef}
-            className="w-full flex-grow relative min-h-[300px] overflow-hidden"
-            style={{ 
-              backgroundColor: "#F9F7FF",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              transition: "all 0.3s ease",
-            }}
-          ></div>
-          
-          {showSummary && (
-            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 text-sm max-h-[300px] overflow-auto">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Mind Map Summary</h3>
-                <Button variant="ghost" size="sm" onClick={() => setShowSummary(false)}>Close</Button>
-              </div>
-              <div className="prose prose-sm">
-                {summary.split('\n').map((line, i) => (
-                  <div key={i} className="mb-1">
-                    {line.startsWith('#') ? (
-                      <h4 className="text-md font-bold">{line.replace(/^#+\s/, '')}</h4>
-                    ) : line.startsWith('-') ? (
-                      <div className="flex items-start">
-                        <span className="mr-2">•</span>
-                        <span>{line.replace(/^-\s/, '')}</span>
-                      </div>
-                    ) : (
-                      <p>{line}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={() => {
-                    if (onExplainText && summary) {
-                      onExplainText(summary);
-                    }
-                    if (onRequestOpenChat) {
-                      onRequestOpenChat();
-                    }
-                  }}
-                >
-                  <FileText size={16} />
-                  Send to Chat
-                </Button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-};
-
-export default MindMapViewer;

@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -34,6 +35,7 @@ const PanelStructure = ({
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
+  const [isLoadingMindMap, setIsLoadingMindMap] = useState(false);
   const { toast } = useToast();
 
   // PDF tab state (active key)
@@ -49,6 +51,9 @@ const PanelStructure = ({
   // Handle active PDF change
   const handleTabChange = async (key: string) => {
     try {
+      // Set loading state to true
+      setIsLoadingMindMap(true);
+      
       setActivePdfKey(key);
       
       // Set the selected PDF as current in IndexedDB
@@ -59,8 +64,14 @@ const PanelStructure = ({
         title: "PDF Loaded",
         description: "PDF and mindmap switched successfully.",
       });
+
+      // Give some time for the mindmap to load before removing loading state
+      setTimeout(() => {
+        setIsLoadingMindMap(false);
+      }, 1000);
     } catch (error) {
       console.error("Error switching PDF:", error);
+      setIsLoadingMindMap(false);
       toast({
         title: "Error Switching PDF",
         description: "Failed to switch to the selected PDF.",
@@ -245,6 +256,7 @@ const PanelStructure = ({
             onMindMapReady={onMindMapReady}
             onExplainText={onExplainText}
             pdfKey={activePdfKey}
+            isLoading={isLoadingMindMap}
           />
         </div>
 
