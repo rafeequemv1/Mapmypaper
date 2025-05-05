@@ -218,17 +218,17 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent 
-          className="max-w-[75vw] max-h-[90vh] overflow-hidden flex flex-col"
-          style={{ maxWidth: '75vw' }} // explicitly reduce width by ~25% from default max-w-4xl (~1120px)
+          className="max-w-[65vw] max-h-[90vh] overflow-hidden flex flex-col"
+          style={{ maxWidth: '65vw' }} // Reduced from 75vw to 65vw
         >
           <DialogHeader>
-            <DialogTitle className="flex justify-between items-center">
+            <DialogTitle className="flex justify-between items-center text-xl">
               <span>Paper Summary</span>
               <div className="flex gap-2">
                 <Button 
                   size="sm"
                   onClick={() => setConfirmDownload(true)}
-                  className="flex gap-1 text-black"
+                  className="flex gap-1 text-black text-sm"
                   variant="outline"
                 >
                   <Download className="h-4 w-4" />
@@ -239,7 +239,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                   variant="outline"
                   onClick={generateSummary}
                   disabled={isLoading}
-                  className="flex gap-1 text-black"
+                  className="flex gap-1 text-black text-sm"
                 >
                   {isLoading ? (
                     <>
@@ -257,7 +257,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="text-center text-muted-foreground">
+              <p className="text-center text-muted-foreground text-base">
                 Generating comprehensive summary of the paper...
               </p>
             </div>
@@ -267,8 +267,8 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                 {/* Always show Easy Summary Section */}
                 {(easySummaryBullets.length > 0) && (
                   <div className="summary-section">
-                    <h3 className="text-lg font-bold border-b pb-1 mb-2">Easy Summary</h3>
-                    <ul className="list-disc list-inside space-y-1 text-sm">
+                    <h3 className="text-xl font-bold border-b pb-1 mb-3">Easy Summary</h3>
+                    <ul className="list-disc list-inside space-y-2 text-base">
                       {easySummaryBullets.map((bullet, idx) => (
                         <li key={idx}>{bullet}</li>
                       ))}
@@ -282,8 +282,8 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                   if (key === "Summary") return null;
                   return (
                     <div key={key} className="summary-section">
-                      <h3 className="text-lg font-bold border-b pb-1 mb-2">{key}</h3>
-                      <div className="summary-section-content pl-2">
+                      <h3 className="text-xl font-bold border-b pb-1 mb-3">{key}</h3>
+                      <div className="summary-section-content pl-2 text-base leading-relaxed">
                         {value}
                       </div>
                     </div>
@@ -296,16 +296,16 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
       </Dialog>
 
       <AlertDialog open={confirmDownload} onOpenChange={setConfirmDownload}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Download Summary as PDF</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg">Download Summary as PDF</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
               This will create a PDF document containing the complete summary of the paper.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={downloadSummaryAsPDF}>
+            <AlertDialogCancel className="text-base">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={downloadSummaryAsPDF} className="text-base">
               Download
             </AlertDialogAction>
           </AlertDialogFooter>
