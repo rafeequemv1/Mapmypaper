@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -39,6 +40,8 @@ const PanelStructure = ({
   
   // New state for captured image
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  // Flag to prevent duplicate image submissions
+  const [isCapturingImage, setIsCapturingImage] = useState(false);
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -96,6 +99,13 @@ const PanelStructure = ({
       await setCurrentPdf(key);
       
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
+      
+      // Dispatch an event to inform chat components about tab change
+      window.dispatchEvent(
+        new CustomEvent('pdfTabChanged', { 
+          detail: { activeKey: key } 
+        })
+      );
       
       // Only display the toast for switching if we're not loading a new mindmap
       if (isMindMapReady(key)) {
@@ -254,6 +264,10 @@ const PanelStructure = ({
 
   // Handle image captured from PDF viewer
   const handleImageCaptured = (imageData: string) => {
+    // Prevent duplicate submissions
+    if (isCapturingImage) return;
+    
+    setIsCapturingImage(true);
     setCapturedImage(imageData);
     
     // Open chat panel if not already open
@@ -265,6 +279,11 @@ const PanelStructure = ({
     window.dispatchEvent(
       new CustomEvent('openChatWithImage', { detail: { imageData } })
     );
+    
+    // Reset the capturing flag after a brief delay
+    setTimeout(() => {
+      setIsCapturingImage(false);
+    }, 500);
   };
 
   useEffect(() => {

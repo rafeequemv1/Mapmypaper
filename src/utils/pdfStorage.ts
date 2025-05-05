@@ -146,6 +146,36 @@ export const setCurrentPdf = async (key: string): Promise<void> => {
   }
 };
 
+// Get current active PDF key
+export const getCurrentPdfKey = async (): Promise<string | null> => {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([PDF_STORE], 'readonly');
+      const store = transaction.objectStore(PDF_STORE);
+      
+      const keyRequest = store.get(CURRENT_PDF_KEY);
+      
+      keyRequest.onsuccess = () => {
+        const currentKey = keyRequest.result;
+        resolve(currentKey || null);
+      };
+      
+      keyRequest.onerror = () => {
+        console.error("Error retrieving current PDF key:", keyRequest.error);
+        reject(new Error(`Failed to get current PDF key: ${keyRequest.error?.message || 'Unknown error'}`));
+      };
+      
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error("Error in getCurrentPdfKey:", error);
+    throw error;
+  }
+};
+
 // Get current active PDF data
 export const getCurrentPdfData = async (): Promise<string | null> => {
   try {
@@ -233,6 +263,16 @@ export const isMindMapReady = (pdfKey: string): boolean => {
   } catch (error) {
     console.error("Error checking if mindmap is ready:", error);
     return false;
+  }
+};
+
+// Get specific PDF text from sessionStorage
+export const getPdfText = (pdfKey: string): string | null => {
+  try {
+    return sessionStorage.getItem(`pdfText_${pdfKey}`);
+  } catch (error) {
+    console.error("Error getting PDF text:", error);
+    return null;
   }
 };
 

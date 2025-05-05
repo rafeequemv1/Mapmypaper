@@ -8,8 +8,7 @@ import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini }
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import { Switch } from "@/components/ui/switch";
 import PdfToText from "react-pdftotext";
-import { storePdfData, getPdfData, isMindMapReady } from "@/utils/pdfStorage";
-import { generateMindMapFromText } from "@/services/geminiService";
+import { storePdfData, getPdfData, isMindMapReady, getCurrentPdfKey, getPdfText } from "@/utils/pdfStorage";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 interface ChatPanelProps {
@@ -37,7 +36,7 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
-  // New state for the PDF toggle
+  // Toggle state for PDF context mode
   const [useAllPdfs, setUseAllPdfs] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -46,6 +45,34 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [attachedFilePreview, setAttachedFilePreview] = useState<string | null>(null);
   const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
   const [processingPdf, setProcessingPdf] = useState(false);
+  const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
+
+  // Get and track the active PDF key
+  useEffect(() => {
+    const fetchCurrentPdfKey = async () => {
+      try {
+        const currentKey = await getCurrentPdfKey();
+        setActivePdfKey(currentKey);
+      } catch (error) {
+        console.error("Error fetching current PDF key:", error);
+      }
+    };
+    
+    fetchCurrentPdfKey();
+    
+    // Listen for PDF tab changes
+    const handlePdfTabChange = (e: CustomEvent) => {
+      if (e.detail?.activeKey) {
+        setActivePdfKey(e.detail.activeKey);
+      }
+    };
+    
+    window.addEventListener('pdfTabChanged', handlePdfTabChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('pdfTabChanged', handlePdfTabChange as EventListener);
+    };
+  }, []);
 
   // Listen for toggle state changes from mobile chat
   useEffect(() => {
@@ -102,10 +129,11 @@ Feel free to ask me any questions! Here are some suggestions:`
         
         try {
           // Enhanced prompt to encourage complete sentences and page citations
-          // Now passing the useAllPdfs parameter
+          // Now passing the useAllPdfs parameter and activePdfKey
           const response = await chatWithGeminiAboutPdf(
             `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
-            useAllPdfs
+            useAllPdfs,
+            activePdfKey
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -142,7 +170,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainText();
-  }, [explainText, toast, useAllPdfs]);
+  }, [explainText, toast, useAllPdfs, activePdfKey]);
 
   // Process image to explain when it changes
   useEffect(() => {
@@ -162,12 +190,10 @@ Feel free to ask me any questions! Here are some suggestions:`
         
         try {
           // Call AI with the image
-          // Here we're using the existing chatWithGeminiAboutPdf function
-          // In a real implementation, you would want to modify this to accept an image
-          // or create a new function that can process images
           const response = await chatWithGeminiAboutPdf(
             "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection.",
-            useAllPdfs
+            useAllPdfs,
+            activePdfKey
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -204,7 +230,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainImage();
-  }, [explainImage, toast, useAllPdfs]);
+  }, [explainImage, toast, useAllPdfs, activePdfKey]);
 
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -499,7 +525,8 @@ Would you like to:
         // Enhanced prompt to encourage complete sentences and page citations with emojis
         const response = await chatWithGeminiAboutPdf(
           `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
-          useAllPdfs
+          useAllPdfs,
+          activePdfKey // Pass the active PDF key so the chat service knows which PDF to reference
         );
         
         // Hide typing indicator and add AI response with enhanced formatting
@@ -576,10 +603,11 @@ Would you like to:
     setIsTyping(true);
     
     try {
-      // Pass useAllPdfs parameter
+      // Pass useAllPdfs parameter and active PDF key
       const response = await chatWithGeminiAboutPdf(
         `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
-        useAllPdfs
+        useAllPdfs,
+        activePdfKey
       );
       
       setIsTyping(false);
@@ -659,7 +687,7 @@ Would you like to:
         style={{ display: "none" }}
         onChange={handleFilesUpload}
       />
-      {/* Chat panel header with new toggle */}
+      {/* Chat panel header with toggle */}
       <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
