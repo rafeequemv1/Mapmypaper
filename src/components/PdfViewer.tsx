@@ -1,4 +1,3 @@
-
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -69,11 +68,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
-        setLoadError(null);
         
         // First, get the current PDF key
         const currentPdfKey = getCurrentPdf();
-        console.log("Current PDF key from localStorage:", currentPdfKey);
         
         if (currentPdfKey) {
           // Then get the actual PDF data using the key
@@ -81,11 +78,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           if (data) {
             setPdfData(data);
-            setPdfKey(currentPdfKey);
             console.log("PDF data loaded successfully from IndexedDB");
           } else {
             setLoadError("No PDF found. Please upload a PDF document first.");
-            console.error("No PDF data found for key:", currentPdfKey);
             toast({
               title: "No PDF Found",
               description: "Please upload a PDF document first.",
@@ -94,7 +89,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           }
         } else {
           setLoadError("No PDF selected. Please upload a PDF document first.");
-          console.error("No current PDF key in localStorage");
           toast({
             title: "No PDF Selected",
             description: "Please upload a PDF document first.",
@@ -459,8 +453,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         
         // Use improved html2canvas options for better rendering
         const htmlCanvasOptions = {
-          backgroundColor: "#ffffff", // Always use white background
-          scale: window.devicePixelRatio || 2, // Use higher scale for better quality
+          backgroundColor: null,
+          scale: window.devicePixelRatio || 1,
           useCORS: true,
           allowTaint: true,
           scrollX: -scrollLeft,
@@ -485,14 +479,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         };
         
         // First attempt with white background to avoid black images
-        html2canvas(targetPage as HTMLElement, htmlCanvasOptions).then((pageCanvas) => {
+        html2canvas(targetPage as HTMLElement, {
+          ...htmlCanvasOptions,
+          backgroundColor: '#ffffff', // Set white background explicitly
+        }).then((pageCanvas) => {
           // Calculate the correct position on the page
           const rectLeft = Math.min(rect.left!, rect.left! + rect.width!);
           const rectTop = Math.min(rect.top!, rect.top! + rect.height!);
           
           // Calculate exact position where to start copying from the source image
-          const sourceX = Math.max(0, (rectLeft - (pageRect.left - viewportRect.left) + scrollLeft)) * (window.devicePixelRatio || 2);
-          const sourceY = Math.max(0, (rectTop - (pageRect.top - viewportRect.top) + scrollTop)) * (window.devicePixelRatio || 2);
+          const sourceX = (rectLeft - (pageRect.left - viewportRect.left) + scrollLeft) * window.devicePixelRatio;
+          const sourceY = (rectTop - (pageRect.top - viewportRect.top) + scrollTop) * window.devicePixelRatio;
           
           // Create a temporary canvas to crop the area
           const tempCanvas = document.createElement('canvas');
@@ -504,8 +501,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           }
           
           // Set the temp canvas dimensions to the selection dimensions
-          const captureWidth = Math.abs(rect.width! || 1);
-          const captureHeight = Math.abs(rect.height! || 1);
+          const captureWidth = Math.abs(rect.width!);
+          const captureHeight = Math.abs(rect.height!);
           tempCanvas.width = captureWidth;
           tempCanvas.height = captureHeight;
           
@@ -519,8 +516,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               pageCanvas, 
               sourceX, 
               sourceY, 
-              captureWidth * (window.devicePixelRatio || 2), 
-              captureHeight * (window.devicePixelRatio || 2),
+              captureWidth * window.devicePixelRatio, 
+              captureHeight * window.devicePixelRatio,
               0, 
               0, 
               captureWidth, 
@@ -567,8 +564,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 // Draw the cropped portion
                 ctx.drawImage(
                   img, 
-                  sourceX / (window.devicePixelRatio || 2), 
-                  sourceY / (window.devicePixelRatio || 2), 
+                  sourceX / window.devicePixelRatio, 
+                  sourceY / window.devicePixelRatio, 
                   captureWidth, 
                   captureHeight, 
                   0, 
@@ -832,7 +829,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         onPdfLoaded();
       }
       setLoadError(null);
-      console.log(`PDF loaded successfully with ${numPages} pages`);
     };
 
     const onPageRenderSuccess = (page: any) => {
@@ -924,183 +920,3 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             Capture Area
           </button>
         </div>
-      );
-    };
-    
-    return (
-      <div className="flex flex-col h-full" data-pdf-viewer ref={pdfContainerRef}>
-        {/* PDF Toolbar */}
-        <div className="flex justify-between items-center p-2 border-b bg-white">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={zoomIn}
-              title="Zoom In"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={zoomOut}
-              title="Zoom Out"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={resetZoom}
-              title="Reset Zoom"
-            >
-              <RotateCw className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowSearch(!showSearch)}
-              title="Search"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSelectionMode}
-              title="Select Area"
-              className={isSelectionMode ? "bg-blue-100" : ""}
-            >
-              <Crop className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {showSearch && (
-            <div className="flex items-center space-x-2">
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-48 h-8 text-sm"
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSearch}
-                className="h-8 text-xs"
-              >
-                Search
-              </Button>
-              {searchResults.length > 0 && (
-                <>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => navigateSearch("prev")}
-                    className="h-8 w-8"
-                    title="Previous Result"
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => navigateSearch("next")}
-                    className="h-8 w-8"
-                    title="Next Result"
-                  >
-                    ↓
-                  </Button>
-                  <span className="text-xs text-gray-500">
-                    {currentSearchIndex + 1} / {searchResults.length}
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* PDF Document */}
-        <ScrollArea className="flex-1 w-full">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p>Loading PDF...</p>
-              </div>
-            </div>
-          ) : loadError ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center max-w-md p-4">
-                <p className="text-red-500 mb-2">Error loading PDF</p>
-                <p>{loadError}</p>
-                <Button 
-                  className="mt-4" 
-                  onClick={loadPdfData} 
-                  variant="outline"
-                >
-                  Retry
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Document
-              file={pdfData}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={(error) => {
-                console.error("Error loading PDF:", error);
-                setLoadError(`Failed to load PDF: ${error.message}`);
-              }}
-              loading={
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p>Loading PDF...</p>
-                  </div>
-                </div>
-              }
-              className="flex flex-col items-center py-4"
-              renderMode="canvas"
-            >
-              {Array.from(new Array(numPages), (_, index) => (
-                <div
-                  key={`page_${index + 1}`}
-                  className="mb-8 shadow-md relative"
-                  ref={setPageRef(index)}
-                  data-page-number={index + 1}
-                >
-                  <Page
-                    pageNumber={index + 1}
-                    width={getOptimalPageWidth()}
-                    scale={scale}
-                    onRenderSuccess={onPageRenderSuccess}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                    canvasRef={(page) => {
-                      // Attach data attributes
-                      if (page) {
-                        page.setAttribute('data-page-number', String(index + 1));
-                      }
-                    }}
-                  />
-                  <div className="absolute bottom-2 right-2 bg-white bg-opacity-70 px-2 py-0.5 rounded text-xs">
-                    {index + 1} / {numPages}
-                  </div>
-                </div>
-              ))}
-            </Document>
-          )}
-        </ScrollArea>
-
-        {/* Area selection tooltips */}
-        {showAreaTooltip && isSelectionMode && <AreaSelectionTooltip />}
-        {showTextTooltip && <TextSelectionTooltip />}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;

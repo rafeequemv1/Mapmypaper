@@ -57,34 +57,19 @@ const PanelStructure = ({
   const [processingPdfKey, setProcessingPdfKey] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState("");
-  const [pdfLoaded, setPdfLoaded] = useState(false);
 
   // Fetch all PDF keys on mount
   useEffect(() => {
     const fetchPdfKeys = async () => {
-      console.log("Fetching PDF keys...");
-      try {
-        const keys = await getAllPdfKeys();
-        console.log("Retrieved PDF keys:", keys);
-        setAllPdfKeys(keys);
-        
-        // If we have keys but no active key, set the first one as active
-        if (keys.length > 0 && !activePdfKey) {
-          console.log("Setting first key as active:", keys[0]);
-          onActivePdfKeyChange(keys[0]);
-          await setCurrentPdf(keys[0]);
-        }
-      } catch (error) {
-        console.error("Error fetching PDF keys:", error);
-      }
+      const keys = await getAllPdfKeys();
+      setAllPdfKeys(keys);
     };
     fetchPdfKeys();
-  }, [activePdfKey, onActivePdfKeyChange]);
+  }, []);
 
   // Handle active PDF change
   const handleTabChange = async (key: string) => {
     try {
-      console.log("Changing to PDF key:", key);
       onActivePdfKeyChange(key);
       
       // Set the selected PDF as current in IndexedDB
@@ -95,7 +80,6 @@ const PanelStructure = ({
         title: "PDF Loaded",
         description: "PDF and mindmap switched successfully.",
       });
-      setPdfLoaded(true);
     } catch (error) {
       console.error("Error switching PDF:", error);
       toast({
@@ -108,7 +92,6 @@ const PanelStructure = ({
 
   // Remove pdf logic
   function handleRemovePdf(key: string) {
-    console.log("Removing PDF with key:", key);
     sessionStorage.removeItem(`pdfMeta_${key}`);
     sessionStorage.removeItem(`mindMapData_${key}`);
     sessionStorage.removeItem(`hasPdfData_${key}`);
@@ -118,7 +101,6 @@ const PanelStructure = ({
         handleTabChange(getPdfKey(metas[0]));
       } else {
         onActivePdfKeyChange(null);
-        setPdfLoaded(false);
       }
     }
     window.dispatchEvent(new CustomEvent('pdfListUpdated'));
@@ -205,7 +187,6 @@ const PanelStructure = ({
         // Optionally, select this tab
         onActivePdfKeyChange(pdfKey);
         await setCurrentPdf(pdfKey); // Set as current PDF
-        setPdfLoaded(true);
         
         setProcessingProgress(100);
         setProcessingStage("Complete");
@@ -296,11 +277,6 @@ const PanelStructure = ({
     }
   };
 
-  const handlePdfLoaded = () => {
-    console.log("PDF loaded callback");
-    setPdfLoaded(true);
-  };
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isRendered) {
@@ -371,7 +347,6 @@ const PanelStructure = ({
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
                 onImageCaptured={handlePdfAreaCaptured}
-                onPdfLoaded={handlePdfLoaded}
               />
             </TooltipProvider>
           </div>
