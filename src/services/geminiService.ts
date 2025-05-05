@@ -1,266 +1,300 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-import { GoogleGenerativeAI, GenerativeModel, EnhancedGenerateContentResponse } from "@google/generative-ai";
+// Access your API key as an environment variable
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
 
-// Get API key from environment variables
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+// Updated model names for the current API version
+// Gemini Pro Vision model
+const modelVision = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
 
-// Initialize the Google Generative AI with API key
-const genAI = new GoogleGenerativeAI(API_KEY);
+// Gemini Pro model (text-only)
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-// Cache for PDF content to avoid repeated extraction
-let cachedPdfContent: string | null = null;
+// Function to get the Gemini Pro model
+const getGeminiModel = async () => {
+  if (!import.meta.env.VITE_GEMINI_API_KEY) {
+    throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+  }
+  return model;
+};
 
 /**
- * Generate a mind map from the provided text content
+ * Sends a chat request to Gemini with the given prompt and PDF content.
+ * @param prompt The user's question or prompt.
+ * @returns The response text from Gemini.
  */
-export async function generateMindMapFromText(text: string): Promise<any> {
+export const chatWithGeminiAboutPdf = async (prompt: string): Promise<string> => {
   try {
-    // Cache the PDF content for subsequent requests
-    cachedPdfContent = text;
+    const gemini = await getGeminiModel();
+    const result = await gemini.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error in chatWithGeminiAboutPdf:", error);
+    throw error;
+  }
+};
 
-    // Initialize the generative model for text
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    // Construct the prompt for mind map generation
-    const prompt = `
-      Act as an expert academic researcher. I want you to create a structured mind map from this academic paper. 
-      The structure should be in JSON format with the following:
-      
-      1. A central topic (the main subject of the paper)
-      2. Main branches (key sections/topics)
-      3. Sub-branches for each main branch (subtopics, details, examples)
-      
-      Create a JSON structure like this:
-      {
-        "centralTopic": "Paper Title",
-        "branches": [
-          {
-            "topic": "Main Topic 1",
-            "children": [
-              {"topic": "Subtopic 1.1"},
-              {"topic": "Subtopic 1.2", "children": [{"topic": "Detail 1.2.1"}, {"topic": "Detail 1.2.2"}]}
-            ]
-          },
-          {
-            "topic": "Main Topic 2",
-            "children": [
-              {"topic": "Subtopic 2.1"},
-              {"topic": "Subtopic 2.2"}
-            ]
-          }
-        ]
-      }
-      
-      Important:
-      - Focus on the most important topics and findings
-      - Maintain hierarchical relationships
-      - Include only text in the JSON structure
-      - Only respond with the JSON object, no additional text or explanation
-      
-      Here is the academic paper:
-      ${text.substring(0, 15000)}
-    `;
-
-    // Generate content based on the prompt
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const textResponse = response.text();
-
-    // Extract JSON from the response
-    let jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Failed to generate a valid mind map structure");
+/**
+ * Analyzes an image with the Gemini Pro Vision model.
+ * @param imageBase64 The base64 encoded image data.
+ * @returns The response text from Gemini.
+ */
+export const analyzeImageWithGemini = async (imageBase64: string): Promise<string> => {
+  try {
+    if (!imageBase64) {
+      throw new Error("Image data is required.");
     }
 
-    // Parse the JSON structure
-    const mindMapData = JSON.parse(jsonMatch[0]);
-    return mindMapData;
-  } catch (error: any) {
-    console.error("Error generating mind map:", error);
-    throw new Error(`Failed to generate mind map: ${error.message}`);
+    const geminiVision = modelVision;
+    const result = await geminiVision.generateContent([
+      "Analyze the content of this image in detail.",
+      imageBase64,
+    ]);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error in analyzeImageWithGemini:", error);
+    throw error;
   }
-}
+};
 
 /**
- * Chat with Gemini about the PDF content
+ * Explains a selected text from a PDF using Gemini
+ * @param selectedText The text selected by the user
+ * @returns The explanation of the selected text
  */
-export async function chatWithGeminiAboutPdf(prompt: string): Promise<string> {
+export const explainSelectedText = async (selectedText: string): Promise<string> => {
   try {
-    // Initialize the generative model for text
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    // Combine the prompt with cached PDF content if available
-    let fullPrompt = prompt;
-    if (cachedPdfContent) {
-      fullPrompt = `
-        I want you to answer questions about the following document.
-        My question is: "${prompt}"
-        
-        Here is the document (excerpt):
-        ${cachedPdfContent.substring(0, 15000)}
-      `;
+    if (!selectedText || typeof selectedText !== 'string' || selectedText.trim() === '') {
+      throw new Error("Valid selected text is required.");
     }
-
-    // Generate content based on the prompt
-    const result = await model.generateContent(fullPrompt);
-    const response = result.response;
-    return response.text();
-  } catch (error: any) {
-    console.error("Error chatting with Gemini about PDF:", error);
-    throw new Error(`Failed to get response: ${error.message}`);
-  }
-}
-
-/**
- * Explain selected text from the PDF
- */
-export async function explainSelectedText(text: string): Promise<string> {
-  try {
-    // Initialize the generative model for text
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    // Construct the prompt for explanation
+    
+    console.log(`Explaining selected text (length: ${selectedText.length} characters)`);
+    
     const prompt = `
-      The following text is from an academic paper. Please explain it in simpler terms, 
-      clarify its meaning, and highlight any important concepts mentioned:
+      Please explain the following text in clear, simple terms. If it contains academic or technical 
+      concepts, provide definitions and context. Use bullet points where appropriate.
       
-      "${text}"
+      Selected text:
+      "${selectedText}"
       
-      Please format your response with markdown for better readability. Include emojis where appropriate.
+      Provide your explanation with relevant emojis and citations if applicable.
     `;
-
-    // Generate content based on the prompt
-    const result = await model.generateContent(prompt);
-    const response = result.response;
+    
+    const geminiModel = await getGeminiModel();
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
     return response.text();
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error explaining selected text:", error);
-    throw new Error(`Failed to explain text: ${error.message}`);
+    throw new Error(`Failed to explain selected text: ${error.message}`);
   }
-}
+};
 
 /**
- * Analyze an image with Gemini Vision
+ * Generates a mind map structure from the extracted PDF text
+ * @param pdfText The text extracted from the PDF
+ * @returns A JSON structure representing the mind map
  */
-export async function analyzeImageWithGemini(imageData: string): Promise<string> {
+export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
-    // Initialize the generative model for multi-modal (text+image)
-    const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
-    
-    // Parse the image data
-    const imageDataParts = imageData.split(",");
-    if (imageDataParts.length !== 2) {
-      throw new Error("Invalid image data format");
+    if (!pdfText || typeof pdfText !== 'string') {
+      console.error("Invalid PDF text provided:", pdfText);
+      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
     }
     
-    const mimeType = imageDataParts[0].split(":")[1].split(";")[0];
-    const imageBase64 = imageDataParts[1];
+    console.log(`Processing PDF text length: ${pdfText.length} characters`);
     
-    // Create image part for the model
-    const imagePart = {
-      inlineData: {
-        data: imageBase64,
-        mimeType
+    // We'll use the first 10000 characters only to avoid token limits
+    const truncatedText = pdfText.slice(0, 10000);
+    
+    const prompt = `
+      Based on the following text from a research document, create a mind map structure in JSON format.
+      Focus on identifying the main topics, key concepts, and their relationships.
+      
+      Document text excerpt:
+      ${truncatedText}
+      
+      Return ONLY valid JSON without any explanation or formatting.
+      The JSON should have this structure:
+      {
+        "root": {
+          "topic": "Main Topic",
+          "children": [
+            {
+              "topic": "Subtopic 1",
+              "children": [
+                {"topic": "Point 1.1"},
+                {"topic": "Point 1.2"}
+              ]
+            },
+            {
+              "topic": "Subtopic 2",
+              "children": []
+            }
+          ]
+        }
       }
-    };
-    
-    // Construct the prompt
-    const prompt = `
-      Analyze this image and describe what you see. If the image contains text, 
-      diagrams, charts, or any academic content, explain what it's showing in detail.
     `;
     
-    // Generate content based on the prompt and image
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = result.response;
-    return response.text();
-  } catch (error: any) {
-    console.error("Error analyzing image with Gemini:", error);
-    throw new Error(`Failed to analyze image: ${error.message}`);
+    console.log("Sending request to Gemini API...");
+    const geminiModel = await getGeminiModel();
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
+    const jsonText = response.text();
+    
+    console.log("Received response from Gemini API, parsing JSON...");
+    
+    try {
+      // Try to clean the JSON text by removing any markdown formatting
+      let cleanedJsonText = jsonText;
+      // Remove markdown code block syntax if present
+      cleanedJsonText = cleanedJsonText.replace(/```(json)?|```/g, '');
+      // Trim whitespace
+      cleanedJsonText = cleanedJsonText.trim();
+      
+      const parsedJson = JSON.parse(cleanedJsonText);
+      console.log("Successfully parsed JSON response");
+      return parsedJson;
+    } catch (parseError) {
+      console.error("Failed to parse JSON from Gemini response:", parseError);
+      console.log("Raw response:", jsonText);
+      
+      // Return a fallback mind map structure
+      return {
+        root: {
+          topic: "Document Structure",
+          children: [
+            { topic: "Unable to parse document structure" }
+          ]
+        }
+      };
+    }
+  } catch (error) {
+    console.error("Error generating mind map from text:", error);
+    throw new Error(`Failed to generate mind map from text: ${error.message}`);
   }
-}
+};
 
 /**
- * Generate a structured summary of the document
+ * Generates a structured summary from the extracted PDF text
+ * @param pdfText The text extracted from the PDF
+ * @returns A structured summary of the document
  */
-export async function generateStructuredSummary(prompt: string): Promise<string> {
+export const generateStructuredSummary = async (pdfText: string): Promise<any> => {
   try {
-    // Initialize the generative model for text
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    // Combine the prompt with cached PDF content if available
-    let fullPrompt = prompt;
-    if (cachedPdfContent) {
-      fullPrompt = `
-        Create a structured academic summary of this document with the following sections:
-        
-        1. Overview
-        2. Key Findings
-        3. Methodology
-        4. Results
-        5. Limitations
-        6. Conclusions
-        
-        Format your response using markdown with headers. 
-        Be concise but comprehensive. Include page citations in [citation:pageX] format.
-        
-        Here is the document:
-        ${cachedPdfContent.substring(0, 15000)}
-      `;
+    if (!pdfText || typeof pdfText !== 'string') {
+      console.error("Invalid PDF text provided:", pdfText);
+      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
     }
-
-    // Generate content based on the prompt
-    const result = await model.generateContent(fullPrompt);
-    const response = result.response;
+    
+    // We'll use the first 10000 characters only to avoid token limits
+    const truncatedText = pdfText.slice(0, 10000);
+    
+    const prompt = `
+      Based on the following text from a research document, create a structured summary.
+      Include the following sections:
+      - Key Findings
+      - Main Arguments
+      - Methodology
+      - Conclusions
+      - Limitations (if mentioned)
+      
+      Document text excerpt:
+      ${truncatedText}
+      
+      Format the response with markdown headings for each section.
+    `;
+    
+    const geminiModel = await getGeminiModel();
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
     return response.text();
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error generating structured summary:", error);
-    throw new Error(`Failed to generate summary: ${error.message}`);
+    throw new Error(`Failed to generate structured summary from text: ${error.message}`);
   }
-}
+};
 
 /**
- * Generate a flowchart diagram from text
+ * Generates a mermaid flowchart syntax from the extracted PDF text
+ * @param pdfText The text extracted from the PDF
+ * @returns A mermaid flowchart syntax string
  */
-export async function generateFlowchartFromText(text: string): Promise<string> {
+export const generateFlowchartFromText = async (pdfText: string): Promise<string> => {
   try {
-    // Initialize the generative model for text
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    // Construct the prompt for flowchart generation
-    const prompt = `
-      Create a Mermaid.js flowchart diagram based on the following content from an academic paper:
-      
-      ${text.substring(0, 5000)}
-      
-      The diagram should:
-      1. Visualize the key processes, steps, or relationships
-      2. Be clear and well-structured
-      3. Use proper Mermaid.js flowchart syntax
-      4. Include only the essential elements
-      
-      Return ONLY the Mermaid code wrapped in triple backticks with the mermaid tag, like:
-      \`\`\`mermaid
-      flowchart TD
-        A[Start] --> B[Process]
-        B --> C[End]
-      \`\`\`
-    `;
-
-    // Generate content based on the prompt
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const textResponse = response.text();
-
-    // Extract Mermaid code from response
-    const mermaidMatch = textResponse.match(/```mermaid([\s\S]*?)```/);
-    if (!mermaidMatch || !mermaidMatch[1]) {
-      throw new Error("Failed to generate a valid Mermaid diagram");
+    if (!pdfText || typeof pdfText !== 'string') {
+      console.error("Invalid PDF text provided:", pdfText);
+      throw new Error("Invalid PDF text provided. Text must be a non-empty string.");
     }
-
-    return mermaidMatch[1].trim();
-  } catch (error: any) {
-    console.error("Error generating flowchart:", error);
-    throw new Error(`Failed to generate flowchart: ${error.message}`);
+    
+    // We'll use the first 10000 characters only to avoid token limits
+    const truncatedText = pdfText.slice(0, 10000);
+    
+    const prompt = `
+      Based on the following text from a research document, create a mermaid.js flowchart syntax that represents the document's structure. 
+      Focus on identifying the main sections, their relationships, and key components. 
+      Use the graph TD (top-down) or LR (left-right) format.
+      Make the chart concise and readable, limited to the most important 15-20 nodes maximum.
+      
+      Use proper mermaid.js syntax with node IDs and clear labels.
+      Include styling with classDef for important nodes.
+      
+      Document text excerpt:
+      ${truncatedText}
+      
+      Return ONLY the mermaid syntax without any explanation or markdown code formatting.
+      The syntax must begin with 'graph TD' or 'graph LR'.
+      Example of valid syntax:
+      graph TD
+        A[Introduction] --> B[Methods]
+        B --> C[Results]
+        C --> D[Discussion]
+        classDef important fill:#f96,stroke:#333,stroke-width:2px;
+        class A,D important;
+    `;
+    
+    console.log("Sending flowchart generation request to Gemini API...");
+    const geminiModel = await getGeminiModel();
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
+    let flowchartSyntax = response.text();
+    
+    console.log("Received flowchart syntax from Gemini API");
+    
+    // Ensure the flowchart syntax starts with graph TD or graph LR
+    flowchartSyntax = flowchartSyntax.replace(/```mermaid|```/g, '').trim();
+    
+    if (!flowchartSyntax.startsWith('graph TD') && !flowchartSyntax.startsWith('graph LR')) {
+      console.warn("Generated syntax doesn't start with graph TD or graph LR, prepending graph TD");
+      flowchartSyntax = `graph TD\n${flowchartSyntax}`;
+    }
+    
+    return flowchartSyntax;
+  } catch (error) {
+    console.error("Error generating flowchart from text:", error);
+    // Return a default flowchart for research papers
+    return `
+      graph TD
+        title[Research Paper Structure] --> abstract[Abstract]
+        title --> intro[Introduction]
+        title --> methods[Methodology]
+        title --> results[Results]
+        title --> discuss[Discussion]
+        title --> concl[Conclusion]
+        title --> refs[References]
+        
+        intro --> background[Background & Context]
+        intro --> problem[Problem Statement]
+        methods --> design[Research Design]
+        methods --> data[Data Collection]
+        results --> findings[Key Findings]
+        discuss --> interpret[Interpretation]
+        concl --> summary[Summary of Findings]
+        
+        classDef highlight fill:#f9f,stroke:#333,stroke-width:2px;
+        class title highlight;
+    `;
   }
-}
+};

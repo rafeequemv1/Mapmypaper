@@ -5,16 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini, explainSelectedText } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import ChatToolbar from "./ChatToolbar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
-import { pdfjs } from 'pdfjs-dist';
-import MessageEmpty from "./MessageEmpty";
+import * as pdfjs from 'pdfjs-dist';
 
-// Initialize PDF.js worker using CDN
+// Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface ChatPanelProps {
@@ -23,12 +22,12 @@ interface ChatPanelProps {
   explainImage?: string;
   onScrollToPdfPosition?: (position: string) => void;
   onExplainText?: (text: string) => void;
-  onPdfPlusClick: () => void;
+  onPdfPlusClick?: () => void;
   activePdfKey: string | null;
   allPdfKeys: string[];
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({
+const ChatPanel = ({
   toggleChat,
   explainText,
   explainImage,
@@ -36,8 +35,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   onExplainText,
   onPdfPlusClick,
   activePdfKey,
-  allPdfKeys
-}) => {
+  allPdfKeys,
+}: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -126,8 +125,16 @@ Feel free to ask me any questions! Here are some suggestions:`
         setIsTyping(true);
         
         try {
-          // Use the explainSelectedText function directly from geminiService
-          const response = await explainSelectedText(explainText);
+          // Build the prompt with context
+          let prompt = `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`;
+          
+          // If using all papers, add that context to the prompt
+          if (useAllPapers && allPdfKeys.length > 1) {
+            prompt = `Consider all uploaded documents when answering. ${prompt}`;
+          }
+          
+          // Call the API with the prompt
+          const response = await chatWithGeminiAboutPdf(prompt);
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
@@ -254,7 +261,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // New function to extract text from PDF with better error handling
+  // New function to extract text from PDF
   const extractTextFromPdf = async (file: File): Promise<string> => {
     try {
       // Convert the file to an ArrayBuffer
@@ -262,24 +269,7 @@ Feel free to ask me any questions! Here are some suggestions:`
       
       // Load the PDF document using the correct API
       const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
-      
-      // Add explicit error handling for worker
-      loadingTask.onUnsupportedFeature = (feature) => {
-        console.warn('Unsupported PDF feature:', feature);
-      };
-      
-      let pdf;
-      try {
-        pdf = await loadingTask.promise;
-      } catch (workerError) {
-        console.error('PDF.js worker error:', workerError);
-        toast({
-          title: "PDF Worker Error",
-          description: "The PDF processing worker failed to load. Please try again.",
-          variant: "destructive"
-        });
-        return `Could not extract text from PDF: PDF.js worker failed to initialize. Error: ${workerError.message}`;
-      }
+      const pdf = await loadingTask.promise;
       
       let fullText = '';
       
@@ -295,7 +285,7 @@ Feel free to ask me any questions! Here are some suggestions:`
       }
       
       return fullText;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error extracting text from PDF:', error);
       return `Could not extract text from PDF: ${error.message}`;
     }
@@ -400,14 +390,14 @@ Feel free to ask me any questions! Here are some suggestions:`
         }
         
         // Add citation instructions
-        prompt += ` Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`;
+        prompt += ` Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`;
         
         // If using all papers, add that context to the prompt
         if (useAllPapers && allPdfKeys.length > 1) {
           prompt = `Consider all uploaded documents when answering. ${prompt}`;
         }
         
-        // Make sure this is using the updated chatWithGeminiAboutPdf function
+        // Call the API with the prompt
         const response = await chatWithGeminiAboutPdf(prompt);
         
         // Hide typing indicator and add AI response with enhanced formatting
@@ -685,30 +675,6 @@ Feel free to ask me any questions! Here are some suggestions:`
     }
   };
 
-  // Show message empty state if no PDF is available
-  if (allPdfKeys.length === 0 || !activePdfKey) {
-    return (
-      <div className="flex flex-col h-full border-l">
-        <div className="flex items-center justify-between p-3 border-b bg-white">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            <h3 className="font-medium text-sm">Research Assistant</h3>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8" 
-            onClick={toggleChat}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        <MessageEmpty onUploadClick={onPdfPlusClick} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full border-l">
       {/* File input for attachments (hidden) */}
@@ -939,33 +905,32 @@ Feel free to ask me any questions! Here are some suggestions:`
           </div>
         )}
         
-        {/* Message input */}
+        {/* Input controls */}
         <div className="flex gap-2">
           <Textarea
-            placeholder="Ask a question..."
+            className="flex-1 min-h-10 max-h-32 resize-none"
+            placeholder={`Ask about ${useAllPapers ? 'all documents' : 'the document'}...`}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="resize-none min-h-[40px] max-h-[120px]"
           />
           <div className="flex flex-col gap-2">
-            <Button 
-              type="button" 
-              size="icon"
+            <Button
               variant="ghost"
-              className="h-9 w-9 rounded-full hover:bg-gray-100"
+              size="icon"
+              className="h-8 w-8"
               onClick={handleAttachClick}
+              title="Attach file"
             >
-              <Paperclip className="h-5 w-5 text-gray-500" />
+              <Paperclip className="h-4 w-4" />
             </Button>
             <Button 
-              type="button" 
-              size="icon"
-              className="h-9 w-9 rounded-full"
+              className="shrink-0" 
+              size="sm" 
               onClick={handleSendMessage}
               disabled={!inputValue.trim() && !attachedFile}
             >
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4" />
             </Button>
           </div>
         </div>

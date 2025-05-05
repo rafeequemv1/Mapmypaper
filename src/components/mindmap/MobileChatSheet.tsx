@@ -1,3 +1,4 @@
+
 import { MessageSquare, Copy, Check, FileText, Paperclip, X, Send } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
 import { pdfjs } from 'react-pdf';
 
-// Initialize PDF.js worker using CDN
+// Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface MobileChatSheetProps {
@@ -190,7 +191,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     processExplainText();
   }, [explainText, isSheetOpen, toast, activePdfKey, useAllPapers, allPdfKeys]);
   
-  // New function to extract text from PDF with enhanced error handling
+  // New function to extract text from PDF
   const extractTextFromPdf = async (file: File): Promise<string> => {
     try {
       // Convert the file to an ArrayBuffer
@@ -198,19 +199,7 @@ Feel free to ask me any questions! Here are some suggestions:`
       
       // Load the PDF document using the correct API
       const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
-      
-      // Add explicit error handling for worker
-      loadingTask.onUnsupportedFeature = (feature) => {
-        console.warn('Unsupported PDF feature:', feature);
-      };
-      
-      let pdf;
-      try {
-        pdf = await loadingTask.promise;
-      } catch (workerError) {
-        console.error('PDF.js worker error:', workerError);
-        return `Could not extract text from PDF: PDF.js worker failed to initialize. Error: ${workerError.message}`;
-      }
+      const pdf = await loadingTask.promise;
       
       let fullText = '';
       
@@ -226,7 +215,7 @@ Feel free to ask me any questions! Here are some suggestions:`
       }
       
       return fullText;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error extracting text from PDF:', error);
       return `Could not extract text from PDF: ${error.message}`;
     }
