@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -756,3 +757,41 @@ const MindMapViewer = ({
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-gray-400"
+            >
+              <path d="M17 11h1a3 3 0 0 1 0 6h-1"></path>
+              <path d="M9 12v6"></path>
+              <path d="M13 12v6"></path>
+              <path d="M9 6V3"></path>
+              <path d="M9 9V6a3 3 0 0 1 6 0v3"></path>
+              <path d="M7 21h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Z"></path>
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No mind map generated</h3>
+          <p className="text-gray-600 mb-4">
+            Load a PDF from the left panel to generate a mind map.
+          </p>
+          <Button variant="outline" className="flex items-center gap-2">
+            <FileText size={16} />
+            <span>Upload a PDF</span>
+          </Button>
+        </div>
+      )}
+      
+      <div 
+        ref={containerRef} 
+        id="map" 
+        className={`w-full h-full flex-grow ${isReady ? '' : 'opacity-0'}`}
+      ></div>
+    </div>
+  );
+};
+
+export default MindMapViewer;
