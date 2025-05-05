@@ -6,7 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdfKey, getPdfData, clearPdfData, isMindMapReady } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf, getPdfData, clearPdfData, isMindMapReady } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -36,6 +36,9 @@ const PanelStructure = ({
   const [isRendered, setIsRendered] = useState(false);
   const [isLoadingMindMap, setIsLoadingMindMap] = useState(false);
   const { toast } = useToast();
+  
+  // New state for captured image
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -74,7 +77,7 @@ const PanelStructure = ({
         if (metas.length > 0 && getPdfKey(metas[0]) !== key) {
           // Switch to another available PDF
           setActivePdfKey(getPdfKey(metas[0]));
-          await setCurrentPdfKey(getPdfKey(metas[0]));
+          await setCurrentPdf(getPdfKey(metas[0]));
           window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         } else if (metas.length === 0) {
           // No PDFs left
@@ -90,7 +93,7 @@ const PanelStructure = ({
       }
       
       // Set the selected PDF as current in IndexedDB
-      await setCurrentPdfKey(key);
+      await setCurrentPdf(key);
       
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
       
@@ -207,6 +210,13 @@ const PanelStructure = ({
           setIsLoadingMindMap(false);
           continue;
         }
+        
+        // IMPORTANT: Store extracted text separately for each PDF
+        sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
+        
+        // Also set as current PDF text for backward compatibility
+        sessionStorage.setItem('pdfText', extractedText);
+        
         // Generate mindmap data
         const mindMapData = await generateMindMapFromText(extractedText);
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
@@ -214,7 +224,7 @@ const PanelStructure = ({
         
         // Optionally, select this tab
         setActivePdfKey(pdfKey);
-        await setCurrentPdfKey(pdfKey); // Set as current PDF
+        await setCurrentPdf(pdfKey); // Set as current PDF
         window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
         setIsLoadingMindMap(false);
@@ -240,6 +250,21 @@ const PanelStructure = ({
       fileInputRef.current.value = ""; // reset for re-uploading same file
       fileInputRef.current.click();
     }
+  };
+
+  // Handle image captured from PDF viewer
+  const handleImageCaptured = (imageData: string) => {
+    setCapturedImage(imageData);
+    
+    // Open chat panel if not already open
+    if (!showChat) {
+      toggleChat();
+    }
+    
+    // Dispatch event to send image to chat
+    window.dispatchEvent(
+      new CustomEvent('openChatWithImage', { detail: { imageData } })
+    );
   };
 
   useEffect(() => {
@@ -280,6 +305,10 @@ const PanelStructure = ({
     }
   };
 
+  if (!isRendered) {
+    return <div className="h-full w-full flex justify-center items-center">Loading panels...</div>;
+  }
+
   return (
     <>
       <input
@@ -304,6 +333,7 @@ const PanelStructure = ({
               <PdfViewer 
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
+                onImageCaptured={handleImageCaptured}
               />
             </TooltipProvider>
           </div>
@@ -325,6 +355,7 @@ const PanelStructure = ({
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}
+              explainImage={capturedImage}
               onExplainText={onExplainText}
               onScrollToPdfPosition={handleScrollToPdfPosition}
             />
@@ -334,6 +365,7 @@ const PanelStructure = ({
         <MobileChatSheet 
           onScrollToPdfPosition={handleScrollToPdfPosition}
           explainText={explainText}
+          explainImage={capturedImage}
         />
       </div>
     </>

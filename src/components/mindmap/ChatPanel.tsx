@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini, comparePdfsWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import { Switch } from "@/components/ui/switch";
 import PdfToText from "react-pdftotext";
-import { storePdfData, getPdfData, getCurrentPdfData, isMindMapReady, getCurrentPdfKey } from "@/utils/pdfStorage";
+import { storePdfData, getPdfData, isMindMapReady } from "@/utils/pdfStorage";
+import { generateMindMapFromText } from "@/services/geminiService";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 interface ChatPanelProps {
@@ -18,7 +20,7 @@ interface ChatPanelProps {
   onExplainText?: (text: string) => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition, onExplainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -35,6 +37,8 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
+  // New state for the PDF toggle
+  const [useAllPdfs, setUseAllPdfs] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // New states for file attachment preview
@@ -43,31 +47,30 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
   const [processingPdf, setProcessingPdf] = useState(false);
 
-  // Track the active PDF key for context
-  const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
-
+  // Listen for toggle state changes from mobile chat
   useEffect(() => {
-    // Get the current PDF key when component mounts
-    const getCurrentKey = async () => {
-      const currentKey = await getCurrentPdfKey();
-      setActivePdfKey(currentKey);
-    };
-    
-    getCurrentKey();
-    
-    // Listen for PDF switches
-    const handlePdfSwitch = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail?.pdfKey) {
-        setActivePdfKey(customEvent.detail.pdfKey);
+    const handleToggleChange = (e: CustomEvent) => {
+      if (e.detail?.useAllPdfs !== undefined) {
+        setUseAllPdfs(e.detail.useAllPdfs);
       }
     };
     
-    window.addEventListener('pdfSwitched', handlePdfSwitch);
+    window.addEventListener('chatToggleChanged', handleToggleChange as EventListener);
+    
     return () => {
-      window.removeEventListener('pdfSwitched', handlePdfSwitch);
+      window.removeEventListener('chatToggleChanged', handleToggleChange as EventListener);
     };
   }, []);
+
+  // Broadcast toggle state changes
+  useEffect(() => {
+    // Emit event when toggle changes so mobile chat can sync
+    window.dispatchEvent(
+      new CustomEvent('chatToggleChanged', { 
+        detail: { useAllPdfs } 
+      })
+    );
+  }, [useAllPdfs]);
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -99,8 +102,10 @@ Feel free to ask me any questions! Here are some suggestions:`
         
         try {
           // Enhanced prompt to encourage complete sentences and page citations
+          // Now passing the useAllPdfs parameter
           const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
+            useAllPdfs
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -137,7 +142,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainText();
-  }, [explainText, toast]);
+  }, [explainText, toast, useAllPdfs]);
 
   // Process image to explain when it changes
   useEffect(() => {
@@ -161,7 +166,8 @@ Feel free to ask me any questions! Here are some suggestions:`
           // In a real implementation, you would want to modify this to accept an image
           // or create a new function that can process images
           const response = await chatWithGeminiAboutPdf(
-            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection."
+            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection.",
+            useAllPdfs
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -198,7 +204,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainImage();
-  }, [explainImage, toast]);
+  }, [explainImage, toast, useAllPdfs]);
 
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -220,7 +226,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // Enhanced PDF processing with comparison to active document
+  // Modified function to process PDF file without creating mindmap
   const processPdfFile = async (file: File) => {
     setProcessingPdf(true);
     
@@ -228,12 +234,12 @@ Feel free to ask me any questions! Here are some suggestions:`
       // Add user message about PDF upload
       setMessages(prev => [...prev, { 
         role: 'user',
-        content: `I've uploaded a PDF: "${file.name}" for analysis and comparison`,
+        content: `I've uploaded a PDF: "${file.name}" for context`,
         filename: file.name,
         filetype: file.type
       }]);
       
-      // Show typing indicator
+      // Show typing indicator for PDF processing
       setIsTyping(true);
       
       // Extract text from PDF
@@ -249,52 +255,22 @@ Feel free to ask me any questions! Here are some suggestions:`
         return;
       }
       
-      // Store PDF data temporarily for comparison
-      const uploadedPdfKey = getPdfKey({ 
-        name: file.name, 
-        size: file.size, 
-        lastModified: file.lastModified 
-      });
-      
-      // Check if active PDF exists for comparison
-      if (activePdfKey) {
-        try {
-          // Get active PDF text
-          const activePdfData = await getPdfData(activePdfKey);
-          if (activePdfData) {
-            // Compare PDFs using Gemini
-            const comparisonResult = await comparePdfsWithGemini(
-              extractedText,
-              file.name,
-              activePdfKey
-            );
-            
-            // Add success message with comparison
-            setIsTyping(false);
-            setMessages(prev => [...prev, { 
-              role: 'assistant',
-              content: formatAIResponse(`📄 **PDF Comparison Analysis**
+      // Add success message
+      setIsTyping(false);
+      setMessages(prev => [...prev, { 
+        role: 'assistant',
+        content: formatAIResponse(`📄 **PDF Processed Successfully!**
 
-I've analyzed "${file.name}" and compared it with the main document you're currently viewing in the mindmap.
+I've analyzed "${file.name}" and can now discuss its contents. How can I help you with this document? You can ask me:
 
-${comparisonResult}
+- To summarize key points
+- Explain specific sections
+- Compare it with the main document
+- Answer questions about its content
 
-What specific aspects would you like me to elaborate on?`),
-              isHtml: true
-            }]);
-          } else {
-            // If active PDF data couldn't be retrieved
-            handleRegularPdfProcessing(extractedText, file);
-          }
-        } catch (error) {
-          console.error("Error comparing PDFs:", error);
-          // Fallback to regular processing
-          handleRegularPdfProcessing(extractedText, file);
-        }
-      } else {
-        // No active PDF for comparison, just process normally
-        handleRegularPdfProcessing(extractedText, file);
-      }
+What would you like to know?`),
+        isHtml: true
+      }]);
       
       toast({
         title: "Success",
@@ -319,23 +295,61 @@ What specific aspects would you like me to elaborate on?`),
     }
   };
 
-  // Helper function for regular PDF processing without comparison
-  const handleRegularPdfProcessing = (extractedText: string, file: File) => {
-    setIsTyping(false);
-    setMessages(prev => [...prev, { 
-      role: 'assistant',
-      content: formatAIResponse(`📄 **PDF Processed Successfully!**
-
-I've analyzed "${file.name}" and can now discuss its contents. How can I help you with this document? You can ask me:
-
-- To summarize key points
-- Explain specific sections
-- Answer questions about its content
-
-What would you like to know?`),
-      isHtml: true
-    }]);
-  };
+  // Listen for custom image capture events
+  useEffect(() => {
+    const handleImageCapture = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.imageData) {
+        // Add user message with the captured image
+        setMessages(prev => [...prev, { 
+          role: 'user', 
+          content: "Please explain this captured area from the document:", 
+          image: customEvent.detail.imageData 
+        }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        // Process the image with Gemini Vision
+        analyzeImageWithGemini(customEvent.detail.imageData)
+          .then(response => {
+            // Hide typing indicator and add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev, 
+              { 
+                role: 'assistant', 
+                content: formatAIResponse(response),
+                isHtml: true 
+              }
+            ]);
+          })
+          .catch(error => {
+            setIsTyping(false);
+            console.error("Image analysis error:", error);
+            setMessages(prev => [
+              ...prev, 
+              { 
+                role: 'assistant', 
+                content: "Sorry, I encountered an error analyzing this image. Please try again." 
+              }
+            ]);
+            
+            toast({
+              title: "Analysis Error",
+              description: "Failed to analyze the captured image.",
+              variant: "destructive"
+            });
+          });
+      }
+    };
+    
+    window.addEventListener('openChatWithImage', handleImageCapture);
+    
+    return () => {
+      window.removeEventListener('openChatWithImage', handleImageCapture);
+    };
+  }, [toast]);
 
   const handleSendMessage = async () => {
     if (inputValue.trim() || attachedFile) {
@@ -484,7 +498,8 @@ Would you like to:
       try {
         // Enhanced prompt to encourage complete sentences and page citations with emojis
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
+          useAllPdfs
         );
         
         // Hide typing indicator and add AI response with enhanced formatting
@@ -561,8 +576,10 @@ Would you like to:
     setIsTyping(true);
     
     try {
+      // Pass useAllPdfs parameter
       const response = await chatWithGeminiAboutPdf(
-        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
+        useAllPdfs
       );
       
       setIsTyping(false);
@@ -642,11 +659,22 @@ Would you like to:
         style={{ display: "none" }}
         onChange={handleFilesUpload}
       />
-      {/* Chat panel header */}
+      {/* Chat panel header with new toggle */}
       <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           <h3 className="font-medium text-sm">Research Assistant</h3>
+          
+          {/* Add the toggle switch here */}
+          <div className="flex items-center space-x-2 ml-3 border-l pl-3">
+            <span className="text-xs text-gray-500">Active PDF</span>
+            <Switch
+              checked={useAllPdfs}
+              onCheckedChange={setUseAllPdfs}
+              aria-label="Toggle between active PDF and all PDFs"
+            />
+            <span className="text-xs text-gray-500">All PDFs</span>
+          </div>
         </div>
         <Button 
           variant="ghost" 
