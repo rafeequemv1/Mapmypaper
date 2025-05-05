@@ -2,8 +2,9 @@
 import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Define the props with the correct React component type
 interface MindMapViewerProps {
-  MindMapComponent: React.FC<any>;
+  MindMapComponent: React.ComponentType<any>;
 }
 
 const MindMapViewer: React.FC<MindMapViewerProps> = ({ MindMapComponent }) => {

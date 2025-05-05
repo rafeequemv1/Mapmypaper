@@ -10,21 +10,21 @@ interface UseGenerateMindMapProps {
 export function useGenerateMindMap({ onMindMapReady }: UseGenerateMindMapProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // Create a function component instead of inline JSX
-  const MindMapComponent = useCallback(() => {
-    // Return a React functional component
-    return function MockMindMapComponent() {
-      return React.createElement(
+  // Create a React component directly (not a function that returns a component)
+  const MindMapComponent = React.memo(() => {
+    return React.createElement(
+      "div",
+      { className: "w-full h-full flex items-center justify-center" },
+      React.createElement(
         "div",
-        { className: "w-full h-full flex items-center justify-center" },
-        React.createElement(
-          "div",
-          { className: "text-gray-500" },
-          "Mind map will be displayed here"
-        )
-      );
-    };
-  }, []);
+        { className: "text-gray-500" },
+        "Mind map will be displayed here"
+      )
+    );
+  });
+  
+  // Give the component a display name for better debugging
+  MindMapComponent.displayName = 'MindMapPlaceholder';
 
   const handlePdfLoaded = useCallback(() => {
     setIsGenerating(true);
