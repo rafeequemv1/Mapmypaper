@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 import { getAllPdfText } from "@/utils/pdfStorage";
@@ -184,24 +183,6 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
   }
 };
 
-// Helper function to get all PDF text from storage
-export const getAllPdfText = (): string => {
-  const pdfs = getAllPdfs();
-  let allText = "";
-  
-  // Combine text from all PDFs
-  pdfs.forEach(pdf => {
-    const key = getPdfKey(pdf);
-    const text = sessionStorage.getItem(`pdfText_${key}`);
-    if (text) {
-      allText += `\n\n=== PDF: ${pdf.name} ===\n\n`;
-      allText += text;
-    }
-  });
-  
-  return allText || "";
-};
-
 // Chat with Gemini about PDF content with citation support
 export const chatWithGeminiAboutPdf = async (message: string, useAllPdfs = false): Promise<string> => {
   try {
@@ -209,7 +190,7 @@ export const chatWithGeminiAboutPdf = async (message: string, useAllPdfs = false
     let pdfText = "";
     
     if (useAllPdfs) {
-      // Get text from all PDFs using the enhanced function
+      // Get text from all PDFs using the imported function from pdfStorage.ts
       pdfText = await getAllPdfText();
     } else {
       // Get text from the active PDF
@@ -271,7 +252,7 @@ export const analyzeImageWithGemini = async (imageData: string): Promise<string>
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     // Process image data to ensure proper format
-    // Remove data URL prefix if present (e.g., "data:image/png;base64,")
+    // Remove data URL prefix if present (e.g., "data:image/png;base64,\")
     const base64Image = imageData.split(',')[1] || imageData;
     
     // Create the content parts including the image
@@ -832,33 +813,4 @@ export const analyzeFileWithGemini = async (fileContent: string, fileName: strin
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    const prompt = `
-      You are an AI research assistant helping a user understand a text file in the context of their research paper. 
-      
-      FILE DETAILS:
-      File name: ${fileName}
-      File type: ${fileType}
-      
-      FILE CONTENT (may be truncated):
-      ${fileContent.slice(0, 10000)}
-      
-      PDF CONTEXT (for reference, may be truncated):
-      ${pdfContext}
-      
-      Please analyze this file and provide the following information:
-      1. A concise summary of what the file contains
-      2. How this file might relate to the research paper (if applicable)
-      3. Any technical details that might be relevant (e.g., for code files, what the code does)
-      4. Any patterns, trends, or interesting points in the data (if it's a data file)
-      
-      Format your response with proper markdown, using headings, bullet points, and code blocks where appropriate.
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Gemini API file analysis error:", error);
-    return "Sorry, I encountered an error while analyzing the file. Please try again.";
-  }
-};
+    const prompt

@@ -4,6 +4,9 @@
  * This solves the issue with sessionStorage quota limitations
  */
 
+// Import necessary types from PdfTabs
+import { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
+
 // Define the DB name and version
 const DB_NAME = 'pdfStorage';
 const DB_VERSION = 1;
