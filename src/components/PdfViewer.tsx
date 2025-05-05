@@ -58,9 +58,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [isSnapshotMode, setIsSnapshotMode] = useState(false);
     const selectionRectRef = useRef<ReturnType<typeof createSelectionRect> | null>(null);
 
-    // Add a state to track whether we're currently processing an image capture
-    const [isProcessingCapture, setIsProcessingCapture] = useState(false);
-
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
@@ -183,7 +180,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
-    // Updated effect for snapshot mode with capture tooltip - modified to prevent duplicate events
+    // Updated effect for snapshot mode with capture tooltip
     useEffect(() => {
       if (!pdfContainerRef.current || !viewportRef.current) return;
       
@@ -230,13 +227,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           }
         };
         
-        // Add new handler for the captureArea custom event with safeguards against duplicate events
+        // Add new handler for the captureArea custom event
         const handleCaptureArea = async (e: Event) => {
           const customEvent = e as CustomEvent;
-          if (!customEvent.detail?.rect || !pdfContainerRef.current || isProcessingCapture) return;
-          
-          // Set processing flag to true to prevent duplicate captures
-          setIsProcessingCapture(true);
+          if (!customEvent.detail?.rect || !pdfContainerRef.current) return;
           
           const rect = customEvent.detail.rect;
           
@@ -269,11 +263,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             setIsSnapshotMode(false);
             // Re-enable text selection when capture is complete
             toggleTextSelection(true);
-            
-            // Reset processing flag after a short delay
-            setTimeout(() => {
-              setIsProcessingCapture(false);
-            }, 500);
           }
         };
         
@@ -307,7 +296,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         // Re-enable text selection when exiting snapshot mode
         toggleTextSelection(true);
       }
-    }, [isSnapshotMode, toast, onImageCaptured, isProcessingCapture]);
+    }, [isSnapshotMode, toast, onImageCaptured]);
 
     const handleExplainText = () => {
       if (selectedText && onTextSelected) {

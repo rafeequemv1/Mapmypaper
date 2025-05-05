@@ -34,13 +34,11 @@ const PanelStructure = ({
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
-  
   const [isLoadingMindMap, setIsLoadingMindMap] = useState(false);
   const { toast } = useToast();
   
-  // New state for captured image with flag to prevent double processing
+  // New state for captured image
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [processingCapture, setProcessingCapture] = useState(false);
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -256,13 +254,6 @@ const PanelStructure = ({
 
   // Handle image captured from PDF viewer
   const handleImageCaptured = (imageData: string) => {
-    // Exit if we're currently processing an image to prevent duplicates
-    if (processingCapture) return;
-    
-    // Set processing flag to true to prevent duplicate captures
-    setProcessingCapture(true);
-    
-    // Store the image data
     setCapturedImage(imageData);
     
     // Open chat panel if not already open
@@ -274,11 +265,6 @@ const PanelStructure = ({
     window.dispatchEvent(
       new CustomEvent('openChatWithImage', { detail: { imageData } })
     );
-    
-    // Reset processing flag after a delay to prevent rapid successive captures
-    setTimeout(() => {
-      setProcessingCapture(false);
-    }, 500);
   };
 
   useEffect(() => {
@@ -307,36 +293,6 @@ const PanelStructure = ({
       window.removeEventListener('openChatWithText', handleOpenChat);
     };
   }, [showChat, toggleChat, onExplainText]);
-
-  // Add new effect to handle openChatWithImage event coming from outside sources
-  useEffect(() => {
-    const handleOpenChatWithImage = (event: CustomEvent) => {
-      // Only process if we're not already handling an image capture
-      if (processingCapture) return;
-      
-      if (event.detail?.imageData) {
-        setProcessingCapture(true);
-        setCapturedImage(event.detail.imageData);
-        
-        // Open chat if not already open
-        if (!showChat) {
-          toggleChat();
-        }
-        
-        // Reset processing flag after a delay
-        setTimeout(() => {
-          setProcessingCapture(false);
-        }, 500);
-      }
-    };
-    
-    // Add event listener with correct typing
-    window.addEventListener('openChatWithImage', handleOpenChatWithImage as EventListener);
-    
-    return () => {
-      window.removeEventListener('openChatWithImage', handleOpenChatWithImage as EventListener);
-    };
-  }, [showChat, toggleChat, processingCapture]);
 
   const handleScrollToPdfPosition = (position: string) => {
     if (pdfViewerRef.current) {
