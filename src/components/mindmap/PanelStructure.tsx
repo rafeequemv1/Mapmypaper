@@ -36,6 +36,9 @@ const PanelStructure = ({
   const [isRendered, setIsRendered] = useState(false);
   const [isLoadingMindMap, setIsLoadingMindMap] = useState(false);
   const { toast } = useToast();
+  
+  // New state for captured image
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -249,6 +252,21 @@ const PanelStructure = ({
     }
   };
 
+  // Handle image captured from PDF viewer
+  const handleImageCaptured = (imageData: string) => {
+    setCapturedImage(imageData);
+    
+    // Open chat panel if not already open
+    if (!showChat) {
+      toggleChat();
+    }
+    
+    // Dispatch event to send image to chat
+    window.dispatchEvent(
+      new CustomEvent('openChatWithImage', { detail: { imageData } })
+    );
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsRendered(true);
@@ -315,6 +333,7 @@ const PanelStructure = ({
               <PdfViewer 
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
+                onImageCaptured={handleImageCaptured}
               />
             </TooltipProvider>
           </div>
@@ -336,6 +355,7 @@ const PanelStructure = ({
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}
+              explainImage={capturedImage}
               onExplainText={onExplainText}
               onScrollToPdfPosition={handleScrollToPdfPosition}
             />
@@ -345,6 +365,7 @@ const PanelStructure = ({
         <MobileChatSheet 
           onScrollToPdfPosition={handleScrollToPdfPosition}
           explainText={explainText}
+          explainImage={capturedImage}
         />
       </div>
     </>

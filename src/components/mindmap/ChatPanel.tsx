@@ -20,7 +20,7 @@ interface ChatPanelProps {
   onExplainText?: (text: string) => void;
 }
 
-const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition, onExplainText }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -295,6 +295,62 @@ What would you like to know?`),
     }
   };
 
+  // Listen for custom image capture events
+  useEffect(() => {
+    const handleImageCapture = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.imageData) {
+        // Add user message with the captured image
+        setMessages(prev => [...prev, { 
+          role: 'user', 
+          content: "Please explain this captured area from the document:", 
+          image: customEvent.detail.imageData 
+        }]);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        // Process the image with Gemini Vision
+        analyzeImageWithGemini(customEvent.detail.imageData)
+          .then(response => {
+            // Hide typing indicator and add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev, 
+              { 
+                role: 'assistant', 
+                content: formatAIResponse(response),
+                isHtml: true 
+              }
+            ]);
+          })
+          .catch(error => {
+            setIsTyping(false);
+            console.error("Image analysis error:", error);
+            setMessages(prev => [
+              ...prev, 
+              { 
+                role: 'assistant', 
+                content: "Sorry, I encountered an error analyzing this image. Please try again." 
+              }
+            ]);
+            
+            toast({
+              title: "Analysis Error",
+              description: "Failed to analyze the captured image.",
+              variant: "destructive"
+            });
+          });
+      }
+    };
+    
+    window.addEventListener('openChatWithImage', handleImageCapture);
+    
+    return () => {
+      window.removeEventListener('openChatWithImage', handleImageCapture);
+    };
+  }, [toast]);
+
   const handleSendMessage = async () => {
     if (inputValue.trim() || attachedFile) {
       // If there's an attached file, handle it first
@@ -522,7 +578,7 @@ Would you like to:
     try {
       // Pass useAllPdfs parameter
       const response = await chatWithGeminiAboutPdf(
-        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
+        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
         useAllPdfs
       );
       
