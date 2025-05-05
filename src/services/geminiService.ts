@@ -503,7 +503,7 @@ const cleanMermaidSyntax = (code: string): string => {
       });
       
       // Handle parentheses ()
-      fixedLine = fixedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
+      fixedLine = fixedLine.replace(/\(([^\)]*)-([^)]*)\)/g, function(match, p1, p2) {
         return '(' + p1 + ' ' + p2 + ')';
       });
       
@@ -816,4 +816,4 @@ const cleanMindmapSyntax = (code: string): string => {
 export const analyzeFileWithGemini = async (fileContent: string, fileName: string, fileType: string): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage for context
-    const pdfText = sessionStorage.getItem('pdfText
+    const pdfText = sessionStorage.getItem('pdfText');
