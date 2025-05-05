@@ -13,7 +13,7 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
-import { Activity, ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
+import { Loader2, ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface FlowchartModalProps {
@@ -47,8 +47,8 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // Generate flowchart when modal is opened
   useEffect(() => {
     if (open && !initialLoadAttempted && mountedRef.current) {
-      // Delay generation slightly to ensure modal is fully opened
-      const timer = setTimeout(() => {
+      // Ensure mermaid is available before attempting to generate flowchart
+      setTimeout(() => {
         if (mountedRef.current) {
           setIsRendering(true);
           generateFlowchart()
@@ -69,9 +69,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               }
             });
         }
-      }, 500);
-      
-      return () => clearTimeout(timer);
+      }, 800); // Increased delay to ensure modal is fully opened and libraries are loaded
     }
   }, [open, generateFlowchart, initialLoadAttempted, toast]);
 
@@ -163,7 +161,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               className="flex items-center gap-1"
               title="Reset zoom to fit diagram"
             >
-              <RefreshCw className="h-4 w-4 mr-1" />
+              <MousePointer className="h-4 w-4 mr-1" />
               {Math.round(zoomLevel * 100)}%
             </Button>
             <Button
@@ -188,9 +186,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           </Button>
         </div>
         
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden border border-gray-200 rounded-md bg-white">
           {/* Preview - Takes up all space */}
-          <div className="h-full flex flex-col">
+          <div className="h-full flex flex-col relative">
             <FlowchartPreview
               code={code || defaultFlowchart}
               error={error}
