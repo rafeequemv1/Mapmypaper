@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,82 +9,55 @@ import { useToast } from "@/hooks/use-toast";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import { getAllPdfs } from "@/components/PdfTabs";
 
-// Define a flexible interface to handle different document types
+// Define the Summary type to match the structure returned by the API
 interface Summary {
   Summary: string;
-  [key: string]: string; // Allow for flexible fields based on document type
+  "Key Findings": string;
+  Objectives: string;
+  Methods: string;
+  Results: string;
+  Conclusions: string;
+  "Key Concepts": string;
 }
 
-// Default empty summary with just the required Summary field
+// Default empty summary
 const emptyMappedSummary: Summary = {
-  Summary: "Loading..."
+  Summary: "Loading...",
+  "Key Findings": "Loading...",
+  Objectives: "Loading...",
+  Methods: "Loading...",
+  Results: "Loading...",
+  Conclusions: "Loading...",
+  "Key Concepts": "Loading..."
 };
 
 interface SummaryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pdfKey?: string | null;
 }
 
-const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
+const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const { toast } = useToast();
   const [summary, setSummary] = useState<Summary>(emptyMappedSummary);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
-  const [documentType, setDocumentType] = useState<string>("document");
-  const [documentName, setDocumentName] = useState<string>("Document");
-
-  // Set the document name based on the key
-  useEffect(() => {
-    if (pdfKey) {
-      const pdfs = getAllPdfs();
-      const currentPdf = pdfs.find(pdf => pdf.name === pdfKey.split('_')[0]);
-      if (currentPdf) {
-        setDocumentName(currentPdf.name);
-      } else {
-        setDocumentName("Document");
-      }
-    } else {
-      setDocumentName("Document");
-    }
-  }, [pdfKey]);
 
   // Generate summary when the modal is opened
   useEffect(() => {
     if (open) {
       generateSummary();
     }
-  }, [open, pdfKey]);
+  }, [open]);
 
   // Generate summary from PDF
   const generateSummary = async () => {
     setIsLoading(true);
     try {
-      // Update the call to match the function signature (no arguments)
       const result = await generateStructuredSummary();
-      
-      // Try to detect the document type from the result keys
-      if (result["Key Findings"] && result["Methods"]) {
-        setDocumentType("research paper");
-      } else if (result["Implementation"] && result["Requirements"]) {
-        setDocumentType("technical document");
-      } else if (result["Business Context"] && result["Financial Implications"]) {
-        setDocumentType("business document");
-      } else if (result["Legal Framework"] && result["Parties & Obligations"]) {
-        setDocumentType("legal document");
-      } else if (result["Main Event"] && result["Key Players"]) {
-        setDocumentType("news article");
-      } else if (result["Themes"] && result["Characters/Elements"]) {
-        setDocumentType("creative work");
-      } else if (result["Main Points"] && result["Structure"]) {
-        setDocumentType("document");
-      }
-      
       // Cast the response to Summary type
-      setSummary(result as Summary);
+      setSummary(result as unknown as Summary);
     } catch (error) {
       console.error("Error generating summary:", error);
       toast({
@@ -187,12 +161,6 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
     return acc;
   }, {} as Record<string, string>);
 
-  // Get a title based on the detected document type
-  const getModalTitle = () => {
-    const typeTitle = documentType.charAt(0).toUpperCase() + documentType.slice(1);
-    return `${documentName} - ${typeTitle} Summary`;
-  };
-
   // Download summary as PDF
   const downloadSummaryAsPDF = async () => {
     if (!summaryRef.current) return;
@@ -224,16 +192,13 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
 
       // Add title
       pdf.setFontSize(20);
-      pdf.text(getModalTitle(), 105, 15, { align: 'center' });
+      pdf.text("Paper Summary", 105, 15, { align: 'center' });
 
       // Add the captured content
       pdf.addImage(imgData, 'PNG', 0, 25, imgWidth, imgHeight - 25);
 
-      // Generate a filename based on the document name
-      const filename = documentName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') + '_summary.pdf';
-      
-      // Save the PDF with appropriate filename
-      pdf.save(filename);
+      // Save the PDF
+      pdf.save("paper_summary.pdf");
 
       toast({
         title: "PDF Generated",
@@ -249,7 +214,6 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
     }
   };
 
-  
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -259,7 +223,7 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
         >
           <DialogHeader>
             <DialogTitle className="flex justify-between items-center">
-              <span>{getModalTitle()}</span>
+              <span>Paper Summary</span>
               <div className="flex gap-2">
                 <Button 
                   size="sm"
@@ -294,7 +258,7 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
             <div className="flex flex-col items-center justify-center h-full p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-center text-muted-foreground">
-                Generating comprehensive summary of {documentName}...
+                Generating comprehensive summary of the paper...
               </p>
             </div>
           ) : (
@@ -336,7 +300,7 @@ const SummaryModal = ({ open, onOpenChange, pdfKey }: SummaryModalProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Download Summary as PDF</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create a PDF document containing the complete summary of {documentName}.
+              This will create a PDF document containing the complete summary of the paper.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
