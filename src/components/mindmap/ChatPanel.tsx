@@ -1,17 +1,16 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import ChatToolbar from "./ChatToolbar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAllPdfs } from "@/components/PdfTabs";
-import * as pdfjs from 'pdfjs-dist';
+import * as pdfjs from 'react-pdf';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -267,9 +266,8 @@ Feel free to ask me any questions! Here are some suggestions:`
       // Convert the file to an ArrayBuffer
       const arrayBuffer = await file.arrayBuffer();
       
-      // Load the PDF document using the correct API
-      const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
+      // Load the PDF document
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       
       let fullText = '';
       
@@ -551,130 +549,6 @@ Feel free to ask me any questions! Here are some suggestions:`
     return match ? match.name : "Unknown PDF";
   };
 
-  // New functions for toolbar actions
-  const handleAnalyzeImage = () => {
-    // Open file picker limited to images
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files[0]) {
-        const file = target.files[0];
-        const reader = new FileReader();
-        
-        reader.onload = async (event) => {
-          if (event.target?.result) {
-            const imageData = event.target.result as string;
-            
-            // Add user message with image
-            setMessages(prev => [...prev, { 
-              role: 'user', 
-              content: "Please analyze this image:", 
-              image: imageData,
-              pdfKey: activePdfKey
-            }]);
-            
-            // Show typing indicator
-            setIsTyping(true);
-            
-            try {
-              // Call the Gemini Vision API
-              const response = await analyzeImageWithGemini(imageData);
-              
-              // Add AI response
-              setIsTyping(false);
-              setMessages(prev => [
-                ...prev, 
-                { 
-                  role: 'assistant', 
-                  content: formatAIResponse(response),
-                  isHtml: true,
-                  pdfKey: activePdfKey
-                }
-              ]);
-            } catch (error) {
-              console.error("Image analysis error:", error);
-              setIsTyping(false);
-              setMessages(prev => [
-                ...prev, 
-                { 
-                  role: 'assistant', 
-                  content: "Sorry, I encountered an error analyzing this image. Please try again.",
-                  pdfKey: activePdfKey
-                }
-              ]);
-              
-              toast({
-                title: "Analysis Error",
-                description: "Failed to analyze the image.",
-                variant: "destructive"
-              });
-            }
-          }
-        };
-        
-        reader.readAsDataURL(file);
-      }
-    };
-    input.click();
-  };
-
-  const handleSummarizeText = async () => {
-    // Add user message
-    setMessages(prev => [...prev, { 
-      role: 'user', 
-      content: "Please summarize the main points of this document.",
-      pdfKey: activePdfKey
-    }]);
-    
-    // Show typing indicator
-    setIsTyping(true);
-    
-    try {
-      // Build the prompt with context
-      let prompt = `Summarize the main points of this document in a clear, structured way. Include key findings, methodologies, and conclusions. Format your response with markdown headings and bullet points for clarity. Add relevant emojis to make the summary more engaging.`;
-      
-      // If using all papers, adjust the prompt
-      if (useAllPapers && allPdfKeys.length > 1) {
-        prompt = `Consider all uploaded documents when answering. ${prompt}`;
-      }
-      
-      // Call the API with the prompt
-      const response = await chatWithGeminiAboutPdf(prompt);
-      
-      // Hide typing indicator and add AI response with formatting
-      setIsTyping(false);
-      setMessages(prev => [
-        ...prev, 
-        { 
-          role: 'assistant', 
-          content: formatAIResponse(response),
-          isHtml: true,
-          pdfKey: useAllPapers ? 'all' : activePdfKey
-        }
-      ]);
-    } catch (error) {
-      // Handle errors
-      setIsTyping(false);
-      console.error("Summarization error:", error);
-      setMessages(prev => [
-        ...prev, 
-        { 
-          role: 'assistant', 
-          content: "Sorry, I encountered an error summarizing the document. Please try again.",
-          pdfKey: activePdfKey
-        }
-      ]);
-      
-      toast({
-        title: "Summarization Error",
-        description: "Failed to summarize the document.",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className="flex flex-col h-full border-l">
       {/* File input for attachments (hidden) */}
@@ -719,11 +593,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         </div>
       )}
       
-      {/* ChatToolbar with new props */}
-      <ChatToolbar 
-        onAnalyzeImage={handleAnalyzeImage} 
-        onSummarizeText={handleSummarizeText} 
-      />
+      {/* Empty ChatToolbar */}
+      <ChatToolbar />
       
       {/* Chat messages area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>

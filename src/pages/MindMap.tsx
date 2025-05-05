@@ -5,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
-import MermaidModal from "@/components/mindmap/MermaidModal";
 import { MindElixirInstance } from "mind-elixir";
 
 const MindMap = () => {
@@ -13,7 +12,6 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
-  const [showMermaid, setShowMermaid] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -77,7 +75,6 @@ const MindMap = () => {
         togglePdf={() => setShowPdf(!showPdf)}
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
-        setShowMermaid={setShowMermaid}
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
@@ -99,12 +96,6 @@ const MindMap = () => {
         open={showSummary}
         onOpenChange={setShowSummary}
         pdfKey={activePdfKey}
-      />
-      
-      {/* Modal for Mermaid Flowchart */}
-      <MermaidModal 
-        open={showMermaid}
-        onOpenChange={setShowMermaid}
       />
     </div>
   );
