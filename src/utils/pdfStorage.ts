@@ -69,6 +69,7 @@ export const getPdfData = async (pdfKey: string): Promise<string | null> => {
   try {
     // Check if we have this PDF stored
     if (sessionStorage.getItem(`hasPdfData_${pdfKey}`) !== 'true') {
+      console.log(`No storage marker found for PDF: ${pdfKey}`);
       return null;
     }
     
@@ -84,6 +85,10 @@ export const getPdfData = async (pdfKey: string): Promise<string | null> => {
         if (request.result) {
           resolve(request.result.data);
         } else {
+          // Data not found in IndexedDB even though marker exists
+          console.warn(`PDF data marker exists but data not found in IndexedDB for: ${pdfKey}`);
+          // Remove the invalid marker
+          sessionStorage.removeItem(`hasPdfData_${pdfKey}`);
           resolve(null);
         }
       };

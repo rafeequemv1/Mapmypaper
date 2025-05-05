@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -7,7 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf, getPdfData, clearPdfData } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -53,8 +52,40 @@ const PanelStructure = ({
     try {
       // Set loading state to true
       setIsLoadingMindMap(true);
-      
       setActivePdfKey(key);
+      
+      // Check if PDF data exists before attempting to switch
+      const pdfDataExists = await getPdfData(key);
+      
+      if (!pdfDataExists) {
+        // If PDF data doesn't exist in IndexedDB but we have meta in sessionStorage
+        // This could happen if browser storage was cleared or after a page refresh
+        toast({
+          title: "PDF Data Missing",
+          description: "PDF data not found. You may need to re-upload this PDF.",
+          variant: "destructive",
+        });
+        
+        // Remove the orphaned PDF metadata
+        sessionStorage.removeItem(`pdfMeta_${key}`);
+        sessionStorage.removeItem(`mindMapData_${key}`);
+        sessionStorage.removeItem(`hasPdfData_${key}`);
+        
+        // Try to find another PDF to switch to
+        const metas = getAllPdfs();
+        if (metas.length > 0 && getPdfKey(metas[0]) !== key) {
+          // Switch to another available PDF
+          setActivePdfKey(getPdfKey(metas[0]));
+          await setCurrentPdf(getPdfKey(metas[0]));
+          window.dispatchEvent(new CustomEvent('pdfListUpdated'));
+        } else if (metas.length === 0) {
+          // No PDFs left
+          setActivePdfKey(null);
+        }
+        
+        setIsLoadingMindMap(false);
+        return;
+      }
       
       // Set the selected PDF as current in IndexedDB
       await setCurrentPdf(key);
@@ -74,7 +105,7 @@ const PanelStructure = ({
       setIsLoadingMindMap(false);
       toast({
         title: "Error Switching PDF",
-        description: "Failed to switch to the selected PDF.",
+        description: "Failed to switch to the selected PDF. The PDF may be missing.",
         variant: "destructive",
       });
     }
@@ -82,22 +113,37 @@ const PanelStructure = ({
 
   // Remove pdf logic
   function handleRemovePdf(key: string) {
-    sessionStorage.removeItem(`pdfMeta_${key}`);
-    sessionStorage.removeItem(`mindMapData_${key}`);
-    sessionStorage.removeItem(`hasPdfData_${key}`);
-    const metas = getAllPdfs();
-    if (activePdfKey === key) {
-      if (metas.length > 0) {
-        handleTabChange(getPdfKey(metas[0]));
-      } else {
-        setActivePdfKey(null);
-      }
-    }
-    window.dispatchEvent(new CustomEvent('pdfListUpdated'));
-    toast({
-      title: "PDF Removed",
-      description: "The PDF has been removed.",
-    });
+    // First remove from IndexedDB
+    clearPdfData(key)
+      .then(() => {
+        // Then remove from session storage
+        sessionStorage.removeItem(`pdfMeta_${key}`);
+        sessionStorage.removeItem(`mindMapData_${key}`);
+        sessionStorage.removeItem(`hasPdfData_${key}`);
+        
+        const metas = getAllPdfs();
+        if (activePdfKey === key) {
+          if (metas.length > 0) {
+            handleTabChange(getPdfKey(metas[0]));
+          } else {
+            setActivePdfKey(null);
+          }
+        }
+        
+        window.dispatchEvent(new CustomEvent('pdfListUpdated'));
+        toast({
+          title: "PDF Removed",
+          description: "The PDF has been removed.",
+        });
+      })
+      .catch(error => {
+        console.error("Error removing PDF data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to completely remove the PDF data.",
+          variant: "destructive",
+        });
+      });
   }
 
   // Generate Mindmap after extracting PDF text
