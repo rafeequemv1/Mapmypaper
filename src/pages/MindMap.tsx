@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +84,7 @@ const MindMap = () => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
+      {/* Header is still included but visually hidden */}
       <Header 
         togglePdf={() => setShowPdf(!showPdf)}
         toggleChat={() => setShowChat(!showChat)}
