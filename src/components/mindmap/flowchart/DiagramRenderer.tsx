@@ -26,6 +26,7 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
   const [isRendering, setIsRendering] = useState(false);
   const renderIdRef = useRef<string>(`diagram-${Date.now()}`);
   const mountedRef = useRef(true);
+  const previousCodeRef = useRef<string>(code);
 
   useEffect(() => {
     return () => {
@@ -34,6 +35,13 @@ const DiagramRenderer: React.FC<DiagramRendererProps> = ({
   }, []);
   
   useEffect(() => {
+    // Check if code has changed to avoid unnecessary renders
+    if (previousCodeRef.current === code && !isGenerating && ref.current && ref.current.querySelector('svg')) {
+      return;
+    }
+    
+    previousCodeRef.current = code;
+    
     const renderDiagram = async () => {
       if (!ref.current || !code || isGenerating || error || !mountedRef.current) return;
 

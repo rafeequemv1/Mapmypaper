@@ -1,7 +1,7 @@
 
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 interface FlowchartEditorProps {
   code: string;
@@ -29,7 +29,7 @@ const FlowchartEditor = ({
           disabled={isGenerating}
           className="flex items-center gap-1"
         >
-          <RefreshCcw className="h-3.5 w-3.5" />
+          <RefreshCw className="h-3.5 w-3.5" />
           {isGenerating ? "Generating..." : "Regenerate"}
         </Button>
       </div>

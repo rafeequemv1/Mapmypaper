@@ -13,8 +13,9 @@ import FlowchartPreview from "./flowchart/FlowchartPreview";
 import FlowchartExport from "./flowchart/FlowchartExport";
 import useMermaidInit from "./flowchart/useMermaidInit";
 import useFlowchartGenerator, { defaultFlowchart } from "./flowchart/useFlowchartGenerator";
-import { Loader2, ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
+import { Code, Loader2, ZoomIn, ZoomOut, MousePointer, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import FlowchartEditor from "./flowchart/FlowchartEditor";
 
 interface FlowchartModalProps {
   open: boolean;
@@ -48,7 +49,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   useEffect(() => {
     if (open && !initialLoadAttempted && mountedRef.current) {
       // Ensure mermaid is available before attempting to generate flowchart
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         if (mountedRef.current) {
           setIsRendering(true);
           generateFlowchart()
@@ -69,7 +70,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               }
             });
         }
-      }, 800); // Increased delay to ensure modal is fully opened and libraries are loaded
+      }, 1500); // Increased delay to ensure modal is fully opened and libraries are loaded
+      
+      return () => clearTimeout(timer);
     }
   }, [open, generateFlowchart, initialLoadAttempted, toast]);
 
@@ -100,6 +103,11 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   
   const handleZoomReset = () => {
     setZoomLevel(0.8); // Reset to 80% to ensure diagram fits
+  };
+
+  // Toggle the editor visibility
+  const toggleEditor = () => {
+    setHideEditor(prev => !prev);
   };
 
   // Fit diagram to screen when window is resized
@@ -174,21 +182,47 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             </Button>
           </div>
           
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRetry}
-            className="flex items-center gap-1 ml-auto"
-            disabled={isGenerating || isRendering}
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating || isRendering ? 'animate-spin' : ''}`} />
-            {error ? "Retry Generation" : "Refresh Flowchart"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleEditor}
+              className="flex items-center gap-1"
+              title={hideEditor ? "Show Code Editor" : "Hide Code Editor"}
+            >
+              <Code className="h-4 w-4 mr-1" />
+              {hideEditor ? "Edit Syntax" : "Hide Editor"}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="flex items-center gap-1"
+              disabled={isGenerating || isRendering}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating || isRendering ? 'animate-spin' : ''}`} />
+              {error ? "Retry Generation" : "Refresh Flowchart"}
+            </Button>
+          </div>
         </div>
         
-        <div className="flex-1 overflow-hidden border border-gray-200 rounded-md bg-white">
-          {/* Preview - Takes up all space */}
-          <div className="h-full flex flex-col relative">
+        <div className={`flex-1 overflow-hidden border border-gray-200 rounded-md bg-white ${!hideEditor ? 'flex' : ''}`}>
+          {/* Editor panel - only visible when hideEditor is false */}
+          {!hideEditor && (
+            <div className="w-2/5 p-4 border-r border-gray-200 overflow-auto">
+              <FlowchartEditor 
+                code={code || defaultFlowchart} 
+                error={error}
+                isGenerating={isGenerating || isRendering}
+                onCodeChange={handleCodeChange}
+                onRegenerate={handleRetry}
+              />
+            </div>
+          )}
+          
+          {/* Preview - Takes up all space or 3/5 if editor is visible */}
+          <div className={`${!hideEditor ? 'w-3/5' : 'w-full'} h-full flex flex-col relative`}>
             <FlowchartPreview
               code={code || defaultFlowchart}
               error={error}
@@ -196,7 +230,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               theme={theme}
               previewRef={previewRef}
               zoomLevel={zoomLevel}
-              hideEditor={true}
+              hideEditor={hideEditor}
             />
           </div>
         </div>

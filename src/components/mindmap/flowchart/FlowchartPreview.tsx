@@ -19,6 +19,7 @@ const FlowchartPreview = ({
   isGenerating,
   theme,
   previewRef,
+  hideEditor = true,
   zoomLevel = 1,
 }: FlowchartPreviewProps) => {
   return (
