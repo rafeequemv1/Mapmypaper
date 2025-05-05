@@ -122,6 +122,63 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
   }
 };
 
+// Generate a structured summary of the PDF document
+export const generateStructuredSummary = async (): Promise<any> => {
+  try {
+    // Get the PDF text from the current active PDF
+    const currentPdf = sessionStorage.getItem('pdfText') || "";
+    
+    if (!currentPdf) {
+      throw new Error("No PDF text available to summarize");
+    }
+
+    // Create a prompt for structured summary generation
+    const prompt = `
+      Analyze the following academic paper or document and provide a comprehensive structured summary.
+      Use the following format, providing detailed information for each section:
+      
+      {
+        "Summary": "A concise 3-5 sentence overview of the entire document",
+        "Key Findings": "The main discoveries or conclusions",
+        "Objectives": "What the document aims to accomplish",
+        "Methods": "How the research or analysis was conducted",
+        "Results": "The outcomes of the research or analysis",
+        "Conclusions": "Final interpretations and implications",
+        "Key Concepts": "Important terminology or ideas central to understanding the document"
+      }
+      
+      Document text:
+      ${currentPdf.substring(0, 30000)}
+      
+      Respond with ONLY the JSON object. Include appropriate page citations for important information using the format [citation:pageX] where X is the page number if you can determine it.
+    `;
+
+    // Generate the structured summary
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const responseText = response.text();
+
+    // Extract the JSON part of the response
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    
+    if (jsonMatch) {
+      try {
+        const summaryData = JSON.parse(jsonMatch[0]);
+        console.log("Generated summary:", summaryData);
+        return summaryData;
+      } catch (error) {
+        console.error("Error parsing summary JSON:", error);
+        throw new Error("Failed to parse summary data");
+      }
+    } else {
+      throw new Error("Could not extract summary data from response");
+    }
+  } catch (error) {
+    console.error("Error generating structured summary:", error);
+    throw error;
+  }
+};
+
 // Modified function to support specific PDF or all PDFs as context
 export const chatWithGeminiAboutPdf = async (
   prompt: string, 
@@ -201,25 +258,23 @@ export const analyzeImageWithGemini = async (imageData: string): Promise<string>
     let pdfContext = sessionStorage.getItem('pdfText') || "";
     const pdfContextExcerpt = pdfContext.substring(0, 5000); // Just use a small excerpt for context
 
-    const imageParts = [
-      {
-        inlineData: {
-          data: imageData.split(",")[1], // Remove the data URL prefix
-          mimeType: "image/png", // Assuming PNG format, adjust if needed
-        },
-      },
-      {
-        text: `This image is from a document I'm analyzing. Please describe what you see in this image in detail.
-              If there's text visible in the image, include that in your analysis.
-              If relevant, here's some context from the document:
-              ${pdfContextExcerpt}`
+    // Create parts array for the request
+    const imagePart = {
+      inlineData: {
+        data: imageData.split(",")[1], // Remove the data URL prefix
+        mimeType: "image/png", // Assuming PNG format, adjust if needed
       }
-    ];
+    };
+    
+    const textPart = {
+      text: `This image is from a document I'm analyzing. Please describe what you see in this image in detail.
+            If there's text visible in the image, include that in your analysis.
+            If relevant, here's some context from the document:
+            ${pdfContextExcerpt}`
+    };
 
-    const result = await visionModel.generateContent({
-      contents: [{ role: "user", parts: imageParts }],
-    });
-
+    // Fixed format for Gemini API
+    const result = await visionModel.generateContent([imagePart, textPart]);
     const response = await result.response;
     return response.text();
   } catch (error) {
