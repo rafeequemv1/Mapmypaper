@@ -4,8 +4,7 @@ import {
   FileCode,
   MessageSquare,
   FileText,
-  Home,
-  Workflow
+  Home
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
@@ -18,7 +17,6 @@ interface HeaderSidebarProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowMermaid: React.Dispatch<React.SetStateAction<boolean>>;
   onExportSVG: () => void;
   onExportPNG: () => void;
   onExportJSON: () => void;
@@ -30,7 +28,6 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   togglePdf,
   toggleChat,
   setShowSummary,
-  setShowMermaid,
   onExportSVG,
   onExportPNG,
   onExportJSON,
@@ -67,11 +64,6 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
         onClick={() => setShowSummary(true)}
         icon={<FileText className="h-4 w-4" />}
         title="Show Summary"
-      />
-      <HeaderSidebarIcon
-        onClick={() => setShowMermaid(true)}
-        icon={<Workflow className="h-4 w-4" />}
-        title="Show Mermaid Diagram"
       />
       <HeaderExportMenu
         onExportSVG={onExportSVG}
