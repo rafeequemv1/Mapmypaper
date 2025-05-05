@@ -1,202 +1,127 @@
 
-/**
- * Utility for storing and retrieving PDF data using IndexedDB
- * This solves the issue with sessionStorage quota limitations
- */
+import PdfToText from "react-pdftotext";
+import { openDB, IDBPDatabase } from 'idb';
 
-// Define the DB name and version
+// Define the database name and store name
 const DB_NAME = 'pdfStorage';
-const DB_VERSION = 1;
-const PDF_STORE = 'pdfData';
+const STORE_NAME = 'pdfs';
+const CURRENT_PDF_KEY = 'currentPdfKey';
 
-// Open the database
-const openDB = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    
-    request.onerror = () => {
-      reject(new Error("Error opening IndexedDB"));
-    };
-    
-    request.onsuccess = () => {
-      const db = request.result;
-      resolve(db);
-    };
-    
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(PDF_STORE)) {
-        db.createObjectStore(PDF_STORE, { keyPath: 'id' });
-      }
-    };
-  });
-};
+// Initialize the database
+let dbPromise: Promise<IDBPDatabase> | null = null;
 
-// Store PDF data in IndexedDB with a specific key
-export const storePdfData = async (pdfKey: string, pdfData: string): Promise<void> => {
-  try {
-    const db = await openDB();
-    const transaction = db.transaction([PDF_STORE], 'readwrite');
-    const store = transaction.objectStore(PDF_STORE);
-    
-    // Store with the specific PDF key
-    await store.put({ id: pdfKey, data: pdfData });
-    
-    // Store a flag in sessionStorage to track available PDFs (but not the data itself)
-    sessionStorage.setItem(`hasPdfData_${pdfKey}`, 'true');
-    sessionStorage.setItem(`mindMapReady_${pdfKey}`, 'true');
-    
-    return new Promise((resolve, reject) => {
-      transaction.oncomplete = () => {
-        db.close();
-        // Dispatch a custom event that PDF data has been updated
-        window.dispatchEvent(new CustomEvent('pdfDataUpdated', { detail: { pdfKey } }));
-        resolve();
-      };
-      
-      transaction.onerror = () => {
-        db.close();
-        reject(new Error('Failed to save PDF data to IndexedDB'));
-      };
-    });
-  } catch (error) {
-    console.error('Error storing PDF data in IndexedDB:', error);
-    throw error;
-  }
-};
-
-// Check if a mindmap has been generated for this PDF
-export const isMindMapReady = (pdfKey: string): boolean => {
-  return sessionStorage.getItem(`mindMapReady_${pdfKey}`) === 'true';
-};
-
-// Retrieve specific PDF data from IndexedDB
-export const getPdfData = async (pdfKey: string): Promise<string | null> => {
-  try {
-    // Check if we have this PDF stored
-    if (sessionStorage.getItem(`hasPdfData_${pdfKey}`) !== 'true') {
-      console.log(`No storage marker found for PDF: ${pdfKey}`);
-      return null;
-    }
-    
-    const db = await openDB();
-    const transaction = db.transaction([PDF_STORE], 'readonly');
-    const store = transaction.objectStore(PDF_STORE);
-    
-    return new Promise((resolve, reject) => {
-      const request = store.get(pdfKey);
-      
-      request.onsuccess = () => {
-        db.close();
-        if (request.result) {
-          resolve(request.result.data);
-        } else {
-          // Data not found in IndexedDB even though marker exists
-          console.warn(`PDF data marker exists but data not found in IndexedDB for: ${pdfKey}`);
-          // Remove the invalid marker
-          sessionStorage.removeItem(`hasPdfData_${pdfKey}`);
-          resolve(null);
+const initDB = async () => {
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
         }
-      };
-      
-      request.onerror = () => {
-        db.close();
-        reject(new Error('Failed to retrieve PDF data from IndexedDB'));
-      };
+      },
     });
+  }
+  return dbPromise;
+};
+
+// Store PDF data in IndexedDB
+export const storePdfData = async (key: string, data: string): Promise<void> => {
+  const db = await initDB();
+  await db.put(STORE_NAME, data, key);
+  // Mark that this PDF has data stored
+  sessionStorage.setItem(`hasPdfData_${key}`, 'true');
+};
+
+// Get PDF data from IndexedDB
+export const getPdfData = async (key: string): Promise<string | null> => {
+  try {
+    const db = await initDB();
+    const data = await db.get(STORE_NAME, key);
+    return data || null;
   } catch (error) {
-    console.error('Error retrieving PDF data from IndexedDB:', error);
+    console.error("Error retrieving PDF data:", error);
     return null;
   }
 };
 
-// For backward compatibility - gets the currently active PDF
+// Set current PDF key in IndexedDB
+export const setCurrentPdfKey = async (key: string): Promise<void> => {
+  const db = await initDB();
+  await db.put(STORE_NAME, key, CURRENT_PDF_KEY);
+  window.dispatchEvent(new CustomEvent('currentPdfChanged', { detail: { key } }));
+};
+
+// Get current PDF key from IndexedDB
+export const getCurrentPdfKey = async (): Promise<string | null> => {
+  try {
+    const db = await initDB();
+    return await db.get(STORE_NAME, CURRENT_PDF_KEY);
+  } catch (error) {
+    console.error("Error getting current PDF key:", error);
+    return null;
+  }
+};
+
+// Get current PDF data from IndexedDB
 export const getCurrentPdfData = async (): Promise<string | null> => {
   try {
-    const db = await openDB();
-    const transaction = db.transaction([PDF_STORE], 'readonly');
-    const store = transaction.objectStore(PDF_STORE);
-    
-    return new Promise((resolve, reject) => {
-      const request = store.get('currentPdf');
-      
-      request.onsuccess = () => {
-        db.close();
-        if (request.result) {
-          resolve(request.result.data);
-        } else {
-          resolve(null);
-        }
-      };
-      
-      request.onerror = () => {
-        db.close();
-        reject(new Error('Failed to retrieve current PDF data from IndexedDB'));
-      };
-    });
+    const key = await getCurrentPdfKey();
+    if (!key) return null;
+    return await getPdfData(key);
   } catch (error) {
-    console.error('Error retrieving current PDF data from IndexedDB:', error);
+    console.error("Error getting current PDF data:", error);
     return null;
   }
 };
 
-// Set current active PDF (for viewer)
-export const setCurrentPdf = async (pdfKey: string): Promise<void> => {
+// Extract text from current PDF
+export const getPdfText = async (): Promise<string> => {
   try {
-    // First get the PDF data by key
-    const pdfData = await getPdfData(pdfKey);
-    if (!pdfData) {
-      throw new Error('PDF data not found for key: ' + pdfKey);
+    const pdfData = await getCurrentPdfData();
+    if (!pdfData) return "";
+    
+    // Convert data URL to Blob
+    const byteString = atob(pdfData.split(',')[1]);
+    const mimeType = pdfData.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
     }
+    const blob = new Blob([ab], { type: mimeType });
+    const file = new File([blob], "current.pdf", { type: mimeType });
     
-    // Then store it as current PDF
-    const db = await openDB();
-    const transaction = db.transaction([PDF_STORE], 'readwrite');
-    const store = transaction.objectStore(PDF_STORE);
-    
-    await store.put({ id: 'currentPdf', data: pdfData });
-    
-    return new Promise((resolve, reject) => {
-      transaction.oncomplete = () => {
-        db.close();
-        resolve();
-      };
-      
-      transaction.onerror = () => {
-        db.close();
-        reject(new Error('Failed to set current PDF'));
-      };
-    });
+    // Use PdfToText to extract text
+    const text = await PdfToText(file);
+    return text || "";
   } catch (error) {
-    console.error('Error setting current PDF:', error);
-    throw error;
+    console.error("Error extracting PDF text:", error);
+    return "";
   }
 };
 
 // Clear PDF data from IndexedDB
-export const clearPdfData = async (pdfKey: string): Promise<void> => {
+export const clearPdfData = async (key: string): Promise<void> => {
   try {
-    const db = await openDB();
-    const transaction = db.transaction([PDF_STORE], 'readwrite');
-    const store = transaction.objectStore(PDF_STORE);
+    const db = await initDB();
+    await db.delete(STORE_NAME, key);
+    // Clear session storage markers
+    sessionStorage.removeItem(`hasPdfData_${key}`);
+    sessionStorage.removeItem(`mindMapReady_${key}`);
     
-    await store.delete(pdfKey);
-    sessionStorage.removeItem(`hasPdfData_${pdfKey}`);
-    sessionStorage.removeItem(`mindMapReady_${pdfKey}`);
-    
-    return new Promise((resolve, reject) => {
-      transaction.oncomplete = () => {
-        db.close();
-        resolve();
-      };
-      
-      transaction.onerror = () => {
-        db.close();
-        reject(new Error('Failed to clear PDF data from IndexedDB'));
-      };
-    });
+    // If we're deleting the current PDF, reset the current key
+    const currentKey = await getCurrentPdfKey();
+    if (currentKey === key) {
+      await setCurrentPdfKey('');
+    }
   } catch (error) {
-    console.error('Error clearing PDF data from IndexedDB:', error);
-    throw error;
+    console.error("Error clearing PDF data:", error);
   }
 };
+
+// Check if mind map is ready for a PDF
+export const isMindMapReady = (key: string): boolean => {
+  return sessionStorage.getItem(`mindMapReady_${key}`) === 'true';
+};
+
+// For backward compatibility
+export const setCurrentPdf = setCurrentPdfKey;

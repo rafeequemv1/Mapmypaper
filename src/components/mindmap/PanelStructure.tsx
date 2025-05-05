@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -7,7 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf, getPdfData, clearPdfData, isMindMapReady } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdfKey, getPdfData, clearPdfData, isMindMapReady } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -75,7 +74,7 @@ const PanelStructure = ({
         if (metas.length > 0 && getPdfKey(metas[0]) !== key) {
           // Switch to another available PDF
           setActivePdfKey(getPdfKey(metas[0]));
-          await setCurrentPdf(getPdfKey(metas[0]));
+          await setCurrentPdfKey(getPdfKey(metas[0]));
           window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         } else if (metas.length === 0) {
           // No PDFs left
@@ -91,7 +90,7 @@ const PanelStructure = ({
       }
       
       // Set the selected PDF as current in IndexedDB
-      await setCurrentPdf(key);
+      await setCurrentPdfKey(key);
       
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
       
@@ -215,7 +214,7 @@ const PanelStructure = ({
         
         // Optionally, select this tab
         setActivePdfKey(pdfKey);
-        await setCurrentPdf(pdfKey); // Set as current PDF
+        await setCurrentPdfKey(pdfKey); // Set as current PDF
         window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
         setIsLoadingMindMap(false);
@@ -280,10 +279,6 @@ const PanelStructure = ({
       }
     }
   };
-
-  if (!isRendered) {
-    return <div className="h-full w-full flex justify-center items-center">Loading panels...</div>;
-  }
 
   return (
     <>

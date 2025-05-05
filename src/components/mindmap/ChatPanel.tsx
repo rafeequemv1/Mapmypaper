@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini, comparePdfsWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import PdfToText from "react-pdftotext";
-import { storePdfData, getPdfData, isMindMapReady } from "@/utils/pdfStorage";
-import { generateMindMapFromText } from "@/services/geminiService";
+import { storePdfData, getPdfData, getCurrentPdfData, isMindMapReady, getCurrentPdfKey } from "@/utils/pdfStorage";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 interface ChatPanelProps {
@@ -43,6 +42,32 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [attachedFilePreview, setAttachedFilePreview] = useState<string | null>(null);
   const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
   const [processingPdf, setProcessingPdf] = useState(false);
+
+  // Track the active PDF key for context
+  const [activePdfKey, setActivePdfKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get the current PDF key when component mounts
+    const getCurrentKey = async () => {
+      const currentKey = await getCurrentPdfKey();
+      setActivePdfKey(currentKey);
+    };
+    
+    getCurrentKey();
+    
+    // Listen for PDF switches
+    const handlePdfSwitch = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.pdfKey) {
+        setActivePdfKey(customEvent.detail.pdfKey);
+      }
+    };
+    
+    window.addEventListener('pdfSwitched', handlePdfSwitch);
+    return () => {
+      window.removeEventListener('pdfSwitched', handlePdfSwitch);
+    };
+  }, []);
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -195,7 +220,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // Modified function to process PDF file without creating mindmap
+  // Enhanced PDF processing with comparison to active document
   const processPdfFile = async (file: File) => {
     setProcessingPdf(true);
     
@@ -203,12 +228,12 @@ Feel free to ask me any questions! Here are some suggestions:`
       // Add user message about PDF upload
       setMessages(prev => [...prev, { 
         role: 'user',
-        content: `I've uploaded a PDF: "${file.name}" for context`,
+        content: `I've uploaded a PDF: "${file.name}" for analysis and comparison`,
         filename: file.name,
         filetype: file.type
       }]);
       
-      // Show typing indicator for PDF processing
+      // Show typing indicator
       setIsTyping(true);
       
       // Extract text from PDF
@@ -224,22 +249,52 @@ Feel free to ask me any questions! Here are some suggestions:`
         return;
       }
       
-      // Add success message
-      setIsTyping(false);
-      setMessages(prev => [...prev, { 
-        role: 'assistant',
-        content: formatAIResponse(`📄 **PDF Processed Successfully!**
+      // Store PDF data temporarily for comparison
+      const uploadedPdfKey = getPdfKey({ 
+        name: file.name, 
+        size: file.size, 
+        lastModified: file.lastModified 
+      });
+      
+      // Check if active PDF exists for comparison
+      if (activePdfKey) {
+        try {
+          // Get active PDF text
+          const activePdfData = await getPdfData(activePdfKey);
+          if (activePdfData) {
+            // Compare PDFs using Gemini
+            const comparisonResult = await comparePdfsWithGemini(
+              extractedText,
+              file.name,
+              activePdfKey
+            );
+            
+            // Add success message with comparison
+            setIsTyping(false);
+            setMessages(prev => [...prev, { 
+              role: 'assistant',
+              content: formatAIResponse(`📄 **PDF Comparison Analysis**
 
-I've analyzed "${file.name}" and can now discuss its contents. How can I help you with this document? You can ask me:
+I've analyzed "${file.name}" and compared it with the main document you're currently viewing in the mindmap.
 
-- To summarize key points
-- Explain specific sections
-- Compare it with the main document
-- Answer questions about its content
+${comparisonResult}
 
-What would you like to know?`),
-        isHtml: true
-      }]);
+What specific aspects would you like me to elaborate on?`),
+              isHtml: true
+            }]);
+          } else {
+            // If active PDF data couldn't be retrieved
+            handleRegularPdfProcessing(extractedText, file);
+          }
+        } catch (error) {
+          console.error("Error comparing PDFs:", error);
+          // Fallback to regular processing
+          handleRegularPdfProcessing(extractedText, file);
+        }
+      } else {
+        // No active PDF for comparison, just process normally
+        handleRegularPdfProcessing(extractedText, file);
+      }
       
       toast({
         title: "Success",
@@ -262,6 +317,24 @@ What would you like to know?`),
     } finally {
       setProcessingPdf(false);
     }
+  };
+
+  // Helper function for regular PDF processing without comparison
+  const handleRegularPdfProcessing = (extractedText: string, file: File) => {
+    setIsTyping(false);
+    setMessages(prev => [...prev, { 
+      role: 'assistant',
+      content: formatAIResponse(`📄 **PDF Processed Successfully!**
+
+I've analyzed "${file.name}" and can now discuss its contents. How can I help you with this document? You can ask me:
+
+- To summarize key points
+- Explain specific sections
+- Answer questions about its content
+
+What would you like to know?`),
+      isHtml: true
+    }]);
   };
 
   const handleSendMessage = async () => {
