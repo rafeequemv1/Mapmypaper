@@ -34,14 +34,37 @@ async function getDb(): Promise<IDBPDatabase<PdfDB>> {
 }
 
 // Store PDF data in IndexedDB
-export async function storePdfData(pdfKey: string, text: string, metadata: { name: string; size: number; lastModified: number }): Promise<void> {
+export async function storePdfData(pdfKey: string, text: string, metadata?: { name: string; size: number; lastModified: number }): Promise<void> {
   try {
     const db = await getDb();
-    await db.put('pdfs', { text, metadata }, pdfKey);
+    let metadataToStore = metadata;
+    
+    if (!metadataToStore) {
+      // Try to get metadata from sessionStorage as fallback
+      const metaStr = sessionStorage.getItem(`pdfMeta_${pdfKey}`);
+      if (metaStr) {
+        try {
+          metadataToStore = JSON.parse(metaStr);
+        } catch (e) {
+          console.error('Error parsing metadata from sessionStorage:', e);
+        }
+      }
+    }
+
+    await db.put('pdfs', { 
+      text, 
+      metadata: metadataToStore || {
+        name: 'Unknown',
+        size: 0,
+        lastModified: Date.now()
+      }
+    }, pdfKey);
     
     // Also update sessionStorage for compatibility with existing code
     sessionStorage.setItem(`pdfText_${pdfKey}`, text);
-    sessionStorage.setItem(`pdfMeta_${pdfKey}`, JSON.stringify(metadata));
+    if (metadataToStore) {
+      sessionStorage.setItem(`pdfMeta_${pdfKey}`, JSON.stringify(metadataToStore));
+    }
     
     // If this is the currently active PDF, update the main pdfText item too
     const currentPdfKey = sessionStorage.getItem('currentPdfKey');
@@ -79,8 +102,22 @@ export async function getCurrentPdfData(): Promise<string | null> {
 }
 
 // Function to check if a mindmap has been generated
-export function isMindMapReady(): boolean {
+export function isMindMapReady(pdfKey?: string): boolean {
+  if (pdfKey) {
+    return sessionStorage.getItem(`mindMapReady_${pdfKey}`) === 'true';
+  }
   return sessionStorage.getItem('mindMapGenerated') === 'true';
+}
+
+// Clear PDF data
+export async function clearPdfData(pdfKey: string): Promise<void> {
+  try {
+    const db = await getDb();
+    await db.delete('pdfs', pdfKey);
+  } catch (error) {
+    console.error('Error clearing PDF data:', error);
+    throw error;
+  }
 }
 
 // Enhanced function to get text from all PDFs
@@ -136,3 +173,4 @@ export async function getAllPdfText(): Promise<string> {
 export function setCurrentPdfKey(key: string): void {
   sessionStorage.setItem('currentPdfKey', key);
 }
+

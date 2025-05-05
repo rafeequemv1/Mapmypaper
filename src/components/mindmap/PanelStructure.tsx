@@ -6,7 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf, getPdfData, clearPdfData, isMindMapReady } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdfKey, getPdfData, clearPdfData, isMindMapReady } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -74,7 +74,7 @@ const PanelStructure = ({
         if (metas.length > 0 && getPdfKey(metas[0]) !== key) {
           // Switch to another available PDF
           setActivePdfKey(getPdfKey(metas[0]));
-          await setCurrentPdf(getPdfKey(metas[0]));
+          setCurrentPdfKey(getPdfKey(metas[0]));
           window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         } else if (metas.length === 0) {
           // No PDFs left
@@ -89,8 +89,8 @@ const PanelStructure = ({
         setIsLoadingMindMap(true);
       }
       
-      // Set the selected PDF as current in IndexedDB
-      await setCurrentPdf(key);
+      // Set the selected PDF as current in storage
+      setCurrentPdfKey(key);
       
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
       
@@ -179,10 +179,9 @@ const PanelStructure = ({
       setIsLoadingMindMap(true);
       
       // Store meta in sessionStorage
-      sessionStorage.setItem(
-        `pdfMeta_${pdfKey}`,
-        JSON.stringify({ name: file.name, size: file.size, lastModified: file.lastModified })
-      );
+      const metadata = { name: file.name, size: file.size, lastModified: file.lastModified };
+      sessionStorage.setItem(`pdfMeta_${pdfKey}`, JSON.stringify(metadata));
+      
       try {
         // Read and process PDF file as dataURL
         const reader = new FileReader();
@@ -194,7 +193,7 @@ const PanelStructure = ({
         const pdfData = await pdfDataPromise;
         
         // Store PDF data in IndexedDB only, not in sessionStorage
-        await storePdfData(pdfKey, pdfData);
+        await storePdfData(pdfKey, pdfData, metadata);
         
         // Extract text from PDF
         const extractedText = await PdfToText(file);
@@ -221,7 +220,7 @@ const PanelStructure = ({
         
         // Optionally, select this tab
         setActivePdfKey(pdfKey);
-        await setCurrentPdf(pdfKey); // Set as current PDF
+        setCurrentPdfKey(pdfKey); // Set as current PDF
         window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
         setIsLoadingMindMap(false);

@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -6,7 +5,7 @@ import PdfToText from "react-pdftotext";
 import { Brain, Upload, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
-import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdfKey } from "@/utils/pdfStorage";
 import Logo from "@/components/Logo";
 import {
   AlertDialog,
@@ -202,11 +201,18 @@ const PdfUpload = () => {
       // Store the PDF data in IndexedDB with its unique key
       const pdfData = await pdfDataPromise;
       
-      // Store in IndexedDB with the specific key
-      await storePdfData(pdfKey, pdfData);
+      // Define metadata for storage
+      const metadata = {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        lastModified: selectedFile.lastModified
+      };
+      
+      // Store in IndexedDB with the specific key and metadata
+      await storePdfData(pdfKey, pdfData, metadata);
       
       // Also set as current active PDF
-      await setCurrentPdf(pdfKey);
+      setCurrentPdfKey(pdfKey);
       
       console.log(`PDF data stored for: ${selectedFile.name}`);
 
