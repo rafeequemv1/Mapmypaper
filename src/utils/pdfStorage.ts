@@ -44,6 +44,7 @@ export const storePdfData = async (pdfKey: string, pdfData: string): Promise<voi
     
     // Store a flag in sessionStorage to track available PDFs (but not the data itself)
     sessionStorage.setItem(`hasPdfData_${pdfKey}`, 'true');
+    sessionStorage.setItem(`mindMapReady_${pdfKey}`, 'true');
     
     return new Promise((resolve, reject) => {
       transaction.oncomplete = () => {
@@ -62,6 +63,11 @@ export const storePdfData = async (pdfKey: string, pdfData: string): Promise<voi
     console.error('Error storing PDF data in IndexedDB:', error);
     throw error;
   }
+};
+
+// Check if a mindmap has been generated for this PDF
+export const isMindMapReady = (pdfKey: string): boolean => {
+  return sessionStorage.getItem(`mindMapReady_${pdfKey}`) === 'true';
 };
 
 // Retrieve specific PDF data from IndexedDB
@@ -176,6 +182,7 @@ export const clearPdfData = async (pdfKey: string): Promise<void> => {
     
     await store.delete(pdfKey);
     sessionStorage.removeItem(`hasPdfData_${pdfKey}`);
+    sessionStorage.removeItem(`mindMapReady_${pdfKey}`);
     
     return new Promise((resolve, reject) => {
       transaction.oncomplete = () => {

@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -6,7 +7,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf, getPdfData, clearPdfData } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf, getPdfData, clearPdfData, isMindMapReady } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -50,8 +51,6 @@ const PanelStructure = ({
   // Handle active PDF change
   const handleTabChange = async (key: string) => {
     try {
-      // Set loading state to true
-      setIsLoadingMindMap(true);
       setActivePdfKey(key);
       
       // Check if PDF data exists before attempting to switch
@@ -83,23 +82,34 @@ const PanelStructure = ({
           setActivePdfKey(null);
         }
         
-        setIsLoadingMindMap(false);
         return;
+      }
+      
+      // Only show loading if this is a newly added PDF without a generated mindmap yet
+      if (!isMindMapReady(key)) {
+        setIsLoadingMindMap(true);
       }
       
       // Set the selected PDF as current in IndexedDB
       await setCurrentPdf(key);
       
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
-      toast({
-        title: "PDF Loaded",
-        description: "PDF and mindmap switched successfully.",
-      });
+      
+      // Only display the toast for switching if we're not loading a new mindmap
+      if (isMindMapReady(key)) {
+        toast({
+          title: "PDF Loaded",
+          description: "PDF and mindmap switched successfully.",
+        });
+      }
 
       // Give some time for the mindmap to load before removing loading state
-      setTimeout(() => {
-        setIsLoadingMindMap(false);
-      }, 1000);
+      // Only needed for newly added PDFs
+      if (!isMindMapReady(key)) {
+        setTimeout(() => {
+          setIsLoadingMindMap(false);
+        }, 1000);
+      }
     } catch (error) {
       console.error("Error switching PDF:", error);
       setIsLoadingMindMap(false);
@@ -165,6 +175,10 @@ const PanelStructure = ({
         toast({ title: "Already added", description: `PDF "${file.name}" already exists.` });
         continue;
       }
+      
+      // Start the loading animation - NEW PDF is being added
+      setIsLoadingMindMap(true);
+      
       // Store meta in sessionStorage
       sessionStorage.setItem(
         `pdfMeta_${pdfKey}`,
@@ -191,22 +205,27 @@ const PanelStructure = ({
             description: "This PDF appears to be image-based or scanned.",
             variant: "destructive"
           });
+          setIsLoadingMindMap(false);
           continue;
         }
         // Generate mindmap data
         const mindMapData = await generateMindMapFromText(extractedText);
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
+        sessionStorage.setItem(`mindMapReady_${pdfKey}`, 'true');
+        
         // Optionally, select this tab
         setActivePdfKey(pdfKey);
         await setCurrentPdf(pdfKey); // Set as current PDF
         window.dispatchEvent(new CustomEvent('pdfListUpdated'));
         window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
+        setIsLoadingMindMap(false);
         toast({
           title: "Success",
           description: "Mind map generated and PDF added!",
         });
       } catch (err) {
         console.error("Error processing PDF:", err);
+        setIsLoadingMindMap(false);
         toast({
           title: "Failed to process PDF",
           description: "Could not process the selected PDF.",
