@@ -18,6 +18,7 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
+  onPdfKeyUpdate?: (key: string | null) => void;
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -30,7 +31,9 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
+  onPdfKeyUpdate,
 }: PanelStructureProps) => {
+  
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
   const [isRendered, setIsRendered] = useState(false);
@@ -43,6 +46,13 @@ const PanelStructure = ({
     if (metas.length === 0) return null;
     return getPdfKey(metas[0]);
   });
+
+  // Update parent component with current PDF key whenever it changes
+  useEffect(() => {
+    if (onPdfKeyUpdate) {
+      onPdfKeyUpdate(activePdfKey);
+    }
+  }, [activePdfKey, onPdfKeyUpdate]);
 
   // File input for adding PDFs
   const fileInputRef = useRef<HTMLInputElement>(null);
