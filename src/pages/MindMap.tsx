@@ -42,22 +42,14 @@ const MindMap = () => {
     }
   }, [showChat]);
 
-  // Handle image capture from PDF
+  // Handle image capture from PDF - enhanced to handle the fixed capture function
   const handleImageCaptured = useCallback((imageData: string) => {
     if (imageData) {
+      console.log("Image captured and being processed");
       setExplainImage(imageData);
       if (!showChat) {
         setShowChat(true);
       }
-      
-      // Log a success message for debugging
-      console.log("Image captured and set successfully", {
-        imageSize: imageData.length,
-        isDataUrl: imageData.startsWith('data:'),
-        previewChars: imageData.substring(0, 50) + '...'
-      });
-    } else {
-      console.error("Image capture failed: No image data received");
     }
   }, [showChat]);
 
@@ -83,19 +75,11 @@ const MindMap = () => {
   useEffect(() => {
     const handleImageCaptured = (e: CustomEvent) => {
       if (e.detail?.imageData) {
+        console.log("Image capture event detected");
         setExplainImage(e.detail.imageData);
         if (!showChat) {
           setShowChat(true);
         }
-        
-        // Log a success message for debugging
-        console.log("Image capture event received", {
-          imageSize: e.detail.imageData.length,
-          isDataUrl: e.detail.imageData.startsWith('data:'),
-          previewChars: e.detail.imageData.substring(0, 50) + '...'
-        });
-      } else {
-        console.error("Image capture event received but no image data was present");
       }
     };
     

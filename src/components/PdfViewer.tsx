@@ -1,15 +1,28 @@
-
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Search,
+  Download,
+  ZoomIn,
+  ZoomOut,
+  RectangleHorizontal,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Maximize2, Minimize2, Download, RotateCw, Crop } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 import html2canvas from 'html2canvas';
-import { useResizeDetector } from 'react-resize-detector';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import 'react-pdf/dist/Page.css';
 
 // Set PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -18,406 +31,335 @@ interface PdfViewerProps {
   pdfUrl: string;
   onTextSelected?: (text: string) => void;
   onImageCaptured?: (imageData: string) => void;
-  activePdfKey: string | null;
-  onActivePdfKeyChange: (key: string) => void;
+  onPdfLoaded?: () => void;
+  renderTooltipContent?: (props: any) => React.ReactNode;
 }
 
-const PdfViewer = ({ pdfUrl, onTextSelected, onImageCaptured, activePdfKey, onActivePdfKeyChange }: PdfViewerProps) => {
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [scale, setScale] = useState(1.0);
-  const [rotation, setRotation] = useState(0);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectionRect, setSelectionRect] = useState<{
-    startX: number | null;
-    startY: number | null;
-    width: number | null;
-    height: number | null;
-    left: number | null;
-    top: number | null;
-  }>({
-    startX: null,
-    startY: null,
-    width: null,
-    height: null,
-    left: null,
-    top: null,
-  });
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [showAreaTooltip, setShowAreaTooltip] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  const pdfContainerRef = useRef<HTMLDivElement>(null);
-  const selectionCanvasRef = useRef<HTMLCanvasElement>(null);
-  const selectionRectRef = useRef<{
-    startX: number | null;
-    startY: number | null;
-    width: number | null;
-    height: number | null;
-    left: number | null;
-    top: number | null;
-  }>({
-    startX: null,
-    startY: null,
-    width: null,
-    height: null,
-    left: null,
-    top: null,
-  });
-  const activePdfPageRef = useRef<number | null>(null);
-  const [selectionCanvas, setSelectionCanvas] = useState<HTMLCanvasElement | null>(null);
-  const { toast } = useToast();
-  const { width, height } = useResizeDetector({ 
-    refreshMode: 'debounce', 
-    refreshRate: 250 
-  });
-  
-  // Load PDF document
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setIsLoading(false);
-  };
-  
-  // Change page
-  const changePage = (offset: number) => {
-    setPageNumber((prevPageNumber) => {
-      const newPageNumber = prevPageNumber + offset;
-      if (newPageNumber >= 1 && newPageNumber <= numPages!) {
-        return newPageNumber;
-      } else {
-        return prevPageNumber;
-      }
+interface PdfViewerHandle {
+  scrollToPage: (pageNumber: number) => void;
+}
+
+const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
+  ({ onTextSelected, onImageCaptured, onPdfLoaded, renderTooltipContent }, ref) => {
+    const [numPages, setNumPages] = useState<number | null>(null);
+    const [pageNumber, setPageNumber] = useState(1);
+    const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<
+      { pageNumber: number; text: string }[]
+    >([]);
+    const [currentSearchResultIndex, setCurrentSearchResultIndex] = useState(0);
+    const [zoomLevel, setZoomLevel] = useState(1.0);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectionStart, setSelectionStart] = useState<{
+      x: number;
+      y: number;
+    } | null>(null);
+    const [selectionRect, setSelectionRect] = useState<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    } | null>(null);
+    const [showAreaTooltip, setShowAreaTooltip] = useState(false);
+    const [capturedImage, setCapturedImage] = useState<string | null>(null);
+    const [tooltipPosition, setTooltipPosition] = useState<{
+      x: number;
+      y: number;
+    } | null>(null);
+    const pdfContainerRef = useRef<HTMLDivElement>(null);
+    const selectionCanvasRef = useRef<HTMLCanvasElement>(null);
+    const selectionRectRef = useRef<{
+      x: number | null;
+      y: number | null;
+      width: number | null;
+      height: number | null;
+      left: number | null;
+      top: number | null;
+    }>({
+      x: null,
+      y: null,
+      width: null,
+      height: null,
+      left: null,
+      top: null,
     });
-  };
-  
-  // Go to previous page
-  const previousPage = () => changePage(-1);
-  
-  // Go to next page
-  const nextPage = () => changePage(1);
-  
-  // Zoom in
-  const zoomIn = () => {
-    setScale((prevScale) => parseFloat((prevScale + 0.1).toFixed(1)));
-  };
-  
-  // Zoom out
-  const zoomOut = () => {
-    setScale((prevScale) => {
-      const newScale = parseFloat((prevScale - 0.1).toFixed(1));
-      return newScale > 0.1 ? newScale : 0.1;
-    });
-  };
-  
-  // Rotate
-  const rotate = () => {
-    setRotation((prevRotation) => (prevRotation + 90) % 360);
-  };
-  
-  // Handle text layer rendering
-  const handleTextLayerRendered = useCallback(() => {
-    setIsLoading(false);
-  }, []);
-  
-  // Start area selection
-  const startAreaSelection = () => {
-    setIsSelectionMode(true);
-    setShowAreaTooltip(true);
-  };
-  
-  // Initialize canvas for selection
-  useEffect(() => {
-    const canvas = selectionCanvasRef.current;
-    if (canvas) {
-      setSelectionCanvas(canvas);
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-  }, []);
-  
-  // Handle mouse down event
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isSelectionMode || !selectionCanvas) return;
-    
-    const canvasRect = selectionCanvas.getBoundingClientRect();
-    const startX = e.clientX - canvasRect.left;
-    const startY = e.clientY - canvasRect.top;
-    
-    selectionRectRef.current = {
-      startX,
-      startY,
-      width: 0,
-      height: 0,
-      left: startX,
-      top: startY,
-    };
-    
-    setSelectionRect({
-      startX,
-      startY,
-      width: 0,
-      height: 0,
-      left: startX,
-      top: startY,
-    });
-  };
-  
-  // Handle mouse move event
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isSelectionMode || !selectionCanvas || !selectionRectRef.current) return;
-    
-    if (selectionRectRef.current.startX === null || selectionRectRef.current.startY === null) return;
-    
-    const canvasRect = selectionCanvas.getBoundingClientRect();
-    const currentX = e.clientX - canvasRect.left;
-    const currentY = e.clientY - canvasRect.top;
-    
-    const width = currentX - selectionRectRef.current.startX;
-    const height = currentY - selectionRectRef.current.startY;
-    
-    selectionRectRef.current = {
-      ...selectionRectRef.current,
-      width,
-      height,
-    };
-    
-    setSelectionRect({
-      ...selectionRectRef.current,
-      width,
-      height,
-    });
-    
-    drawSelection();
-  };
-  
-  // Draw selection rectangle on canvas
-  const drawSelection = () => {
-    if (!selectionCanvas || !selectionRectRef.current) return;
-    
-    const canvas = selectionCanvas;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    if (selectionRectRef.current.startX !== null && selectionRectRef.current.startY !== null) {
-      const { startX, startY, width, height } = selectionRectRef.current;
-      
-      if (startX !== null && startY !== null && width !== null && height !== null) {
-        ctx.fillStyle = 'rgba(0, 119, 255, 0.3)';
-        ctx.fillRect(startX, startY, width, height);
-        ctx.strokeStyle = '#0077ff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(startX, startY, width, height);
-      }
-    }
-  };
-  
-  // Handle mouse up event
-  const handleMouseUp = () => {
-    if (!isSelectionMode) return;
-    captureSelectedArea();
-  };
-  
-  // Capture selected area
-  const captureSelectedArea = () => {
-    if (!selectionRectRef.current || !selectionCanvas) return;
-    
-    try {
-      // Get the coordinates of the selection rectangle
-      const rect = selectionRectRef.current;
-      
-      // Create a temporary canvas to crop the area
-      const tempCanvas = document.createElement('canvas');
-      const ctx = tempCanvas.getContext('2d');
-      
-      if (!ctx) {
-        console.error('Could not get 2D context for canvas');
-        return;
-      }
-      
-      // Set the temp canvas dimensions to the selection dimensions
-      tempCanvas.width = Math.abs(rect.width as number);
-      tempCanvas.height = Math.abs(rect.height as number);
-      
-      // Find the PDF page that contains our selection
-      const pdfPages = document.querySelectorAll('[data-page-number]');
-      const pageNum = activePdfPageRef.current || 1;
-      let targetPage: Element | null = null;
-      
-      for (let i = 0; i < pdfPages.length; i++) {
-        if ((pdfPages[i] as HTMLElement).dataset.pageNumber === String(pageNum)) {
-          targetPage = pdfPages[i];
-          break;
+    const activePdfPageRef = useRef<number | null>(1);
+    let selectionCanvas: HTMLCanvasElement | null = null;
+    const { toast } = useToast();
+
+    const loadPdfData = useCallback(async (url: string) => {
+      try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        setPdfData(uint8Array);
+        if (onPdfLoaded) {
+          onPdfLoaded();
         }
-      }
-      
-      if (!targetPage) {
-        console.error('Could not find target page element');
-        return;
-      }
-      
-      // Get all necessary measurements
-      const pageRect = targetPage.getBoundingClientRect();
-      const scrollContainer = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-      const scrollTop = scrollContainer?.scrollTop || 0;
-      const scrollLeft = scrollContainer?.scrollLeft || 0;
-      const viewportRect = scrollContainer?.getBoundingClientRect() || { left: 0, top: 0 };
-      
-      // Use improved html2canvas options for better rendering
-      html2canvas(targetPage as HTMLElement, {
-        backgroundColor: null, // Transparent background
-        scale: window.devicePixelRatio || 1,
-        useCORS: true,
-        allowTaint: true, // Allow cross-origin images
-        scrollX: -scrollLeft,
-        scrollY: -scrollTop,
-        // Add these additional options to improve rendering
-        logging: true, // Enable logging for debugging
-        onclone: (clonedDoc) => {
-          // Fix styles in cloned document for better rendering
-          const clonedPage = clonedDoc.querySelector(`[data-page-number="${pageNum}"]`);
-          if (clonedPage) {
-            // Ensure text is visible in captured image
-            const textLayers = clonedPage.querySelectorAll('.react-pdf__Page__textContent');
-            textLayers.forEach(layer => {
-              if (layer instanceof HTMLElement) {
-                layer.style.transform = 'none';
-                layer.style.opacity = '1';
-                layer.style.display = 'block';
-              }
-            });
-          }
-          return clonedDoc;
-        }
-      }).then(pageCanvas => {
-        // Calculate the correct position on the page
-        // We need to account for the page position, scroll position, and device pixel ratio
-        const rectLeft = Math.min(rect.left!, rect.left! + rect.width!);
-        const rectTop = Math.min(rect.top!, rect.top! + rect.height!);
-        
-        // Calculate exact position where to start copying from the source image
-        // Need to account for the page's position relative to the viewport and scroll
-        const sourceX = (rectLeft - (pageRect.left - viewportRect.left) + scrollLeft) * window.devicePixelRatio;
-        const sourceY = (rectTop - (pageRect.top - viewportRect.top) + scrollTop) * window.devicePixelRatio;
-        
-        // Log debugging info
-        console.log('Capture details:', {
-          rectLeft, 
-          rectTop,
-          rectWidth: Math.abs(rect.width!),
-          rectHeight: Math.abs(rect.height!),
-          pageRectLeft: pageRect.left,
-          pageRectTop: pageRect.top,
-          viewportRectLeft: viewportRect.left,
-          viewportRectTop: viewportRect.top,
-          scrollTop,
-          scrollLeft,
-          sourceX,
-          sourceY,
-          devicePixelRatio: window.devicePixelRatio,
-          pageCanvasWidth: pageCanvas.width,
-          pageCanvasHeight: pageCanvas.height
+      } catch (error) {
+        console.error("Error fetching PDF:", error);
+        toast({
+          title: "PDF Load Error",
+          description: "Failed to load the PDF from the provided URL.",
+          variant: "destructive",
         });
+      }
+    }, [onPdfLoaded, toast]);
+
+    useEffect(() => {
+      // Load PDF data when the component mounts
+      const pdfURL = (document.querySelector("#pdf-url") as HTMLInputElement)
+        ?.value;
+      if (pdfURL) {
+        loadPdfData(pdfURL);
+      }
+    }, [loadPdfData]);
+
+    useEffect(() => {
+      // Set up the selection canvas when selection mode is enabled
+      if (isSelectionMode && pdfContainerRef.current) {
+        // Get the first PDF page element
+        const pdfPage = pdfContainerRef.current.querySelector(
+          '[data-page-number="1"]'
+        ) as HTMLElement;
+
+        if (pdfPage) {
+          // Get the dimensions of the PDF page
+          const { width, height } = pdfPage.getBoundingClientRect();
+
+          // Create a canvas element for selection overlay
+          selectionCanvas = selectionCanvasRef.current;
+
+          if (selectionCanvas) {
+            // Set canvas dimensions to match the PDF page
+            selectionCanvas.width = width;
+            selectionCanvas.height = height;
+            selectionCanvas.style.position = "absolute";
+            selectionCanvas.style.top = "0";
+            selectionCanvas.style.left = "0";
+            selectionCanvas.style.zIndex = "10";
+          }
+        }
+      } else {
+        // Clear the selection canvas when selection mode is disabled
+        const canvas = selectionCanvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
+      }
+    }, [isSelectionMode]);
+
+    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+      setNumPages(numPages);
+      setPageNumber(1);
+    };
+
+    const goToPrevPage = () => {
+      setPageNumber((prevPageNumber) =>
+        prevPageNumber <= 1 ? prevPageNumber : prevPageNumber - 1
+      );
+    };
+
+    const goToNextPage = () => {
+      setPageNumber((prevPageNumber) =>
+        prevPageNumber >= numPages! ? prevPageNumber : prevPageNumber + 1
+      );
+    };
+
+    const handleTextLayerRendered = useCallback(() => {
+      if (!isSelectionMode) {
+        // Get the text content of the current page
+        const textLayerDiv = document.querySelector(
+          `[data-page-number="${pageNumber}"] .react-pdf__Page__textContent`
+        );
+
+        if (textLayerDiv) {
+          const textContent = textLayerDiv.textContent || "";
+
+          // Notify parent component about the selected text
+          if (onTextSelected) {
+            onTextSelected(textContent);
+          }
+
+          // Dispatch a custom event to open the chat with the text
+          const event = new CustomEvent("openChatWithText", {
+            detail: { text: textContent },
+          });
+          window.dispatchEvent(event);
+        }
+      }
+    }, [pageNumber, isSelectionMode, onTextSelected]);
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (isSelectionMode) {
+        const canvas = selectionCanvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        setSelectionStart({ x, y });
+        selectionRectRef.current = {
+          x,
+          y,
+          width: 0,
+          height: 0,
+          left: rect.left,
+          top: rect.top,
+        };
+      }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (isSelectionMode && selectionStart) {
+        const canvas = selectionCanvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const width = x - selectionStart.x;
+        const height = y - selectionStart.y;
+
+        setSelectionRect({
+          x: selectionStart.x,
+          y: selectionStart.y,
+          width,
+          height,
+        });
+
+        selectionRectRef.current = {
+          x: selectionStart.x,
+          y: selectionStart.y,
+          width,
+          height,
+          left: rect.left,
+          top: rect.top,
+        };
+
+        setShowAreaTooltip(true);
+        setTooltipPosition({ x: e.clientX, y: e.clientY });
+
+        // Draw the selection rectangle on the canvas
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "rgba(0, 123, 255, 0.3)";
+          ctx.fillRect(selectionStart.x, selectionStart.y, width, height);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isSelectionMode && selectionStart && selectionRect) {
+        // Capture the selected area
+        captureSelectedArea();
+        setSelectionStart(null);
+        setSelectionRect(null);
+      }
+    };
+
+    // Fix the captureSelectedArea function to correctly handle the offset
+    const captureSelectedArea = () => {
+      if (!selectionRectRef.current || !selectionCanvas) return;
+      
+      try {
+        // Get the coordinates of the selection rectangle
+        const rect = selectionRectRef.current;
         
-        // Draw only the selected portion to our temp canvas
-        try {
+        // Create a temporary canvas to crop the area
+        const tempCanvas = document.createElement('canvas');
+        const ctx = tempCanvas.getContext('2d');
+        
+        if (!ctx) {
+          console.error('Could not get 2D context for canvas');
+          return;
+        }
+        
+        // Set the temp canvas dimensions to the selection dimensions
+        tempCanvas.width = rect.width as number;
+        tempCanvas.height = rect.height as number;
+        
+        // Find the PDF page that contains our selection
+        const pdfPages = document.querySelectorAll('[data-page-number]');
+        const pageNum = activePdfPageRef.current || 1;
+        let targetPage: Element | null = null;
+        
+        for (let i = 0; i < pdfPages.length; i++) {
+          if ((pdfPages[i] as HTMLElement).dataset.pageNumber === String(pageNum)) {
+            targetPage = pdfPages[i];
+            break;
+          }
+        }
+        
+        if (!targetPage) {
+          console.error('Could not find target page element');
+          return;
+        }
+        
+        // Calculate the offset of the PDF page relative to the viewport
+        const pageRect = targetPage.getBoundingClientRect();
+        const scrollContainer = pdfContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+        const scrollTop = scrollContainer?.scrollTop || 0;
+        const scrollLeft = scrollContainer?.scrollLeft || 0;
+        
+        // Get the viewport offset
+        const viewportRect = scrollContainer?.getBoundingClientRect() || { left: 0, top: 0 };
+        
+        // Convert page element to image
+        html2canvas(targetPage as HTMLElement, {
+          backgroundColor: null,
+          scale: window.devicePixelRatio, // Use device pixel ratio for better quality
+          useCORS: true,
+          // Fix: Include scrolling position in calculation
+          scrollX: -scrollLeft,
+          scrollY: -scrollTop,
+          // Fix: Account for the viewport position
+          x: pageRect.left - viewportRect.left,
+          y: pageRect.top - viewportRect.top,
+        }).then(pageCanvas => {
+          // Calculate the correct offset within the page, accounting for scaling, scrolling, and viewport position
+          const canvasOffset = {
+            // Fix: Improve the offset calculation to be more accurate
+            x: (rect.left! - (pageRect.left - viewportRect.left)) / window.devicePixelRatio,
+            y: (rect.top! - (pageRect.top - scrollTop)) / window.devicePixelRatio
+          };
+          
+          console.log('Capture details:', {
+            rectLeft: rect.left,
+            rectTop: rect.top,
+            pageRectLeft: pageRect.left,
+            pageRectTop: pageRect.top,
+            viewportRectLeft: viewportRect.left,
+            viewportRectTop: viewportRect.top,
+            scrollTop,
+            scrollLeft,
+            offsetX: canvasOffset.x,
+            offsetY: canvasOffset.y,
+            devicePixelRatio: window.devicePixelRatio
+          });
+          
+          // Draw only the selected portion to our temp canvas
           ctx.drawImage(
-            pageCanvas,
-            sourceX,
-            sourceY,
-            Math.abs(rect.width!) * window.devicePixelRatio,
-            Math.abs(rect.height!) * window.devicePixelRatio,
-            0,
-            0,
-            Math.abs(rect.width as number),
-            Math.abs(rect.height as number)
+            pageCanvas, 
+            canvasOffset.x * window.devicePixelRatio, 
+            canvasOffset.y * window.devicePixelRatio, 
+            rect.width! * window.devicePixelRatio, 
+            rect.height! * window.devicePixelRatio,
+            0, 
+            0, 
+            rect.width as number, 
+            rect.height as number
           );
           
-          // Check if the canvas is not empty/blank
-          const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-          const pixelData = imageData.data;
-          let hasData = false;
-          
-          // Check if the image has any non-transparent pixels
-          for (let i = 0; i < pixelData.length; i += 4) {
-            // If any pixel has color or alpha, the image is not blank
-            if (pixelData[i] > 0 || pixelData[i+1] > 0 || pixelData[i+2] > 0 || pixelData[i+3] > 0) {
-              hasData = true;
-              break;
-            }
-          }
-          
-          if (!hasData) {
-            console.warn('Generated image appears to be blank, trying alternative capture method');
-            
-            // Try alternative approach - capture with background
-            // This helps when we're dealing with complex PDF content
-            html2canvas(targetPage as HTMLElement, {
-              backgroundColor: '#ffffff', // White background
-              scale: window.devicePixelRatio || 1,
-              useCORS: true,
-              allowTaint: true,
-              scrollX: -scrollLeft,
-              scrollY: -scrollTop,
-              ignoreElements: (element) => {
-                // Ignore elements that might interfere
-                return element.classList.contains('fabric-canvas-container');
-              }
-            }).then(alternateCanvas => {
-              // Draw the selection from this new canvas
-              ctx.fillStyle = '#ffffff'; // White background
-              ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-              ctx.drawImage(
-                alternateCanvas,
-                sourceX,
-                sourceY,
-                Math.abs(rect.width!) * window.devicePixelRatio,
-                Math.abs(rect.height!) * window.devicePixelRatio,
-                0,
-                0,
-                Math.abs(rect.width as number),
-                Math.abs(rect.height as number)
-              );
-              
-              finalizeImageCapture();
-            }).catch(err => {
-              console.error('Alternative capture method failed:', err);
-              toast({
-                title: "Capture failed",
-                description: "Could not capture the selected area clearly.",
-                variant: "destructive"
-              });
-            });
-          } else {
-            finalizeImageCapture();
-          }
-        } catch (drawError) {
-          console.error('Error drawing the image section:', drawError);
-          toast({
-            title: "Capture Error",
-            description: "Error processing the capture. Please try again.",
-            variant: "destructive"
-          });
-        }
-        
-        // Helper function to finalize the image capture and send it
-        function finalizeImageCapture() {
           // Convert to data URL
           const imageData = tempCanvas.toDataURL('image/png');
-          
-          // Verify image data is valid
-          if (imageData === 'data:,') {
-            console.error('Empty image data generated');
-            toast({
-              title: "Capture failed",
-              description: "Generated image was empty. Please try again.",
-              variant: "destructive"
-            });
-            return;
-          }
           
           // Store the captured image
           setCapturedImage(imageData);
@@ -441,240 +383,338 @@ const PdfViewer = ({ pdfUrl, onTextSelected, onImageCaptured, activePdfKey, onAc
             title: "Area captured",
             description: "The selected area has been sent to the chat.",
           });
-        }
-      }).catch(err => {
-        console.error('Error capturing PDF area:', err);
+        }).catch(err => {
+          console.error('Error capturing PDF area:', err);
+          toast({
+            title: "Capture failed",
+            description: "Failed to capture the selected area.",
+            variant: "destructive"
+          });
+        });
+      } catch (error) {
+        console.error('Error capturing selected area:', error);
         toast({
           title: "Capture failed",
-          description: "Failed to capture the selected area. Please try again.",
+          description: "An error occurred while capturing the selected area.",
           variant: "destructive"
         });
-      });
-    } catch (error) {
-      console.error('Error capturing selected area:', error);
-      toast({
-        title: "Capture failed",
-        description: "An error occurred while capturing the selected area.",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  // Handle text selection
-  const handleTextSelection = () => {
-    if (!onTextSelected) return;
-    
-    const selection = window.getSelection();
-    if (selection) {
-      const selectedText = selection.toString();
-      if (selectedText) {
-        onTextSelected(selectedText);
-        
-        // Dispatch a custom event to open the chat with the selected text
-        const event = new CustomEvent('openChatWithText', {
-          detail: { text: selectedText }
+      }
+    };
+
+    const handleSearch = () => {
+      if (!pdfData) return;
+
+      // Load the PDF document
+      pdfjs.getDocument({ data: pdfData })
+        .promise.then((pdf) => {
+          const searchText = searchQuery.toLowerCase();
+          const results: { pageNumber: number; text: string }[] = [];
+
+          // Iterate through each page
+          const searchPromises: Promise<void>[] = [];
+          for (let i = 1; i <= pdf.numPages; i++) {
+            searchPromises.push(
+              pdf.getPage(i).then((page) => {
+                return page.getTextContent().then((textContent) => {
+                  const pageText = textContent.items
+                    .map((item: any) => item.str)
+                    .join(" ")
+                    .toLowerCase();
+                  if (pageText.includes(searchText)) {
+                    results.push({ pageNumber: i, text: pageText });
+                  }
+                });
+              })
+            );
+          }
+
+          Promise.all(searchPromises).then(() => {
+            setSearchResults(results);
+            setCurrentSearchResultIndex(results.length > 0 ? 0 : -1);
+            if (results.length === 0) {
+              toast({
+                title: "No results found",
+                description: "No matching results found in the document.",
+              });
+            } else {
+              toast({
+                title: "Search complete",
+                description: `${results.length} results found in the document.`,
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Error during search:", error);
+          toast({
+            title: "Search Error",
+            description: "An error occurred during the search process.",
+            variant: "destructive",
+          });
+        });
+    };
+
+    const scrollToPage = (pageNumber: number) => {
+      // Find the element with the data-page-number attribute
+      const pageElement = document.querySelector(
+        `[data-page-number="${pageNumber}"]`
+      );
+
+      if (pageElement) {
+        // Scroll the element into view
+        pageElement.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+          inline: "nearest",
+        });
+
+        // Dispatch a custom event to indicate the PDF page has been switched
+        const event = new CustomEvent("pdfSwitched", {
+          detail: { pdfKey: `pdf_${pageNumber}` },
         });
         window.dispatchEvent(event);
+
+        // Set the active PDF page number
+        activePdfPageRef.current = pageNumber;
+      } else {
+        console.warn(`Page number ${pageNumber} not found in the document.`);
       }
-    }
-  };
-  
-  // Handle page change
-  useEffect(() => {
-    // Notify parent component about the PDF switch
-    const pdfKey = activePdfKey;
-    if (onActivePdfKeyChange && pdfKey) {
-      onActivePdfKeyChange(pdfKey);
-    }
-    
-    // Reset page number when PDF changes
-    setPageNumber(1);
-  }, [pdfUrl, onActivePdfKeyChange, activePdfKey]);
-  
-  // Update active page ref
-  useEffect(() => {
-    activePdfPageRef.current = pageNumber;
-  }, [pageNumber]);
-  
-  return (
-    <div className="flex flex-col h-full">
-      {/* PDF Toolbar */}
-      <div className="flex items-center justify-between p-3 border-b">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={previousPage} disabled={pageNumber <= 1 || isLoading}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={nextPage} disabled={pageNumber >= numPages! || isLoading}>
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-gray-500">
-            Page {pageNumber || (numPages ? 1 : '--')} of {numPages || '--'}
-          </span>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={zoomIn} disabled={isLoading}>
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="center">
-                Zoom In
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={zoomOut} disabled={isLoading}>
-                  <Minimize2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="center">
-                Zoom Out
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={rotate} disabled={isLoading}>
-                  <RotateCw className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="center">
-                Rotate
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={startAreaSelection} disabled={isLoading}>
-                  <Crop className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="center">
+    };
+
+    useImperativeHandle(ref, () => ({
+      scrollToPage: (pageNumber: number) => {
+        scrollToPage(pageNumber);
+        setPageNumber(pageNumber);
+      },
+    }));
+
+    const goToSearchResult = (direction: "prev" | "next") => {
+      if (searchResults.length === 0) return;
+
+      let newIndex = currentSearchResultIndex;
+      if (direction === "next") {
+        newIndex =
+          currentSearchResultIndex < searchResults.length - 1
+            ? currentSearchResultIndex + 1
+            : 0;
+      } else {
+        newIndex =
+          currentSearchResultIndex > 0
+            ? currentSearchResultIndex - 1
+            : searchResults.length - 1;
+      }
+
+      setCurrentSearchResultIndex(newIndex);
+      scrollToPage(searchResults[newIndex].pageNumber);
+      setPageNumber(searchResults[newIndex].pageNumber);
+    };
+
+    const handleZoomIn = () => {
+      setZoomLevel((prevZoomLevel) => Math.min(prevZoomLevel + 0.1, 2.0));
+    };
+
+    const handleZoomOut = () => {
+      setZoomLevel((prevZoomLevel) => Math.max(prevZoomLevel - 0.1, 0.5));
+    };
+
+    const TooltipContent = ({ x, y }: { x: number; y: number }) => {
+      return (
+        <div
+          style={{
+            position: "fixed",
+            top: y - 50,
+            left: x + 10,
+            zIndex: 100,
+            backgroundColor: "white",
+            border: "1px solid #ccc",
+            padding: "10px",
+            borderRadius: "4px",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+          }}
+        >
+          {renderTooltipContent ? (
+            renderTooltipContent({ setShowAreaTooltip, setIsSelectionMode })
+          ) : (
+            <>
+              <p>Do you want to capture this area?</p>
+              <Button
+                size="sm"
+                onClick={() => {
+                  captureSelectedArea();
+                  setShowAreaTooltip(false);
+                  setIsSelectionMode(false);
+                }}
+              >
                 Capture Area
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" asChild disabled={isLoading}>
-                  <a href={pdfUrl} target="_blank" rel="noopener noreferrer" download>
-                    <Download className="h-4 w-4" />
-                  </a>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="center">
-                Download PDF
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </Button>
+            </>
+          )}
         </div>
-      </div>
-      
-      {/* PDF Viewer */}
-      <div className="flex-1 relative overflow-hidden">
-        <ScrollArea className="h-full w-full">
-          <div
-            className="flex flex-col items-center justify-center"
-            ref={pdfContainerRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            style={{ width: '100%', minHeight: 'calc(100% + 1px)' }}
-          >
-            {isLoading && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-                <div className="flex items-center gap-2 text-gray-500">
-                  <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Loading PDF...
-                </div>
+      );
+    };
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between p-2 border-b">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToPrevPage}
+              disabled={pageNumber <= 1}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToNextPage}
+              disabled={pageNumber >= numPages!}
+            >
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <span className="text-sm">
+              Page {pageNumber || (numPages ? "?" : "-")} of {numPages || "?"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleZoomIn}
+              disabled={zoomLevel >= 2.0}
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleZoomOut}
+              disabled={zoomLevel <= 0.5}
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              placeholder="Search document..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-[200px]"
+            />
+            <Button variant="outline" size="sm" onClick={handleSearch}>
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+            {searchResults.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => goToSearchResult("prev")}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => goToSearchResult("next")}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <span className="text-sm">
+                  {currentSearchResultIndex + 1} / {searchResults.length}
+                </span>
               </div>
             )}
-            
-            <div style={{ position: 'relative' }}>
-              <Document
-                file={pdfUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                loading=""
-                className="w-full"
-              >
-                <Page
-                  pageNumber={pageNumber}
-                  scale={scale}
-                  rotate={rotation}
-                  className="w-full"
-                  onRenderSuccess={handleTextLayerRendered}
-                  renderTextLayer={true}
-                  renderAnnotationLayer={false}
-                  data-page-number={pageNumber}
-                  onLoadSuccess={() => {
-                    // Use a timeout to attach the event listener after the page is rendered
-                    setTimeout(() => {
-                      const textLayerElements = document.querySelectorAll('.react-pdf__Page__textContent');
-                      if (textLayerElements.length > 0) {
-                        const textLayer = textLayerElements[0];
-                        textLayer.addEventListener('mouseup', () => {
-                          handleTextSelection();
-                        });
-                      }
-                    }, 100);
-                  }}
-                />
-              </Document>
-              
-              {/* Selection Canvas */}
-              <canvas
-                ref={selectionCanvasRef}
-                width={width}
-                height={height}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  zIndex: 100,
-                  cursor: isSelectionMode ? 'crosshair' : 'default',
-                }}
-              />
-              
-              {/* Area Selection Tooltip */}
-              {showAreaTooltip && isSelectionMode && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: selectionRect.startY || 0,
-                    left: selectionRect.startX || 0,
-                    backgroundColor: 'rgba(0, 119, 255, 0.7)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    zIndex: 101,
-                    pointerEvents: 'none',
-                  }}
-                >
-                  Select area...
-                </div>
-              )}
-            </div>
           </div>
-        </ScrollArea>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSelectionMode(!isSelectionMode)}
+            >
+              {isSelectionMode ? (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Exit Area Select
+                </>
+              ) : (
+                <>
+                  <RectangleHorizontal className="h-4 w-4 mr-2" />
+                  Select Area
+                </>
+              )}
+            </Button>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+        </div>
+
+        {/* PDF Viewer */}
+        <div
+          className="flex-grow relative overflow-auto"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          ref={pdfContainerRef}
+        >
+          <ScrollArea className="h-full">
+            {pdfData ? (
+              <div
+                style={{
+                  transform: `scale(${zoomLevel})`,
+                  transformOrigin: "top left",
+                }}
+              >
+                <Document
+                  file={{ data: pdfData }}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={(error) =>
+                    console.error("Error loading document:", error)
+                  }
+                  loading="Loading PDF..."
+                  error="Failed to load PDF."
+                >
+                  <Page
+                    pageNumber={pageNumber}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={false}
+                    onRenderSuccess={handleTextLayerRendered}
+                    // canvasBackground="rgb(255,255,255)"
+                    //className="border border-gray-200"
+                  >
+                    <canvas
+                      ref={selectionCanvasRef}
+                      style={{ position: "absolute", top: 0, left: 0 }}
+                    />
+                  </Page>
+                </Document>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <span>Loading PDF...</span>
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+
+        {/* Area Selection Tooltip */}
+        {showAreaTooltip && tooltipPosition && (
+          <TooltipContent x={tooltipPosition.x} y={tooltipPosition.y} />
+        )}
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
 
 export default PdfViewer;
