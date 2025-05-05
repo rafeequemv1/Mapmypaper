@@ -6,7 +6,7 @@ import HeaderSidebar from "./HeaderSidebar";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { GitMerge, MessageCircle, FileText, FlowIcon } from "lucide-react";
+import { GitMerge, MessageCircle, FileText, Network } from "lucide-react";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -109,7 +109,7 @@ const Header = ({
           className="flex items-center gap-1 px-2 sm:px-3"
           onClick={() => setShowFlowchart(true)}
         >
-          <FlowIcon className="h-4 w-4" />
+          <Network className="h-4 w-4" />
           <span className="hidden sm:inline">Flowchart</span>
         </Button>
         
