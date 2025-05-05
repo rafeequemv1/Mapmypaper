@@ -35,7 +35,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
   const mountedRef = useRef(true);
   
-  // Always initialize mermaid library with horizontal layout
+  // Initialize with horizontal layout
   useMermaidInit("LR"); 
   
   // Set up cleanup on unmount
@@ -48,7 +48,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // Generate flowchart when modal is opened
   useEffect(() => {
     if (open && !initialLoadAttempted && mountedRef.current) {
-      // Ensure mermaid is available before attempting to generate flowchart
       const timer = setTimeout(() => {
         if (mountedRef.current) {
           setIsRendering(true);
@@ -70,7 +69,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               }
             });
         }
-      }, 1500); // Increased delay to ensure modal is fully opened and libraries are loaded
+      }, 1500);
       
       return () => clearTimeout(timer);
     }
@@ -79,7 +78,6 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   // Reset initial load when modal closes
   useEffect(() => {
     if (!open) {
-      // Reset for next opening
       setInitialLoadAttempted(false);
     }
   }, [open]);

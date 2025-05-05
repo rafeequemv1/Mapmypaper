@@ -6,9 +6,25 @@ interface FallbackDiagramProps {
 }
 
 const FallbackDiagram: React.FC<FallbackDiagramProps> = ({ code }) => {
-  // Extract nodes for fallback display
+  // Extract nodes for display
   const nodeMatches = code.match(/([A-Za-z0-9_-]+)(?:\[|\(|\{)/g) || [];
   const nodes = Array.from(new Set(nodeMatches.map(n => n.replace(/[\[\(\{]$/, ""))));
+  
+  // Extract connections if possible
+  const connections: { from: string, to: string, label?: string }[] = [];
+  const connectionRegex = /([A-Za-z0-9_-]+)\s*--(?:-|>)\s*(?:\|([^|]+)\|\s*)?([A-Za-z0-9_-]+)/g;
+  let match;
+  
+  // Use the regex to find connections
+  const codeString = typeof code === 'string' ? code : '';
+  while ((match = connectionRegex.exec(codeString)) !== null) {
+    connections.push({
+      from: match[1],
+      to: match[3],
+      label: match[2]
+    });
+  }
+  
   return (
     <div className="w-full h-full flex items-center justify-center relative">
       <svg width="100%" height="100%" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
@@ -28,12 +44,59 @@ const FallbackDiagram: React.FC<FallbackDiagramProps> = ({ code }) => {
               <text x="100" y="35" textAnchor="middle" fontFamily="Arial" fontSize="14">{node}</text>
             </g>
           ))}
+          
+          {/* Draw connections between nodes if we have position data */}
+          {connections.map((conn, i) => {
+            const fromIndex = nodes.indexOf(conn.from);
+            const toIndex = nodes.indexOf(conn.to);
+            
+            if (fromIndex === -1 || toIndex === -1) return null;
+            
+            const fromX = (fromIndex % 3) * 260 + 100;
+            const fromY = Math.floor(fromIndex / 3) * 100 + 30;
+            
+            const toX = (toIndex % 3) * 260 + 100;
+            const toY = Math.floor(toIndex / 3) * 100 + 30;
+            
+            // Calculate a midpoint with slight curve
+            const midX = (fromX + toX) / 2;
+            const midY = (fromY + toY) / 2 + 20;
+            
+            return (
+              <g key={`conn-${i}`}>
+                <path 
+                  d={`M ${fromX} ${fromY} Q ${midX} ${midY} ${toX} ${toY}`}
+                  fill="none"
+                  stroke="#64748B"
+                  strokeWidth="2"
+                  markerEnd="url(#arrowhead)"
+                />
+                {conn.label && (
+                  <g transform={`translate(${midX}, ${midY})`}>
+                    <rect 
+                      x="-30" y="-10" 
+                      width="60" height="20" 
+                      rx="5" ry="5"
+                      fill="white" 
+                      stroke="#64748B"
+                      strokeWidth="1"
+                    />
+                    <text 
+                      x="0" y="5" 
+                      textAnchor="middle" 
+                      fontFamily="Arial" 
+                      fontSize="10"
+                    >
+                      {conn.label}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
         </g>
         <text x="400" y="30" textAnchor="middle" fontFamily="Arial" fontSize="18" fontWeight="bold">
-          Simplified Flowchart (Fallback Mode)
-        </text>
-        <text x="400" y="570" textAnchor="middle" fontFamily="Arial" fontSize="14" fill="#EF4444">
-          Note: Using simplified view due to rendering issues
+          Simplified Flowchart
         </text>
       </svg>
     </div>

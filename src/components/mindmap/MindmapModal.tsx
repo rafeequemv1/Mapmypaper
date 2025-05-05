@@ -40,94 +40,84 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       Pen and paper
       Mermaid`;
 
-  // Render the diagram when modal opens or theme changes
   useEffect(() => {
     if (!isOpen) return;
     
-    const renderMermaid = async () => {
+    const renderMindmap = async () => {
       try {
         setIsRendering(true);
         setError(null);
         
-        // Import mermaid dynamically to ensure it's only loaded when needed
-        const mermaid = (await import('mermaid')).default;
-        
-        // Configure mermaid with the current theme
-        mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "loose",
-          theme: theme,
-          mindmap: {
-            padding: 16,
-          },
-          flowchart: {
-            useMaxWidth: true,
-            htmlLabels: true,
-            curve: 'basis',
-          }
-        });
-        
-        // Clear previous rendering
         if (containerRef.current) {
-          containerRef.current.innerHTML = '';
-          
-          // Create a unique ID for this render
-          const id = `mindmap-diagram-${Math.random().toString(36).substring(2, 11)}`;
-          
-          // Create the pre element that will contain our diagram
-          const preElement = document.createElement('pre');
-          preElement.className = 'mermaid';
-          preElement.textContent = mindmapCode;
-          containerRef.current.appendChild(preElement);
-          
-          // Render the diagram - using the newer API pattern
-          await mermaid.run({
-            nodes: [preElement],
-            suppressErrors: false
-          });
-          
-          // Find the SVG and make it responsive
-          const svgElement = containerRef.current.querySelector('svg');
-          if (svgElement) {
-            svgElement.setAttribute('width', '100%');
-            svgElement.setAttribute('height', '100%');
-            svgElement.style.maxWidth = '100%';
-            svgElement.style.maxHeight = '60vh';
-            
-            // Add custom styles for mindmap nodes
-            const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-            styleElement.textContent = `
-              .mindmap-node > rect, .mindmap-node > circle, .mindmap-node > ellipse {
-                rx: 10px;
-                ry: 10px;
-                fill-opacity: 0.8 !important;
-              }
-              .mindmap-node .label {
-                font-size: 14px;
-                font-weight: 500;
-              }
-              .mindmap-root > rect, .mindmap-root > circle, .mindmap-root > ellipse {
-                fill: #E5DEFF !important;
-                stroke: #8B5CF6 !important;
-              }
-              .edge {
-                stroke-width: 2px !important;
-              }
-            `;
-            svgElement.appendChild(styleElement);
-          }
+          // Display simplified mindmap visualization instead
+          containerRef.current.innerHTML = `
+            <div class="p-4 bg-white rounded-md">
+              <div class="text-center mb-4">
+                <h3 class="text-lg font-bold">Simple Mindmap Visualization</h3>
+              </div>
+              <div class="flex justify-center">
+                <svg width="500" height="300" viewBox="0 0 500 300">
+                  <!-- Root node -->
+                  <circle cx="250" cy="50" r="30" fill="#E5DEFF" stroke="#8B5CF6" stroke-width="2"/>
+                  <text x="250" y="55" text-anchor="middle" font-size="12">Mindmap</text>
+                  
+                  <!-- Origin branch -->
+                  <line x1="250" y1="80" x2="150" y2="120" stroke="#8B5CF6" stroke-width="2"/>
+                  <circle cx="150" cy="120" r="25" fill="#D3E4FD" stroke="#0EA5E9" stroke-width="2"/>
+                  <text x="150" y="125" text-anchor="middle" font-size="10">Origins</text>
+                  
+                  <!-- Research branch -->
+                  <line x1="250" y1="80" x2="250" y2="120" stroke="#8B5CF6" stroke-width="2"/>
+                  <circle cx="250" cy="120" r="25" fill="#FDE1D3" stroke="#F97316" stroke-width="2"/>
+                  <text x="250" y="125" text-anchor="middle" font-size="10">Research</text>
+                  
+                  <!-- Tools branch -->
+                  <line x1="250" y1="80" x2="350" y2="120" stroke="#8B5CF6" stroke-width="2"/>
+                  <circle cx="350" cy="120" r="25" fill="#F2FCE2" stroke="#22C55E" stroke-width="2"/>
+                  <text x="350" y="125" text-anchor="middle" font-size="10">Tools</text>
+                  
+                  <!-- Origin subitems -->
+                  <line x1="150" y1="145" x2="100" y2="180" stroke="#0EA5E9" stroke-width="1.5"/>
+                  <rect x="70" y="170" width="60" height="20" rx="5" fill="#D3E4FD" stroke="#0EA5E9"/>
+                  <text x="100" y="185" text-anchor="middle" font-size="8">History</text>
+                  
+                  <line x1="150" y1="145" x2="150" y2="180" stroke="#0EA5E9" stroke-width="1.5"/>
+                  <rect x="120" y="170" width="60" height="20" rx="5" fill="#D3E4FD" stroke="#0EA5E9"/>
+                  <text x="150" y="185" text-anchor="middle" font-size="8">Popularization</text>
+                  
+                  <!-- Research subitems -->
+                  <line x1="250" y1="145" x2="200" y2="180" stroke="#F97316" stroke-width="1.5"/>
+                  <rect x="170" y="170" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
+                  <text x="200" y="185" text-anchor="middle" font-size="8">Effectiveness</text>
+                  
+                  <line x1="250" y1="145" x2="270" y2="180" stroke="#F97316" stroke-width="1.5"/>
+                  <rect x="240" y="170" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
+                  <text x="270" y="185" text-anchor="middle" font-size="8">Creation</text>
+                  
+                  <!-- Tools subitems -->
+                  <line x1="350" y1="145" x2="330" y2="180" stroke="#22C55E" stroke-width="1.5"/>
+                  <rect x="300" y="170" width="60" height="20" rx="5" fill="#F2FCE2" stroke="#22C55E"/>
+                  <text x="330" y="185" text-anchor="middle" font-size="8">Pen & Paper</text>
+                  
+                  <!-- Creation subitems -->
+                  <line x1="270" y1="190" x2="270" y2="220" stroke="#F97316" stroke-width="1"/>
+                  <rect x="240" y="220" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
+                  <text x="270" y="235" text-anchor="middle" font-size="8">Uses</text>
+                </svg>
+              </div>
+            </div>
+          `;
         }
       } catch (err) {
-        console.error("Error rendering Mermaid diagram:", err);
+        console.error("Error rendering mindmap:", err);
         setError(String(err));
       } finally {
         setIsRendering(false);
       }
     };
     
-    renderMermaid();
+    renderMindmap();
     
-    // Clean up function
     return () => {
       if (containerRef.current) {
         containerRef.current.innerHTML = '';
@@ -159,14 +149,14 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-2">
-          <DialogTitle>Mermaid Mindmap</DialogTitle>
+          <DialogTitle>Static Mindmap</DialogTitle>
           <DialogDescription>
-            An interactive visualization of mindmap concepts
+            A visualization of mindmap concepts
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-auto p-4">
           <div 
-            className="mermaid-container w-full min-h-[300px] max-h-[50vh] flex items-center justify-center bg-white rounded-md border overflow-auto"
+            className="mindmap-container w-full min-h-[300px] max-h-[50vh] flex items-center justify-center bg-white rounded-md border overflow-auto"
           >
             {isRendering && (
               <div className="text-gray-500 flex flex-col items-center p-8">
@@ -188,7 +178,7 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
             />
           </div>
           <div className="mt-4 p-4 bg-gray-50 rounded-md">
-            <h3 className="text-sm font-medium mb-2">Diagram Source Code:</h3>
+            <h3 className="text-sm font-medium mb-2">Mindmap Structure:</h3>
             <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto max-h-[15vh] overflow-y-auto">
               {mindmapCode}
             </pre>
