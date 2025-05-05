@@ -4,7 +4,9 @@ import {
   FileCode,
   MessageSquare,
   FileText,
+  Home
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
 import UserMenu from "@/components/UserMenu";
@@ -29,35 +31,51 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   onExportSVG,
   onExportPNG,
   onExportJSON,
-}) => (
-  <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-20 gap-2 z-10">
-    <HeaderSidebarIcon
-      active={isPdfActive}
-      onClick={togglePdf}
-      icon={<FileCode className="h-4 w-4" />}
-      title="Toggle PDF"
-    />
-    <HeaderSidebarIcon
-      active={isChatActive}
-      onClick={toggleChat}
-      icon={<MessageSquare className="h-4 w-4" />}
-      title="Toggle Chat"
-    />
-    <HeaderSidebarIcon
-      onClick={() => setShowSummary(true)}
-      icon={<FileText className="h-4 w-4" />}
-      title="Show Summary"
-    />
-    <HeaderExportMenu
-      onExportSVG={onExportSVG}
-      onExportPNG={onExportPNG}
-      onExportJSON={onExportJSON}
-    />
-    {/* User Menu at the bottom */}
-    <div className="mt-auto mb-4">
-      <UserMenu />
+}) => {
+  const navigate = useNavigate();
+  
+  return (
+    <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-4 gap-2 z-10">
+      {/* Home button at the very top */}
+      <HeaderSidebarIcon
+        onClick={() => navigate('/')}
+        icon={<Home className="h-4 w-4" />}
+        title="Go to Home"
+        className="mb-4"
+      />
+      
+      {/* Divider line */}
+      <div className="w-8 h-px bg-gray-200 mb-4"></div>
+      
+      {/* Original buttons */}
+      <HeaderSidebarIcon
+        active={isPdfActive}
+        onClick={togglePdf}
+        icon={<FileCode className="h-4 w-4" />}
+        title="Toggle PDF"
+      />
+      <HeaderSidebarIcon
+        active={isChatActive}
+        onClick={toggleChat}
+        icon={<MessageSquare className="h-4 w-4" />}
+        title="Toggle Chat"
+      />
+      <HeaderSidebarIcon
+        onClick={() => setShowSummary(true)}
+        icon={<FileText className="h-4 w-4" />}
+        title="Show Summary"
+      />
+      <HeaderExportMenu
+        onExportSVG={onExportSVG}
+        onExportPNG={onExportPNG}
+        onExportJSON={onExportJSON}
+      />
+      {/* User Menu at the bottom */}
+      <div className="mt-auto mb-4">
+        <UserMenu />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default HeaderSidebar;
