@@ -61,6 +61,26 @@ const MindMap = () => {
     }
   }, [location]);
 
+  // Listen for tab changes to update PDF text in session storage
+  useEffect(() => {
+    const handleTabChange = (e: CustomEvent) => {
+      if (e.detail?.activeKey) {
+        const key = e.detail.activeKey;
+        // Get PDF text for this specific PDF and store it as the main text
+        const pdfText = sessionStorage.getItem(`pdfText_${key}`);
+        if (pdfText) {
+          sessionStorage.setItem('pdfText', pdfText);
+        }
+      }
+    };
+    
+    window.addEventListener('pdfTabChanged', handleTabChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('pdfTabChanged', handleTabChange as EventListener);
+    };
+  }, []);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header 

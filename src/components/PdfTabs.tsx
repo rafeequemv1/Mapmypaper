@@ -26,7 +26,7 @@ interface PdfTabsProps {
   activeKey: string | null;
   onTabChange: (key: string) => void;
   onRemove: (key: string) => void;
-  onAddPdf?: () => void; // NEW PROP
+  onAddPdf?: () => void;
 }
 
 const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onAddPdf }) => {
@@ -44,11 +44,23 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
     };
   }, []);
 
+  // Notify when tab changes
+  const handleTabChange = (key: string) => {
+    onTabChange(key);
+    
+    // Dispatch an event to inform chat components about tab change
+    window.dispatchEvent(
+      new CustomEvent('pdfTabChanged', { 
+        detail: { activeKey: key } 
+      })
+    );
+  };
+
   if (pdfMetas.length === 0 && !onAddPdf) return null;
 
   return (
     <div className="p-0.5 bg-gray-100 border-b flex items-center">
-      <Tabs value={activeKey || undefined} onValueChange={onTabChange} className="w-full flex-1">
+      <Tabs value={activeKey || undefined} onValueChange={handleTabChange} className="w-full flex-1">
         <TabsList className="overflow-auto">
           {pdfMetas.map((meta) => (
             <TabsTrigger
@@ -93,4 +105,3 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
 };
 
 export default PdfTabs;
-

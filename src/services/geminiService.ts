@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 // Initialize the Gemini API with a fixed API key
 const apiKey = "AIzaSyAiqTjjCuc3p8TIV8PuWqtPJ-HmgDoVm6A";
@@ -181,21 +182,45 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
   }
 };
 
+// Helper function to get all PDF text from storage
+export const getAllPdfText = (): string => {
+  const pdfs = getAllPdfs();
+  let allText = "";
+  
+  // Combine text from all PDFs
+  pdfs.forEach(pdf => {
+    const key = getPdfKey(pdf);
+    const text = sessionStorage.getItem(`pdfText_${key}`);
+    if (text) {
+      allText += `\n\n=== PDF: ${pdf.name} ===\n\n`;
+      allText += text;
+    }
+  });
+  
+  return allText || "";
+};
+
 // Chat with Gemini about PDF content with citation support
-export const chatWithGeminiAboutPdf = async (message: string): Promise<string> => {
+export const chatWithGeminiAboutPdf = async (message: string, useAllPdfs = false): Promise<string> => {
   try {
-    // Retrieve stored PDF text from sessionStorage
-    const pdfText = sessionStorage.getItem('pdfText');
+    // Get PDF text based on mode
+    let pdfText = useAllPdfs ? getAllPdfText() : sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
-      return "I don't have access to the PDF content. Please make sure you've uploaded a PDF first.";
+      return "I don't have access to any PDF content. Please make sure you've uploaded a PDF first.";
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
+    // Add context about which mode we're using
+    const contextPrefix = useAllPdfs 
+      ? "You are analyzing MULTIPLE PDFs. When citing sources, include the PDF name if available." 
+      : "You are analyzing a SINGLE PDF.";
+    
     // Use a history array to maintain context
     const prompt = `
+    ${contextPrefix}
     You are an AI research assistant chatting with a user about a PDF document. 
     The user has the following question or request: "${message}"
     
@@ -791,36 +816,4 @@ const cleanMindmapSyntax = (code: string): string => {
 export const analyzeFileWithGemini = async (fileContent: string, fileName: string, fileType: string): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage for context
-    const pdfText = sessionStorage.getItem('pdfText');
-    const pdfContext = pdfText ? pdfText.slice(0, 5000) : "";
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const prompt = `
-      You are an AI research assistant helping a user understand a file they've uploaded.
-      
-      The user has uploaded a file named "${fileName}" with type "${fileType}".
-      
-      Analyze this file content and provide a detailed explanation of what it contains.
-      If it contains data, describe the structure and key points.
-      If it's text content, summarize the main ideas and concepts.
-      
-      Make connections to the broader research document context if possible.
-      
-      Here's some context from the main document (may be truncated):
-      ${pdfContext}
-      
-      Here's the content of the uploaded file:
-      ${fileContent}
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-    
-  } catch (error) {
-    console.error("Gemini API file analysis error:", error);
-    return "Sorry, I encountered an error while analyzing the file. Please try again.";
-  }
-};
+    const pdfText = sessionStorage.getItem('pdfText

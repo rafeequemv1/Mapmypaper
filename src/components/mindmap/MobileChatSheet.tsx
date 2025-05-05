@@ -6,9 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import { Switch } from "@/components/ui/switch";
 import PdfToText from "react-pdftotext";
-import { storePdfData, getPdfData, isMindMapReady } from "@/utils/pdfStorage";
-import { generateMindMapFromText } from "@/services/geminiService";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 interface MobileChatSheetProps {
@@ -33,12 +32,39 @@ Feel free to ask me any questions! Here are some suggestions:`
   const citationActivated = useRef(false);
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingPdf, setProcessingPdf] = useState(false);
+  // New state for the PDF toggle
+  const [useAllPdfs, setUseAllPdfs] = useState(false);
 
   // New states for file attachment
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachedFilePreview, setAttachedFilePreview] = useState<string | null>(null);
   const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
+  
+  // Listen for toggle state changes from desktop chat
+  useEffect(() => {
+    const handleToggleChange = (e: CustomEvent) => {
+      if (e.detail?.useAllPdfs !== undefined) {
+        setUseAllPdfs(e.detail.useAllPdfs);
+      }
+    };
+    
+    window.addEventListener('chatToggleChanged', handleToggleChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('chatToggleChanged', handleToggleChange as EventListener);
+    };
+  }, []);
+
+  // Broadcast toggle state changes
+  useEffect(() => {
+    // Emit event when toggle changes so desktop chat can sync
+    window.dispatchEvent(
+      new CustomEvent('chatToggleChanged', { 
+        detail: { useAllPdfs } 
+      })
+    );
+  }, [useAllPdfs]);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -97,8 +123,10 @@ Feel free to ask me any questions! Here are some suggestions:`
         
         try {
           // Enhanced prompt for explanation
+          // Now passing useAllPdfs parameter
           const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
+            useAllPdfs
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -135,7 +163,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainText();
-  }, [explainText, isSheetOpen, toast]);
+  }, [explainText, isSheetOpen, toast, useAllPdfs]);
   
   // Modified function to process PDF file without creating mindmap
   const processPdfFile = async (file: File) => {
@@ -352,8 +380,10 @@ Would you like to:
       
       try {
         // Enhanced prompt to encourage complete sentences, page citations, and emojis
+        // Now passing useAllPdfs parameter
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
+          useAllPdfs
         );
         
         // Hide typing indicator and add AI response with formatting
@@ -450,8 +480,10 @@ Would you like to:
     setIsTyping(true);
     
     try {
+      // Pass useAllPdfs parameter
       const response = await chatWithGeminiAboutPdf(
-        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
+        useAllPdfs
       );
       
       setIsTyping(false);
@@ -542,10 +574,24 @@ Would you like to:
       </SheetTrigger>
       
       <SheetContent side="right" className="sm:max-w-lg w-full p-0 flex flex-col">
-        <div className="flex items-center justify-between p-3 border-b">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            <h3 className="font-medium text-sm">Research Assistant</h3>
+        <div className="flex flex-col p-3 border-b">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <h3 className="font-medium text-sm">Research Assistant</h3>
+            </div>
+          </div>
+          
+          {/* Add the toggle for mobile */}
+          <div className="flex items-center justify-center mt-1">
+            <span className="text-xs text-gray-500">Active PDF</span>
+            <Switch
+              checked={useAllPdfs}
+              onCheckedChange={setUseAllPdfs}
+              className="mx-2"
+              aria-label="Toggle between active PDF and all PDFs"
+            />
+            <span className="text-xs text-gray-500">All PDFs</span>
           </div>
         </div>
         
