@@ -1,6 +1,7 @@
 
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
+import { getAllPdfText } from "@/utils/pdfStorage";
 
 // Initialize the Gemini API with a fixed API key
 const apiKey = "AIzaSyAiqTjjCuc3p8TIV8PuWqtPJ-HmgDoVm6A";
@@ -205,7 +206,15 @@ export const getAllPdfText = (): string => {
 export const chatWithGeminiAboutPdf = async (message: string, useAllPdfs = false): Promise<string> => {
   try {
     // Get PDF text based on mode
-    let pdfText = useAllPdfs ? getAllPdfText() : sessionStorage.getItem('pdfText');
+    let pdfText = "";
+    
+    if (useAllPdfs) {
+      // Get text from all PDFs using the enhanced function
+      pdfText = await getAllPdfText();
+    } else {
+      // Get text from the active PDF
+      pdfText = sessionStorage.getItem('pdfText') || "";
+    }
     
     if (!pdfText || pdfText.trim() === '') {
       return "I don't have access to any PDF content. Please make sure you've uploaded a PDF first.";
