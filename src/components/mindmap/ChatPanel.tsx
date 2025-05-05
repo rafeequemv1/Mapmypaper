@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, FileText, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -930,4 +931,47 @@ Feel free to ask me any questions! Here are some suggestions:`
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 shrink-0
+              className="h-6 w-6 shrink-0"
+              onClick={removeAttachedFile}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
+        {/* Message input */}
+        <div className="flex gap-2">
+          <Textarea
+            placeholder="Ask a question..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="resize-none min-h-[40px] max-h-[120px]"
+          />
+          <div className="flex flex-col gap-2">
+            <Button 
+              type="button" 
+              size="icon"
+              variant="ghost"
+              className="h-9 w-9 rounded-full hover:bg-gray-100"
+              onClick={handleAttachClick}
+            >
+              <Paperclip className="h-5 w-5 text-gray-500" />
+            </Button>
+            <Button 
+              type="button" 
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() && !attachedFile}
+            >
+              <Send className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatPanel;
