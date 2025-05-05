@@ -180,7 +180,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
-    // New effect for snapshot mode
+    // Updated effect for snapshot mode with capture tooltip
     useEffect(() => {
       if (!pdfContainerRef.current || !viewportRef.current) return;
       
@@ -207,37 +207,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           selectionRectRef.current.moveSelection(e.clientX, e.clientY);
         };
         
-        const handleMouseUp = async (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current || !pdfContainerRef.current) return;
-          
-          const rect = selectionRectRef.current.endSelection(e.clientX, e.clientY);
-          
-          if (rect && rect.width > 10 && rect.height > 10) {
-            try {
-              // Capture the selected area
-              const imageData = await captureElementArea(pdfContainerRef.current, rect);
-              
-              if (imageData && onImageCaptured) {
-                // Send captured image to chat
-                onImageCaptured(imageData);
-                
-                toast({
-                  title: "Area captured",
-                  description: "The selected area has been sent to chat",
-                });
-              }
-            } catch (error) {
-              console.error("Error capturing area:", error);
-              toast({
-                title: "Capture failed",
-                description: "Failed to capture the selected area",
-                variant: "destructive"
-              });
-            }
-          }
-          
-          // Exit snapshot mode after capturing
-          setIsSnapshotMode(false);
+        const handleMouseUp = (e: MouseEvent) => {
+          if (!isSnapshotMode || !selectionRectRef.current) return;
+          selectionRectRef.current.endSelection(e.clientX, e.clientY);
+          // Note: We no longer immediately capture the area here
+          // Instead, we wait for the user to click the capture tooltip
         };
         
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -250,11 +224,49 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           }
         };
         
+        // Add new handler for the captureArea custom event
+        const handleCaptureArea = async (e: Event) => {
+          const customEvent = e as CustomEvent;
+          if (!customEvent.detail?.rect || !pdfContainerRef.current) return;
+          
+          const rect = customEvent.detail.rect;
+          
+          try {
+            // Capture the selected area
+            const imageData = await captureElementArea(pdfContainerRef.current, rect);
+            
+            if (imageData && onImageCaptured) {
+              // Send captured image to chat
+              onImageCaptured(imageData);
+              
+              toast({
+                title: "Area captured",
+                description: "The selected area has been sent to chat",
+              });
+            }
+          } catch (error) {
+            console.error("Error capturing area:", error);
+            toast({
+              title: "Capture failed",
+              description: "Failed to capture the selected area",
+              variant: "destructive"
+            });
+          } finally {
+            // Reset the capturing state and clean up
+            if (selectionRectRef.current) {
+              selectionRectRef.current.setCapturing(false);
+              selectionRectRef.current.cancelSelection();
+            }
+            setIsSnapshotMode(false);
+          }
+        };
+        
         // Add event listeners
         viewport.addEventListener("mousedown", handleMouseDown);
         window.addEventListener("mousemove", handleMouseMove);
         window.addEventListener("mouseup", handleMouseUp);
         window.addEventListener("keydown", handleKeyDown);
+        pdfContainerRef.current.addEventListener("captureArea", handleCaptureArea);
         
         // Set cursor to crosshair when in snapshot mode
         viewport.style.cursor = "crosshair";
@@ -265,6 +277,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           window.removeEventListener("mousemove", handleMouseMove);
           window.removeEventListener("mouseup", handleMouseUp);
           window.removeEventListener("keydown", handleKeyDown);
+          if (pdfContainerRef.current) {
+            pdfContainerRef.current.removeEventListener("captureArea", handleCaptureArea);
+          }
           
           // Reset cursor
           viewport.style.cursor = "";

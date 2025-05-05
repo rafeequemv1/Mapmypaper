@@ -57,10 +57,19 @@ export function createSelectionRect(containerElement: HTMLElement) {
   selectionRect.style.display = 'none';
   containerElement.appendChild(selectionRect);
   
+  // Create capture button tooltip
+  const captureTooltip = document.createElement('div');
+  captureTooltip.className = 'absolute bg-blue-600 text-white px-2 py-1 rounded text-sm z-50 cursor-pointer shadow-md hover:bg-blue-700 transition-colors duration-150';
+  captureTooltip.style.display = 'none';
+  captureTooltip.textContent = 'Capture';
+  containerElement.appendChild(captureTooltip);
+  
   // Selection state
   let isSelecting = false;
   let startX = 0;
   let startY = 0;
+  let currentRect = { x: 0, y: 0, width: 0, height: 0 };
+  let isCapturing = false;
   
   // Update rectangle position and dimensions
   const updateRect = (endX: number, endY: number) => {
@@ -85,8 +94,15 @@ export function createSelectionRect(containerElement: HTMLElement) {
     selectionRect.style.width = `${width}px`;
     selectionRect.style.height = `${height}px`;
     
+    // Store current rect
+    currentRect = { x: left, y: top, width, height };
+    
+    // Position the tooltip above the rectangle
+    captureTooltip.style.left = `${left + width/2 - captureTooltip.offsetWidth/2}px`;
+    captureTooltip.style.top = `${top - captureTooltip.offsetHeight - 5}px`;
+    
     // Return the current rectangle dimensions
-    return { x: left, y: top, width, height };
+    return currentRect;
   };
   
   // Start selection
@@ -108,8 +124,12 @@ export function createSelectionRect(containerElement: HTMLElement) {
     // Hide rectangle if dimensions are too small (likely an accidental click)
     if (rect.width < 10 || rect.height < 10) {
       selectionRect.style.display = 'none';
+      captureTooltip.style.display = 'none';
       return null;
     }
+    
+    // Show the capture tooltip
+    captureTooltip.style.display = 'block';
     
     return rect;
   };
@@ -124,12 +144,49 @@ export function createSelectionRect(containerElement: HTMLElement) {
   const cancelSelection = () => {
     isSelecting = false;
     selectionRect.style.display = 'none';
+    captureTooltip.style.display = 'none';
+    isCapturing = false;
   };
+  
+  // Set capture loading state
+  const setCapturing = (capturing: boolean) => {
+    isCapturing = capturing;
+    
+    if (capturing) {
+      // Show loading state
+      captureTooltip.innerHTML = '<div class="inline-block w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-1"></div> Capturing...';
+      captureTooltip.classList.add('bg-blue-800');
+      captureTooltip.classList.remove('hover:bg-blue-700');
+      captureTooltip.style.cursor = 'default';
+    } else {
+      // Reset to normal state
+      captureTooltip.textContent = 'Capture';
+      captureTooltip.classList.remove('bg-blue-800');
+      captureTooltip.classList.add('hover:bg-blue-700');
+      captureTooltip.style.cursor = 'pointer';
+    }
+  };
+  
+  // Set up click handler for the tooltip
+  captureTooltip.addEventListener('click', () => {
+    if (isCapturing) return; // Prevent multiple captures
+    
+    // Dispatch a custom event with the current rectangle
+    const captureEvent = new CustomEvent('captureArea', {
+      detail: { rect: currentRect }
+    });
+    
+    containerElement.dispatchEvent(captureEvent);
+    setCapturing(true);
+  });
   
   // Remove selection elements
   const destroy = () => {
     if (containerElement.contains(selectionRect)) {
       containerElement.removeChild(selectionRect);
+    }
+    if (containerElement.contains(captureTooltip)) {
+      containerElement.removeChild(captureTooltip);
     }
   };
   
@@ -139,6 +196,7 @@ export function createSelectionRect(containerElement: HTMLElement) {
     moveSelection,
     endSelection,
     cancelSelection,
+    setCapturing,
     destroy,
     isSelecting: () => isSelecting
   };
