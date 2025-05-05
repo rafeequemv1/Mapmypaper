@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -109,6 +108,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     useEffect(() => {
       const handleTextSelection = () => {
         const selection = window.getSelection();
+        
+        // Always hide previous tooltip when a new selection is made
+        setShowSelectionTooltip(false);
+        
         if (selection && !selection.isCollapsed) {
           const text = selection.toString().trim();
           if (text) {
@@ -117,12 +120,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             // Get position for tooltip
             const range = selection.getRangeAt(0);
             const rect = range.getBoundingClientRect();
+            
+            // Update tooltip position
             setSelectionPosition({
               x: rect.x + rect.width / 2,
               y: rect.y - 10
             });
             
-            setShowSelectionTooltip(true);
+            // Show tooltip with slight delay to prevent flickering
+            setTimeout(() => {
+              setShowSelectionTooltip(true);
+            }, 50);
           }
         }
       };
@@ -499,11 +507,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div 
               className="flex flex-col items-center py-4 relative"
             >
-              {/* Selection Tooltip */}
-              {showSelectionTooltip && selectionPosition && (
+              {/* Selection Tooltip - Now with conditional opacity and transition */}
+              {selectionPosition && (
                 <div
                   ref={selectionTooltipRef}
-                  className="absolute bg-white rounded-md shadow-md border border-gray-200 z-50 p-1"
+                  className={`absolute bg-white rounded-md shadow-md border border-gray-200 z-50 p-1 transition-opacity duration-200 ${showSelectionTooltip ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                   style={{
                     left: `${selectionPosition.x}px`,
                     top: `${selectionPosition.y}px`,
