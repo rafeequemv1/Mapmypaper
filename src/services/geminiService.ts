@@ -1,7 +1,5 @@
-
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
-import { getAllPdfText } from "@/utils/pdfStorage";
 
 // Initialize the Gemini API with a fixed API key
 const apiKey = "AIzaSyAiqTjjCuc3p8TIV8PuWqtPJ-HmgDoVm6A";
@@ -206,15 +204,7 @@ export const getAllPdfText = (): string => {
 export const chatWithGeminiAboutPdf = async (message: string, useAllPdfs = false): Promise<string> => {
   try {
     // Get PDF text based on mode
-    let pdfText = "";
-    
-    if (useAllPdfs) {
-      // Get text from all PDFs using the enhanced function
-      pdfText = await getAllPdfText();
-    } else {
-      // Get text from the active PDF
-      pdfText = sessionStorage.getItem('pdfText') || "";
-    }
+    let pdfText = useAllPdfs ? getAllPdfText() : sessionStorage.getItem('pdfText');
     
     if (!pdfText || pdfText.trim() === '') {
       return "I don't have access to any PDF content. Please make sure you've uploaded a PDF first.";
@@ -513,7 +503,7 @@ const cleanMermaidSyntax = (code: string): string => {
       });
       
       // Handle parentheses ()
-      fixedLine = fixedLine.replace(/\(([^\)]*)-([^)]*)\)/g, function(match, p1, p2) {
+      fixedLine = fixedLine.replace(/\(([^\)]*)-([^\)]*)\)/g, function(match, p1, p2) {
         return '(' + p1 + ' ' + p2 + ')';
       });
       
@@ -826,39 +816,4 @@ const cleanMindmapSyntax = (code: string): string => {
 export const analyzeFileWithGemini = async (fileContent: string, fileName: string, fileType: string): Promise<string> => {
   try {
     // Retrieve stored PDF text from sessionStorage for context
-    const pdfText = sessionStorage.getItem('pdfText');
-    const pdfContext = pdfText ? pdfText.slice(0, 3000) : "";
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const prompt = `
-      You are an AI research assistant helping a user understand a text file in the context of their research paper. 
-      
-      FILE DETAILS:
-      File name: ${fileName}
-      File type: ${fileType}
-      
-      FILE CONTENT (may be truncated):
-      ${fileContent.slice(0, 10000)}
-      
-      PDF CONTEXT (for reference, may be truncated):
-      ${pdfContext}
-      
-      Please analyze this file and provide the following information:
-      1. A concise summary of what the file contains
-      2. How this file might relate to the research paper (if applicable)
-      3. Any technical details that might be relevant (e.g., for code files, what the code does)
-      4. Any patterns, trends, or interesting points in the data (if it's a data file)
-      
-      Format your response with proper markdown, using headings, bullet points, and code blocks where appropriate.
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Gemini API file analysis error:", error);
-    return "Sorry, I encountered an error while analyzing the file. Please try again.";
-  }
-};
+    const pdfText = sessionStorage.getItem('pdfText

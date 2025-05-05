@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -207,13 +208,6 @@ const PanelStructure = ({
           setIsLoadingMindMap(false);
           continue;
         }
-        
-        // IMPORTANT: Store extracted text separately for each PDF
-        sessionStorage.setItem(`pdfText_${pdfKey}`, extractedText);
-        
-        // Also set as current PDF text for backward compatibility
-        sessionStorage.setItem('pdfText', extractedText);
-        
         // Generate mindmap data
         const mindMapData = await generateMindMapFromText(extractedText);
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
