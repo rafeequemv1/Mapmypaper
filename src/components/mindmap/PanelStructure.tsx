@@ -53,7 +53,7 @@ const PanelStructure = ({
           className={`${showChat ? 'w-full md:w-1/2 lg:w-3/5' : 'w-full'} h-full flex flex-col overflow-hidden border-r`}
         >
           <PdfTabs onTabChange={handleTabChange} />
-          <PdfViewer onScrollToPdfPosition={handleScrollToPdfPosition} />
+          <PdfViewer />
         </div>
       )}
 
@@ -69,7 +69,10 @@ const PanelStructure = ({
         />
       ) : (
         <div className={`${showPdf ? 'hidden md:flex md:w-1/2 lg:w-2/5' : 'w-full'} h-full flex-col`}>
-          <MindMapViewer onMindMapReady={onMindMapReady} />
+          <MindMapViewer 
+            onMindMapReady={onMindMapReady} 
+            isMapGenerated={true}
+          />
         </div>
       )}
 
