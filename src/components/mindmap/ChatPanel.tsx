@@ -1,10 +1,8 @@
-
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
@@ -19,10 +17,9 @@ interface ChatPanelProps {
   explainImage?: string;
   onScrollToPdfPosition?: (position: string) => void;
   onExplainText?: (text: string) => void;
-  activePdfKey?: string;
 }
 
-const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition, activePdfKey }: ChatPanelProps) => {
+const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPosition }: ChatPanelProps) => {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -46,9 +43,6 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [attachedFilePreview, setAttachedFilePreview] = useState<string | null>(null);
   const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
   const [processingPdf, setProcessingPdf] = useState(false);
-  
-  // New state for answer mode toggle
-  const [useAllPdfs, setUseAllPdfs] = useState(false);
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -81,8 +75,7 @@ Feel free to ask me any questions! Here are some suggestions:`
         try {
           // Enhanced prompt to encourage complete sentences and page citations
           const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
-            useAllPdfs ? null : activePdfKey
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -119,7 +112,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainText();
-  }, [explainText, toast, useAllPdfs, activePdfKey]);
+  }, [explainText, toast]);
 
   // Process image to explain when it changes
   useEffect(() => {
@@ -143,8 +136,7 @@ Feel free to ask me any questions! Here are some suggestions:`
           // In a real implementation, you would want to modify this to accept an image
           // or create a new function that can process images
           const response = await chatWithGeminiAboutPdf(
-            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection.",
-            useAllPdfs ? null : activePdfKey
+            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection."
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -181,7 +173,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainImage();
-  }, [explainImage, toast, useAllPdfs, activePdfKey]);
+  }, [explainImage, toast]);
 
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -419,8 +411,7 @@ Would you like to:
       try {
         // Enhanced prompt to encourage complete sentences and page citations with emojis
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
-          useAllPdfs ? null : activePdfKey
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`
         );
         
         // Hide typing indicator and add AI response with enhanced formatting
@@ -498,8 +489,7 @@ Would you like to:
     
     try {
       const response = await chatWithGeminiAboutPdf(
-        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
-        useAllPdfs ? null : activePdfKey
+        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
       );
       
       setIsTyping(false);
@@ -579,32 +569,21 @@ Would you like to:
         style={{ display: "none" }}
         onChange={handleFilesUpload}
       />
-      {/* Chat panel header with new toggle */}
+      {/* Chat panel header */}
       <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           <h3 className="font-medium text-sm">Research Assistant</h3>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Active PDF</span>
-            <Switch
-              checked={useAllPdfs}
-              onCheckedChange={setUseAllPdfs}
-              aria-label="Use all PDFs"
-            />
-            <span className="text-xs text-gray-500">All PDFs</span>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8" 
-            onClick={toggleChat}
-            title="Close chat"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={toggleChat}
+          title="Close chat"
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
       
       {/* Chat messages area with enhanced styling */}

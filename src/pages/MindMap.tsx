@@ -12,7 +12,6 @@ const MindMap = () => {
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
-  const [activePdfKey, setActivePdfKey] = useState<string>("");
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -35,11 +34,6 @@ const MindMap = () => {
       });
     }
   }, [showChat, toast]);
-
-  // Handle active PDF change
-  const handleActivePdfChange = useCallback((pdfKey: string) => {
-    setActivePdfKey(pdfKey);
-  }, []);
 
   // Listen for text selection events that should activate chat
   useEffect(() => {
@@ -85,8 +79,6 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={handleExplainText}
-        onActivePdfChange={handleActivePdfChange}
-        activePdfKey={activePdfKey}
       />
       
       {/* Modal for Summary */}
