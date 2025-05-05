@@ -1,13 +1,13 @@
-
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 import { getAllPdfText } from "@/utils/pdfStorage";
 
-const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+// Replace process.env with import.meta.env for Vite
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 async function getGeminiApiKey(): Promise<string> {
   if (!apiKey) {
-    throw new Error("Gemini API key is missing. Please set the NEXT_PUBLIC_GEMINI_API_KEY environment variable.");
+    throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
   }
   return apiKey;
 }
@@ -238,4 +238,3 @@ export const generateStructuredSummary = async (): Promise<Record<string, string
     throw error;
   }
 };
-
