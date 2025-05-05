@@ -6,7 +6,8 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import { Document, Page } from "react-pdf";
+import * as pdfjs from "pdfjs-dist";
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,13 +23,14 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import html2canvas from 'html2canvas';
-import 'react-pdf/dist/Page.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
 // Set PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
-  pdfUrl: string;
+  pdfUrl?: string;
   onTextSelected?: (text: string) => void;
   onImageCaptured?: (imageData: string) => void;
   onPdfLoaded?: () => void;
@@ -116,43 +118,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [loadPdfData]);
 
-    useEffect(() => {
-      // Set up the selection canvas when selection mode is enabled
-      if (isSelectionMode && pdfContainerRef.current) {
-        // Get the first PDF page element
-        const pdfPage = pdfContainerRef.current.querySelector(
-          '[data-page-number="1"]'
-        ) as HTMLElement;
-
-        if (pdfPage) {
-          // Get the dimensions of the PDF page
-          const { width, height } = pdfPage.getBoundingClientRect();
-
-          // Create a canvas element for selection overlay
-          selectionCanvas = selectionCanvasRef.current;
-
-          if (selectionCanvas) {
-            // Set canvas dimensions to match the PDF page
-            selectionCanvas.width = width;
-            selectionCanvas.height = height;
-            selectionCanvas.style.position = "absolute";
-            selectionCanvas.style.top = "0";
-            selectionCanvas.style.left = "0";
-            selectionCanvas.style.zIndex = "10";
-          }
-        }
-      } else {
-        // Clear the selection canvas when selection mode is disabled
-        const canvas = selectionCanvasRef.current;
-        if (canvas) {
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-          }
-        }
-      }
-    }, [isSelectionMode]);
-
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
       setNumPages(numPages);
       setPageNumber(1);
@@ -193,6 +158,43 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         }
       }
     }, [pageNumber, isSelectionMode, onTextSelected]);
+
+    useEffect(() => {
+      // Set up the selection canvas when selection mode is enabled
+      if (isSelectionMode && pdfContainerRef.current) {
+        // Get the first PDF page element
+        const pdfPage = pdfContainerRef.current.querySelector(
+          '[data-page-number="1"]'
+        ) as HTMLElement;
+
+        if (pdfPage) {
+          // Get the dimensions of the PDF page
+          const { width, height } = pdfPage.getBoundingClientRect();
+
+          // Create a canvas element for selection overlay
+          selectionCanvas = selectionCanvasRef.current;
+
+          if (selectionCanvas) {
+            // Set canvas dimensions to match the PDF page
+            selectionCanvas.width = width;
+            selectionCanvas.height = height;
+            selectionCanvas.style.position = "absolute";
+            selectionCanvas.style.top = "0";
+            selectionCanvas.style.left = "0";
+            selectionCanvas.style.zIndex = "10";
+          }
+        }
+      } else {
+        // Clear the selection canvas when selection mode is disabled
+        const canvas = selectionCanvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
+      }
+    }, [isSelectionMode]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
       if (isSelectionMode) {
@@ -265,7 +267,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Fix the captureSelectedArea function to correctly handle the offset
     const captureSelectedArea = () => {
       if (!selectionRectRef.current || !selectionCanvas) return;
       
@@ -688,8 +689,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     renderTextLayer={true}
                     renderAnnotationLayer={false}
                     onRenderSuccess={handleTextLayerRendered}
-                    // canvasBackground="rgb(255,255,255)"
-                    //className="border border-gray-200"
                   >
                     <canvas
                       ref={selectionCanvasRef}
