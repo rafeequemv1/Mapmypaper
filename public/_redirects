@@ -1,4 +1,0 @@
-
-# Netlify redirects file
-# Redirects all routes to index.html with 200 status code
-/* /index.html 200

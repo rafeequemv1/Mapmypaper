@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
+import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import { MindElixirInstance } from "mind-elixir";
 
@@ -11,6 +12,7 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
+  const [showFlowchart, setShowFlowchart] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
@@ -23,16 +25,12 @@ const MindMap = () => {
     setMindMapInstance(instance);
   }, []);
 
-  // Toggle chat function
-  const toggleChat = useCallback(() => {
-    setShowChat(prev => !prev);
-  }, []);
-
   // Listen for text selection events that should activate chat
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
       if (e.detail?.text) {
         setExplainText(e.detail.text);
+        // Open chat panel if it's not already open
         if (!showChat) {
           setShowChat(true);
         }
@@ -57,22 +55,29 @@ const MindMap = () => {
     <div className="h-screen flex flex-col overflow-hidden">
       <Header 
         togglePdf={() => setShowPdf(!showPdf)}
-        toggleChat={toggleChat}
+        toggleChat={() => setShowChat(!showChat)}
         setShowSummary={setShowSummary}
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
+        openFlowchart={() => setShowFlowchart(true)}
       />
       <PanelStructure
         showPdf={showPdf}
         showChat={showChat}
-        toggleChat={toggleChat}
+        toggleChat={() => setShowChat(!showChat)}
         togglePdf={() => setShowPdf(!showPdf)}
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={setExplainText}
       />
       
+      {/* Modal for Flowchart */}
+      <FlowchartModal 
+        open={showFlowchart} 
+        onOpenChange={setShowFlowchart}
+      />
+
       {/* Modal for Summary */}
       <SummaryModal 
         open={showSummary}
