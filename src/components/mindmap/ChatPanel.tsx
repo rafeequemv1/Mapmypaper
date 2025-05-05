@@ -195,7 +195,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // New function to handle PDF processing
+  // Modified function to process PDF file without creating mindmap
   const processPdfFile = async (file: File) => {
     setProcessingPdf(true);
     
@@ -203,38 +203,13 @@ Feel free to ask me any questions! Here are some suggestions:`
       // Add user message about PDF upload
       setMessages(prev => [...prev, { 
         role: 'user',
-        content: `I've uploaded a PDF: "${file.name}"`,
+        content: `I've uploaded a PDF: "${file.name}" for context`,
         filename: file.name,
         filetype: file.type
       }]);
       
-      // Check if PDF already exists to prevent duplicates
-      const pdfKey = getPdfKey({ name: file.name, size: file.size, lastModified: file.lastModified });
-      const existingPdfs = getAllPdfs();
-      
-      if (existingPdfs.some(pdf => getPdfKey(pdf) === pdfKey)) {
-        // PDF already exists
-        setMessages(prev => [...prev, { 
-          role: 'assistant',
-          content: `This PDF is already in your library. You can ask questions about it.`,
-          isHtml: true
-        }]);
-        setProcessingPdf(false);
-        return;
-      }
-      
       // Show typing indicator for PDF processing
       setIsTyping(true);
-      
-      // Read and process PDF file as dataURL
-      const reader = new FileReader();
-      const pdfDataPromise = new Promise<string>((resolve, reject) => {
-        reader.onload = e => resolve(e.target?.result as string);
-        reader.onerror = () => reject(new Error("Failed to read PDF file"));
-        reader.readAsDataURL(file);
-      });
-      
-      const pdfData = await pdfDataPromise;
       
       // Extract text from PDF
       const extractedText = await PdfToText(file);
@@ -249,43 +224,26 @@ Feel free to ask me any questions! Here are some suggestions:`
         return;
       }
       
-      // Store PDF data and meta
-      await storePdfData(pdfKey, pdfData);
-      sessionStorage.setItem(
-        `pdfMeta_${pdfKey}`,
-        JSON.stringify({ name: file.name, size: file.size, lastModified: file.lastModified })
-      );
-      
-      // Generate mindmap data
-      const mindMapData = await generateMindMapFromText(extractedText);
-      const mindMapKeyPrefix = "mindMapData_";
-      sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
-      sessionStorage.setItem(`mindMapReady_${pdfKey}`, 'true');
-      
-      // Notify about updates
-      window.dispatchEvent(new CustomEvent('pdfListUpdated'));
-      window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
-      
       // Add success message
       setIsTyping(false);
       setMessages(prev => [...prev, { 
         role: 'assistant',
-        content: formatAIResponse(`✅ **PDF Successfully Processed!**
+        content: formatAIResponse(`📄 **PDF Processed Successfully!**
 
-I've added "${file.name}" to your library and generated a mind map. You can now:
+I've analyzed "${file.name}" and can now discuss its contents. How can I help you with this document? You can ask me:
 
-1. View this PDF in the document viewer
-2. Explore the mind map visualization
-3. Ask me specific questions about the content
-4. Search for key information
+- To summarize key points
+- Explain specific sections
+- Compare it with the main document
+- Answer questions about its content
 
-What would you like to know about this document?`),
+What would you like to know?`),
         isHtml: true
       }]);
       
       toast({
         title: "Success",
-        description: "PDF processed and mind map generated!",
+        description: "PDF processed for chat context",
       });
     } catch (error) {
       console.error("Error processing PDF:", error);
@@ -353,7 +311,7 @@ What would you like to know about this document?`),
               }
             ]);
           } else if (attachedFile.type === "application/pdf") {
-            // Handle PDF upload with the new PDF processing function
+            // Handle PDF upload with the modified PDF processing function
             await processPdfFile(attachedFile);
             return; // Early return since processPdfFile handles its own messages
           } else if (
