@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
@@ -49,8 +50,8 @@ const Header = ({
   };
 
   return (
-    <div className="hidden">
-      {/* Keep the HeaderSidebar component as it's the left toolbar */}
+    <>
+      {/* Render HeaderSidebar outside of any hidden container */}
       <HeaderSidebar 
         isPdfActive={isPdfActive}
         isChatActive={isChatActive}
@@ -62,7 +63,7 @@ const Header = ({
         onExportPNG={handleExportPNG}
         onExportJSON={handleExportJSON}
       />
-    </div>
+    </>
   );
 };
 
