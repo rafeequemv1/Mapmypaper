@@ -45,6 +45,42 @@ export async function captureElementArea(
 }
 
 /**
+ * Applies or removes text selection prevention styles to the document
+ * 
+ * @param enable - Whether to enable or disable text selection
+ */
+export function toggleTextSelection(enable: boolean) {
+  const rootElement = document.documentElement;
+  
+  if (enable) {
+    // Enable text selection
+    rootElement.style.removeProperty('user-select');
+    rootElement.classList.remove('no-text-selection');
+  } else {
+    // Disable text selection
+    rootElement.style.setProperty('user-select', 'none', 'important');
+    rootElement.classList.add('no-text-selection');
+  }
+
+  // Also ensure we have the CSS class defined
+  if (!enable && !document.getElementById('no-text-selection-style')) {
+    const style = document.createElement('style');
+    style.id = 'no-text-selection-style';
+    style.innerHTML = `
+      .no-text-selection * {
+        user-select: none !important;
+        pointer-events: auto !important;
+      }
+      .no-text-selection .react-pdf__Page__textContent {
+        user-select: none !important;
+        pointer-events: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+/**
  * Draws a selection rectangle on the screen
  * 
  * @param containerElement - The container element where the rectangle will be drawn
@@ -111,6 +147,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
     startX = x;
     startY = y;
     selectionRect.style.display = 'block';
+    // Disable text selection when starting to draw
+    toggleTextSelection(false);
     updateRect(x, y);
   };
   
@@ -125,6 +163,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
     if (rect.width < 10 || rect.height < 10) {
       selectionRect.style.display = 'none';
       captureTooltip.style.display = 'none';
+      // Re-enable text selection when canceling selection
+      toggleTextSelection(true);
       return null;
     }
     
@@ -146,6 +186,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
     selectionRect.style.display = 'none';
     captureTooltip.style.display = 'none';
     isCapturing = false;
+    // Re-enable text selection when canceling selection
+    toggleTextSelection(true);
   };
   
   // Set capture loading state
@@ -164,6 +206,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
       captureTooltip.classList.remove('bg-blue-800');
       captureTooltip.classList.add('hover:bg-blue-700');
       captureTooltip.style.cursor = 'pointer';
+      // Re-enable text selection when capture is done
+      toggleTextSelection(true);
     }
   };
   
@@ -188,6 +232,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
     if (containerElement.contains(captureTooltip)) {
       containerElement.removeChild(captureTooltip);
     }
+    // Re-enable text selection when destroying
+    toggleTextSelection(true);
   };
   
   // Return control methods

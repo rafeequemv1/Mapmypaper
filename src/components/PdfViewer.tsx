@@ -8,7 +8,7 @@ import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { getCurrentPdfData } from "@/utils/pdfStorage";
-import { createSelectionRect, captureElementArea } from "@/utils/captureUtils";
+import { createSelectionRect, captureElementArea, toggleTextSelection } from "@/utils/captureUtils";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -191,6 +191,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
       
       if (isSnapshotMode) {
+        // Disable text selection when entering snapshot mode
+        toggleTextSelection(false);
+        
         // Create new selection rect handler when entering snapshot mode
         selectionRectRef.current = createSelectionRect(pdfContainerRef.current);
         
@@ -210,8 +213,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const handleMouseUp = (e: MouseEvent) => {
           if (!isSnapshotMode || !selectionRectRef.current) return;
           selectionRectRef.current.endSelection(e.clientX, e.clientY);
-          // Note: We no longer immediately capture the area here
-          // Instead, we wait for the user to click the capture tooltip
         };
         
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -221,6 +222,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               selectionRectRef.current.cancelSelection();
             }
             setIsSnapshotMode(false);
+            // Re-enable text selection when exiting snapshot mode
+            toggleTextSelection(true);
           }
         };
         
@@ -258,6 +261,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               selectionRectRef.current.cancelSelection();
             }
             setIsSnapshotMode(false);
+            // Re-enable text selection when capture is complete
+            toggleTextSelection(true);
           }
         };
         
@@ -283,7 +288,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           
           // Reset cursor
           viewport.style.cursor = "";
+          
+          // Re-enable text selection when unmounting
+          toggleTextSelection(true);
         };
+      } else {
+        // Re-enable text selection when exiting snapshot mode
+        toggleTextSelection(true);
       }
     }, [isSnapshotMode, toast, onImageCaptured]);
 
