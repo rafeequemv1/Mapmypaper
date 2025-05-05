@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
+import PdfToText from "react-pdftotext";
+import { storePdfData, getPdfData, isMindMapReady } from "@/utils/pdfStorage";
+import { generateMindMapFromText } from "@/services/geminiService";
+import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 interface ChatPanelProps {
   toggleChat: () => void;
@@ -39,7 +42,8 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachedFilePreview, setAttachedFilePreview] = useState<string | null>(null);
   const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
-  
+  const [processingPdf, setProcessingPdf] = useState(false);
+
   useEffect(() => {
     // Scroll to bottom when messages change
     if (scrollAreaRef.current) {
@@ -191,6 +195,117 @@ Feel free to ask me any questions! Here are some suggestions:`
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
+  // New function to handle PDF processing
+  const processPdfFile = async (file: File) => {
+    setProcessingPdf(true);
+    
+    try {
+      // Add user message about PDF upload
+      setMessages(prev => [...prev, { 
+        role: 'user',
+        content: `I've uploaded a PDF: "${file.name}"`,
+        filename: file.name,
+        filetype: file.type
+      }]);
+      
+      // Check if PDF already exists to prevent duplicates
+      const pdfKey = getPdfKey({ name: file.name, size: file.size, lastModified: file.lastModified });
+      const existingPdfs = getAllPdfs();
+      
+      if (existingPdfs.some(pdf => getPdfKey(pdf) === pdfKey)) {
+        // PDF already exists
+        setMessages(prev => [...prev, { 
+          role: 'assistant',
+          content: `This PDF is already in your library. You can ask questions about it.`,
+          isHtml: true
+        }]);
+        setProcessingPdf(false);
+        return;
+      }
+      
+      // Show typing indicator for PDF processing
+      setIsTyping(true);
+      
+      // Read and process PDF file as dataURL
+      const reader = new FileReader();
+      const pdfDataPromise = new Promise<string>((resolve, reject) => {
+        reader.onload = e => resolve(e.target?.result as string);
+        reader.onerror = () => reject(new Error("Failed to read PDF file"));
+        reader.readAsDataURL(file);
+      });
+      
+      const pdfData = await pdfDataPromise;
+      
+      // Extract text from PDF
+      const extractedText = await PdfToText(file);
+      
+      if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
+        setIsTyping(false);
+        setMessages(prev => [...prev, { 
+          role: 'assistant',
+          content: "I couldn't extract any text from this PDF. It might be an image-based or scanned document.",
+        }]);
+        setProcessingPdf(false);
+        return;
+      }
+      
+      // Store PDF data and meta
+      await storePdfData(pdfKey, pdfData);
+      sessionStorage.setItem(
+        `pdfMeta_${pdfKey}`,
+        JSON.stringify({ name: file.name, size: file.size, lastModified: file.lastModified })
+      );
+      
+      // Generate mindmap data
+      const mindMapData = await generateMindMapFromText(extractedText);
+      const mindMapKeyPrefix = "mindMapData_";
+      sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
+      sessionStorage.setItem(`mindMapReady_${pdfKey}`, 'true');
+      
+      // Notify about updates
+      window.dispatchEvent(new CustomEvent('pdfListUpdated'));
+      window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey } }));
+      
+      // Add success message
+      setIsTyping(false);
+      setMessages(prev => [...prev, { 
+        role: 'assistant',
+        content: formatAIResponse(`✅ **PDF Successfully Processed!**
+
+I've added "${file.name}" to your library and generated a mind map. You can now:
+
+1. View this PDF in the document viewer
+2. Explore the mind map visualization
+3. Ask me specific questions about the content
+4. Search for key information
+
+What would you like to know about this document?`),
+        isHtml: true
+      }]);
+      
+      toast({
+        title: "Success",
+        description: "PDF processed and mind map generated!",
+      });
+    } catch (error) {
+      console.error("Error processing PDF:", error);
+      
+      setIsTyping(false);
+      setMessages(prev => [...prev, { 
+        role: 'assistant',
+        content: "Sorry, I couldn't process this PDF. There might be an issue with the file or it's in a format I can't handle.",
+      }]);
+      
+      toast({
+        title: "Failed to process PDF",
+        description: "Could not process the selected PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingPdf(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (inputValue.trim() || attachedFile) {
       // If there's an attached file, handle it first
@@ -237,6 +352,10 @@ Feel free to ask me any questions! Here are some suggestions:`
                 isHtml: true
               }
             ]);
+          } else if (attachedFile.type === "application/pdf") {
+            // Handle PDF upload with the new PDF processing function
+            await processPdfFile(attachedFile);
+            return; // Early return since processPdfFile handles its own messages
           } else if (
             attachedFile.type === "text/plain" || 
             attachedFile.type === "text/csv" ||
@@ -669,7 +788,7 @@ Would you like to:
             className="shrink-0"
             size="icon"
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() && !attachedFile}
+            disabled={(!inputValue.trim() && !attachedFile) || processingPdf}
           >
             <Send className="h-4 w-4" />
           </Button>
