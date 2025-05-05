@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 import { getAllPdfText } from "@/utils/pdfStorage";
