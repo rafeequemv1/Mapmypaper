@@ -6,7 +6,7 @@ import HeaderSidebar from "./HeaderSidebar";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { GitMerge, MessageCircle, FileText, Network } from "lucide-react";
+import { GitMerge, MessageCircle, FileText } from "lucide-react";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -65,6 +65,7 @@ const Header = ({
           togglePdf={togglePdf}
           toggleChat={toggleChat}
           setShowSummary={setShowSummary}
+          setShowFlowchart={setShowFlowchart}
           onExportSVG={handleExportSVG}
           onExportPNG={handleExportPNG}
           onExportJSON={handleExportJSON}
@@ -101,16 +102,6 @@ const Header = ({
         >
           <GitMerge className="h-4 w-4" />
           <span className="hidden sm:inline">Summary</span>
-        </Button>
-
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex items-center gap-1 px-2 sm:px-3"
-          onClick={() => setShowFlowchart(true)}
-        >
-          <Network className="h-4 w-4" />
-          <span className="hidden sm:inline">Flowchart</span>
         </Button>
         
         <HeaderExportMenu 

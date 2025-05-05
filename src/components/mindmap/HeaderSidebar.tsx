@@ -4,7 +4,8 @@ import {
   FileCode,
   MessageSquare,
   FileText,
-  Home
+  Home,
+  Network
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
@@ -17,6 +18,7 @@ interface HeaderSidebarProps {
   togglePdf: () => void;
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
   onExportSVG: () => void;
   onExportPNG: () => void;
   onExportJSON: () => void;
@@ -28,6 +30,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   togglePdf,
   toggleChat,
   setShowSummary,
+  setShowFlowchart,
   onExportSVG,
   onExportPNG,
   onExportJSON,
@@ -64,6 +67,11 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
         onClick={() => setShowSummary(true)}
         icon={<FileText className="h-4 w-4" />}
         title="Show Summary"
+      />
+      <HeaderSidebarIcon
+        onClick={() => setShowFlowchart(true)}
+        icon={<Network className="h-4 w-4" />}
+        title="Show Flowchart"
       />
       <HeaderExportMenu
         onExportSVG={onExportSVG}
