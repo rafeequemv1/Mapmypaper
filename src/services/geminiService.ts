@@ -2,12 +2,11 @@ import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 import { getAllPdfText } from "@/utils/pdfStorage";
 
-// Replace process.env with import.meta.env for Vite
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
 async function getGeminiApiKey(): Promise<string> {
   if (!apiKey) {
-    throw new Error("Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.");
+    throw new Error("Gemini API key is missing. Please set the NEXT_PUBLIC_GEMINI_API_KEY environment variable.");
   }
   return apiKey;
 }
@@ -171,70 +170,5 @@ export const analyzeFileWithGemini = async (fileContent: string, fileName: strin
   } catch (error) {
     console.error("Gemini API file analysis error:", error);
     return "Sorry, I encountered an error while analyzing the file. Please try again.";
-  }
-};
-
-// Enhanced function to generate structured summaries from PDF content
-export const generateStructuredSummary = async (): Promise<Record<string, string>> => {
-  try {
-    // Retrieve stored PDF text from sessionStorage
-    const pdfText = sessionStorage.getItem('pdfText');
-    
-    if (!pdfText || pdfText.trim() === '') {
-      throw new Error("No PDF content available. Please upload a PDF first.");
-    }
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const prompt = `
-    You are a scientific summarization assistant. Given the text of a research paper (abstract, full paper, or detailed notes), 
-    generate a structured, concise, and clear summary with the following sections. Keep the writing professional and suited 
-    for an academic audience who wants a snapshot of the study without reading the full paper.
-
-    Format the output as a JSON object with these section names as keys and the content as values:
-    {
-      "Summary": "1-2 sentence high-level summary of the entire study: what was studied, how it was studied, and the key finding.",
-      
-      "Key Findings": "List the main statistical or scientific results clearly, point-wise. Highlight effect sizes, odds ratios, correlations, p-values, or any key quantitative result mentioned in the paper.",
-      
-      "Objectives": "State the research question(s) or aim(s) of the paper, mentioning the gap in the literature or problem the study tries to address.",
-      
-      "Methods": "Briefly describe the study design (e.g., cohort study, case-control, simulation, modeling), data collection methods (e.g., surveys, experiments, datasets used), and analysis approach (e.g., regression models, machine learning, statistical tests).",
-      
-      "Results": "Summarize the main results in 3-5 sentences, focusing on how the data answered the objectives. Include any noteworthy statistics, trends, or patterns.",
-      
-      "Conclusions": "Summarize the implications of the study, what it contributes to the field, and any potential practical applications.",
-      
-      "Key Concepts": "List 8-12 important keywords and concepts from the paper for context and indexing."
-    }
-    
-    IMPORTANT:
-    - Use bullet points (format as '- Point text') for Key Findings and Key Concepts.
-    - Keep each section concise and focused on the most important information.
-    - If the document doesn't contain information for a specific section, provide a brief note explaining this.
-    - Format the output as proper JSON, not markdown or anything else.
-    
-    Document text:
-    ${pdfText.slice(0, 15000)}
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Try to parse the JSON response
-    try {
-      // Find and extract JSON if it's surrounded by markdown code blocks or other text
-      const jsonMatch = text.match(/```(?:json)?([\\s\\S]*?)```/) || text.match(/({[\\s\\S]*})/);
-      const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
-      return JSON.parse(jsonString);
-    } catch (parseError) {
-      console.error("Failed to parse Gemini summary response as JSON:", parseError);
-      throw new Error("Failed to generate summary. The AI response format was invalid.");
-    }
-  } catch (error) {
-    console.error("Gemini API summary generation error:", error);
-    throw error;
   }
 };
