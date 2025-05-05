@@ -1,8 +1,10 @@
+
 import { MessageSquare, Copy, Check, X, Send, Paperclip } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
@@ -14,9 +16,10 @@ import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 interface MobileChatSheetProps {
   onScrollToPdfPosition?: (position: string) => void;
   explainText?: string;
+  activePdfKey?: string;
 }
 
-const MobileChatSheet = ({ onScrollToPdfPosition, explainText }: MobileChatSheetProps) => {
+const MobileChatSheet = ({ onScrollToPdfPosition, explainText, activePdfKey }: MobileChatSheetProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string; filename?: string; filetype?: string }[]>([
     { 
@@ -39,6 +42,9 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachedFilePreview, setAttachedFilePreview] = useState<string | null>(null);
   const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
+  
+  // New state for answer mode toggle
+  const [useAllPdfs, setUseAllPdfs] = useState(false);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -98,7 +104,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         try {
           // Enhanced prompt for explanation
           const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
+            useAllPdfs ? null : activePdfKey
           );
           
           // Hide typing indicator and add AI response with formatting
@@ -135,7 +142,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     };
     
     processExplainText();
-  }, [explainText, isSheetOpen, toast]);
+  }, [explainText, isSheetOpen, toast, useAllPdfs, activePdfKey]);
   
   // Modified function to process PDF file without creating mindmap
   const processPdfFile = async (file: File) => {
@@ -353,7 +360,8 @@ Would you like to:
       try {
         // Enhanced prompt to encourage complete sentences, page citations, and emojis
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
+          useAllPdfs ? null : activePdfKey
         );
         
         // Hide typing indicator and add AI response with formatting
@@ -451,7 +459,8 @@ Would you like to:
     
     try {
       const response = await chatWithGeminiAboutPdf(
-        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`
+        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to make your response more engaging.`,
+        useAllPdfs ? null : activePdfKey
       );
       
       setIsTyping(false);
@@ -542,10 +551,24 @@ Would you like to:
       </SheetTrigger>
       
       <SheetContent side="right" className="sm:max-w-lg w-full p-0 flex flex-col">
-        <div className="flex items-center justify-between p-3 border-b">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            <h3 className="font-medium text-sm">Research Assistant</h3>
+        <div className="flex flex-col border-b">
+          {/* Header */}
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <h3 className="font-medium text-sm">Research Assistant</h3>
+            </div>
+          </div>
+          
+          {/* Toggle switch */}
+          <div className="flex justify-center items-center gap-3 py-2 px-3 border-t">
+            <span className="text-xs text-gray-500">Active PDF</span>
+            <Switch
+              checked={useAllPdfs}
+              onCheckedChange={setUseAllPdfs}
+              aria-label="Use all PDFs"
+            />
+            <span className="text-xs text-gray-500">All PDFs</span>
           </div>
         </div>
         
