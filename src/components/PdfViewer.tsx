@@ -5,7 +5,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { getCurrentPdfData } from "@/utils/pdfStorage";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -44,10 +44,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     
     // Text selection tooltip states
     const [selectedText, setSelectedText] = useState<string>("");
-    const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
-    const [showSelectionTooltip, setShowSelectionTooltip] = useState<boolean>(false);
     const selectionTooltipRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement | null>(null);
+
+    // New tooltip positioning state
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+    const [showSelectionTooltip, setShowSelectionTooltip] = useState(false);
+    const tooltipTextRef = useRef<string>("");
 
     const loadPdfData = async () => {
       try {
@@ -109,7 +112,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [pdfContainerRef.current]);
 
-    // Improved text selection handling with scroll position awareness
+    // Updated text selection handling to use absolute positioning within PDF container
     useEffect(() => {
       let selectionTimeout: number | null = null;
       
@@ -127,30 +130,38 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           const text = selection.toString().trim();
           if (text) {
             setSelectedText(text);
+            tooltipTextRef.current = text;
             
             // Get the precise position for tooltip
             const range = selection.getRangeAt(0);
             const rect = range.getBoundingClientRect();
             
-            // Store the selection rectangle for repositioning during scroll
-            setSelectionRect(rect);
-            
-            // Show tooltip with slight delay to ensure position is updated
-            selectionTimeout = window.setTimeout(() => {
-              setShowSelectionTooltip(true);
-            }, 50);
-          } else {
-            setShowSelectionTooltip(false);
-          }
-        } else {
-          // No text is selected
-          if (!selection || selection.isCollapsed) {
-            // Only hide tooltip if user clicked elsewhere (not on the tooltip itself)
-            if (selectionTooltipRef.current && 
-                document.activeElement !== selectionTooltipRef.current &&
-                !selectionTooltipRef.current.contains(document.activeElement)) {
-              setShowSelectionTooltip(false);
+            if (pdfContainerRef.current && viewportRef.current) {
+              // Calculate the position relative to the PDF container's scroll position
+              const containerRect = pdfContainerRef.current.getBoundingClientRect();
+              const scrollTop = viewportRef.current.scrollTop;
+              
+              const x = rect.left + (rect.width / 2) - containerRect.left;
+              // Key change: Y position is relative to the page, not the viewport
+              const y = rect.top + scrollTop - containerRect.top;
+              
+              setTooltipPosition({ x, y });
+              
+              // Show tooltip with slight delay to ensure position is updated
+              selectionTimeout = window.setTimeout(() => {
+                setShowSelectionTooltip(true);
+              }, 50);
             }
+          }
+        } else if (!selectionTooltipRef.current?.contains(document.activeElement)) {
+          // Hide tooltip if clicked elsewhere and not on tooltip itself
+          // But don't hide if user clicked the tooltip button
+          if (document.activeElement !== selectionTooltipRef.current) {
+            selectionTimeout = window.setTimeout(() => {
+              if (!document.getSelection()?.toString()) {
+                setShowSelectionTooltip(false);
+              }
+            }, 100);
           }
         }
       };
@@ -163,27 +174,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
-    // Handle scroll events to reposition the tooltip
-    useEffect(() => {
-      if (!viewportRef.current || !selectionRect || !showSelectionTooltip) return;
-      
-      const handleScroll = () => {
-        if (selectionRect && viewportRef.current) {
-          // We don't need to update the selection rect here
-          // Just force a re-render to update the tooltip position
-          setSelectionRect(prevRect => prevRect ? {...prevRect} : null);
-        }
-      };
-      
-      viewportRef.current.addEventListener('scroll', handleScroll);
-      
-      return () => {
-        if (viewportRef.current) {
-          viewportRef.current.removeEventListener('scroll', handleScroll);
-        }
-      };
-    }, [viewportRef.current, selectionRect, showSelectionTooltip]);
-
     const handleExplainText = () => {
       if (selectedText && onTextSelected) {
         onTextSelected(selectedText);
@@ -193,7 +183,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           new CustomEvent('openChatWithText', { detail: { text: selectedText } })
         );
         
-        // Do NOT clear selection or hide tooltip - keep it visible
+        // Do NOT clear selection - keep the tooltip visible and the text highlighted
         setShowSelectionTooltip(true);
       }
     };
@@ -289,7 +279,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Navigate through search results
     const navigateSearch = (direction: 'next' | 'prev') => {
       if (searchResults.length === 0) return;
       
@@ -376,7 +365,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Expose the scrollToPage method to parent components
     useImperativeHandle(ref, () => ({
       scrollToPage
     }), [numPages]);
@@ -407,7 +395,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       setLoadError(null);
     };
 
-    // Handle page render success to adjust container height
     const onPageRenderSuccess = (page: any) => {
       setPageHeight(page.height);
     };
@@ -527,16 +514,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div 
               className="flex flex-col items-center py-4 relative"
             >
-              {/* Selection Tooltip - positioned using selection rectangle to stay with text on scroll */}
-              {selectionRect && showSelectionTooltip && (
-                <div
+              {/* NEW Selection Tooltip - positioned absolutely within the PDF container */}
+              {showSelectionTooltip && (
+                <PositionedTooltip
                   ref={selectionTooltipRef}
-                  className="fixed bg-white rounded-md shadow-md border border-gray-200 z-50 p-1 transition-opacity duration-200"
-                  style={{
-                    left: `${selectionRect.left + (selectionRect.width / 2)}px`,
-                    top: `${selectionRect.top - 10}px`,
-                    transform: 'translate(-50%, -100%)'
-                  }}
+                  show={showSelectionTooltip}
+                  x={tooltipPosition.x}
+                  y={tooltipPosition.y - 40} // Offset it above the text
+                  className="transform -translate-x-1/2 shadow-lg"
                 >
                   <Button 
                     size="sm" 
@@ -547,7 +532,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     <MessageSquare className="h-3 w-3" />
                     <span>Explain</span>
                   </Button>
-                </div>
+                </PositionedTooltip>
               )}
               
               <Document

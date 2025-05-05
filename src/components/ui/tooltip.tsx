@@ -27,4 +27,34 @@ const TooltipContent = React.forwardRef<
 ))
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+// Add a simple custom tooltip component that can be positioned absolutely within a container
+const PositionedTooltip = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & {
+    show: boolean;
+    x: number;
+    y: number;
+  }
+>(({ className, show, x, y, ...props }, ref) => {
+  if (!show) return null;
+  
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "absolute z-50 rounded-md border bg-white px-3 py-1.5 text-sm shadow-md transition-opacity duration-200",
+        className
+      )}
+      style={{
+        left: `${x}px`,
+        top: `${y}px`,
+        opacity: show ? 1 : 0,
+        pointerEvents: show ? 'auto' : 'none',
+      }}
+      {...props}
+    />
+  );
+});
+PositionedTooltip.displayName = "PositionedTooltip";
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, PositionedTooltip }
