@@ -1,10 +1,10 @@
-import { MessageSquare, Copy, Check } from "lucide-react";
+import { MessageSquare, Copy, Check, X, Send, Paperclip } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { chatWithGeminiAboutPdf } from "@/services/geminiService";
+import { chatWithGeminiAboutPdf, analyzeImageWithGemini, analyzeFileWithGemini } from "@/services/geminiService";
 import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 
 interface MobileChatSheetProps {
@@ -14,7 +14,7 @@ interface MobileChatSheetProps {
 
 const MobileChatSheet = ({ onScrollToPdfPosition, explainText }: MobileChatSheetProps) => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean }[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string; filename?: string; filetype?: string }[]>([
     { 
       role: 'assistant', 
       content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
@@ -28,6 +28,12 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const citationActivated = useRef(false);
   const [processingExplainText, setProcessingExplainText] = useState(false);
+
+  // New states for file attachment
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedFilePreview, setAttachedFilePreview] = useState<string | null>(null);
+  const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
   
   // Activate citations in messages when they are rendered
   useEffect(() => {
@@ -127,8 +133,136 @@ Feel free to ask me any questions! Here are some suggestions:`
   }, [explainText, isSheetOpen, toast]);
   
   const handleSendMessage = async () => {
-    if (inputValue.trim()) {
-      // Add user message
+    if (inputValue.trim() || attachedFile) {
+      // If there's an attached file, handle it first
+      if (attachedFile) {
+        // Add user message with file
+        let messageContent = inputValue.trim() || `Uploaded: ${attachedFile.name}`;
+        let messageObj: any = {
+          role: "user",
+          content: messageContent,
+        };
+        
+        // Add file specific properties
+        if (attachedFile.type.startsWith("image/")) {
+          messageObj.image = attachedFilePreview;
+        } else {
+          messageObj.filename = attachedFile.name;
+          messageObj.filetype = attachedFile.type;
+        }
+        
+        setMessages(prev => [...prev, messageObj]);
+        
+        // Clear input and file attachment
+        setInputValue('');
+        setAttachedFile(null);
+        setAttachedFilePreview(null);
+        setAttachedFileType(null);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          // Process based on file type
+          if (attachedFile.type.startsWith("image/")) {
+            // Handle image file with Gemini Vision
+            const analysis = await analyzeImageWithGemini(attachedFilePreview as string);
+            
+            // Add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: formatAIResponse(analysis),
+                isHtml: true
+              }
+            ]);
+          } else if (
+            attachedFile.type === "text/plain" || 
+            attachedFile.type === "text/csv" ||
+            attachedFile.type === "application/vnd.ms-excel" ||
+            attachedFile.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+            attachedFile.type === "application/json"
+          ) {
+            // Handle text-based files
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+              const fileContent = e.target?.result as string;
+              
+              // Analyze file with Gemini
+              const analysis = await analyzeFileWithGemini(
+                fileContent,
+                attachedFile.name,
+                attachedFile.type
+              );
+              
+              // Add AI response
+              setIsTyping(false);
+              setMessages(prev => [
+                ...prev,
+                {
+                  role: 'assistant',
+                  content: formatAIResponse(analysis),
+                  isHtml: true
+                }
+              ]);
+            };
+            
+            reader.onerror = () => {
+              setIsTyping(false);
+              setMessages(prev => [
+                ...prev,
+                {
+                  role: 'assistant',
+                  content: "Sorry, I couldn't read this file. It may be too large or in an unsupported format."
+                }
+              ]);
+            };
+            
+            reader.readAsText(attachedFile);
+          } else {
+            // For other file types, send a generic response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: formatAIResponse(`I've received your file: ${attachedFile.name}. 
+                
+This appears to be a ${attachedFile.type || "unknown"} file. While I can't directly analyze the full contents of this file type, you can ask me questions about it, and I'll try to help based on the information you provide.
+
+Would you like to:
+1. Ask specific questions about this file?
+2. Extract certain information from it? 
+3. Compare it with the main document you uploaded?`),
+                isHtml: true
+              }
+            ]);
+          }
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("File analysis error:", error);
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: "Sorry, I encountered an error processing this file. Please try again or try a different file format."
+            }
+          ]);
+          
+          toast({
+            title: "Analysis Error",
+            description: "Failed to process the file.",
+            variant: "destructive"
+          });
+        }
+        
+        return;
+      }
+
+      // If no file, handle as regular text message
       const userMessage = inputValue.trim();
       setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
       
@@ -269,9 +403,57 @@ Feel free to ask me any questions! Here are some suggestions:`
       });
     }
   };
+  
+  // File attachment handlers
+  const handleAttachClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0]; // Process only the first file for simplicity
+    setAttachedFile(file);
+    setAttachedFileType(file.type);
+
+    if (file.type.startsWith("image/")) {
+      // Create preview for image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageData = e.target?.result as string;
+        setAttachedFilePreview(imageData);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // For non-image files, just set filename preview
+      setAttachedFilePreview(null);
+    }
+  };
+
+  // Clear file attachment
+  const clearAttachment = () => {
+    setAttachedFile(null);
+    setAttachedFilePreview(null);
+    setAttachedFileType(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <Sheet open={isSheetOpen} onOpenChange={handleSheetOpenChange}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.csv,.xls,.xlsx,.doc,.docx,.txt"
+        style={{ display: "none" }}
+        onChange={handleFilesUpload}
+      />
+      
       <SheetTrigger asChild>
         <Button 
           className="fixed right-4 bottom-4 rounded-full h-12 w-12 md:hidden shadow-lg"
@@ -300,6 +482,24 @@ Feel free to ask me any questions! Here are some suggestions:`
                       : 'ai-message bg-gray-50 border border-gray-100 shadow-sm'
                   }`}
                 >
+                  {/* Display attached image if present */}
+                  {message.image && (
+                    <div className="mb-2">
+                      <img 
+                        src={message.image} 
+                        alt="Selected area" 
+                        className="max-w-full rounded-md border border-gray-200"
+                        style={{ maxHeight: '200px' }} 
+                      />
+                    </div>
+                  )}
+                  {/* Display non-image file name and type */}
+                  {message.filename && !message.image && (
+                    <div className="mb-2 text-xs text-muted-foreground">
+                      <span className="font-semibold">{message.filename}</span> <span>({message.filetype})</span>
+                    </div>
+                  )}
+                  
                   {message.isHtml ? (
                     <div 
                       className="ai-message-content" 
@@ -372,23 +572,69 @@ Feel free to ask me any questions! Here are some suggestions:`
           </div>
         </ScrollArea>
         
+        {/* File preview area */}
+        {attachedFile && (
+          <div className="p-2 border-t bg-gray-50">
+            <div className="flex items-center gap-2 p-2 bg-white border rounded-md">
+              {attachedFilePreview ? (
+                <img 
+                  src={attachedFilePreview} 
+                  alt="Preview" 
+                  className="h-10 w-10 object-cover rounded" 
+                />
+              ) : (
+                <div className="h-10 w-10 flex items-center justify-center bg-gray-100 rounded">
+                  <span className="text-xs font-semibold text-gray-500">
+                    {attachedFileType?.split('/')[1]?.toUpperCase() || 'FILE'}
+                  </span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{attachedFile.name}</p>
+                <p className="text-xs text-gray-500">
+                  {(attachedFile.size / 1024).toFixed(1)} KB • {attachedFileType}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={clearAttachment}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Input area with file button next to input */}
         <div className="p-3 border-t mt-auto">
           <div className="flex gap-2">
-            <textarea
-              className="flex-1 rounded-md border p-2 text-sm min-h-10 max-h-32 resize-none"
-              placeholder="Type your message..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-            />
+            <div className="flex-1 flex border rounded-md overflow-hidden">
+              <textarea
+                className="flex-1 p-2 text-sm min-h-10 max-h-32 resize-none border-0 focus:outline-none"
+                placeholder="Type your message..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={1}
+              />
+              <Button 
+                variant="ghost" 
+                className="px-2 rounded-none border-l"
+                onClick={handleAttachClick}
+                title="Attach file"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+            </div>
             <Button 
               className="shrink-0" 
-              size="sm" 
+              size="icon"
               onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() && !attachedFile}
             >
-              Send
+              <Send className="h-4 w-4" />
             </Button>
           </div>
         </div>

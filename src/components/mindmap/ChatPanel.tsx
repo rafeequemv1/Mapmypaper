@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Copy, Check, Image, Paperclip } from "lucide-react";
+import { MessageSquare, X, Copy, Check, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,6 +34,11 @@ Feel free to ask me any questions! Here are some suggestions:`
   const [processingExplainText, setProcessingExplainText] = useState(false);
   const [processingExplainImage, setProcessingExplainImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // New states for file attachment preview
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedFilePreview, setAttachedFilePreview] = useState<string | null>(null);
+  const [attachedFileType, setAttachedFileType] = useState<string | null>(null);
   
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -186,8 +192,136 @@ Feel free to ask me any questions! Here are some suggestions:`
   }, [messages, onScrollToPdfPosition]);
 
   const handleSendMessage = async () => {
-    if (inputValue.trim()) {
-      // Add user message
+    if (inputValue.trim() || attachedFile) {
+      // If there's an attached file, handle it first
+      if (attachedFile) {
+        // Add user message with file
+        let messageContent = inputValue.trim() || `Uploaded: ${attachedFile.name}`;
+        let messageObj: any = {
+          role: "user",
+          content: messageContent,
+        };
+        
+        // Add file specific properties
+        if (attachedFile.type.startsWith("image/")) {
+          messageObj.image = attachedFilePreview;
+        } else {
+          messageObj.filename = attachedFile.name;
+          messageObj.filetype = attachedFile.type;
+        }
+        
+        setMessages(prev => [...prev, messageObj]);
+        
+        // Clear input and file attachment
+        setInputValue('');
+        setAttachedFile(null);
+        setAttachedFilePreview(null);
+        setAttachedFileType(null);
+        
+        // Show typing indicator
+        setIsTyping(true);
+        
+        try {
+          // Process based on file type
+          if (attachedFile.type.startsWith("image/")) {
+            // Handle image file with Gemini Vision
+            const analysis = await analyzeImageWithGemini(attachedFilePreview as string);
+            
+            // Add AI response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: formatAIResponse(analysis),
+                isHtml: true
+              }
+            ]);
+          } else if (
+            attachedFile.type === "text/plain" || 
+            attachedFile.type === "text/csv" ||
+            attachedFile.type === "application/vnd.ms-excel" ||
+            attachedFile.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+            attachedFile.type === "application/json"
+          ) {
+            // Handle text-based files
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+              const fileContent = e.target?.result as string;
+              
+              // Analyze file with Gemini
+              const analysis = await analyzeFileWithGemini(
+                fileContent,
+                attachedFile.name,
+                attachedFile.type
+              );
+              
+              // Add AI response
+              setIsTyping(false);
+              setMessages(prev => [
+                ...prev,
+                {
+                  role: 'assistant',
+                  content: formatAIResponse(analysis),
+                  isHtml: true
+                }
+              ]);
+            };
+            
+            reader.onerror = () => {
+              setIsTyping(false);
+              setMessages(prev => [
+                ...prev,
+                {
+                  role: 'assistant',
+                  content: "Sorry, I couldn't read this file. It may be too large or in an unsupported format."
+                }
+              ]);
+            };
+            
+            reader.readAsText(attachedFile);
+          } else {
+            // For other file types, send a generic response
+            setIsTyping(false);
+            setMessages(prev => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: formatAIResponse(`I've received your file: ${attachedFile.name}. 
+                
+This appears to be a ${attachedFile.type || "unknown"} file. While I can't directly analyze the full contents of this file type, you can ask me questions about it, and I'll try to help based on the information you provide.
+
+Would you like to:
+1. Ask specific questions about this file?
+2. Extract certain information from it? 
+3. Compare it with the main document you uploaded?`),
+                isHtml: true
+              }
+            ]);
+          }
+        } catch (error) {
+          // Handle errors
+          setIsTyping(false);
+          console.error("File analysis error:", error);
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: "Sorry, I encountered an error processing this file. Please try again or try a different file format."
+            }
+          ]);
+          
+          toast({
+            title: "Analysis Error",
+            description: "Failed to process the file.",
+            variant: "destructive"
+          });
+        }
+        
+        return;
+      }
+      
+      // If no file, handle as regular text message
       const userMessage = inputValue.trim();
       setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
       
@@ -321,159 +455,31 @@ Feel free to ask me any questions! Here are some suggestions:`
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    for (const file of Array.from(files)) {
-      let messageObj: any = {
-        role: "user",
-        content: `Uploaded: ${file.name}`,
+    const file = files[0]; // Process only the first file for simplicity
+    setAttachedFile(file);
+    setAttachedFileType(file.type);
+
+    if (file.type.startsWith("image/")) {
+      // Create preview for image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageData = e.target?.result as string;
+        setAttachedFilePreview(imageData);
       };
+      reader.readAsDataURL(file);
+    } else {
+      // For non-image files, just set filename preview
+      setAttachedFilePreview(null);
+    }
+  };
 
-      if (file.type.startsWith("image/")) {
-        // Show image preview
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const imageData = reader.result as string;
-          
-          // Add user message with image
-          setMessages(prev => [
-            ...prev,
-            {
-              ...messageObj,
-              content: "Uploaded image:",
-              image: imageData,
-            },
-          ]);
-          
-          // Show typing indicator
-          setIsTyping(true);
-          
-          try {
-            // Call Gemini to analyze the image
-            const analysis = await analyzeImageWithGemini(imageData);
-            
-            // Add AI response
-            setIsTyping(false);
-            setMessages(prev => [
-              ...prev,
-              {
-                role: 'assistant',
-                content: formatAIResponse(analysis),
-                isHtml: true
-              }
-            ]);
-          } catch (error) {
-            setIsTyping(false);
-            console.error("Image analysis error:", error);
-            setMessages(prev => [
-              ...prev,
-              {
-                role: 'assistant',
-                content: "Sorry, I encountered an error analyzing this image. Please try again."
-              }
-            ]);
-            
-            toast({
-              title: "Analysis Error",
-              description: "Failed to analyze the image with Gemini.",
-              variant: "destructive"
-            });
-          }
-        };
-        reader.readAsDataURL(file);
-      } else {
-        // For text-based files (PDF, TXT, CSV, etc.)
-        setMessages(prev => [
-          ...prev,
-          {
-            ...messageObj,
-            content: `Uploaded file: ${file.name} (${file.type || "unknown type"})`,
-            filename: file.name,
-            filetype: file.type,
-          },
-        ]);
-        
-        // Show typing indicator for file analysis
-        setIsTyping(true);
-        
-        try {
-          // For text-based files we can try to read and analyze them
-          if (file.type === "text/plain" || 
-              file.type === "text/csv" ||
-              file.type === "application/vnd.ms-excel" ||
-              file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-              file.type === "application/json") {
-            
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const fileContent = reader.result as string;
-              
-              // Analyze file with Gemini
-              const analysis = await analyzeFileWithGemini(
-                fileContent,
-                file.name,
-                file.type
-              );
-              
-              // Add AI response
-              setIsTyping(false);
-              setMessages(prev => [
-                ...prev,
-                {
-                  role: 'assistant',
-                  content: formatAIResponse(analysis),
-                  isHtml: true
-                }
-              ]);
-            };
-            
-            reader.onerror = () => {
-              setIsTyping(false);
-              setMessages(prev => [
-                ...prev,
-                {
-                  role: 'assistant',
-                  content: "Sorry, I couldn't read this file. It may be too large or in an unsupported format."
-                }
-              ]);
-            };
-            
-            reader.readAsText(file);
-          } else {
-            // For other file types, send a generic response
-            setIsTyping(false);
-            setMessages(prev => [
-              ...prev,
-              {
-                role: 'assistant',
-                content: formatAIResponse(`I've received your file: ${file.name}. 
-                
-This appears to be a ${file.type || "unknown"} file. While I can't directly analyze the full contents of this file type, you can ask me questions about it, and I'll try to help based on the information you provide.
-
-Would you like to:
-1. Ask specific questions about this file?
-2. Extract certain information from it? 
-3. Compare it with the main document you uploaded?`),
-                isHtml: true
-              }
-            ]);
-          }
-        } catch (error) {
-          setIsTyping(false);
-          console.error("File analysis error:", error);
-          setMessages(prev => [
-            ...prev,
-            {
-              role: 'assistant',
-              content: "Sorry, I encountered an error processing this file. Please try again or try a different file format."
-            }
-          ]);
-          
-          toast({
-            title: "Analysis Error",
-            description: "Failed to process the file.",
-            variant: "destructive"
-          });
-        }
-      }
+  // Clear file attachment
+  const clearAttachment = () => {
+    setAttachedFile(null);
+    setAttachedFilePreview(null);
+    setAttachedFileType(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -492,26 +498,15 @@ Would you like to:
           <MessageSquare className="h-4 w-4" />
           <h3 className="font-medium text-sm">Research Assistant</h3>
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleAttachClick}
-            title="Attach file"
-          >
-            <Paperclip className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8" 
-            onClick={toggleChat}
-            title="Close chat"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={toggleChat}
+          title="Close chat"
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
       
       {/* Chat messages area with enhanced styling */}
@@ -615,23 +610,68 @@ Would you like to:
         </div>
       </ScrollArea>
       
-      {/* Input area */}
+      {/* File preview area */}
+      {attachedFile && (
+        <div className="p-2 border-t bg-gray-50">
+          <div className="flex items-center gap-2 p-2 bg-white border rounded-md">
+            {attachedFilePreview ? (
+              <img 
+                src={attachedFilePreview} 
+                alt="Preview" 
+                className="h-12 w-12 object-cover rounded" 
+              />
+            ) : (
+              <div className="h-12 w-12 flex items-center justify-center bg-gray-100 rounded">
+                <span className="text-xs font-semibold text-gray-500">
+                  {attachedFileType?.split('/')[1]?.toUpperCase() || 'FILE'}
+                </span>
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{attachedFile.name}</p>
+              <p className="text-xs text-gray-500">
+                {(attachedFile.size / 1024).toFixed(1)} KB • {attachedFileType}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={clearAttachment}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Input area with file button next to input */}
       <div className="p-3 border-t bg-white">
         <div className="flex gap-2">
-          <Textarea
-            className="flex-1 min-h-10 max-h-32 resize-none"
-            placeholder="Ask about the document..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <Button 
-            className="shrink-0" 
-            size="sm" 
+          <div className="flex-1 flex border rounded-md overflow-hidden">
+            <Textarea
+              className="flex-1 min-h-10 max-h-32 resize-none border-0"
+              placeholder="Ask about the document..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <Button 
+              variant="ghost" 
+              className="px-2 rounded-none border-l"
+              onClick={handleAttachClick}
+              title="Attach file"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            className="shrink-0"
+            size="icon"
             onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() && !attachedFile}
           >
-            Send
+            <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
