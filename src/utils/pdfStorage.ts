@@ -6,18 +6,29 @@ import { openDB, IDBPDatabase } from 'idb';
 const DB_NAME = 'pdfStorage';
 const STORE_NAME = 'pdfs';
 const CURRENT_PDF_KEY = 'currentPdfKey';
+const DB_VERSION = 1; // Adding explicit version number
 
 // Initialize the database
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
 const initDB = async () => {
   if (!dbPromise) {
-    dbPromise = openDB(DB_NAME, 1, {
-      upgrade(db) {
+    dbPromise = openDB(DB_NAME, DB_VERSION, {
+      upgrade(db, oldVersion, newVersion) {
+        // Create the object store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE_NAME)) {
+          console.log(`Creating object store: ${STORE_NAME}`);
           db.createObjectStore(STORE_NAME);
         }
       },
+      blocking(currentVersion, blockedVersion, event) {
+        console.log(`Database blocking event: current version ${currentVersion}, blocked version ${blockedVersion}`);
+        // Handle blocking events if needed
+      },
+      terminated() {
+        console.log('Database connection terminated unexpectedly');
+        dbPromise = null; // Reset the promise so we try to reconnect next time
+      }
     });
   }
   return dbPromise;
@@ -25,10 +36,16 @@ const initDB = async () => {
 
 // Store PDF data in IndexedDB
 export const storePdfData = async (key: string, data: string): Promise<void> => {
-  const db = await initDB();
-  await db.put(STORE_NAME, data, key);
-  // Mark that this PDF has data stored
-  sessionStorage.setItem(`hasPdfData_${key}`, 'true');
+  try {
+    const db = await initDB();
+    await db.put(STORE_NAME, data, key);
+    // Mark that this PDF has data stored
+    sessionStorage.setItem(`hasPdfData_${key}`, 'true');
+    console.log(`PDF data stored successfully for key: ${key}`);
+  } catch (error) {
+    console.error("Error storing PDF data:", error);
+    throw error; // Re-throw to allow handling by caller
+  }
 };
 
 // Get PDF data from IndexedDB
@@ -45,9 +62,15 @@ export const getPdfData = async (key: string): Promise<string | null> => {
 
 // Set current PDF key in IndexedDB
 export const setCurrentPdfKey = async (key: string): Promise<void> => {
-  const db = await initDB();
-  await db.put(STORE_NAME, key, CURRENT_PDF_KEY);
-  window.dispatchEvent(new CustomEvent('currentPdfChanged', { detail: { key } }));
+  try {
+    const db = await initDB();
+    await db.put(STORE_NAME, key, CURRENT_PDF_KEY);
+    window.dispatchEvent(new CustomEvent('currentPdfChanged', { detail: { key } }));
+    console.log(`Current PDF key set to: ${key}`);
+  } catch (error) {
+    console.error("Error setting current PDF key:", error);
+    throw error;
+  }
 };
 
 // Get current PDF key from IndexedDB
