@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf } from "@/services/geminiService";
 import mermaid from "mermaid";
 import html2canvas from "html2canvas";
-import { saveAs } from "file-saver";
+import { downloadBlob } from "@/utils/downloadUtils";
 
 // Initialize mermaid
 mermaid.initialize({
@@ -126,7 +126,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       // Convert to blob and download
       canvas.toBlob((blob) => {
         if (blob) {
-          saveAs(blob, "paper_flowchart.png");
+          downloadBlob(blob, "paper_flowchart.png");
           toast({
             title: "Download Complete",
             description: "Flowchart has been downloaded as PNG.",
