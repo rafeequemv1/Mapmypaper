@@ -25,6 +25,18 @@ const MindMap = () => {
     setMindMapInstance(instance);
   }, []);
 
+  // Handle text selected for explanation
+  const handleExplainText = useCallback((text: string) => {
+    setExplainText(text);
+    if (!showChat) {
+      setShowChat(true);
+      toast({
+        title: "Explain Feature",
+        description: "Opening chat to explain selected text.",
+      });
+    }
+  }, [showChat, toast]);
+
   // Listen for text selection events that should activate chat
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
@@ -69,7 +81,7 @@ const MindMap = () => {
         togglePdf={() => setShowPdf(!showPdf)}
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
-        onExplainText={setExplainText}
+        onExplainText={handleExplainText}
       />
       
       {/* Modal for Flowchart */}

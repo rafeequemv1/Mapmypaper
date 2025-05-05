@@ -3,9 +3,11 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { getCurrentPdfData } from "@/utils/pdfStorage";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -40,6 +42,12 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [pdfKey, setPdfKey] = useState<string | null>(null);
+    
+    // Text selection tooltip states
+    const [selectedText, setSelectedText] = useState<string>("");
+    const [selectionPosition, setSelectionPosition] = useState<{x: number, y: number} | null>(null);
+    const [showSelectionTooltip, setShowSelectionTooltip] = useState<boolean>(false);
+    const selectionTooltipRef = useRef<HTMLDivElement>(null);
 
     // Load PDF data from IndexedDB when active PDF changes
     const loadPdfData = async () => {
@@ -96,6 +104,66 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         window.removeEventListener('pdfSwitched', handlePdfSwitch);
       };
     }, [toast]);
+
+    // Handle text selection in PDF
+    useEffect(() => {
+      const handleTextSelection = () => {
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) {
+          const text = selection.toString().trim();
+          if (text) {
+            setSelectedText(text);
+            
+            // Get position for tooltip
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            setSelectionPosition({
+              x: rect.x + rect.width / 2,
+              y: rect.y - 10
+            });
+            
+            setShowSelectionTooltip(true);
+          }
+        }
+      };
+
+      const handleClickOutside = (e: MouseEvent) => {
+        if (
+          showSelectionTooltip && 
+          selectionTooltipRef.current && 
+          !selectionTooltipRef.current.contains(e.target as Node)
+        ) {
+          const selection = window.getSelection();
+          if (!selection || selection.isCollapsed) {
+            setShowSelectionTooltip(false);
+          }
+        }
+      };
+
+      document.addEventListener('selectionchange', handleTextSelection);
+      document.addEventListener('mousedown', handleClickOutside);
+      
+      return () => {
+        document.removeEventListener('selectionchange', handleTextSelection);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [showSelectionTooltip]);
+
+    // Handle explanation request
+    const handleExplainText = () => {
+      if (selectedText && onTextSelected) {
+        onTextSelected(selectedText);
+        setShowSelectionTooltip(false);
+        
+        // Dispatch custom event for opening chat with text
+        window.dispatchEvent(
+          new CustomEvent('openChatWithText', { detail: { text: selectedText } })
+        );
+        
+        // Clear selection
+        window.getSelection()?.removeAllRanges();
+      }
+    };
 
     // Enhanced search functionality with improved highlighting
     const handleSearch = () => {
@@ -431,6 +499,28 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div 
               className="flex flex-col items-center py-4 relative"
             >
+              {/* Selection Tooltip */}
+              {showSelectionTooltip && selectionPosition && (
+                <div
+                  ref={selectionTooltipRef}
+                  className="absolute bg-white rounded-md shadow-md border border-gray-200 z-50 p-1"
+                  style={{
+                    left: `${selectionPosition.x}px`,
+                    top: `${selectionPosition.y}px`,
+                    transform: 'translate(-50%, -100%)'
+                  }}
+                >
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    className="flex items-center gap-1 text-xs p-1 h-7"
+                    onClick={handleExplainText}
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    <span>Explain</span>
+                  </Button>
+                </div>
+              )}
               
               <Document
                 file={pdfData}
