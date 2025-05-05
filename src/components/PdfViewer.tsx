@@ -1,21 +1,20 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, RectangleHorizontal } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { getCurrentPdfData } from "@/utils/pdfStorage";
-import PdfAreaSelector from "./mindmap/pdf/PdfAreaSelector";
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import "react-pdf/dist/esm/Page/TextLayer.css";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 
 // Set up the worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
-  onImageCaptured?: (imageData: string) => void;
   onPdfLoaded?: () => void;
   renderTooltipContent?: () => React.ReactNode;
 }
@@ -25,7 +24,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onImageCaptured, onPdfLoaded, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onPdfLoaded, renderTooltipContent }, ref) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -41,7 +40,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [pdfKey, setPdfKey] = useState<string | null>(null);
-    const [isAreaSelectActive, setIsAreaSelectActive] = useState(false);
 
     // Load PDF data from IndexedDB when active PDF changes
     const loadPdfData = async () => {
@@ -338,39 +336,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
-    // Handle area selection toggling
-    const toggleAreaSelection = () => {
-      setIsAreaSelectActive(prev => !prev);
-      if (!isAreaSelectActive) {
-        // Show instructions toast when activating
-        toast({
-          title: "Area Selection Mode",
-          description: "Click and drag to select an area of the PDF you want to explain",
-        });
-      }
-    };
-
-    // Handle area captured from the PdfAreaSelector
-    const handleAreaCaptured = (imageData: string) => {
-      setIsAreaSelectActive(false);
-      
-      // Send the captured image to chat via event
-      const event = new CustomEvent('openChatWithImage', {
-        detail: { imageData }
-      });
-      window.dispatchEvent(event);
-      
-      // Also call the prop if provided
-      if (onImageCaptured) {
-        onImageCaptured(imageData);
-      }
-    };
-
-    // Handle cancel area selection
-    const handleCancelAreaSelection = () => {
-      setIsAreaSelectActive(false);
-    };
-
     // PDF Toolbar (make even more compact)
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
@@ -458,28 +423,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             </div>
           )}
-
-          {/* Area Selection Button */}
-          <div className="ml-auto">
-            <Button
-              variant={isAreaSelectActive ? "secondary" : "ghost"}
-              size="sm"
-              className={`h-6 px-2 flex items-center gap-0.5 ${isAreaSelectActive ? 'bg-blue-100 border border-blue-300' : ''}`}
-              onClick={toggleAreaSelection}
-              title="Select area to explain"
-            >
-              <RectangleHorizontal className={`h-3 w-3 ${isAreaSelectActive ? 'text-blue-600' : ''}`} />
-              <span className={`text-xs ${isAreaSelectActive ? 'text-blue-600 font-medium' : ''}`}>
-                {isAreaSelectActive ? "Exit Select" : "Select Area"}
-              </span>
-            </Button>
-          </div>
         </div>
 
         {/* PDF Content */}
-        <div className="flex-1 relative" ref={pdfContainerRef}>
-          <ScrollArea className="h-full">
-            <div className="flex flex-col items-center py-4 relative">
+        {pdfData ? (
+          <ScrollArea className="flex-1" ref={pdfContainerRef}>
+            <div 
+              className="flex flex-col items-center py-4 relative"
+            >
               
               <Document
                 file={pdfData}
@@ -520,43 +471,30 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   </div>
                 ))}
               </Document>
-              
-              {/* Area selection overlay */}
-              {isAreaSelectActive && (
-                <PdfAreaSelector
-                  containerRef={pdfContainerRef}
-                  isActive={isAreaSelectActive}
-                  onCapture={handleAreaCaptured}
-                  onCancel={handleCancelAreaSelection}
-                />
-              )}
             </div>
           </ScrollArea>
-          
-          {/* No PDF content message */}
-          {pdfData ? null : (
-            <div className="absolute inset-0 flex items-center justify-center flex-col gap-4 bg-gray-50">
-              {isLoading ? (
-                <div className="flex flex-col items-center">
-                  <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                  <p className="text-gray-500">Loading PDF...</p>
-                </div>
-              ) : (
-                <div className="text-center p-8">
-                  <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
-                  <p className="text-gray-500">Please return to the upload page and select a PDF document.</p>
-                  <Button 
-                    onClick={() => window.location.href = '/'} 
-                    variant="outline" 
-                    className="mt-4"
-                  >
-                    Go to Upload Page
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className="flex h-full items-center justify-center flex-col gap-4">
+            {isLoading ? (
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-500">Loading PDF...</p>
+              </div>
+            ) : (
+              <div className="text-center p-8">
+                <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
+                <p className="text-gray-500">Please return to the upload page and select a PDF document.</p>
+                <Button 
+                  onClick={() => window.location.href = '/'} 
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Go to Upload Page
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }

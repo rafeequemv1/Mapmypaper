@@ -12,7 +12,6 @@ const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
-  const [explainImage, setExplainImage] = useState("");
   const [showFlowchart, setShowFlowchart] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const location = useLocation();
@@ -44,25 +43,6 @@ const MindMap = () => {
       window.removeEventListener('openChatWithText', handleTextSelected as EventListener);
     };
   }, [showChat]);
-  
-  // Listen for image capture events
-  useEffect(() => {
-    const handleImageCaptured = (e: CustomEvent) => {
-      if (e.detail?.imageData) {
-        setExplainImage(e.detail.imageData);
-        // Open chat panel if it's not already open
-        if (!showChat) {
-          setShowChat(true);
-        }
-      }
-    };
-    
-    window.addEventListener('openChatWithImage', handleImageCaptured as EventListener);
-    
-    return () => {
-      window.removeEventListener('openChatWithImage', handleImageCaptured as EventListener);
-    };
-  }, [showChat]);
 
   useEffect(() => {
     if (location.state?.presetQuestion) {
@@ -89,9 +69,7 @@ const MindMap = () => {
         togglePdf={() => setShowPdf(!showPdf)}
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
-        explainImage={explainImage}
         onExplainText={setExplainText}
-        onExplainImage={setExplainImage}
       />
       
       {/* Modal for Flowchart */}

@@ -17,9 +17,7 @@ interface PanelStructureProps {
   togglePdf: () => void;
   onMindMapReady: any;
   explainText: string;
-  explainImage?: string;
   onExplainText: (text: string) => void;
-  onExplainImage?: (imageData: string) => void;
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -31,9 +29,7 @@ const PanelStructure = ({
   togglePdf,
   onMindMapReady,
   explainText,
-  explainImage,
   onExplainText,
-  onExplainImage,
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -70,18 +66,6 @@ const PanelStructure = ({
         description: "Failed to switch to the selected PDF.",
         variant: "destructive",
       });
-    }
-  };
-
-  // Handle PDF area captured
-  const handleImageCaptured = (imageData: string) => {
-    if (onExplainImage) {
-      onExplainImage(imageData);
-    }
-    
-    // Open chat if not already open
-    if (!showChat) {
-      toggleChat();
     }
   };
 
@@ -249,7 +233,6 @@ const PanelStructure = ({
               <PdfViewer 
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
-                onImageCaptured={handleImageCaptured}
               />
             </TooltipProvider>
           </div>
@@ -270,7 +253,6 @@ const PanelStructure = ({
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}
-              explainImage={explainImage}
               onExplainText={onExplainText}
               onScrollToPdfPosition={handleScrollToPdfPosition}
             />
@@ -280,7 +262,6 @@ const PanelStructure = ({
         <MobileChatSheet 
           onScrollToPdfPosition={handleScrollToPdfPosition}
           explainText={explainText}
-          explainImage={explainImage}
         />
       </div>
     </>
