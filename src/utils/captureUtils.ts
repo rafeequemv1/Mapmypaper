@@ -190,7 +190,7 @@ export function createSelectionRect(containerElement: HTMLElement) {
     toggleTextSelection(true);
   };
   
-  // Set capture loading state
+  // Set capture loading state - MODIFIED: Now ensures the rectangle stays visible during capture
   const setCapturing = (capturing: boolean) => {
     isCapturing = capturing;
     
@@ -200,6 +200,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
       captureTooltip.classList.add('bg-blue-800');
       captureTooltip.classList.remove('hover:bg-blue-700');
       captureTooltip.style.cursor = 'default';
+      // Make sure rectangle stays visible
+      selectionRect.style.display = 'block';
     } else {
       // Reset to normal state
       captureTooltip.textContent = 'Capture';
@@ -208,6 +210,18 @@ export function createSelectionRect(containerElement: HTMLElement) {
       captureTooltip.style.cursor = 'pointer';
       // Re-enable text selection when capture is done
       toggleTextSelection(true);
+      // IMPORTANT: Now we don't hide the rectangle here - it will be hidden by the caller
+    }
+  };
+
+  // Show or hide both the rectangle and tooltip
+  const setVisibility = (visible: boolean) => {
+    if (visible) {
+      selectionRect.style.display = 'block';
+      captureTooltip.style.display = 'block';
+    } else {
+      selectionRect.style.display = 'none';
+      captureTooltip.style.display = 'none';
     }
   };
   
@@ -254,6 +268,7 @@ export function createSelectionRect(containerElement: HTMLElement) {
     endSelection,
     cancelSelection,
     setCapturing,
+    setVisibility, // New method to control visibility
     destroy,
     isSelecting: () => isSelecting
   };
