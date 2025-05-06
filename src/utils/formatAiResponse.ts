@@ -2,7 +2,7 @@
 /**
  * Formats AI responses with enhanced typography and structure
  * Converts markdown syntax to properly styled HTML and adds citation support
- * Optimized for concise, simplified responses
+ * Optimized for natural, conversational responses
  */
 export const formatAIResponse = (content: string): string => {
   // Add relevant emojis based on content
@@ -11,7 +11,7 @@ export const formatAIResponse = (content: string): string => {
     text = text.replace(/important fact/gi, '📌 Important fact');
     text = text.replace(/key point/gi, '🔑 Key point');
     
-    // Add emoji for explanations
+    // Add emoji for explanations - sparingly
     text = text.replace(/to explain/gi, '💡 To explain');
     text = text.replace(/for example/gi, '🔍 For example');
     
@@ -28,7 +28,7 @@ export const formatAIResponse = (content: string): string => {
     return text;
   };
 
-  // First process the content with emojis
+  // First process the content with emojis - but use them sparingly
   let formattedContent = addEmojis(content);
   
   // Process citations - format as small circular badges with just the page number
@@ -61,6 +61,25 @@ export const formatAIResponse = (content: string): string => {
       return `<span class="citation" data-citation="${citation}" role="button" tabindex="0" title="Click to navigate to ${citation}"><sup class="inline-flex items-center justify-center w-5 h-5 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-sm transition-transform duration-150 ease-in-out">${shortCite}</sup></span>`;
     }
   );
+
+  // Make the tone more conversational by converting formal phrases
+  formattedContent = formattedContent
+    .replace(/it is important to note that/gi, "just so you know")
+    .replace(/it should be noted that/gi, "keep in mind")
+    .replace(/according to the document/gi, "the document mentions")
+    .replace(/as mentioned previously/gi, "as I said earlier")
+    .replace(/furthermore/gi, "also")
+    .replace(/therefore/gi, "so")
+    .replace(/consequently/gi, "because of that")
+    .replace(/in addition/gi, "also")
+    .replace(/however/gi, "but")
+    .replace(/nevertheless/gi, "still")
+    .replace(/subsequently/gi, "after that")
+    .replace(/thus/gi, "so")
+    .replace(/in essence/gi, "basically")
+    .replace(/specifically/gi, "especially")
+    .replace(/in summary/gi, "to wrap up")
+    .replace(/in conclusion/gi, "finally");
   
   // Replace markdown headers with concise styling
   formattedContent = formattedContent
