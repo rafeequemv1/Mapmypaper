@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RefreshCw } from "lucide-react";
+import { Loader2, Download, RefreshCw, Maximize, Minimize } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf, generateMindmapFromPdf } from "@/services/geminiService";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -37,6 +37,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [diagramCode, setDiagramCode] = useState<string>("");
   const [diagramType, setDiagramType] = useState<DiagramType>('flowchart');
   const diagramRef = useRef<HTMLDivElement>(null);
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   
   // Add state for active PDF key
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -226,10 +227,15 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     }
   };
 
+  // Toggle fullscreen mode
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col"
+        className={`${isFullScreen ? 'max-w-[100vw] w-screen h-screen max-h-screen rounded-none' : 'max-w-[90vw] max-h-[90vh]'} overflow-hidden flex flex-col`}
       >
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center text-xl">
@@ -261,6 +267,24 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
                   <>
                     <RefreshCw className="h-4 w-4" />
                     Regenerate
+                  </>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={toggleFullScreen}
+                className="flex gap-1 text-sm"
+              >
+                {isFullScreen ? (
+                  <>
+                    <Minimize className="h-4 w-4" />
+                    Exit Full Screen
+                  </>
+                ) : (
+                  <>
+                    <Maximize className="h-4 w-4" />
+                    Full Screen
                   </>
                 )}
               </Button>
@@ -309,7 +333,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             </p>
           </div>
         ) : (
-          <div className="flex-1 overflow-auto py-4 relative">
+          <div className={`flex-1 overflow-auto py-4 relative ${isFullScreen ? 'h-full' : ''}`}>
             <div 
               ref={diagramRef} 
               className={`flex justify-center items-center ${diagramType === 'mindmap' ? 'w-full h-full min-h-[65vh]' : 'w-full min-h-[65vh] overflow-auto'} p-4 bg-white`}
