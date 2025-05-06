@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -741,4 +742,59 @@ const MindMapViewer = ({
       {(isLoading || loadingProgress > 0) && (
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center">
           <LoaderCircle className="h-12 w-12 text-purple-600 animate-spin mb-4" />
-          <h3 className
+          <h3 className="text-lg font-medium mb-2">Generating Mind Map</h3>
+          <div className="w-64 mb-2">
+            <Progress value={loadingProgress} className="h-2" />
+          </div>
+          <p className="text-sm text-gray-500">Please wait while we analyze the document...</p>
+        </div>
+      )}
+
+      {/* Placeholder when no map is generated yet */}
+      {!isMapGenerated && !isLoading && (
+        <div className="h-full w-full flex flex-col items-center justify-center bg-gray-50 rounded-md border border-dashed border-gray-300 p-8">
+          <FileText className="h-16 w-16 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium mb-2">No Mind Map Yet</h3>
+          <p className="text-center text-gray-500 max-w-md mb-4">
+            Click the "Generate Mind Map" button to create a visual representation of your document.
+          </p>
+          <Button 
+            onClick={onRequestOpenChat}
+            variant="outline"
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Open Chat
+          </Button>
+        </div>
+      )}
+      
+      {/* Summary display for nodes */}
+      {showSummary && (
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col p-4 overflow-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Node Summary</h3>
+            <Button variant="outline" size="sm" onClick={() => setShowSummary(false)}>
+              Close
+            </Button>
+          </div>
+          <div className="prose prose-sm max-w-none overflow-auto flex-1">
+            {summary.split('\n').map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Mind Map Container */}
+      <div 
+        ref={containerRef} 
+        className={`flex-1 overflow-hidden transition-opacity duration-300 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+      >
+        {/* Mind Elixir will render here */}
+      </div>
+    </div>
+  );
+};
+
+export default MindMapViewer;
