@@ -217,7 +217,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // Modified processPdfFile to be more conversational
+  // Modified processPdfFile to extract and store text for chat context
   const processPdfFile = async (file: File) => {
     setProcessingPdf(true);
     
@@ -246,17 +246,48 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
         return;
       }
       
-      // More conversational success message
+      // Generate a unique key for this chat-uploaded PDF
+      const timestamp = new Date().getTime();
+      const chatPdfKey = `chat_pdf_${file.name.replace(/\s+/g, '_')}_${timestamp}`;
+      
+      // Store extracted text in sessionStorage with the unique key
+      sessionStorage.setItem(`pdfText_${chatPdfKey}`, extractedText);
+      
+      // If using active PDF only mode, update the current PDF text too
+      if (!useAllPdfs) {
+        sessionStorage.setItem('pdfText', extractedText);
+      }
+      
+      // Also store PDF metadata for potential future reference
+      sessionStorage.setItem(`pdfMeta_${chatPdfKey}`, JSON.stringify({
+        name: file.name,
+        size: file.size,
+        lastModified: file.lastModified,
+        uploadedInChat: true,
+        timestamp
+      }));
+      
+      // Mark this PDF as ready for chat (no mindmap needed)
+      sessionStorage.setItem(`chatPdfReady_${chatPdfKey}`, 'true');
+      
+      // More conversational success message with details about the document
       setIsTyping(false);
+      
+      // Generate a response that includes basic info about the PDF
+      const wordCount = extractedText.split(/\s+/).length;
+      const pageEstimate = Math.max(1, Math.round(wordCount / 500)); // Rough estimate of pages
+      
       setMessages(prev => [...prev, { 
         role: 'assistant',
-        content: formatAIResponse(`Got it! I've read through "${file.name}". What would you like to know about it?`),
+        content: formatAIResponse(`I've read through "${file.name}" (approximately ${wordCount} words, ~${pageEstimate} pages). 
+        
+What would you like to know about this document? I'll use its content to provide more accurate answers.`),
         isHtml: true
       }]);
       
       toast({
-        title: "Success",
-        description: "PDF processed for chat context",
+        title: "PDF Processed",
+        description: "The PDF has been read and added to the chat context",
       });
     } catch (error) {
       console.error("Error processing PDF:", error);
