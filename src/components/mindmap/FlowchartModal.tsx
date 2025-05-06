@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,9 +18,9 @@ mermaid.initialize({
     useMaxWidth: true,
     htmlLabels: true,
     curve: 'basis',
-    rankSpacing: 60,
     nodeSpacing: 60,
-    rankDir: 'LR' // Set flowchart direction to Left to Right
+    rankSpacing: 60,
+    // Remove the invalid rankDir property
   },
   securityLevel: 'loose',
   fontSize: 14
@@ -106,8 +105,10 @@ flowchart LR
     
     T --> V[Future Research]`;
         } else {
-          // Ensure flowchart is LR (left to right) and has reasonable spacing
-          mermaidCode = mermaidCode.replace(/flowchart (TD|TB)/, 'flowchart LR');
+          // Instead of modifying the flowchart type, set direction in the diagram code itself
+          if (!mermaidCode.includes('flowchart LR')) {
+            mermaidCode = mermaidCode.replace(/flowchart (TD|TB)/, 'flowchart LR');
+          }
         }
       } else {
         mermaidCode = await generateMindmapFromPdf();
