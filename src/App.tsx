@@ -16,6 +16,7 @@ import Pricing from "./pages/Pricing";
 import Contact from "./pages/Contact";
 import Policy from "./pages/Policy";
 import Refund from "./pages/Refund";
+import Features from "./pages/Features";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -56,6 +57,7 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/policy" element={<Policy />} />
                 <Route path="/refund" element={<Refund />} />
+                <Route path="/features" element={<Features />} />
                 <Route path="/" element={<PdfUpload />} />
               </Route>
               
