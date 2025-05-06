@@ -17,7 +17,8 @@ mermaid.initialize({
   flowchart: {
     useMaxWidth: false,
     htmlLabels: true,
-    curve: 'basis'
+    curve: 'basis',
+    rankDir: 'LR' // Set flowchart direction to Left to Right
   },
   securityLevel: 'loose',
   fontSize: 16
@@ -58,6 +59,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       let mermaidCode;
       if (diagramType === 'flowchart') {
         mermaidCode = await generateFlowchartFromPdf();
+        // Ensure flowchart is LR (left to right)
+        if (mermaidCode.includes('flowchart TD') || mermaidCode.includes('flowchart TB')) {
+          mermaidCode = mermaidCode.replace(/flowchart (TD|TB)/, 'flowchart LR');
+        }
       } else {
         mermaidCode = await generateMindmapFromPdf();
       }
@@ -71,7 +76,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       });
       // Set fallback diagram
       setDiagramCode(diagramType === 'flowchart'
-        ? `flowchart TD\n  A[Error] --> B[Generation Failed]\n  B --> C[Please try again]`
+        ? `flowchart LR\n  A[Error] --> B[Generation Failed]\n  B --> C[Please try again]`
         : `mindmap\n  root((Error))\n    Failed to generate mindmap\n      Please try again`
       );
     } finally {
@@ -94,6 +99,17 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       const container = document.createElement('div');
       container.id = id;
       container.className = 'mermaid';
+      
+      // For mindmaps, add full-screen style
+      if (diagramType === 'mindmap') {
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.minHeight = '60vh';
+        container.style.display = 'flex';
+        container.style.justifyContent = 'center';
+        container.style.alignItems = 'center';
+      }
+      
       container.textContent = diagramCode;
       
       // Add to the DOM
@@ -103,6 +119,18 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       await mermaid.run({
         nodes: [container]
       });
+      
+      // For mindmap, find the SVG and make it full size
+      if (diagramType === 'mindmap') {
+        const svg = container.querySelector('svg');
+        if (svg) {
+          svg.style.width = '100%';
+          svg.style.height = '100%';
+          svg.style.maxHeight = '60vh';
+          svg.setAttribute('width', '100%');
+          svg.setAttribute('height', '100%');
+        }
+      }
     } catch (error) {
       console.error("Mermaid rendering error:", error);
       
@@ -166,7 +194,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="max-w-[75vw] max-h-[90vh] overflow-hidden flex flex-col"
+        className="max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col"
       >
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center text-xl">
@@ -240,7 +268,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           <div className="flex-1 overflow-auto py-4">
             <div 
               ref={diagramRef} 
-              className="flex justify-center items-center min-h-[50vh] p-4 bg-white"
+              className={`flex justify-center items-center min-h-[65vh] ${diagramType === 'mindmap' ? 'w-full h-full' : ''} p-4 bg-white`}
             >
               {!diagramCode && (
                 <div className="text-center text-muted-foreground">
