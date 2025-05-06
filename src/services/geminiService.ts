@@ -1,11 +1,10 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Analyze image with gemini pro vision api
 export const analyzeImageWithGemini = async (base64Image: string) => {
   try {
-    // Access the Gemini Pro API key from environment variables
-    const apiKey = import.meta.env.AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY;
+    // Use the provided API key directly
+    const apiKey = "AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY";
     if (!apiKey) {
       throw new Error('Gemini API Key not found. Please add your key to environment variables.');
     }
@@ -44,8 +43,8 @@ export const analyzeImageWithGemini = async (base64Image: string) => {
 // Analyze file with gemini pro api
 export const analyzeFileWithGemini = async (fileContent: string, fileName: string, fileType: string) => {
   try {
-    // Access the Gemini Pro API key from environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    // Use the provided API key directly
+    const apiKey = "AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY";
     if (!apiKey) {
       throw new Error('Gemini API Key not found. Please add your key to environment variables.');
     }
@@ -71,8 +70,8 @@ export const analyzeFileWithGemini = async (fileContent: string, fileName: strin
 // Generate mind map from text using gemini pro api
 export const generateMindMapFromText = async (text: string) => {
   try {
-    // Access the Gemini Pro API key from environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    // Use the provided API key directly
+    const apiKey = "AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY";
     if (!apiKey) {
       throw new Error('Gemini API Key not found. Please add your key to environment variables.');
     }
@@ -107,8 +106,8 @@ export const generateMindMapFromText = async (text: string) => {
 // Generate structured summary from PDF
 export const generateStructuredSummary = async () => {
   try {
-    // Access the Gemini Pro API key from environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    // Use the provided API key directly
+    const apiKey = "AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY";
     if (!apiKey) {
       throw new Error('Gemini API Key not found. Please add your key to environment variables.');
     }
@@ -185,8 +184,8 @@ export const generateStructuredSummary = async () => {
 // Generate flowchart from PDF content
 export const generateFlowchartFromPdf = async () => {
   try {
-    // Access the Gemini Pro API key from environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    // Use the provided API key directly
+    const apiKey = "AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY";
     if (!apiKey) {
       throw new Error('Gemini API Key not found. Please add your key to environment variables.');
     }
@@ -239,8 +238,8 @@ export const generateFlowchartFromPdf = async () => {
 // Generate mind map from PDF content
 export const generateMindmapFromPdf = async () => {
   try {
-    // Access the Gemini Pro API key from environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    // Use the provided API key directly
+    const apiKey = "AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY";
     if (!apiKey) {
       throw new Error('Gemini API Key not found. Please add your key to environment variables.');
     }
@@ -292,8 +291,8 @@ export const generateMindmapFromPdf = async () => {
 // Modified to handle PDFs uploaded directly in chat
 export const chatWithGeminiAboutPdf = async (message: string, useAllPdfs = false) => {
   try {
-    // Access the Gemini Pro API key from environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    // Use the provided API key directly
+    const apiKey = "AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY";
     if (!apiKey) {
       throw new Error('Gemini API Key not found. Please add your key to environment variables.');
     }
