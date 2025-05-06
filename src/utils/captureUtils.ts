@@ -87,13 +87,13 @@ export function toggleTextSelection(enable: boolean) {
  * @returns Object with methods to control the selection rectangle
  */
 export function createSelectionRect(containerElement: HTMLElement) {
-  // Create selection rectangle element with absolute positioning
+  // Create selection rectangle element
   const selectionRect = document.createElement('div');
   selectionRect.className = 'absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none z-50';
   selectionRect.style.display = 'none';
   containerElement.appendChild(selectionRect);
   
-  // Create capture button tooltip - positioned outside the selection
+  // Create capture button tooltip
   const captureTooltip = document.createElement('div');
   captureTooltip.className = 'absolute bg-blue-600 text-white px-2 py-1 rounded text-sm z-50 cursor-pointer shadow-md hover:bg-blue-700 transition-colors duration-150';
   captureTooltip.style.display = 'none';
@@ -110,10 +110,9 @@ export function createSelectionRect(containerElement: HTMLElement) {
   // Update rectangle position and dimensions
   const updateRect = (endX: number, endY: number) => {
     const containerRect = containerElement.getBoundingClientRect();
-    const scrollTop = containerElement.scrollTop || 
-                      (containerElement.querySelector('[data-radix-scroll-area-viewport]')?.scrollTop || 0);
+    const scrollTop = containerElement.scrollTop;
     
-    // Calculate actual positions relative to the container including scroll
+    // Calculate actual positions relative to the container
     const relStartX = startX - containerRect.left;
     const relStartY = startY - containerRect.top + scrollTop;
     const relEndX = endX - containerRect.left;
@@ -134,10 +133,9 @@ export function createSelectionRect(containerElement: HTMLElement) {
     // Store current rect
     currentRect = { x: left, y: top, width, height };
     
-    // Position the tooltip ABOVE the rectangle with enough clearance
-    // This ensures the tooltip is completely outside the selection area
+    // Position the tooltip above the rectangle
     captureTooltip.style.left = `${left + width/2 - captureTooltip.offsetWidth/2}px`;
-    captureTooltip.style.top = `${top - captureTooltip.offsetHeight - 10}px`;
+    captureTooltip.style.top = `${top - captureTooltip.offsetHeight - 5}px`;
     
     // Return the current rectangle dimensions
     return currentRect;
@@ -225,24 +223,6 @@ export function createSelectionRect(containerElement: HTMLElement) {
     containerElement.dispatchEvent(captureEvent);
     setCapturing(true);
   });
-  
-  // Listen for scroll events to update the positions of the selection and tooltip
-  const scrollContainer = containerElement.querySelector('[data-radix-scroll-area-viewport]');
-  if (scrollContainer) {
-    scrollContainer.addEventListener('scroll', () => {
-      // Only update if we have an active selection
-      if (selectionRect.style.display !== 'none') {
-        // Just use the current rect data to re-position elements
-        const rect = currentRect;
-        
-        // The selection rect should already be correctly positioned as it's in the scrolled container
-        
-        // Update the tooltip position to stay with the selection
-        captureTooltip.style.left = `${rect.x + rect.width/2 - captureTooltip.offsetWidth/2}px`;
-        captureTooltip.style.top = `${rect.y - captureTooltip.offsetHeight - 10}px`;
-      }
-    });
-  }
   
   // Remove selection elements
   const destroy = () => {
