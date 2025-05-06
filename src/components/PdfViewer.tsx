@@ -61,9 +61,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Add a state to track whether we're currently processing an image capture
     const [isProcessingCapture, setIsProcessingCapture] = useState(false);
 
-    // New state to track the current capture rectangle for visibility persistence
-    const [currentCaptureRect, setCurrentCaptureRect] = useState<{x: number; y: number; width: number; height: number} | null>(null);
-
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
@@ -218,10 +215,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         
         const handleMouseUp = (e: MouseEvent) => {
           if (!isSnapshotMode || !selectionRectRef.current) return;
-          const rect = selectionRectRef.current.endSelection(e.clientX, e.clientY);
-          if (rect) {
-            setCurrentCaptureRect(rect);
-          }
+          selectionRectRef.current.endSelection(e.clientX, e.clientY);
         };
         
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -231,7 +225,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               selectionRectRef.current.cancelSelection();
             }
             setIsSnapshotMode(false);
-            setCurrentCaptureRect(null);
             // Re-enable text selection when exiting snapshot mode
             toggleTextSelection(true);
           }
@@ -246,14 +239,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           setIsProcessingCapture(true);
           
           const rect = customEvent.detail.rect;
-          setCurrentCaptureRect(rect);
           
           try {
-            // Show capturing state but keep the rectangle visible 
-            if (selectionRectRef.current) {
-              selectionRectRef.current.setCapturing(true);
-            }
-            
             // Capture the selected area
             const imageData = await captureElementArea(pdfContainerRef.current, rect);
             
@@ -265,21 +252,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 title: "Area captured",
                 description: "The selected area has been sent to chat",
               });
-              
-              // Now that the image has been processed and sent to chat, we can clean up
-              setTimeout(() => {
-                // Only now hide the selection rectangle
-                if (selectionRectRef.current) {
-                  selectionRectRef.current.setCapturing(false);
-                  selectionRectRef.current.setVisibility(false);
-                }
-                setCurrentCaptureRect(null);
-                setIsSnapshotMode(false);
-                // Re-enable text selection when capture is complete
-                toggleTextSelection(true);
-                // Reset processing flag after cleanup
-                setIsProcessingCapture(false);
-              }, 500); // Small delay to ensure chat has received the image
             }
           } catch (error) {
             console.error("Error capturing area:", error);
@@ -288,16 +260,20 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               description: "Failed to capture the selected area",
               variant: "destructive"
             });
-            
-            // Clean up on error
+          } finally {
+            // Reset the capturing state and clean up
             if (selectionRectRef.current) {
               selectionRectRef.current.setCapturing(false);
               selectionRectRef.current.cancelSelection();
             }
             setIsSnapshotMode(false);
-            setCurrentCaptureRect(null);
+            // Re-enable text selection when capture is complete
             toggleTextSelection(true);
-            setIsProcessingCapture(false);
+            
+            // Reset processing flag after a short delay
+            setTimeout(() => {
+              setIsProcessingCapture(false);
+            }, 500);
           }
         };
         
@@ -328,12 +304,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           toggleTextSelection(true);
         };
       } else {
-        // When exiting snapshot mode (but not during active capture), clean up
-        if (!isProcessingCapture) {
-          setCurrentCaptureRect(null);
-          // Re-enable text selection when exiting snapshot mode
-          toggleTextSelection(true);
-        }
+        // Re-enable text selection when exiting snapshot mode
+        toggleTextSelection(true);
       }
     }, [isSnapshotMode, toast, onImageCaptured, isProcessingCapture]);
 
@@ -634,11 +606,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             
             {/* Add snapshot button */}
             <Button 
-              variant={isSnapshotMode || isProcessingCapture ? "default" : "ghost"}
+              variant={isSnapshotMode ? "default" : "ghost"}
               size="icon"
-              className={`h-6 w-6 p-0 ml-2 ${isSnapshotMode || isProcessingCapture ? 'bg-blue-500 text-white' : 'text-black'}`}
+              className={`h-6 w-6 p-0 ml-2 ${isSnapshotMode ? 'bg-blue-500 text-white' : 'text-black'}`}
               onClick={toggleSnapshotMode}
-              disabled={isProcessingCapture}
               title="Take Snapshot"
             >
               <Camera className="h-3 w-3" />
@@ -711,18 +682,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     size="sm" 
                     className="ml-2 bg-blue-600 hover:bg-blue-700 p-1 h-6" 
                     onClick={() => setIsSnapshotMode(false)}
-                    disabled={isProcessingCapture}
                   >
                     Cancel
                   </Button>
-                </div>
-              )}
-
-              {/* Processing Capture Indicator */}
-              {isProcessingCapture && (
-                <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
-                  <span>Processing capture...</span>
                 </div>
               )}
               
