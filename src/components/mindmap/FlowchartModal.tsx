@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,8 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   
   // Store diagram codes by PDF key and type for instant switching
-  const [diagramCodeCache, setDiagramCodeCache] = useState<Record<string, Record<DiagramType, string>>>({});
+  // Using a Record with both flowchart and mindmap keys always present
+  const [diagramCodeCache, setDiagramCodeCache] = useState<Record<string, Record<DiagramType, string | null>>>({});
   
   // Add state for active PDF key
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -107,13 +109,22 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       setDiagramCode(mermaidCode);
       
       // Cache the diagram code for future use
-      setDiagramCodeCache(prev => ({
-        ...prev,
-        [activePdfKey as string]: {
-          ...(prev[activePdfKey as string] || {}),
-          [diagramType]: mermaidCode
+      setDiagramCodeCache(prev => {
+        const updatedCache = { ...prev };
+        
+        // Initialize the PDF entry if it doesn't exist
+        if (!updatedCache[activePdfKey]) {
+          updatedCache[activePdfKey] = {
+            flowchart: null,
+            mindmap: null
+          };
         }
-      }));
+        
+        // Update the specific diagram type
+        updatedCache[activePdfKey][diagramType] = mermaidCode;
+        
+        return updatedCache;
+      });
       
     } catch (error) {
       console.error(`Error generating ${diagramType}:`, error);
