@@ -3,12 +3,10 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, Upload, AlertCircle, X, ImageIcon } from "lucide-react";
+import { Brain, Upload, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { generateMindMapFromText } from "@/services/geminiService";
-import { storePdfData, setCurrentPdf, storePdfImages } from "@/utils/pdfStorage";
-import { extractImagesFromPdf } from "@/utils/pdfImageExtractor";
+import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
 import Logo from "@/components/Logo";
 import {
   AlertDialog,
@@ -36,7 +34,6 @@ const PdfUpload = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
-  const [extractImages, setExtractImages] = useState(true); // Default to true for image extraction
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingFileRef = useRef<File | null>(null);
   const maxRetries = 3;
@@ -184,7 +181,8 @@ const PdfUpload = () => {
     });
 
     await processAndGenerateMindMap(selectedFile, activePdfKey);
-  }, [activePdfKey, pdfFiles, toast, extractImages]);  
+  // eslint-disable-next-line
+  }, [activePdfKey, pdfFiles, toast]);  
 
   async function processAndGenerateMindMap(selectedFile: File, pdfKey: string) {
     try {
@@ -219,49 +217,9 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
 
-      // Extract images if the option is selected
-      let extractedImages = [];
-      if (extractImages) {
-        toast({
-          title: "Extracting Images",
-          description: "Finding and processing images in the PDF...",
-        });
-        
-        try {
-          extractedImages = await extractImagesFromPdf(pdfData);
-          console.log(`Extracted ${extractedImages.length} images from PDF`);
-          
-          // Store extracted images
-          if (extractedImages.length > 0) {
-            await storePdfImages(pdfKey, extractedImages);
-            
-            toast({
-              title: "Images Extracted",
-              description: `Found ${extractedImages.length} images in the PDF.`,
-            });
-          } else {
-            console.log("No images found in PDF");
-            toast({
-              title: "No Images Found",
-              description: "No images were found in this PDF.",
-            });
-          }
-        } catch (imageError) {
-          console.error("Error extracting images:", imageError);
-          toast({
-            title: "Warning",
-            description: "Had trouble extracting images from PDF. Continuing with text only.",
-            variant: "warning",
-          });
-        }
-      }
-
       // Process via Gemini API
       try {
-        const mindMapData = await generateMindMapFromText(
-          extractedText, 
-          extractImages ? extractedImages : [] // Pass images only if extraction was enabled
-        );
+        const mindMapData = await generateMindMapFromText(extractedText);
 
         // Store generated mind map data in sessionStorage under dedicated key
         sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
@@ -413,25 +371,6 @@ const PdfUpload = () => {
                       {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
-                  
-                  {/* Image extraction checkbox */}
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Checkbox 
-                      id="extractImages" 
-                      checked={extractImages}
-                      onCheckedChange={(checked) => {
-                        setExtractImages(checked === true);
-                      }}
-                    />
-                    <label 
-                      htmlFor="extractImages" 
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                      Extract images from PDF and include in mind map
-                    </label>
-                  </div>
-                  
                   <Button
                     onClick={handleGenerateMindmap}
                     className="w-full bg-[#333] hover:bg-[#444] text-white"

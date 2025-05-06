@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Copy, Check, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,9 +16,6 @@ interface ChatPanelProps {
   toggleChat: () => void;
   explainText?: string;
   explainImage?: string;
-  initialText?: string; // Add this prop to match what's being passed in PanelStructure
-  capturedImage?: string; // Add this prop to match what's being passed in PanelStructure
-  onClearCapturedImage?: () => void; // Add this prop to match what's being passed in PanelStructure
   onScrollToPdfPosition?: (position: string) => void;
   onExplainText?: (text: string) => void;
 }

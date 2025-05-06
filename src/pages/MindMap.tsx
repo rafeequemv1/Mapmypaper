@@ -7,7 +7,6 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import { MindElixirInstance } from "mind-elixir";
-import { getPdfImages } from "@/utils/pdfStorage";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -19,44 +18,12 @@ const MindMap = () => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
-  const [pdfKey, setPdfKey] = useState<string | null>(null);
-  const [hasExtractedImages, setHasExtractedImages] = useState(false);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
     setIsMapGenerated(true);
     setMindMapInstance(instance);
   }, []);
-
-  // Check for extracted images when pdfKey is set
-  useEffect(() => {
-    const checkForImages = async () => {
-      if (pdfKey) {
-        try {
-          const images = await getPdfImages(pdfKey);
-          if (images && images.length > 0) {
-            setHasExtractedImages(true);
-            console.log(`Found ${images.length} extracted images for PDF key: ${pdfKey}`);
-          } else {
-            setHasExtractedImages(false);
-          }
-        } catch (error) {
-          console.error("Error checking for images:", error);
-        }
-      }
-    };
-    
-    checkForImages();
-  }, [pdfKey]);
-
-  // Get pdfKey from location state
-  useEffect(() => {
-    if (location.state?.pdfKey) {
-      setPdfKey(location.state.pdfKey);
-      // Store the pdfKey in session storage for components that need it
-      sessionStorage.setItem('currentPdfKey', location.state.pdfKey);
-    }
-  }, [location.state]);
 
   // Handle text selected for explanation
   const handleExplainText = useCallback((text: string) => {
@@ -101,7 +68,6 @@ const MindMap = () => {
     const handleTabChange = (e: CustomEvent) => {
       if (e.detail?.activeKey) {
         const key = e.detail.activeKey;
-        setPdfKey(key);
         // Get PDF text for this specific PDF and store it as the main text
         const pdfText = sessionStorage.getItem(`pdfText_${key}`);
         if (pdfText) {
@@ -137,8 +103,6 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={handleExplainText}
-        pdfKey={pdfKey}
-        hasExtractedImages={hasExtractedImages}
       />
       
       {/* Modal for Summary */}
