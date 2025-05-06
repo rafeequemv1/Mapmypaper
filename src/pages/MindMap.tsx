@@ -69,20 +69,21 @@ const MindMap = () => {
     const handleTabChange = (e: CustomEvent) => {
       if (e.detail?.activeKey) {
         const key = e.detail.activeKey;
-        console.log("Current PDF set to:", key);
+        console.log("MindMap: Current PDF set to:", key);
         setCurrentPdfKey(key);
         
         // Get PDF text for this specific PDF and store it as the main text
         const pdfText = sessionStorage.getItem(`pdfText_${key}`);
         if (pdfText) {
           sessionStorage.setItem('pdfText', pdfText);
+          console.log("MindMap: Updated main pdfText with content from", key);
         }
         
         // Notify other components about the PDF change with the forceUpdate flag
         // This helps ensure that visualizations and mindmaps update properly
         const forceUpdate = e.detail.forceUpdate === undefined ? true : e.detail.forceUpdate;
         if (forceUpdate) {
-          console.log("Broadcasting pdfSwitched event with forceUpdate");
+          console.log("MindMap: Broadcasting pdfSwitched event with forceUpdate");
           window.dispatchEvent(
             new CustomEvent('pdfSwitched', { 
               detail: { 
@@ -92,6 +93,14 @@ const MindMap = () => {
             })
           );
         }
+        
+        // If flowchart modal is open, make sure it updates too
+        if (showFlowchart) {
+          console.log("MindMap: Flowchart modal is open, triggering update");
+          // Close and reopen to force a fresh render with new PDF
+          setShowFlowchart(false);
+          setTimeout(() => setShowFlowchart(true), 100);
+        }
       }
     };
     
@@ -100,7 +109,7 @@ const MindMap = () => {
     return () => {
       window.removeEventListener('pdfTabChanged', handleTabChange as EventListener);
     };
-  }, []);
+  }, [showFlowchart]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">

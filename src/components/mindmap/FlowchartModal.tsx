@@ -40,7 +40,6 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   
   // Store diagram codes by PDF key and type for instant switching
-  // Using a Record with properly typed null values to avoid TypeScript errors
   const [diagramCodeCache, setDiagramCodeCache] = useState<Record<string, Record<DiagramType, string | null>>>({});
   
   // Add state for active PDF key
@@ -53,22 +52,42 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
   // Update activePdfKey when currentPdfKey prop changes
   useEffect(() => {
     if (currentPdfKey && currentPdfKey !== activePdfKey) {
+      console.log("FlowchartModal: currentPdfKey changed to", currentPdfKey);
       setActivePdfKey(currentPdfKey);
+      
+      // Check if we have cached diagram for this PDF and current type
+      if (open && diagramCodeCache[currentPdfKey]?.[diagramType]) {
+        const cachedDiagram = diagramCodeCache[currentPdfKey][diagramType];
+        setDiagramCode(cachedDiagram || "");
+        // Ensure diagram is re-rendered after a short delay
+        setTimeout(() => renderDiagram(), 200);
+      } else if (open) {
+        // No cached diagram, generate a new one
+        generateDiagram(currentPdfKey);
+      }
     }
-  }, [currentPdfKey]);
+  }, [currentPdfKey, diagramType, open]);
 
   // Listen for tab changes from outside this component
   useEffect(() => {
     const handlePdfTabChanged = (event: CustomEvent) => {
       if (event.detail?.activeKey) {
-        setActivePdfKey(event.detail.activeKey);
+        const newPdfKey = event.detail.activeKey;
+        console.log("FlowchartModal: received pdfTabChanged event for", newPdfKey);
         
-        // Force re-render if forceUpdate flag is set
-        if (event.detail?.forceUpdate) {
-          const cachedDiagram = diagramCodeCache[event.detail.activeKey]?.[diagramType];
-          if (cachedDiagram) {
-            setDiagramCode(cachedDiagram);
-            setTimeout(() => renderDiagram(), 100);
+        setActivePdfKey(newPdfKey);
+        
+        // Only process if modal is open
+        if (open) {
+          // Check for cached diagram
+          if (diagramCodeCache[newPdfKey]?.[diagramType]) {
+            const cachedDiagram = diagramCodeCache[newPdfKey][diagramType];
+            setDiagramCode(cachedDiagram || "");
+            // Ensure diagram is re-rendered
+            setTimeout(() => renderDiagram(), 200);
+          } else {
+            // No cached diagram, generate a new one
+            generateDiagram(newPdfKey);
           }
         }
       }
@@ -79,20 +98,25 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     return () => {
       window.removeEventListener('pdfTabChanged', handlePdfTabChanged as EventListener);
     };
-  }, [diagramCodeCache, diagramType]);
+  }, [open, diagramType, diagramCodeCache]);
 
   // Generate diagram when the modal is opened or type changes or PDF changes
   useEffect(() => {
     if (open && activePdfKey) {
+      console.log("FlowchartModal: open or activePdfKey changed, checking cache for", activePdfKey, diagramType);
+      
       // Check if we have cached data for this PDF and diagram type
       const cachedDiagram = diagramCodeCache[activePdfKey]?.[diagramType];
       
       if (cachedDiagram) {
         // If cached data exists, use it immediately
+        console.log("FlowchartModal: using cached diagram");
         setDiagramCode(cachedDiagram);
+        setTimeout(() => renderDiagram(), 200);
       } else {
         // Otherwise generate new diagram
-        generateDiagram();
+        console.log("FlowchartModal: no cached diagram, generating new one");
+        generateDiagram(activePdfKey);
       }
     }
   }, [open, diagramType, activePdfKey]);
@@ -100,16 +124,32 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
   // Render diagram whenever the code changes
   useEffect(() => {
     if (diagramCode && open && diagramRef.current) {
+      console.log("FlowchartModal: diagram code changed, rendering");
       renderDiagram();
     }
   }, [diagramCode, open]);
 
   // Generate diagram based on selected type
-  const generateDiagram = async () => {
-    if (!activePdfKey) return;
+  const generateDiagram = async (pdfKey: string = activePdfKey || "") => {
+    if (!pdfKey) {
+      console.error("FlowchartModal: no PDF key provided for diagram generation");
+      return;
+    }
     
+    console.log(`FlowchartModal: generating ${diagramType} for PDF`, pdfKey);
     setIsLoading(true);
+    
     try {
+      // Set PDF text for this specific PDF
+      const specificPdfText = sessionStorage.getItem(`pdfText_${pdfKey}`);
+      if (specificPdfText) {
+        // Store as current PDF text for generation services
+        console.log("FlowchartModal: setting current PDF text from", pdfKey);
+        sessionStorage.setItem('pdfText', specificPdfText);
+      } else {
+        console.warn("FlowchartModal: no PDF text found for", pdfKey);
+      }
+      
       let mermaidCode;
       if (diagramType === 'flowchart') {
         mermaidCode = await generateFlowchartFromPdf();
@@ -131,15 +171,15 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
         const updatedCache = { ...prev };
         
         // Initialize the PDF entry if it doesn't exist
-        if (!updatedCache[activePdfKey]) {
-          updatedCache[activePdfKey] = {
+        if (!updatedCache[pdfKey]) {
+          updatedCache[pdfKey] = {
             flowchart: null,
             mindmap: null
           };
         }
         
         // Update the specific diagram type
-        updatedCache[activePdfKey][diagramType] = mermaidCode;
+        updatedCache[pdfKey][diagramType] = mermaidCode;
         
         return updatedCache;
       });
@@ -276,6 +316,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
       }
       
       container.textContent = processedCode;
+      console.log(`FlowchartModal: rendering ${diagramType} with code:`, processedCode.substring(0, 100) + '...');
       
       // Add to the DOM
       diagramRef.current.appendChild(container);
@@ -304,6 +345,8 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
           svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
         }
       }
+      
+      console.log(`FlowchartModal: ${diagramType} rendered successfully`);
     } catch (error) {
       console.error("Mermaid rendering error:", error);
       
@@ -331,23 +374,32 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
   // Handle diagram type change
   const handleDiagramTypeChange = (value: DiagramType) => {
     if (value !== diagramType) {
+      console.log("FlowchartModal: diagram type changed to", value);
       setDiagramType(value);
       
       // Check if we have cached data for this diagram type and PDF
-      const cachedDiagram = diagramCodeCache[activePdfKey as string]?.[value];
-      
-      if (cachedDiagram) {
-        // Use cached diagram immediately
-        setDiagramCode(cachedDiagram);
-      } else {
-        // Otherwise clear and generate new
-        setDiagramCode("");
+      if (activePdfKey) {
+        const cachedDiagram = diagramCodeCache[activePdfKey]?.[value];
+        
+        if (cachedDiagram) {
+          // Use cached diagram immediately
+          setDiagramCode(cachedDiagram);
+          // Schedule a re-render
+          setTimeout(() => renderDiagram(), 200);
+        } else {
+          // Otherwise clear and generate new
+          setDiagramCode("");
+          generateDiagram(activePdfKey);
+        }
       }
     }
   };
 
   // Handle PDF tab change
   const handlePdfChange = (key: string) => {
+    if (key === activePdfKey) return;
+    
+    console.log("FlowchartModal: tab changed to", key);
     setActivePdfKey(key);
     
     // Dispatch an event to inform other components about tab change
@@ -371,6 +423,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     } else {
       // Clear and generate new diagram
       setDiagramCode("");
+      generateDiagram(key);
     }
   };
 
@@ -505,7 +558,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
               <Button
                 size="sm"
                 variant="outline"
-                onClick={generateDiagram}
+                onClick={() => generateDiagram(activePdfKey || "")}
                 disabled={isLoading}
                 className="flex gap-1 text-sm"
               >
