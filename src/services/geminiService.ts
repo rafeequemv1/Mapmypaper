@@ -780,3 +780,80 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
         Methodology
           LSTM architecture used
           Training on 50,000 samples
+    
+    Here's the document text:
+    ${pdfText.slice(0, 8000)}
+    
+    Generate ONLY valid Mermaid mindmap code, nothing else.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    
+    // Remove markdown code blocks if present
+    const mermaidCode = text
+      .replace(/```mermaid\s?/g, "")
+      .replace(/```\s?/g, "")
+      .trim();
+    
+    return cleanMindmapSyntax(mermaidCode);
+  } catch (error) {
+    console.error("Gemini API mindmap generation error:", error);
+    return `mindmap
+      root((Error))
+        Technical Issue
+          Failed to generate mindmap`;
+  }
+};
+
+// Helper function to clean and fix common mindmap syntax issues
+const cleanMindmapSyntax = (code: string): string => {
+  if (!code || !code.trim()) {
+    return `mindmap
+      root((Error))
+        Empty Result
+          Please try again`;
+  }
+  
+  try {
+    // Ensure the code starts with mindmap directive
+    let cleaned = code.trim();
+    if (!cleaned.startsWith("mindmap")) {
+      cleaned = "mindmap\n" + cleaned;
+    }
+    
+    // Process line by line to ensure each line is valid
+    const lines = cleaned.split('\n');
+    const validLines: string[] = [];
+    
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      
+      // Skip empty lines and keep comments
+      if (trimmedLine === '' || trimmedLine.startsWith('%')) {
+        validLines.push(line);
+        return;
+      }
+      
+      // Keep mindmap directive
+      if (trimmedLine.startsWith('mindmap')) {
+        validLines.push(line);
+        return;
+      }
+      
+      // Remove any semicolons which can cause issues
+      let fixedLine = line.replace(/;/g, "");
+      
+      validLines.push(fixedLine);
+    });
+    
+    return validLines.join('\n');
+  } catch (error) {
+    console.error("Error cleaning mindmap syntax:", error);
+    return `mindmap
+      root((Error))
+        Syntax Cleaning Failed
+          Please try again`;
+  }
+};
