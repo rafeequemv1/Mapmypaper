@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Analyze image with gemini pro vision api
@@ -23,8 +24,10 @@ export const analyzeImageWithGemini = async (base64Image: string) => {
 
     // Create the image content object
     const imageContent = {
-      mimeType: "image/png",
-      data: imageBase64
+      inlineData: {
+        mimeType: "image/png",
+        data: imageBase64
+      }
     };
 
     // Send the image and prompt to the Gemini Pro Vision model
@@ -98,6 +101,191 @@ export const generateMindMapFromText = async (text: string) => {
   } catch (error) {
     console.error('Error in generateMindMapFromText:', error);
     throw new Error(`Failed to generate mind map with Gemini API: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+// Generate structured summary from PDF
+export const generateStructuredSummary = async () => {
+  try {
+    // Access the Gemini Pro API key from environment variables
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('Gemini API Key not found. Please add your key to environment variables.');
+    }
+
+    // Get the current PDF text from session storage
+    const pdfText = sessionStorage.getItem('pdfText') || '';
+    
+    if (!pdfText.trim()) {
+      return {
+        Summary: "No PDF text available. Please upload a PDF first.",
+        "Key Findings": "N/A",
+        Objectives: "N/A",
+        Methods: "N/A",
+        Results: "N/A",
+        Conclusions: "N/A",
+        "Key Concepts": "N/A"
+      };
+    }
+
+    // Initialize the Gemini API client
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    // Truncate PDF if necessary to fit token limits (approx 100k chars)
+    const truncatedPdf = pdfText.length > 100000 
+      ? pdfText.substring(0, 100000) + "... [content truncated due to length]" 
+      : pdfText;
+
+    // Prepare the prompt for structured summary
+    const prompt = `Create a comprehensive, well-structured summary of the following academic paper or document.
+    Format your response as a JSON object with the following sections:
+    - Summary: A concise overview of the entire document (a few paragraphs).
+    - Key Findings: The most important discoveries or conclusions.
+    - Objectives: The main goals or research questions of the document.
+    - Methods: The approach, methodology, or techniques used.
+    - Results: The outcomes, data, or findings presented.
+    - Conclusions: The final takeaways or implications.
+    - Key Concepts: Important terms, ideas, or theoretical frameworks introduced.
+
+    When referring to specific information from the document, use the citation format [citation:pageX] where X is the relevant page number.
+    Make your summary thorough but focused on the most important aspects of the document.
+    
+    Here is the document text:
+    ${truncatedPdf}`;
+
+    // Send the prompt to the Gemini Pro model
+    const result = await model.generateContent(prompt);
+    const response = result.response.text();
+
+    // Try to parse the response as JSON
+    try {
+      const jsonResponse = JSON.parse(response);
+      return jsonResponse;
+    } catch (jsonError) {
+      console.error('Error parsing JSON response:', jsonError);
+      
+      // If JSON parsing fails, return a simplified structure with the raw text
+      return {
+        Summary: response,
+        "Key Findings": "Error parsing structured response.",
+        Objectives: "Error parsing structured response.",
+        Methods: "Error parsing structured response.",
+        Results: "Error parsing structured response.",
+        Conclusions: "Error parsing structured response.",
+        "Key Concepts": "Error parsing structured response."
+      };
+    }
+  } catch (error) {
+    console.error('Error in generateStructuredSummary:', error);
+    throw new Error(`Failed to generate summary with Gemini API: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+// Generate flowchart from PDF content
+export const generateFlowchartFromPdf = async () => {
+  try {
+    // Access the Gemini Pro API key from environment variables
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('Gemini API Key not found. Please add your key to environment variables.');
+    }
+
+    // Get the current PDF text from session storage
+    const pdfText = sessionStorage.getItem('pdfText') || '';
+    
+    if (!pdfText.trim()) {
+      return 'flowchart LR\n  A[No PDF Loaded] --> B[Please upload a PDF]\n  B --> C[Then generate a flowchart]';
+    }
+
+    // Initialize the Gemini API client
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    // Truncate PDF if necessary to fit token limits (approx 80k chars to leave room for output)
+    const truncatedPdf = pdfText.length > 80000 
+      ? pdfText.substring(0, 80000) + "... [content truncated due to length]" 
+      : pdfText;
+
+    // Prepare the prompt for flowchart generation
+    const prompt = `Create a mermaid flowchart from this document that represents the main process, methodology, or workflow described in it.
+    Use the flowchart LR (left to right) orientation for better readability.
+    Keep the flowchart focused on the core process or story - aim for 5-15 nodes maximum.
+    Use concise labels and clear relationships.
+    Return ONLY the mermaid code without any explanation or markdown formatting.
+    
+    Here is the document text:
+    ${truncatedPdf}`;
+
+    // Send the prompt to the Gemini Pro model
+    const result = await model.generateContent(prompt);
+    const response = result.response.text();
+
+    // Clean up the response to ensure it's valid mermaid code
+    let flowchartCode = response.replace(/```mermaid|```/g, '').trim();
+    
+    // Ensure the flowchart starts with 'flowchart LR'
+    if (!flowchartCode.startsWith('flowchart LR')) {
+      flowchartCode = 'flowchart LR\n' + flowchartCode.replace(/^flowchart (TD|TB)/, '');
+    }
+
+    return flowchartCode;
+  } catch (error) {
+    console.error('Error in generateFlowchartFromPdf:', error);
+    throw new Error(`Failed to generate flowchart with Gemini API: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+// Generate mind map from PDF content
+export const generateMindmapFromPdf = async () => {
+  try {
+    // Access the Gemini Pro API key from environment variables
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('Gemini API Key not found. Please add your key to environment variables.');
+    }
+
+    // Get the current PDF text from session storage
+    const pdfText = sessionStorage.getItem('pdfText') || '';
+    
+    if (!pdfText.trim()) {
+      return 'mindmap\n  root((No PDF))\n    Upload a PDF\n      Then generate a mind map';
+    }
+
+    // Initialize the Gemini API client
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    // Truncate PDF if necessary to fit token limits (approx 80k chars to leave room for output)
+    const truncatedPdf = pdfText.length > 80000 
+      ? pdfText.substring(0, 80000) + "... [content truncated due to length]" 
+      : pdfText;
+
+    // Prepare the prompt for mindmap generation
+    const prompt = `Create a mermaid mindmap diagram that represents the key concepts, relationships, and hierarchy in this document.
+    The mindmap should have a clear root node and logical branching structure.
+    Keep labels short and descriptive, with 3-7 main branches and appropriate sub-branches.
+    Return ONLY the mermaid code without any explanation or markdown formatting.
+    
+    Here is the document text:
+    ${truncatedPdf}`;
+
+    // Send the prompt to the Gemini Pro model
+    const result = await model.generateContent(prompt);
+    const response = result.response.text();
+
+    // Clean up the response to ensure it's valid mermaid mindmap code
+    let mindmapCode = response.replace(/```mermaid|```/g, '').trim();
+    
+    // Ensure the code starts with 'mindmap'
+    if (!mindmapCode.startsWith('mindmap')) {
+      mindmapCode = 'mindmap\n' + mindmapCode;
+    }
+
+    return mindmapCode;
+  } catch (error) {
+    console.error('Error in generateMindmapFromPdf:', error);
+    throw new Error(`Failed to generate mindmap with Gemini API: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
