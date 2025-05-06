@@ -345,8 +345,7 @@ export const analyzeImageWithGemini = async (imageData: string): Promise<string>
       If there is text content, summarize the key points and explain any technical concepts.
       Make connections to the broader context of the document if possible.
       
-      Here's some context from the document (it may be truncated):
-      ${pdfContext}
+      Here's some context from the document (it may be truncated):\n      ${pdfContext}
     `;
     
     // Create properly formatted content parts
@@ -472,19 +471,7 @@ export const generateFlowchartFromPdf = async (): Promise<string> => {
     - For each node, ADD a Mermaid class assignment line at the end as:
         class NODE_ID CLASSNAME
       where CLASSNAME is one of: success, warning, info, neutral, decision, default, danger.
-    - Try to use a different class for every connected node so the flowchart looks colorful.
-    - Example:
-      flowchart TD
-        A[Start] --> B{Decision}
-        B -->|Yes| C[Process One]
-        B -->|No| D[Process Two]
-        C --> E[End]
-        D --> E
-        class A success
-        class B decision
-        class C info
-        class D warning
-        class E default
+    - Try to use a different class for every connected node so the flowchart looks colorful.\n    - Example:\n      flowchart TD\n        A[Start] --> B{Decision}\n        B -->|Yes| C[Process One]\n        B -->|No| D[Process Two]\n        C --> E[End]\n        D --> E\n        class A success\n        class B decision\n        class C info\n        class D warning\n        class E default
 
     - Your output should use several classes so the colors are visible in the chart.
 
@@ -580,7 +567,7 @@ const cleanMermaidSyntax = (code: string): string => {
       
       // Handle curly braces {}
       fixedLine = fixedLine.replace(/\{([^\}]*)-([^\}]*)\}/g, function(match, p1, p2) {
-        return '{' + p1 + ' ' + p2 + '}';
+        return '{' + p1 + '}';
       });
       
       // Fix nodes without brackets by adding them
@@ -792,4 +779,4 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
           Problem of overfitting data
         Methodology
           LSTM architecture used
-          Training on 50,00
+          Training on 50,000 samples
