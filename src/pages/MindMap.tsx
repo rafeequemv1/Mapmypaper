@@ -111,7 +111,7 @@ const MindMap = () => {
         onOpenChange={setShowSummary}
       />
 
-      {/* Modal for Flowchart */}
+      {/* Modal for Flowchart/Mindmap visualization */}
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
