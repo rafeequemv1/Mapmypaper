@@ -8,9 +8,9 @@ import { toast } from 'sonner';
 import { getPdfImages } from "@/utils/pdfStorage";
 
 // Import MindElixir
-import MindElixir from 'mind-elixir';
+import MindElixir, { MindElixirInstance, MindElixirData } from 'mind-elixir';
 import nodeMenu from '@mind-elixir/node-menu';
-import { MindElixirInstance } from 'mind-elixir';
+import { downloadMindMapAsPNG } from '@/lib/export-utils';
 
 interface MindMapPanelProps {
   onMindMapReady?: (instance: MindElixirInstance) => void;
@@ -58,7 +58,7 @@ const MindMapPanel = ({ onMindMapReady, pdfKey, hasExtractedImages = false }: Mi
           return;
         }
         
-        const mindMapData = JSON.parse(mindMapDataStr);
+        const mindMapData: MindElixirData = JSON.parse(mindMapDataStr);
         
         // If the container isn't ready yet or already has a mind map, don't proceed
         if (!containerRef.current || containerRef.current.childElementCount > 0) {
@@ -72,10 +72,10 @@ const MindMapPanel = ({ onMindMapReady, pdfKey, hasExtractedImages = false }: Mi
         }
         
         // Initialize MindElixir with data
-        instance = MindElixir.new({
+        instance = new MindElixir({
           el: containerRef.current,
           direction: MindElixir.LEFT,
-          data: mindMapData.nodeData || {},
+          data: mindMapData,
           draggable: true,
           contextMenu: true,
           toolBar: true,
@@ -124,7 +124,7 @@ const MindMapPanel = ({ onMindMapReady, pdfKey, hasExtractedImages = false }: Mi
         }
         
         // Listen for node clicks to scroll PDF
-        instance.bus.addListener('node_click', (node: any) => {
+        instance.bus.addListener('nodeClick', (node: any) => {
           console.log('Node clicked:', node);
           
           // If the node has a page number reference, scroll to that page
@@ -173,7 +173,8 @@ const MindMapPanel = ({ onMindMapReady, pdfKey, hasExtractedImages = false }: Mi
             );
           }
           
-          instance.removeEventListener();
+          // Clean up event listeners
+          instance.bus.removeListener('nodeClick');
           mindElixirRef.current = null;
         } catch (e) {
           console.error("Error in mindmap cleanup:", e);

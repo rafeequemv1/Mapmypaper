@@ -126,7 +126,7 @@ const PanelStructure = ({
               className="min-h-0"
             >
               <ChatPanel
-                selectedText={selectedTextFromPdf}
+                initialText={selectedTextFromPdf}
                 capturedImage={capturedImage}
                 onClearCapturedImage={() => setCapturedImage(null)}
               />
