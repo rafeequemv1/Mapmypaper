@@ -51,7 +51,10 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
     // Dispatch an event to inform chat components about tab change
     window.dispatchEvent(
       new CustomEvent('pdfTabChanged', { 
-        detail: { activeKey: key } 
+        detail: { 
+          activeKey: key,
+          forceUpdate: true // Add this flag to force updates
+        } 
       })
     );
   };

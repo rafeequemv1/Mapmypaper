@@ -18,6 +18,7 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
+  currentPdfKey?: string | null;
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -30,6 +31,7 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
+  currentPdfKey
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -44,10 +46,20 @@ const PanelStructure = ({
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
+    // Use passed currentPdfKey if available, otherwise use default logic
+    if (currentPdfKey) return currentPdfKey;
+    
     const metas = getAllPdfs();
     if (metas.length === 0) return null;
     return getPdfKey(metas[0]);
   });
+
+  // Update activePdfKey when currentPdfKey prop changes
+  useEffect(() => {
+    if (currentPdfKey && currentPdfKey !== activePdfKey) {
+      setActivePdfKey(currentPdfKey);
+    }
+  }, [currentPdfKey]);
 
   // File input for adding PDFs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,7 +109,13 @@ const PanelStructure = ({
       // Set the selected PDF as current in IndexedDB
       await setCurrentPdf(key);
       
-      window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
+      // Dispatch a more detailed event for PDF switching with forceUpdate flag
+      window.dispatchEvent(new CustomEvent('pdfSwitched', { 
+        detail: { 
+          pdfKey: key,
+          forceUpdate: true
+        } 
+      }));
       
       // Only display the toast for switching if we're not loading a new mindmap
       if (isMindMapReady(key)) {
@@ -348,6 +366,21 @@ const PanelStructure = ({
       }
     }
   };
+
+  // Listen for PDF tab changes from outside components
+  useEffect(() => {
+    const handleExternalTabChange = (event: CustomEvent) => {
+      if (event.detail?.activeKey && event.detail.activeKey !== activePdfKey) {
+        handleTabChange(event.detail.activeKey);
+      }
+    };
+    
+    window.addEventListener('pdfTabChanged', handleExternalTabChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('pdfTabChanged', handleExternalTabChange as EventListener);
+    };
+  }, [activePdfKey]);
 
   if (!isRendered) {
     return <div className="h-full w-full flex justify-center items-center">Loading panels...</div>;

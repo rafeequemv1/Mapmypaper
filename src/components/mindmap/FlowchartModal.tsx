@@ -27,11 +27,12 @@ mermaid.initialize({
 interface FlowchartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  currentPdfKey?: string | null;
 }
 
 type DiagramType = 'flowchart' | 'mindmap';
 
-const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
+const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [diagramCode, setDiagramCode] = useState<string>("");
@@ -49,6 +50,13 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     if (metas.length === 0) return null;
     return getPdfKey(metas[0]);
   });
+
+  // Update activePdfKey when currentPdfKey prop changes
+  useEffect(() => {
+    if (currentPdfKey && currentPdfKey !== activePdfKey) {
+      setActivePdfKey(currentPdfKey);
+    }
+  }, [currentPdfKey]);
 
   // Listen for tab changes from outside this component
   useEffect(() => {
@@ -243,7 +251,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     // Dispatch an event to inform other components about tab change
     window.dispatchEvent(
       new CustomEvent('pdfTabChanged', { 
-        detail: { activeKey: key } 
+        detail: { 
+          activeKey: key,
+          forceUpdate: true
+        } 
       })
     );
     

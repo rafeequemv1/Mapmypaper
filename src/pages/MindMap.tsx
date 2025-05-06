@@ -18,6 +18,7 @@ const MindMap = () => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
+  const [currentPdfKey, setCurrentPdfKey] = useState<string | null>(null);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -63,11 +64,13 @@ const MindMap = () => {
     }
   }, [location]);
 
-  // Listen for tab changes to update PDF text in session storage
+  // Listen for tab changes to update PDF text in session storage and track current PDF key
   useEffect(() => {
     const handleTabChange = (e: CustomEvent) => {
       if (e.detail?.activeKey) {
         const key = e.detail.activeKey;
+        setCurrentPdfKey(key);
+        
         // Get PDF text for this specific PDF and store it as the main text
         const pdfText = sessionStorage.getItem(`pdfText_${key}`);
         if (pdfText) {
@@ -103,6 +106,7 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={handleExplainText}
+        currentPdfKey={currentPdfKey}
       />
       
       {/* Modal for Summary */}
@@ -115,6 +119,7 @@ const MindMap = () => {
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
+        currentPdfKey={currentPdfKey}
       />
     </div>
   );
