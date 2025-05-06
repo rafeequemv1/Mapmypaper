@@ -27,9 +27,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string, filename?: string, filetype?: string }[]>([
     { 
       role: 'assistant', 
-      content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
-
-Feel free to ask me any questions! Here are some suggestions:` 
+      content: `Hi there! 👋 I'm here to help with your document. What would you like to know?` 
     }
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -101,10 +99,9 @@ Feel free to ask me any questions! Here are some suggestions:`
         setIsTyping(true);
         
         try {
-          // Enhanced prompt to encourage complete sentences and page citations
-          // Now passing the useAllPdfs parameter
+          // Modified prompt to encourage more natural responses
           const response = await chatWithGeminiAboutPdf(
-            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
+            `Explain this text in a conversational way. Keep it brief and natural. Use relevant emojis occasionally: "${explainText}"`,
             useAllPdfs
           );
           
@@ -126,7 +123,7 @@ Feel free to ask me any questions! Here are some suggestions:`
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I encountered an error. Please try again." 
+              content: "Sorry, I ran into a problem. Can you try again?" 
             }
           ]);
           
@@ -161,14 +158,8 @@ Feel free to ask me any questions! Here are some suggestions:`
         setIsTyping(true);
         
         try {
-          // Call AI with the image
-          // Here we're using the existing chatWithGeminiAboutPdf function
-          // In a real implementation, you would want to modify this to accept an image
-          // or create a new function that can process images
-          const response = await chatWithGeminiAboutPdf(
-            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection.",
-            useAllPdfs
-          );
+          // Modified prompt for more natural responses
+          const response = await analyzeImageWithGemini(explainImage);
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
@@ -188,7 +179,7 @@ Feel free to ask me any questions! Here are some suggestions:`
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I encountered an error. Please try again." 
+              content: "Sorry, I couldn't analyze that image. Let's try again?" 
             }
           ]);
           
@@ -226,7 +217,7 @@ Feel free to ask me any questions! Here are some suggestions:`
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // Modified function to process PDF file without creating mindmap
+  // Modified processPdfFile to be more conversational
   const processPdfFile = async (file: File) => {
     setProcessingPdf(true);
     
@@ -249,26 +240,17 @@ Feel free to ask me any questions! Here are some suggestions:`
         setIsTyping(false);
         setMessages(prev => [...prev, { 
           role: 'assistant',
-          content: "I couldn't extract any text from this PDF. It might be an image-based or scanned document.",
+          content: "I couldn't get any text from this PDF. Is it a scanned document maybe?",
         }]);
         setProcessingPdf(false);
         return;
       }
       
-      // Add success message
+      // More conversational success message
       setIsTyping(false);
       setMessages(prev => [...prev, { 
         role: 'assistant',
-        content: formatAIResponse(`📄 **PDF Processed Successfully!**
-
-I've analyzed "${file.name}" and can now discuss its contents. How can I help you with this document? You can ask me:
-
-- To summarize key points
-- Explain specific sections
-- Compare it with the main document
-- Answer questions about its content
-
-What would you like to know?`),
+        content: formatAIResponse(`Got it! I've read through "${file.name}". What would you like to know about it?`),
         isHtml: true
       }]);
       
@@ -331,7 +313,7 @@ What would you like to know?`),
               ...prev, 
               { 
                 role: 'assistant', 
-                content: "Sorry, I encountered an error analyzing this image. Please try again." 
+                content: "I couldn't analyze this image properly. Mind trying again?" 
               }
             ]);
             
@@ -496,9 +478,9 @@ Would you like to:
       setIsTyping(true);
       
       try {
-        // Enhanced prompt to encourage complete sentences and page citations with emojis
+        // Modified prompt to encourage more conversational responses
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
+          `${userMessage} Respond in a friendly, conversational way. Keep it natural and concise. Use citations in [citation:pageX] format where relevant. Use occasional emojis where appropriate.`,
           useAllPdfs
         );
         
@@ -520,7 +502,7 @@ Would you like to:
           ...prev, 
           { 
             role: 'assistant', 
-            content: "Sorry, I encountered an error. Please try again." 
+            content: "Sorry, I ran into an issue with that question. Can you try asking in a different way?" 
           }
         ]);
         
@@ -576,9 +558,9 @@ Would you like to:
     setIsTyping(true);
     
     try {
-      // Pass useAllPdfs parameter
+      // Modified prompt for more conversational responses
       const response = await chatWithGeminiAboutPdf(
-        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
+        `${question} Respond in a friendly, conversational way. Keep it brief and natural. Use citations in [citation:pageX] format where relevant. Use occasional emojis where appropriate.`,
         useAllPdfs
       );
       
@@ -598,7 +580,7 @@ Would you like to:
         ...prev, 
         { 
           role: 'assistant', 
-          content: "Sorry, I encountered an error. Please try again." 
+          content: "I couldn't get an answer for that. Let's try a different question?" 
         }
       ]);
       
@@ -659,7 +641,7 @@ Would you like to:
         style={{ display: "none" }}
         onChange={handleFilesUpload}
       />
-      {/* Chat panel header with new toggle */}
+      {/* Chat panel header with toggle */}
       <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
@@ -687,7 +669,7 @@ Would you like to:
         </Button>
       </div>
       
-      {/* Chat messages area with enhanced styling */}
+      {/* Chat messages area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="flex flex-col gap-4">
           {messages.map((message, i) => (
