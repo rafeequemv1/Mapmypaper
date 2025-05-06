@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, FileImage, FilePdf, ChartPie, Download } from "lucide-react";
+import { FileText, FileImage, File, ChartPie, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Features = () => {
@@ -10,7 +10,7 @@ const Features = () => {
     {
       title: "Multi-PDF Analysis",
       description: "Analyze multiple documents simultaneously to extract insights, compare information, and find connections across your entire document collection.",
-      icon: <FilePdf className="h-12 w-12 text-primary" />,
+      icon: <File className="h-12 w-12 text-primary" />,
       action: "Analyze PDFs"
     },
     {

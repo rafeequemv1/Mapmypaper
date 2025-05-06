@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import RequireAuth from "@/components/RequireAuth";
+import TopBar from "@/components/TopBar";
 import Footer from "@/components/Footer";
 import PdfUpload from "./pages/PdfUpload";
 import MindMap from "./pages/MindMap";
@@ -31,7 +32,8 @@ const queryClient = new QueryClient({
 // Layout component that includes Footer only (removed TopBar)
 const Layout = () => (
   <>
-    <div className="pt-4 pb-8">
+    <TopBar />
+    <div className="pt-16 pb-8">
       <Outlet />
     </div>
     <Footer />
