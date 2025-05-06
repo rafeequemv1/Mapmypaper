@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, Camera } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, Camera, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
@@ -60,6 +60,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Add a state to track whether we're currently processing an image capture
     const [isProcessingCapture, setIsProcessingCapture] = useState(false);
+
+    // Add a ref for the search input to focus when search is opened
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const loadPdfData = async () => {
       try {
@@ -120,6 +123,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         viewportRef.current = pdfContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
       }
     }, [pdfContainerRef.current]);
+
+    // Add new effect to focus search input when search is toggled
+    useEffect(() => {
+      if (showSearch && searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, [showSearch]);
 
     // Updated text selection handling to use absolute positioning within PDF container
     useEffect(() => {
@@ -320,6 +330,16 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         
         // Do NOT clear selection - keep the tooltip visible and the text highlighted
         setShowSelectionTooltip(true);
+      }
+    };
+
+    // Toggle search visibility
+    const toggleSearch = () => {
+      setShowSearch(prevState => !prevState);
+      if (!showSearch) {
+        // Reset search results when opening search
+        setSearchResults([]);
+        setCurrentSearchIndex(-1);
       }
     };
 
@@ -558,6 +578,15 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Handle search input keydown event
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        handleSearch();
+      } else if (e.key === 'Escape') {
+        setShowSearch(false);
+      }
+    };
+
     // Calculate optimal width for PDF pages
     const getOptimalPageWidth = () => {
       if (!pdfContainerRef.current) return undefined;
@@ -616,30 +645,54 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             </Button>
           </div>
           
-          {/* Search Input */}
+          {/* Search Section - Modified to be toggled */}
           <div className="flex-1 mx-0.5">
-            <div className="flex items-center">
-              <Input
-                placeholder="Search in document..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-6 text-xs mr-0.5"
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 flex items-center gap-0.5 text-black px-1"
-                onClick={handleSearch}
-              >
-                <Search className="h-3 w-3" />
-                <span className="text-xs">Search</span>
-              </Button>
-            </div>
+            {showSearch ? (
+              <div className="flex items-center">
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Search in document..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-6 text-xs mr-0.5"
+                  onKeyDown={handleSearchKeyDown}
+                  autoFocus
+                />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 flex items-center gap-0.5 text-black px-1"
+                  onClick={handleSearch}
+                >
+                  <Search className="h-3 w-3" />
+                  <span className="text-xs">Find</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 flex items-center text-black px-1"
+                  onClick={() => setShowSearch(false)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 flex items-center gap-0.5 text-black px-1"
+                  onClick={toggleSearch}
+                >
+                  <Search className="h-3 w-3" />
+                  <span className="text-xs">Search</span>
+                </Button>
+              </div>
+            )}
           </div>
           
-          {/* Search Navigation */}
-          {searchResults.length > 0 && (
+          {/* Search Navigation - Only show when search results exist */}
+          {searchResults.length > 0 && showSearch && (
             <div className="flex items-center gap-1">
               <span className="text-xs">
                 {currentSearchIndex + 1} of {searchResults.length}
