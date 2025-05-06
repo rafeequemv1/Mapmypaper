@@ -17,8 +17,7 @@ mermaid.initialize({
   flowchart: {
     useMaxWidth: false,
     htmlLabels: true,
-    curve: 'basis',
-    rankDir: 'LR' // Set flowchart direction to Left to Right
+    curve: 'basis'
   },
   securityLevel: 'loose',
   fontSize: 16
