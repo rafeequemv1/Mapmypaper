@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export const analyzeImageWithGemini = async (base64Image: string) => {
   try {
     // Access the Gemini Pro API key from environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const apiKey = import.meta.env.AIzaSyAuwIzpzBdk9hJYNSm-hpbA1NKfsja9JOY;
     if (!apiKey) {
       throw new Error('Gemini API Key not found. Please add your key to environment variables.');
     }
