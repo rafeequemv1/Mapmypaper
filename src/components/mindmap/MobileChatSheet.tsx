@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ const MobileChatSheet = ({
           <div className="flex-1 overflow-hidden">
             <ChatPanel 
               toggleChat={() => setOpen(false)} 
-              explainText={explainText}
+              initialText={explainText}
               explainImage={explainImage} 
               onScrollToPdfPosition={onScrollToPdfPosition}
             />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -126,6 +125,7 @@ const PanelStructure = ({
               className="min-h-0"
             >
               <ChatPanel
+                toggleChat={toggleChat}
                 initialText={selectedTextFromPdf}
                 capturedImage={capturedImage}
                 onClearCapturedImage={() => setCapturedImage(null)}
