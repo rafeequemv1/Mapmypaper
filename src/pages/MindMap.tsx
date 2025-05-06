@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +22,38 @@ const MindMap = () => {
     console.log("Mind map instance is ready:", instance);
     setIsMapGenerated(true);
     setMindMapInstance(instance);
+    
+    // Add event listener for node operations to enforce word limit per line
+    instance.bus.addListener('operation', (operation: any) => {
+      if (operation.name === 'editTopic') {
+        const nodeObj = operation.obj;
+        if (nodeObj && nodeObj.topic) {
+          // Format node text to enforce 3-5 words per line
+          const isRoot = nodeObj.id === 'root';
+          const wordsPerLine = isRoot ? 3 : 4;
+          
+          // Format the node text after a short delay to allow the edit to complete
+          setTimeout(() => {
+            // Get the current node text after editing
+            const currentNode = instance.findNodeObj(nodeObj.id);
+            if (currentNode) {
+              // Apply formatting rules
+              const words = currentNode.topic.split(' ');
+              if (words.length > wordsPerLine) {
+                let formattedText = '';
+                for (let i = 0; i < words.length; i += wordsPerLine) {
+                  const chunk = words.slice(i, i + wordsPerLine).join(' ');
+                  formattedText += chunk + (i + wordsPerLine < words.length ? '\n' : '');
+                }
+                
+                // Update the node text with formatted version
+                instance.updateNodeText(nodeObj.id, formattedText);
+              }
+            }
+          }, 100);
+        }
+      }
+    });
   }, []);
 
   // Handle text selected for explanation
