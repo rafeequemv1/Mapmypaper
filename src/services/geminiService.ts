@@ -371,6 +371,63 @@ export const analyzeImageWithGemini = async (imageData: string): Promise<string>
   }
 };
 
+// New function to analyze text files with Gemini
+export const analyzeFileWithGemini = async (
+  fileContent: string,
+  fileName: string,
+  fileType: string
+): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage for context (if available)
+    const pdfText = sessionStorage.getItem('pdfText');
+    const pdfContext = pdfText ? pdfText.slice(0, 3000) : "";
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    // Truncate file content if it's too large
+    const maxContentLength = 15000;
+    const truncatedContent = fileContent.length > maxContentLength 
+      ? fileContent.slice(0, maxContentLength) + "\n\n[Content truncated due to length...]" 
+      : fileContent;
+    
+    // Create the prompt for analysis
+    const prompt = `
+      You are an AI research assistant helping a user analyze a file in relation to their research document.
+      
+      The user has uploaded a file with the following details:
+      - Filename: ${fileName}
+      - File type: ${fileType}
+      
+      Here's the content of the file:
+      ---
+      ${truncatedContent}
+      ---
+      
+      ${pdfContext ? `Here's some context from the main research document the user is working with (it may be truncated):
+      ---
+      ${pdfContext}
+      ---` : "The user doesn't have a main document loaded for context."}
+      
+      Please analyze this file and provide:
+      1. A brief summary of what the file contains
+      2. Key insights or information from the file
+      3. How this information relates to or could supplement their research (if context is available)
+      4. Any patterns, anomalies, or points of interest in the data
+      
+      Format your response with proper markdown headings, bullet points, and clear organization.
+    `;
+    
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Gemini API file analysis error:", error);
+    return "Sorry, I encountered an error while analyzing the file. Please check if the file format is supported and try again.";
+  }
+};
+
 // Enhanced function to generate structured summaries from PDF content
 export const generateStructuredSummary = async (): Promise<Record<string, string>> => {
   try {
@@ -715,145 +772,4 @@ const cleanSequenceDiagramSyntax = (code: string): string => {
       let fixedLine = line;
       
       // Fix arrows with two dashes only
-      fixedLine = fixedLine.replace(/([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)/g, "$1->>$2");
-      
-      // Remove semicolons which can cause issues
-      fixedLine = fixedLine.replace(/;/g, "");
-      
-      validLines.push(fixedLine);
-    });
-    
-    return validLines.join('\n');
-  } catch (error) {
-    console.error("Error cleaning sequence diagram syntax:", error);
-    return `sequenceDiagram
-      participant Error
-      participant System
-      
-      Error->>System: Syntax Cleaning Failed
-      System->>Error: Please try again`;
-  }
-};
-
-// New function to generate mindmap from PDF content
-export const generateMindmapFromPdf = async (): Promise<string> => {
-  try {
-    // Retrieve stored PDF text from sessionStorage
-    const pdfText = sessionStorage.getItem('pdfText');
-    
-    if (!pdfText || pdfText.trim() === '') {
-      return `mindmap
-        root((Error))
-          No PDF Content
-            Please upload a PDF first`;
-    }
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const prompt = `
-    Create a valid Mermaid mindmap based on this document text. 
-    
-    IMPORTANT: Use ACTUAL SPECIFIC content from the document, not generic labels.
-    
-    CRITICAL MERMAID SYNTAX RULES:
-    1. Start with 'mindmap'
-    2. Use proper indentation for hierarchy
-    3. Root node must use this exact syntax: root((Paper Title))
-    4. First level nodes use text on their own line with proper indentation
-    5. You can use these node styles:
-       - Regular text node (just text)
-       - Text in square brackets [Text]
-       - Text in parentheses (Text)
-       - Text in double parentheses ((Text))
-    6. Max 3 levels of hierarchy
-    7. Max 15 nodes total
-    8. AVOID special characters that might break syntax
-    9. NEVER use class declarations like "class node className"
-    
-    EXAMPLE CORRECT SYNTAX:
-    mindmap
-      root((Research on Machine Learning))
-        Introduction
-          Background on neural networks
-          Problem of overfitting data
-        Methodology
-          LSTM architecture used
-          Training on 50,000 samples
-    
-    Here's the document text:
-    ${pdfText.slice(0, 8000)}
-    
-    Generate ONLY valid Mermaid mindmap code, nothing else.
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
-    
-    // Remove markdown code blocks if present
-    const mermaidCode = text
-      .replace(/```mermaid\s?/g, "")
-      .replace(/```\s?/g, "")
-      .trim();
-    
-    return cleanMindmapSyntax(mermaidCode);
-  } catch (error) {
-    console.error("Gemini API mindmap generation error:", error);
-    return `mindmap
-      root((Error))
-        Technical Issue
-          Failed to generate mindmap`;
-  }
-};
-
-// Helper function to clean and fix common mindmap syntax issues
-const cleanMindmapSyntax = (code: string): string => {
-  if (!code || !code.trim()) {
-    return `mindmap
-      root((Error))
-        Empty Result
-          Please try again`;
-  }
-  
-  try {
-    // Ensure the code starts with mindmap directive
-    let cleaned = code.trim();
-    if (!cleaned.startsWith("mindmap")) {
-      cleaned = "mindmap\n" + cleaned;
-    }
-    
-    // Process line by line to ensure each line is valid
-    const lines = cleaned.split('\n');
-    const validLines: string[] = [];
-    
-    lines.forEach(line => {
-      const trimmedLine = line.trim();
-      
-      // Skip empty lines and keep comments
-      if (trimmedLine === '' || trimmedLine.startsWith('%')) {
-        validLines.push(line);
-        return;
-      }
-      
-      // Keep mindmap directive
-      if (trimmedLine.startsWith('mindmap')) {
-        validLines.push(line);
-        return;
-      }
-      
-      // Remove any semicolons which can cause issues
-      let fixedLine = line.replace(/;/g, "");
-      
-      validLines.push(fixedLine);
-    });
-    
-    return validLines.join('\n');
-  } catch (error) {
-    console.error("Error cleaning mindmap syntax:", error);
-    return `mindmap
-      root((Error))
-        Syntax Cleaning Failed
-          Please try again`;
-  }
-};
+      fixedLine
