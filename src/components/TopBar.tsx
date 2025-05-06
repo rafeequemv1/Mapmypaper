@@ -2,7 +2,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserPlus, DollarSign, Home, LayoutGrid } from "lucide-react";
+import { LogIn, UserPlus, DollarSign, Home } from "lucide-react";
 import UserMenu from "./UserMenu";
 import Logo from "./Logo";
 
@@ -28,15 +28,6 @@ const TopBar = () => {
           >
             <Logo className="h-4 w-4" />
             Home
-          </Button>
-          
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/features')}
-            className="flex items-center gap-2"
-          >
-            <LayoutGrid className="h-4 w-4" />
-            Features
           </Button>
           
           <Button
@@ -78,3 +69,4 @@ const TopBar = () => {
 };
 
 export default TopBar;
+
