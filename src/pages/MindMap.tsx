@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -35,7 +36,8 @@ const MindMap = () => {
           // Format the node text after a short delay to allow the edit to complete
           setTimeout(() => {
             // Get the current node text after editing
-            const currentNode = instance.findNodeObj(nodeObj.id);
+            // Using type assertion (as any) to access methods not defined in the TypeScript interface
+            const currentNode = (instance as any).findNodeObj(nodeObj.id);
             if (currentNode) {
               // Apply formatting rules
               const words = currentNode.topic.split(' ');
@@ -47,7 +49,8 @@ const MindMap = () => {
                 }
                 
                 // Update the node text with formatted version
-                instance.updateNodeText(nodeObj.id, formattedText);
+                // Using type assertion (as any) to access methods not defined in the TypeScript interface
+                (instance as any).updateNodeText(nodeObj.id, formattedText);
               }
             }
           }, 100);
