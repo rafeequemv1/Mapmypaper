@@ -69,12 +69,25 @@ const MindMap = () => {
     const handleTabChange = (e: CustomEvent) => {
       if (e.detail?.activeKey) {
         const key = e.detail.activeKey;
+        console.log("Current PDF set to:", key);
         setCurrentPdfKey(key);
         
         // Get PDF text for this specific PDF and store it as the main text
         const pdfText = sessionStorage.getItem(`pdfText_${key}`);
         if (pdfText) {
           sessionStorage.setItem('pdfText', pdfText);
+        }
+        
+        // Notify other components about the PDF change with the forceUpdate flag
+        if (e.detail.forceUpdate) {
+          window.dispatchEvent(
+            new CustomEvent('pdfSwitched', { 
+              detail: { 
+                pdfKey: key,
+                forceUpdate: true 
+              } 
+            })
+          );
         }
       }
     };

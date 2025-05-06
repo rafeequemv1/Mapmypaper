@@ -11,7 +11,7 @@ import html2canvas from "html2canvas";
 import { downloadBlob } from "@/utils/downloadUtils";
 import PdfTabs, { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
-// Initialize mermaid
+// Initialize mermaid with specific settings for mindmap
 mermaid.initialize({
   startOnLoad: true,
   theme: 'default',
@@ -41,7 +41,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   
   // Store diagram codes by PDF key and type for instant switching
-  // Using a Record with both flowchart and mindmap keys always present
+  // Using a Record with properly typed null values to avoid TypeScript errors
   const [diagramCodeCache, setDiagramCodeCache] = useState<Record<string, Record<DiagramType, string | null>>>({});
   
   // Add state for active PDF key
@@ -63,6 +63,15 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     const handlePdfTabChanged = (event: CustomEvent) => {
       if (event.detail?.activeKey) {
         setActivePdfKey(event.detail.activeKey);
+        
+        // Force re-render if forceUpdate flag is set
+        if (event.detail?.forceUpdate) {
+          const cachedDiagram = diagramCodeCache[event.detail.activeKey]?.[diagramType];
+          if (cachedDiagram) {
+            setDiagramCode(cachedDiagram);
+            setTimeout(() => renderDiagram(), 100);
+          }
+        }
       }
     };
     
@@ -71,7 +80,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     return () => {
       window.removeEventListener('pdfTabChanged', handlePdfTabChanged as EventListener);
     };
-  }, []);
+  }, [diagramCodeCache, diagramType]);
 
   // Generate diagram when the modal is opened or type changes or PDF changes
   useEffect(() => {
@@ -111,6 +120,8 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
         }
       } else {
         mermaidCode = await generateMindmapFromPdf();
+        // Fix common mindmap formatting issues
+        mermaidCode = fixMindmapFormat(mermaidCode);
       }
       
       // Update the diagram code
@@ -149,6 +160,42 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Fix common mindmap formatting issues
+  const fixMindmapFormat = (code: string): string => {
+    if (!code) return code;
+    
+    // Fix common mindmap issues
+    let fixed = code;
+    
+    // Remove any trailing text that would break the mindmap syntax
+    fixed = fixed.replace(/memraid mindmap issue/g, '');
+    fixed = fixed.replace(/mermaid mindmap issue/g, '');
+    
+    // Make sure each line has proper indentation
+    const lines = fixed.split('\n');
+    const fixedLines: string[] = [];
+    
+    for (const line of lines) {
+      let fixedLine = line;
+      // Skip empty lines and the mindmap declaration
+      if (!fixedLine.trim() || fixedLine.trim() === 'mindmap') {
+        fixedLines.push(fixedLine);
+        continue;
+      }
+      
+      // Fix indentation issues by ensuring proper spaces
+      const leadingSpaces = fixedLine.match(/^(\s*)/)?.[1].length || 0;
+      if (leadingSpaces % 2 !== 0 && !fixedLine.trim().startsWith('root')) {
+        const correctedSpaces = Math.round(leadingSpaces / 2) * 2;
+        fixedLine = ' '.repeat(correctedSpaces) + fixedLine.trimLeft();
+      }
+      
+      fixedLines.push(fixedLine);
+    }
+    
+    return fixedLines.join('\n');
   };
 
   // Render the diagram using mermaid
@@ -214,12 +261,21 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     } catch (error) {
       console.error("Mermaid rendering error:", error);
       
-      // Simple fallback - show the code instead
+      // Improved error handling with details
       if (diagramRef.current) {
+        // Create a more useful error message with the diagram code
         diagramRef.current.innerHTML = `
           <div class="p-4 border border-red-300 bg-red-50 rounded-md">
-            <p class="text-red-500 mb-2">Error rendering diagram.</p>
-            <pre class="text-xs overflow-auto p-2 bg-gray-100 rounded">${diagramCode}</pre>
+            <h3 class="text-red-500 font-medium mb-2">Error rendering diagram</h3>
+            <p class="mb-4">There's an issue with the diagram syntax. Common problems include:</p>
+            <ul class="list-disc pl-5 mb-4 text-sm">
+              <li>Incorrect indentation in mindmaps</li>
+              <li>Special characters in node text</li>
+              <li>Missing or extra spaces</li>
+              <li>Trailing text at the end of the diagram</li>
+            </ul>
+            <p class="font-medium mb-2">Diagram code:</p>
+            <pre class="text-xs overflow-auto p-2 bg-gray-100 rounded border border-gray-300">${diagramCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
           </div>
         `;
       }
@@ -311,6 +367,36 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
   const toggleFullScreen = () => {
     setIsFullScreen(!isFullScreen);
   };
+  
+  // Function to manually update diagram code
+  const updateDiagramCode = (code: string) => {
+    // Verify the code has the correct starting syntax based on type
+    if (diagramType === 'mindmap' && !code.trim().startsWith('mindmap')) {
+      code = 'mindmap\n' + code;
+    } else if (diagramType === 'flowchart' && !code.trim().startsWith('flowchart')) {
+      code = 'flowchart LR\n' + code;
+    }
+    
+    setDiagramCode(code);
+    
+    // Update cache
+    if (activePdfKey) {
+      setDiagramCodeCache(prev => {
+        const updatedCache = { ...prev };
+        if (!updatedCache[activePdfKey]) {
+          updatedCache[activePdfKey] = {
+            flowchart: null,
+            mindmap: null
+          };
+        }
+        updatedCache[activePdfKey][diagramType] = code;
+        return updatedCache;
+      });
+    }
+    
+    // Render after a short delay
+    setTimeout(() => renderDiagram(), 100);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -401,6 +487,37 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
             </div>
           </RadioGroup>
         </div>
+
+        {/* Custom diagram editor for troubleshooting */}
+        {diagramType === 'mindmap' && (
+          <div className="bg-gray-50 p-2 mb-4 rounded-md">
+            <p className="text-sm mb-2">Having rendering issues? Try this mindmap format:</p>
+            <pre className="text-xs bg-white p-2 border rounded cursor-pointer" onClick={() => updateDiagramCode(`mindmap
+  root((Neutron Reflectometry Study))
+    Introduction
+      Polyelectrolyte multilayers
+      Swelling in solvents
+    Methodology
+      PSS and pDADMAC polyelectrolytes
+      Neutron reflectometry
+    Results
+      Film thickness increases
+      Swelling increases with humidity`)}>
+mindmap
+  root((Neutron Reflectometry Study))
+    Introduction
+      Polyelectrolyte multilayers
+      Swelling in solvents
+    Methodology
+      PSS and pDADMAC polyelectrolytes
+      Neutron reflectometry
+    Results
+      Film thickness increases
+      Swelling increases with humidity
+</pre>
+            <p className="text-xs text-gray-500 mt-1">Click the example above to use it as a template.</p>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-[60vh] p-8">
