@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -162,7 +161,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     }
   };
   
-  // Fix common mindmap formatting issues
+  // Fix common mindmap formatting issues with improved parsing
   const fixMindmapFormat = (code: string): string => {
     if (!code) return code;
     
@@ -172,33 +171,73 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     // Remove any trailing text that would break the mindmap syntax
     fixed = fixed.replace(/memraid mindmap issue/g, '');
     fixed = fixed.replace(/mermaid mindmap issue/g, '');
+    fixed = fixed.replace(/memraid/g, '');
+    fixed = fixed.replace(/mermaid mindmap issue/g, '');
     
-    // Make sure each line has proper indentation
+    // Make sure mindmap declaration is properly set
+    if (!fixed.trim().startsWith('mindmap')) {
+      fixed = 'mindmap\n' + fixed.trim();
+    }
+    
+    // Process each line for proper indentation and format
     const lines = fixed.split('\n');
     const fixedLines: string[] = [];
+    let inRoot = false;
     
-    for (const line of lines) {
-      let fixedLine = line;
-      // Skip empty lines and the mindmap declaration
-      if (!fixedLine.trim() || fixedLine.trim() === 'mindmap') {
-        fixedLines.push(fixedLine);
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i].trimRight(); // Remove trailing spaces but keep leading indentation
+      
+      // Skip empty lines but keep the mindmap declaration
+      if (!line.trim()) {
         continue;
       }
       
-      // Fix indentation issues by ensuring proper spaces
-      const leadingSpaces = fixedLine.match(/^(\s*)/)?.[1].length || 0;
-      if (leadingSpaces % 2 !== 0 && !fixedLine.trim().startsWith('root')) {
-        const correctedSpaces = Math.round(leadingSpaces / 2) * 2;
-        fixedLine = ' '.repeat(correctedSpaces) + fixedLine.trimLeft();
+      // Keep the mindmap declaration as is
+      if (line.trim() === 'mindmap') {
+        fixedLines.push(line);
+        continue;
       }
       
-      fixedLines.push(fixedLine);
+      // Fix root line if needed - ensure it has proper double parentheses
+      if (line.trim().startsWith('root') && !inRoot) {
+        inRoot = true;
+        if (!line.includes('((') && !line.includes('))')) {
+          line = line.replace(/root\s*\(([^)]*)\)/, 'root(($1))');
+        }
+        if (!line.includes('((')) {
+          line = line.replace(/root\s*/, 'root((');
+        }
+        if (!line.includes('))')) {
+          line = line + '))';
+        }
+        fixedLines.push(line);
+        continue;
+      }
+      
+      // Fix indentation - ensure proper increments of 2 spaces
+      const leadingSpaces = line.match(/^(\s*)/)?.[1].length || 0;
+      if (leadingSpaces % 2 !== 0) {
+        const correctedSpaces = Math.round(leadingSpaces / 2) * 2;
+        line = ' '.repeat(correctedSpaces) + line.trimLeft();
+      }
+      
+      fixedLines.push(line);
     }
     
-    return fixedLines.join('\n');
+    // Filter out any unwanted text after the mindmap content
+    let result = fixedLines.join('\n');
+    
+    // Clean up trailing text that's not part of the mindmap syntax
+    const mindmapEndRegex = /("Swelling transition"[^"]*")/;
+    const match = result.match(mindmapEndRegex);
+    if (match && match.index) {
+      result = result.substring(0, match.index + match[1].length);
+    }
+    
+    return result;
   };
 
-  // Render the diagram using mermaid
+  // Render the diagram using mermaid with enhanced error handling
   const renderDiagram = async () => {
     if (!diagramRef.current) return;
 
@@ -229,7 +268,14 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
         container.style.overflow = 'auto';
       }
       
-      container.textContent = diagramCode;
+      // Pre-process diagram code before rendering
+      let processedCode = diagramCode;
+      if (diagramType === 'mindmap') {
+        // Ensure proper mindmap format with extra check
+        processedCode = fixMindmapFormat(processedCode);
+      }
+      
+      container.textContent = processedCode;
       
       // Add to the DOM
       diagramRef.current.appendChild(container);
@@ -320,6 +366,8 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     if (cachedDiagram) {
       // Use cached diagram immediately 
       setDiagramCode(cachedDiagram);
+      // Ensure re-rendering
+      setTimeout(() => renderDiagram(), 200);
     } else {
       // Clear and generate new diagram
       setDiagramCode("");
@@ -397,6 +445,43 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     // Render after a short delay
     setTimeout(() => renderDiagram(), 100);
   };
+
+  // Get well-formatted default example based on diagram type
+  const getDefaultExample = (): string => {
+    if (diagramType === 'mindmap') {
+      return `mindmap
+  root((Neutron Reflectometry Study))
+    Introduction
+      Polyelectrolyte multilayers
+      Swelling in solvents
+    Methodology
+      PSS and pDADMAC polyelectrolytes
+      Neutron reflectometry
+    Results
+      Film thickness increases
+      Swelling increases with humidity`;
+    } else {
+      return `flowchart LR
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Process 1]
+  B -->|No| D[Process 2]
+  C --> E[End]
+  D --> E`;
+    }
+  };
+
+  // Fixed working mindmap example for neutron reflectometry study
+  const neutronStudyExample = `mindmap
+  root((Neutron Reflectometry Study))
+    Introduction
+      Polyelectrolyte multilayers
+      Swelling in solvents
+    Methodology
+      PSS and pDADMAC polyelectrolytes
+      Neutron reflectometry
+    Results
+      Film thickness increases
+      Swelling increases with humidity`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -492,28 +577,9 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
         {diagramType === 'mindmap' && (
           <div className="bg-gray-50 p-2 mb-4 rounded-md">
             <p className="text-sm mb-2">Having rendering issues? Try this mindmap format:</p>
-            <pre className="text-xs bg-white p-2 border rounded cursor-pointer" onClick={() => updateDiagramCode(`mindmap
-  root((Neutron Reflectometry Study))
-    Introduction
-      Polyelectrolyte multilayers
-      Swelling in solvents
-    Methodology
-      PSS and pDADMAC polyelectrolytes
-      Neutron reflectometry
-    Results
-      Film thickness increases
-      Swelling increases with humidity`)}>
-mindmap
-  root((Neutron Reflectometry Study))
-    Introduction
-      Polyelectrolyte multilayers
-      Swelling in solvents
-    Methodology
-      PSS and pDADMAC polyelectrolytes
-      Neutron reflectometry
-    Results
-      Film thickness increases
-      Swelling increases with humidity
+            <pre className="text-xs bg-white p-2 border rounded cursor-pointer" 
+              onClick={() => updateDiagramCode(neutronStudyExample)}>
+{neutronStudyExample}
 </pre>
             <p className="text-xs text-gray-500 mt-1">Click the example above to use it as a template.</p>
           </div>

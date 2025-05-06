@@ -79,7 +79,10 @@ const MindMap = () => {
         }
         
         // Notify other components about the PDF change with the forceUpdate flag
-        if (e.detail.forceUpdate) {
+        // This helps ensure that visualizations and mindmaps update properly
+        const forceUpdate = e.detail.forceUpdate === undefined ? true : e.detail.forceUpdate;
+        if (forceUpdate) {
+          console.log("Broadcasting pdfSwitched event with forceUpdate");
           window.dispatchEvent(
             new CustomEvent('pdfSwitched', { 
               detail: { 
