@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
     const metas = getAllPdfs();
     if (metas.length === 0) return null;
-    return getPdfKey(metas[0]);
+    return currentPdfKey || getPdfKey(metas[0]);
   });
 
   // Update activePdfKey when currentPdfKey prop changes
@@ -395,22 +396,18 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     }
   };
 
-  // Handle PDF tab change
+  // Handle PDF tab change within the modal
   const handlePdfChange = (key: string) => {
     if (key === activePdfKey) return;
     
     console.log("FlowchartModal: tab changed to", key);
     setActivePdfKey(key);
     
-    // Dispatch an event to inform other components about tab change
-    window.dispatchEvent(
-      new CustomEvent('pdfTabChanged', { 
-        detail: { 
-          activeKey: key,
-          forceUpdate: true
-        } 
-      })
-    );
+    // Update the specific PDF text for generation
+    const pdfText = sessionStorage.getItem(`pdfText_${key}`);
+    if (pdfText) {
+      sessionStorage.setItem('pdfText', pdfText);
+    }
     
     // Check if we have cached data for this PDF and current diagram type
     const cachedDiagram = diagramCodeCache[key]?.[diagramType];
@@ -425,6 +422,16 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
       setDiagramCode("");
       generateDiagram(key);
     }
+    
+    // Dispatch an event to inform other components about tab change
+    window.dispatchEvent(
+      new CustomEvent('pdfTabChanged', { 
+        detail: { 
+          activeKey: key,
+          forceUpdate: false // Don't force update for inner tab change to prevent loops
+        } 
+      })
+    );
   };
 
   // Download the diagram as PNG
@@ -600,7 +607,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
         <div className="mb-1">
           <PdfTabs
             activeKey={activePdfKey}
-            onTabChange={handlePdfChange}
+            onTabChange={handlePdfChange}  
             onRemove={() => {}} // We don't want to allow removal from this modal
           />
         </div>

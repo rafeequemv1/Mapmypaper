@@ -93,14 +93,6 @@ const MindMap = () => {
             })
           );
         }
-        
-        // If flowchart modal is open, make sure it updates too
-        if (showFlowchart) {
-          console.log("MindMap: Flowchart modal is open, triggering update");
-          // Close and reopen to force a fresh render with new PDF
-          setShowFlowchart(false);
-          setTimeout(() => setShowFlowchart(true), 100);
-        }
       }
     };
     
@@ -109,7 +101,7 @@ const MindMap = () => {
     return () => {
       window.removeEventListener('pdfTabChanged', handleTabChange as EventListener);
     };
-  }, [showFlowchart]);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
