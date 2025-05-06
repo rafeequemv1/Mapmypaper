@@ -9,7 +9,7 @@ const apiKey = "AIzaSyAiqTjjCuc3p8TIV8PuWqtPJ-HmgDoVm6A";
 export const getGeminiApiKey = () => apiKey;
 
 // Process text with Gemini to generate mindmap data
-export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
+export const generateMindMapFromText = async (pdfText: string, images: any[] = []): Promise<any> => {
   try {
     // Store the PDF text in sessionStorage for chat functionality
     sessionStorage.setItem('pdfText', pdfText);
@@ -157,6 +157,13 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       // Store the raw template for backup
       sessionStorage.setItem('mindMapTemplate', JSON.stringify(researchPaperTemplate));
       
+      // Add images to appropriate nodes if available
+      if (images && images.length > 0) {
+        const enhancedResponse = addImagesToMindMap(parsedResponse, images);
+        console.log("Added images to mindmap data:", enhancedResponse);
+        return enhancedResponse;
+      }
+      
       // Debug the response
       console.log("Parsed mindmap data:", JSON.stringify(parsedResponse.nodeData, null, 2));
       
@@ -171,6 +178,12 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
         if (titleMatch && titleMatch[1]) {
           researchPaperTemplate.nodeData.topic = titleMatch[1].trim();
         }
+        
+        // Add images to appropriate nodes if available
+        if (images && images.length > 0) {
+          const enhancedResponse = addImagesToMindMap(researchPaperTemplate, images);
+          return enhancedResponse;
+        }
       } catch (e) {
         console.error("Error extracting title:", e);
       }
@@ -181,6 +194,71 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     console.error("Gemini API error:", error);
     throw error;
   }
+};
+
+// Helper function to add images to appropriate nodes in the mind map
+const addImagesToMindMap = (mindMapData: any, images: any[]): any => {
+  if (!images || images.length === 0) return mindMapData;
+  
+  // Make a deep copy to avoid mutating the original
+  const enhancedMindMap = JSON.parse(JSON.stringify(mindMapData));
+  const nodeData = enhancedMindMap.nodeData;
+  
+  // Function to find suitable nodes for adding images
+  const addImagesToNodes = (node: any, remainingImages: any[], depth = 0) => {
+    // Stop if no more images to add
+    if (remainingImages.length === 0) return;
+
+    // Add image to the current node if it doesn't already have one
+    // Prioritize adding images to the results and methodology sections
+    const canAddImage = !node.image && 
+                      (depth > 0) && 
+                      (node.id?.includes('result') || 
+                       node.id?.includes('method') || 
+                       node.id?.includes('discuss') ||
+                       depth > 1);
+    
+    if (canAddImage) {
+      const imageToAdd = remainingImages.shift();
+      if (imageToAdd) {
+        node.image = {
+          url: imageToAdd.data,
+          width: imageToAdd.width > 500 ? 500 : imageToAdd.width,
+          height: imageToAdd.height > 300 ? 300 : imageToAdd.height
+        };
+        
+        // Adjust height and width to reasonable values if they're too large
+        const maxWidth = 400;
+        const maxHeight = 300;
+        
+        if (node.image.width > maxWidth || node.image.height > maxHeight) {
+          const aspectRatio = node.image.width / node.image.height;
+          
+          if (aspectRatio > 1) { // Wider than tall
+            node.image.width = maxWidth;
+            node.image.height = Math.floor(maxWidth / aspectRatio);
+          } else { // Taller than wide
+            node.image.height = maxHeight;
+            node.image.width = Math.floor(maxHeight * aspectRatio);
+          }
+        }
+        
+        console.log(`Added image to node: ${node.topic}`);
+      }
+    }
+    
+    // Recursively process child nodes
+    if (node.children && node.children.length > 0) {
+      for (const child of node.children) {
+        addImagesToNodes(child, remainingImages, depth + 1);
+      }
+    }
+  };
+  
+  // Start adding images from the root
+  addImagesToNodes(nodeData, [...images]);
+  
+  return enhancedMindMap;
 };
 
 // Chat with Gemini about PDF content with citation support
@@ -714,134 +792,4 @@ export const generateMindmapFromPdf = async (): Promise<string> => {
           Problem of overfitting data
         Methodology
           LSTM architecture used
-          Training on 50,000 examples
-        Results
-          93% accuracy achieved
-          Compared to 85% baseline
-    
-    Here's the document text:
-    ${pdfText.slice(0, 8000)}
-    
-    Generate ONLY valid Mermaid mindmap code with SPECIFIC content from the document, nothing else.
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
-    
-    // Remove markdown code blocks if present
-    const mermaidCode = text
-      .replace(/```mermaid\s?/g, "")
-      .replace(/```\s?/g, "")
-      .trim();
-    
-    return cleanMindmapSyntax(mermaidCode);
-  } catch (error) {
-    console.error("Gemini API mindmap generation error:", error);
-    return `mindmap
-      root((Error))
-        Failed to generate mindmap
-          Please try again`;
-  }
-};
-
-// Helper function to clean and fix common Mermaid mindmap syntax issues
-const cleanMindmapSyntax = (code: string): string => {
-  if (!code || !code.trim()) {
-    return `mindmap
-      root((Error))
-        Empty mindmap
-          Please try again`;
-  }
-
-  try {
-    // Ensure the code starts with mindmap directive
-    let cleaned = code.trim();
-    if (!cleaned.startsWith("mindmap")) {
-      cleaned = "mindmap\n" + cleaned;
-    }
-
-    // Process line by line to ensure each line is valid
-    const lines = cleaned.split('\n');
-    const validLines: string[] = [];
-    
-    lines.forEach(line => {
-      const trimmedLine = line.trim();
-      
-      // Skip empty lines and keep comments
-      if (trimmedLine === '' || trimmedLine.startsWith('%')) {
-        validLines.push(line);
-        return;
-      }
-      
-      // Keep mindmap directive
-      if (trimmedLine.startsWith('mindmap')) {
-        validLines.push(line);
-        return;
-      }
-      
-      // Remove semicolons which can cause issues
-      let fixedLine = line;
-      fixedLine = fixedLine.replace(/;/g, "");
-      
-      // Remove special characters that might break the syntax
-      fixedLine = fixedLine.replace(/[<>]/g, m => m === '<' ? '(' : ')');
-      
-      // CRITICAL: Remove class declarations that could cause errors
-      if (fixedLine.includes("class ")) {
-        fixedLine = fixedLine.split("class ")[0].trim();
-      }
-      
-      validLines.push(fixedLine);
-    });
-    
-    return validLines.join('\n');
-  } catch (error) {
-    console.error("Error cleaning mindmap syntax:", error);
-    return `mindmap
-      root((Error))
-        Syntax Cleaning Failed
-          Please try again`;
-  }
-};
-
-// New function to analyze text-based files with Gemini
-export const analyzeFileWithGemini = async (fileContent: string, fileName: string, fileType: string): Promise<string> => {
-  try {
-    // Retrieve stored PDF text from sessionStorage for context
-    const pdfText = sessionStorage.getItem('pdfText');
-    const pdfContext = pdfText ? pdfText.slice(0, 3000) : "";
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const prompt = `
-      You are an AI research assistant helping a user understand a text file in the context of their research paper. 
-      
-      FILE DETAILS:
-      File name: ${fileName}
-      File type: ${fileType}
-      
-      FILE CONTENT (may be truncated):
-      ${fileContent.slice(0, 10000)}
-      
-      PDF CONTEXT (for reference, may be truncated):
-      ${pdfContext}
-      
-      Please analyze this file and provide the following information:
-      1. A concise summary of what the file contains
-      2. How this file might relate to the research paper (if applicable)
-      3. Any technical details that might be relevant (e.g., for code files, what the code does)
-      4. Any patterns, trends, or interesting points in the data (if it's a data file)
-      
-      Format your response with proper markdown, using headings, bullet points, and code blocks where appropriate.
-    `;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Gemini API file analysis error:", error);
-    return "Sorry, I encountered an error while analyzing the file. Please try again.";
-  }
-};
+          Training on 50,00

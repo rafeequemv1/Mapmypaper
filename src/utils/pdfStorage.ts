@@ -4,8 +4,9 @@
 
 // Database configuration
 const DB_NAME = 'PdfStorageDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;  // Increased version for new image store
 const PDF_STORE = 'pdfStore';
+const IMAGE_STORE = 'pdfImageStore';
 const CURRENT_PDF_KEY = 'currentPdfKey';
 
 // Helper function to open the database connection
@@ -22,13 +23,19 @@ const openDatabase = (): Promise<IDBDatabase> => {
         db.createObjectStore(PDF_STORE);
         console.log(`Created ${PDF_STORE} object store`);
       }
+      
+      // Create the PDF image store if it doesn't exist
+      if (!db.objectStoreNames.contains(IMAGE_STORE)) {
+        db.createObjectStore(IMAGE_STORE);
+        console.log(`Created ${IMAGE_STORE} object store`);
+      }
     };
 
     request.onsuccess = () => {
       const db = request.result;
       
-      // Verify the store exists
-      if (!db.objectStoreNames.contains(PDF_STORE)) {
+      // Verify the stores exists
+      if (!db.objectStoreNames.contains(PDF_STORE) || !db.objectStoreNames.contains(IMAGE_STORE)) {
         // Close the connection before trying to delete
         db.close();
         
@@ -83,6 +90,71 @@ export const storePdfData = async (key: string, pdfData: string): Promise<void> 
   } catch (error) {
     console.error("Error in storePdfData:", error);
     throw error;
+  }
+};
+
+// Store PDF images in IndexedDB
+export const storePdfImages = async (key: string, images: any[]): Promise<void> => {
+  if (!images || images.length === 0) {
+    console.log('No images to store');
+    return;
+  }
+  
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([IMAGE_STORE], 'readwrite');
+      const store = transaction.objectStore(IMAGE_STORE);
+      
+      const request = store.put(images, key);
+      
+      request.onsuccess = () => {
+        console.log(`${images.length} PDF images stored for key: ${key}`);
+        resolve();
+      };
+      
+      request.onerror = () => {
+        console.error("Error storing PDF images:", request.error);
+        reject(new Error(`Failed to store PDF images: ${request.error?.message || 'Unknown error'}`));
+      };
+      
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error("Error in storePdfImages:", error);
+    throw error;
+  }
+};
+
+// Get PDF images from IndexedDB
+export const getPdfImages = async (key: string): Promise<any[] | null> => {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([IMAGE_STORE], 'readonly');
+      const store = transaction.objectStore(IMAGE_STORE);
+      
+      const request = store.get(key);
+      
+      request.onsuccess = () => {
+        const images = request.result || [];
+        resolve(images);
+      };
+      
+      request.onerror = () => {
+        console.error("Error retrieving PDF images:", request.error);
+        reject(new Error(`Failed to get PDF images: ${request.error?.message || 'Unknown error'}`));
+      };
+      
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error("Error in getPdfImages:", error);
+    return null;
   }
 };
 
