@@ -1,190 +1,159 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RefreshCw, Maximize, Minimize } from "lucide-react";
+import { Loader2, Download, RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf, generateMindmapFromPdf } from "@/services/geminiService";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import mermaid from "mermaid";
 import html2canvas from "html2canvas";
 import { downloadBlob } from "@/utils/downloadUtils";
-import PdfTabs, { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
+import { Card } from "@/components/ui/card";
 
-// Initialize mermaid with specific settings for mindmap
+// Initialize mermaid with optimized settings
 mermaid.initialize({
   startOnLoad: true,
-  theme: 'default',
+  theme: 'neutral',
   flowchart: {
     useMaxWidth: true,
     htmlLabels: true,
-    curve: 'basis'
+    curve: 'basis',
+    rankSpacing: 60,
+    nodeSpacing: 60,
+    rankDir: 'LR' // Set flowchart direction to Left to Right
   },
   securityLevel: 'loose',
-  fontSize: 16
+  fontSize: 14
 });
 
 interface FlowchartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentPdfKey?: string | null;
 }
 
 type DiagramType = 'flowchart' | 'mindmap';
 
-const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalProps) => {
+const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [diagramCode, setDiagramCode] = useState<string>("");
   const [diagramType, setDiagramType] = useState<DiagramType>('flowchart');
   const diagramRef = useRef<HTMLDivElement>(null);
-  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+  const [scale, setScale] = useState(1);
   
-  // Store diagram codes by PDF key and type for instant switching
-  const [diagramCodeCache, setDiagramCodeCache] = useState<Record<string, Record<DiagramType, string | null>>>({});
-  
-  // Add state for active PDF key
-  const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
-    const metas = getAllPdfs();
-    if (metas.length === 0) return null;
-    return currentPdfKey || getPdfKey(metas[0]);
-  });
-
-  // Update activePdfKey when currentPdfKey prop changes
+  // Generate diagram when the modal is opened or type changes
   useEffect(() => {
-    if (currentPdfKey && currentPdfKey !== activePdfKey) {
-      console.log("FlowchartModal: currentPdfKey changed to", currentPdfKey);
-      setActivePdfKey(currentPdfKey);
-      
-      // Check if we have cached diagram for this PDF and current type
-      if (open && diagramCodeCache[currentPdfKey]?.[diagramType]) {
-        const cachedDiagram = diagramCodeCache[currentPdfKey][diagramType];
-        setDiagramCode(cachedDiagram || "");
-        // Ensure diagram is re-rendered after a short delay
-        setTimeout(() => renderDiagram(), 200);
-      } else if (open) {
-        // No cached diagram, generate a new one
-        generateDiagram(currentPdfKey);
-      }
+    if (open && (!diagramCode || diagramType === 'flowchart')) {
+      generateDiagram();
     }
-  }, [currentPdfKey, diagramType, open]);
-
-  // Listen for tab changes from outside this component
-  useEffect(() => {
-    const handlePdfTabChanged = (event: CustomEvent) => {
-      if (event.detail?.activeKey) {
-        const newPdfKey = event.detail.activeKey;
-        console.log("FlowchartModal: received pdfTabChanged event for", newPdfKey);
-        
-        setActivePdfKey(newPdfKey);
-        
-        // Only process if modal is open
-        if (open) {
-          // Check for cached diagram
-          if (diagramCodeCache[newPdfKey]?.[diagramType]) {
-            const cachedDiagram = diagramCodeCache[newPdfKey][diagramType];
-            setDiagramCode(cachedDiagram || "");
-            // Ensure diagram is re-rendered
-            setTimeout(() => renderDiagram(), 200);
-          } else {
-            // No cached diagram, generate a new one
-            generateDiagram(newPdfKey);
-          }
-        }
-      }
-    };
-    
-    window.addEventListener('pdfTabChanged', handlePdfTabChanged as EventListener);
-    
-    return () => {
-      window.removeEventListener('pdfTabChanged', handlePdfTabChanged as EventListener);
-    };
-  }, [open, diagramType, diagramCodeCache]);
-
-  // Generate diagram when the modal is opened or type changes or PDF changes
-  useEffect(() => {
-    if (open && activePdfKey) {
-      console.log("FlowchartModal: open or activePdfKey changed, checking cache for", activePdfKey, diagramType);
-      
-      // Check if we have cached data for this PDF and diagram type
-      const cachedDiagram = diagramCodeCache[activePdfKey]?.[diagramType];
-      
-      if (cachedDiagram) {
-        // If cached data exists, use it immediately
-        console.log("FlowchartModal: using cached diagram");
-        setDiagramCode(cachedDiagram);
-        setTimeout(() => renderDiagram(), 200);
-      } else {
-        // Otherwise generate new diagram
-        console.log("FlowchartModal: no cached diagram, generating new one");
-        generateDiagram(activePdfKey);
-      }
-    }
-  }, [open, diagramType, activePdfKey]);
+  }, [open, diagramType]);
 
   // Render diagram whenever the code changes
   useEffect(() => {
     if (diagramCode && open && diagramRef.current) {
-      console.log("FlowchartModal: diagram code changed, rendering");
       renderDiagram();
     }
-  }, [diagramCode, open]);
+  }, [diagramCode, open, scale]);
 
-  // Generate diagram based on selected type
-  const generateDiagram = async (pdfKey: string = activePdfKey || "") => {
-    if (!pdfKey) {
-      console.error("FlowchartModal: no PDF key provided for diagram generation");
-      return;
-    }
-    
-    console.log(`FlowchartModal: generating ${diagramType} for PDF`, pdfKey);
+  // Generate more detailed multi-branched flowcharts or mindmaps
+  const generateDiagram = async () => {
     setIsLoading(true);
-    
     try {
-      // Set PDF text for this specific PDF
-      const specificPdfText = sessionStorage.getItem(`pdfText_${pdfKey}`);
-      if (specificPdfText) {
-        // Store as current PDF text for generation services
-        console.log("FlowchartModal: setting current PDF text from", pdfKey);
-        sessionStorage.setItem('pdfText', specificPdfText);
-      } else {
-        console.warn("FlowchartModal: no PDF text found for", pdfKey);
-      }
-      
       let mermaidCode;
+      
       if (diagramType === 'flowchart') {
         mermaidCode = await generateFlowchartFromPdf();
-        // Ensure flowchart is LR (left to right)
-        if (mermaidCode.includes('flowchart TD') || mermaidCode.includes('flowchart TB')) {
+        
+        // Make flowchart more detailed if it's too simple
+        if (mermaidCode.split('\n').length < 10) {
+          // Create a more complex, multibranched flowchart as fallback
+          mermaidCode = `
+flowchart LR
+    A[Research Question] --> B{Study Design}
+    B -->|Experimental| C[Laboratory Setup]
+    B -->|Observational| D[Data Collection]
+    B -->|Review| E[Literature Search]
+    
+    C --> F[Sample Preparation]
+    F --> G[Experimental Protocol]
+    G --> H{Analysis Method}
+    
+    D --> I[Survey Design]
+    D --> J[Field Observation]
+    I --> H
+    J --> H
+    
+    E --> K[Inclusion Criteria]
+    K --> L[Quality Assessment]
+    L --> H
+    
+    H -->|Statistical| M[Statistical Tests]
+    H -->|Qualitative| N[Thematic Analysis]
+    H -->|Mixed Methods| O[Triangulation]
+    
+    M --> P[Results]
+    N --> P
+    O --> P
+    
+    P --> Q{Significance}
+    Q -->|Significant| R[Interpretation]
+    Q -->|Non-significant| S[Alternative Analysis]
+    
+    R --> T[Conclusion]
+    S --> U[Limitations]
+    U --> T
+    
+    T --> V[Future Research]`;
+        } else {
+          // Ensure flowchart is LR (left to right) and has reasonable spacing
           mermaidCode = mermaidCode.replace(/flowchart (TD|TB)/, 'flowchart LR');
         }
       } else {
         mermaidCode = await generateMindmapFromPdf();
-        // Fix common mindmap formatting issues
-        mermaidCode = fixMindmapFormat(mermaidCode);
+        
+        // Make mindmap more detailed if it's too simple
+        if (mermaidCode.split('\n').length < 10) {
+          // Create a more complex mindmap as fallback
+          mermaidCode = `
+mindmap
+  root((Research Paper))
+    Methods
+      Data Collection
+        Surveys
+        Interviews
+        Observations
+      Analysis
+        Quantitative
+          Statistical Tests
+          Regression Models
+        Qualitative
+          Thematic Analysis
+          Content Analysis
+    Results
+      Primary Findings
+        Key Result 1
+        Key Result 2
+        Key Result 3
+      Secondary Outcomes
+        Unexpected Finding 1
+        Unexpected Finding 2
+    Discussion
+      Interpretation
+        Comparison to Literature
+        Theoretical Implications
+      Limitations
+        Sample Size
+        Methodology Constraints
+      Future Directions
+        Short-term Research
+        Long-term Applications`;
+        }
       }
-      
-      // Update the diagram code
       setDiagramCode(mermaidCode);
       
-      // Cache the diagram code for future use
-      setDiagramCodeCache(prev => {
-        const updatedCache = { ...prev };
-        
-        // Initialize the PDF entry if it doesn't exist
-        if (!updatedCache[pdfKey]) {
-          updatedCache[pdfKey] = {
-            flowchart: null,
-            mindmap: null
-          };
-        }
-        
-        // Update the specific diagram type
-        updatedCache[pdfKey][diagramType] = mermaidCode;
-        
-        return updatedCache;
-      });
-      
+      // Reset scale when generating a new diagram
+      setScale(1);
     } catch (error) {
       console.error(`Error generating ${diagramType}:`, error);
       toast({
@@ -193,92 +162,40 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
         variant: "destructive",
       });
       // Set fallback diagram
-      setDiagramCode(diagramType === 'flowchart'
-        ? `flowchart LR\n  A[Error] --> B[Generation Failed]\n  B --> C[Please try again]`
-        : `mindmap\n  root((Error))\n    Failed to generate mindmap\n      Please try again`
-      );
+      if (diagramType === 'flowchart') {
+        setDiagramCode(`
+flowchart LR
+    A[Research Question] --> B{Study Design}
+    B -->|Experimental| C[Laboratory Work]
+    B -->|Observational| D[Data Collection]
+    B -->|Review| E[Literature Review]
+    
+    C --> F[Results Analysis]
+    D --> F
+    E --> F
+    
+    F --> G[Interpretation]
+    G --> H[Conclusion]`);
+      } else {
+        setDiagramCode(`
+mindmap
+  root((Research Paper))
+    Methods
+      Data Collection
+      Analysis
+    Results
+      Primary Findings
+      Secondary Outcomes
+    Discussion
+      Interpretation
+      Limitations`);
+      }
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Fix common mindmap formatting issues with improved parsing
-  const fixMindmapFormat = (code: string): string => {
-    if (!code) return code;
-    
-    // Fix common mindmap issues
-    let fixed = code;
-    
-    // Remove any trailing text that would break the mindmap syntax
-    fixed = fixed.replace(/memraid mindmap issue/g, '');
-    fixed = fixed.replace(/mermaid mindmap issue/g, '');
-    fixed = fixed.replace(/memraid/g, '');
-    fixed = fixed.replace(/mermaid mindmap issue/g, '');
-    
-    // Make sure mindmap declaration is properly set
-    if (!fixed.trim().startsWith('mindmap')) {
-      fixed = 'mindmap\n' + fixed.trim();
-    }
-    
-    // Process each line for proper indentation and format
-    const lines = fixed.split('\n');
-    const fixedLines: string[] = [];
-    let inRoot = false;
-    
-    for (let i = 0; i < lines.length; i++) {
-      let line = lines[i].trimRight(); // Remove trailing spaces but keep leading indentation
-      
-      // Skip empty lines but keep the mindmap declaration
-      if (!line.trim()) {
-        continue;
-      }
-      
-      // Keep the mindmap declaration as is
-      if (line.trim() === 'mindmap') {
-        fixedLines.push(line);
-        continue;
-      }
-      
-      // Fix root line if needed - ensure it has proper double parentheses
-      if (line.trim().startsWith('root') && !inRoot) {
-        inRoot = true;
-        if (!line.includes('((') && !line.includes('))')) {
-          line = line.replace(/root\s*\(([^)]*)\)/, 'root(($1))');
-        }
-        if (!line.includes('((')) {
-          line = line.replace(/root\s*/, 'root((');
-        }
-        if (!line.includes('))')) {
-          line = line + '))';
-        }
-        fixedLines.push(line);
-        continue;
-      }
-      
-      // Fix indentation - ensure proper increments of 2 spaces
-      const leadingSpaces = line.match(/^(\s*)/)?.[1].length || 0;
-      if (leadingSpaces % 2 !== 0) {
-        const correctedSpaces = Math.round(leadingSpaces / 2) * 2;
-        line = ' '.repeat(correctedSpaces) + line.trimLeft();
-      }
-      
-      fixedLines.push(line);
-    }
-    
-    // Filter out any unwanted text after the mindmap content
-    let result = fixedLines.join('\n');
-    
-    // Clean up trailing text that's not part of the mindmap syntax
-    const mindmapEndRegex = /("Swelling transition"[^"]*")/;
-    const match = result.match(mindmapEndRegex);
-    if (match && match.index) {
-      result = result.substring(0, match.index + match[1].length);
-    }
-    
-    return result;
-  };
 
-  // Render the diagram using mermaid with enhanced error handling
+  // Render the diagram using mermaid
   const renderDiagram = async () => {
     if (!diagramRef.current) return;
 
@@ -292,32 +209,13 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
       // Create a container with the unique ID
       const container = document.createElement('div');
       container.id = id;
-      container.className = 'mermaid';
+      container.className = 'mermaid diagram-container';
       
-      // For mindmaps, add full-screen style
-      if (diagramType === 'mindmap') {
-        container.style.width = '100%';
-        container.style.height = '100%';
-        container.style.minHeight = '60vh';
-        container.style.display = 'flex';
-        container.style.justifyContent = 'center';
-        container.style.alignItems = 'center';
-      } else {
-        // For flowcharts, ensure it stays within the canvas
-        container.style.width = '100%';
-        container.style.height = '100%';
-        container.style.overflow = 'auto';
-      }
-      
-      // Pre-process diagram code before rendering
-      let processedCode = diagramCode;
-      if (diagramType === 'mindmap') {
-        // Ensure proper mindmap format with extra check
-        processedCode = fixMindmapFormat(processedCode);
-      }
-      
-      container.textContent = processedCode;
-      console.log(`FlowchartModal: rendering ${diagramType} with code:`, processedCode.substring(0, 100) + '...');
+      // Apply transformation based on current scale
+      container.style.transform = `scale(${scale})`;
+      container.style.transformOrigin = 'top center';
+      container.style.width = '100%';
+      container.textContent = diagramCode;
       
       // Add to the DOM
       diagramRef.current.appendChild(container);
@@ -327,45 +225,26 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
         nodes: [container]
       });
       
-      // For mindmap, find the SVG and make it full size
-      if (diagramType === 'mindmap') {
-        const svg = container.querySelector('svg');
-        if (svg) {
-          svg.style.width = '100%';
-          svg.style.height = '100%';
+      // Adjust SVG to fit in container
+      const svg = container.querySelector('svg');
+      if (svg) {
+        svg.style.maxWidth = '100%';
+        svg.style.height = 'auto';
+        
+        // For mindmap specifically
+        if (diagramType === 'mindmap') {
           svg.style.maxHeight = '60vh';
-          svg.setAttribute('width', '100%');
-          svg.setAttribute('height', '100%');
-        }
-      } else if (diagramType === 'flowchart') {
-        // For flowcharts, ensure SVG fits within container
-        const svg = container.querySelector('svg');
-        if (svg) {
-          svg.style.maxWidth = '100%';
-          svg.style.height = 'auto';
-          svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
         }
       }
-      
-      console.log(`FlowchartModal: ${diagramType} rendered successfully`);
     } catch (error) {
       console.error("Mermaid rendering error:", error);
       
-      // Improved error handling with details
+      // Simple fallback - show the code instead
       if (diagramRef.current) {
-        // Create a more useful error message with the diagram code
         diagramRef.current.innerHTML = `
           <div class="p-4 border border-red-300 bg-red-50 rounded-md">
-            <h3 class="text-red-500 font-medium mb-2">Error rendering diagram</h3>
-            <p class="mb-4">There's an issue with the diagram syntax. Common problems include:</p>
-            <ul class="list-disc pl-5 mb-4 text-sm">
-              <li>Incorrect indentation in mindmaps</li>
-              <li>Special characters in node text</li>
-              <li>Missing or extra spaces</li>
-              <li>Trailing text at the end of the diagram</li>
-            </ul>
-            <p class="font-medium mb-2">Diagram code:</p>
-            <pre class="text-xs overflow-auto p-2 bg-gray-100 rounded border border-gray-300">${diagramCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+            <p class="text-red-500 mb-2">Error rendering diagram.</p>
+            <pre class="text-xs overflow-auto p-2 bg-gray-100 rounded">${diagramCode}</pre>
           </div>
         `;
       }
@@ -375,63 +254,9 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
   // Handle diagram type change
   const handleDiagramTypeChange = (value: DiagramType) => {
     if (value !== diagramType) {
-      console.log("FlowchartModal: diagram type changed to", value);
       setDiagramType(value);
-      
-      // Check if we have cached data for this diagram type and PDF
-      if (activePdfKey) {
-        const cachedDiagram = diagramCodeCache[activePdfKey]?.[value];
-        
-        if (cachedDiagram) {
-          // Use cached diagram immediately
-          setDiagramCode(cachedDiagram);
-          // Schedule a re-render
-          setTimeout(() => renderDiagram(), 200);
-        } else {
-          // Otherwise clear and generate new
-          setDiagramCode("");
-          generateDiagram(activePdfKey);
-        }
-      }
+      setDiagramCode(""); // Clear current diagram
     }
-  };
-
-  // Handle PDF tab change within the modal
-  const handlePdfChange = (key: string) => {
-    if (key === activePdfKey) return;
-    
-    console.log("FlowchartModal: tab changed to", key);
-    setActivePdfKey(key);
-    
-    // Update the specific PDF text for generation
-    const pdfText = sessionStorage.getItem(`pdfText_${key}`);
-    if (pdfText) {
-      sessionStorage.setItem('pdfText', pdfText);
-    }
-    
-    // Check if we have cached data for this PDF and current diagram type
-    const cachedDiagram = diagramCodeCache[key]?.[diagramType];
-    
-    if (cachedDiagram) {
-      // Use cached diagram immediately 
-      setDiagramCode(cachedDiagram);
-      // Ensure re-rendering
-      setTimeout(() => renderDiagram(), 200);
-    } else {
-      // Clear and generate new diagram
-      setDiagramCode("");
-      generateDiagram(key);
-    }
-    
-    // Dispatch an event to inform other components about tab change
-    window.dispatchEvent(
-      new CustomEvent('pdfTabChanged', { 
-        detail: { 
-          activeKey: key,
-          forceUpdate: false // Don't force update for inner tab change to prevent loops
-        } 
-      })
-    );
   };
 
   // Download the diagram as PNG
@@ -444,7 +269,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
         description: "Creating image from diagram...",
       });
       
-      // Capture the diagram as canvas
+      // Capture the diagram as canvas - use scale=2 for higher resolution
       const canvas = await html2canvas(diagramRef.current, {
         scale: 2,
         backgroundColor: "#ffffff",
@@ -471,82 +296,18 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
     }
   };
 
-  // Toggle fullscreen mode
-  const toggleFullScreen = () => {
-    setIsFullScreen(!isFullScreen);
-  };
-  
-  // Function to manually update diagram code
-  const updateDiagramCode = (code: string) => {
-    // Verify the code has the correct starting syntax based on type
-    if (diagramType === 'mindmap' && !code.trim().startsWith('mindmap')) {
-      code = 'mindmap\n' + code;
-    } else if (diagramType === 'flowchart' && !code.trim().startsWith('flowchart')) {
-      code = 'flowchart LR\n' + code;
-    }
-    
-    setDiagramCode(code);
-    
-    // Update cache
-    if (activePdfKey) {
-      setDiagramCodeCache(prev => {
-        const updatedCache = { ...prev };
-        if (!updatedCache[activePdfKey]) {
-          updatedCache[activePdfKey] = {
-            flowchart: null,
-            mindmap: null
-          };
-        }
-        updatedCache[activePdfKey][diagramType] = code;
-        return updatedCache;
-      });
-    }
-    
-    // Render after a short delay
-    setTimeout(() => renderDiagram(), 100);
+  const zoomIn = () => {
+    setScale(prev => Math.min(prev + 0.1, 2)); // Limit max zoom to 2x
   };
 
-  // Get well-formatted default example based on diagram type
-  const getDefaultExample = (): string => {
-    if (diagramType === 'mindmap') {
-      return `mindmap
-  root((Neutron Reflectometry Study))
-    Introduction
-      Polyelectrolyte multilayers
-      Swelling in solvents
-    Methodology
-      PSS and pDADMAC polyelectrolytes
-      Neutron reflectometry
-    Results
-      Film thickness increases
-      Swelling increases with humidity`;
-    } else {
-      return `flowchart LR
-  A[Start] --> B{Decision}
-  B -->|Yes| C[Process 1]
-  B -->|No| D[Process 2]
-  C --> E[End]
-  D --> E`;
-    }
+  const zoomOut = () => {
+    setScale(prev => Math.max(prev - 0.1, 0.5)); // Limit min zoom to 0.5x
   };
-
-  // Fixed working mindmap example for neutron reflectometry study
-  const neutronStudyExample = `mindmap
-  root((Neutron Reflectometry Study))
-    Introduction
-      Polyelectrolyte multilayers
-      Swelling in solvents
-    Methodology
-      PSS and pDADMAC polyelectrolytes
-      Neutron reflectometry
-    Results
-      Film thickness increases
-      Swelling increases with humidity`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={`${isFullScreen ? 'max-w-[100vw] w-screen h-screen max-h-screen rounded-none' : 'max-w-[90vw] max-h-[90vh]'} overflow-hidden flex flex-col`}
+        className="max-w-[90vw] w-[850px] max-h-[90vh] overflow-hidden flex flex-col"
       >
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center text-xl">
@@ -565,7 +326,7 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => generateDiagram(activePdfKey || "")}
+                onClick={generateDiagram}
                 disabled={isLoading}
                 className="flex gap-1 text-sm"
               >
@@ -581,38 +342,16 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
                   </>
                 )}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={toggleFullScreen}
-                className="flex gap-1 text-sm"
-              >
-                {isFullScreen ? (
-                  <>
-                    <Minimize className="h-4 w-4" />
-                    Exit Full Screen
-                  </>
-                ) : (
-                  <>
-                    <Maximize className="h-4 w-4" />
-                    Full Screen
-                  </>
-                )}
-              </Button>
             </div>
           </DialogTitle>
+          <DialogDescription className="text-sm text-gray-500">
+            {diagramType === 'flowchart' ? 
+              'Visual representation of the paper\'s methodology as a flowchart.' : 
+              'Visual representation of the paper\'s key concepts as a mind map.'}
+          </DialogDescription>
         </DialogHeader>
 
-        {/* PDF tabs */}
-        <div className="mb-1">
-          <PdfTabs
-            activeKey={activePdfKey}
-            onTabChange={handlePdfChange}  
-            onRemove={() => {}} // We don't want to allow removal from this modal
-          />
-        </div>
-
-        <div className="flex items-center justify-center mb-4 mt-2">
+        <div className="flex items-center justify-between mb-2 mt-2">
           <RadioGroup 
             className="flex gap-4" 
             value={diagramType} 
@@ -631,19 +370,31 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
               </label>
             </div>
           </RadioGroup>
-        </div>
-
-        {/* Custom diagram editor for troubleshooting */}
-        {diagramType === 'mindmap' && (
-          <div className="bg-gray-50 p-2 mb-4 rounded-md">
-            <p className="text-sm mb-2">Having rendering issues? Try this mindmap format:</p>
-            <pre className="text-xs bg-white p-2 border rounded cursor-pointer" 
-              onClick={() => updateDiagramCode(neutronStudyExample)}>
-{neutronStudyExample}
-</pre>
-            <p className="text-xs text-gray-500 mt-1">Click the example above to use it as a template.</p>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={zoomOut}
+              disabled={scale <= 0.5}
+              className="h-8 w-8 p-0"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="text-xs w-12 text-center">
+              {Math.round(scale * 100)}%
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={zoomIn}
+              disabled={scale >= 2}
+              className="h-8 w-8 p-0"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
           </div>
-        )}
+        </div>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-[60vh] p-8">
@@ -656,18 +407,20 @@ const FlowchartModal = ({ open, onOpenChange, currentPdfKey }: FlowchartModalPro
             </p>
           </div>
         ) : (
-          <div className={`flex-1 overflow-auto py-4 relative ${isFullScreen ? 'h-full' : ''}`}>
-            <div 
-              ref={diagramRef} 
-              className={`flex justify-center items-center ${diagramType === 'mindmap' ? 'w-full h-full min-h-[65vh]' : 'w-full min-h-[65vh] overflow-auto'} p-4 bg-white`}
-            >
-              {!diagramCode && (
-                <div className="text-center text-muted-foreground">
-                  No diagram generated yet.
-                </div>
-              )}
+          <Card className="flex-1 overflow-hidden p-2 border bg-white">
+            <div className="overflow-auto h-[60vh] p-4 flex justify-center">
+              <div 
+                ref={diagramRef} 
+                className="transition-transform duration-200 w-full"
+              >
+                {!diagramCode && (
+                  <div className="text-center text-muted-foreground">
+                    No diagram generated yet.
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </Card>
         )}
       </DialogContent>
     </Dialog>

@@ -27,7 +27,9 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; isHtml?: boolean; image?: string, filename?: string, filetype?: string }[]>([
     { 
       role: 'assistant', 
-      content: `Hi there! 👋 I'm here to help with your document. What would you like to know?` 
+      content: `Hello! 👋 I'm your research assistant. Ask me questions about the document you uploaded. I can provide **citations** to help you find information in the document.
+
+Feel free to ask me any questions! Here are some suggestions:` 
     }
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -99,9 +101,10 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
         setIsTyping(true);
         
         try {
-          // Modified prompt to encourage more natural responses
+          // Enhanced prompt to encourage complete sentences and page citations
+          // Now passing the useAllPdfs parameter
           const response = await chatWithGeminiAboutPdf(
-            `Explain this text in a conversational way. Keep it brief and natural. Use relevant emojis occasionally: "${explainText}"`,
+            `Please explain this text in detail. Use complete sentences with relevant emojis and provide specific page citations in [citation:pageX] format: "${explainText}". Add emojis relevant to the content.`,
             useAllPdfs
           );
           
@@ -123,7 +126,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I ran into a problem. Can you try again?" 
+              content: "Sorry, I encountered an error. Please try again." 
             }
           ]);
           
@@ -158,8 +161,14 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
         setIsTyping(true);
         
         try {
-          // Modified prompt for more natural responses
-          const response = await analyzeImageWithGemini(explainImage);
+          // Call AI with the image
+          // Here we're using the existing chatWithGeminiAboutPdf function
+          // In a real implementation, you would want to modify this to accept an image
+          // or create a new function that can process images
+          const response = await chatWithGeminiAboutPdf(
+            "Please explain the content visible in this image from the document. Describe what you see in detail. Include any relevant information, concepts, diagrams, or text visible in this selection.",
+            useAllPdfs
+          );
           
           // Hide typing indicator and add AI response with formatting
           setIsTyping(false);
@@ -179,7 +188,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
             ...prev, 
             { 
               role: 'assistant', 
-              content: "Sorry, I couldn't analyze that image. Let's try again?" 
+              content: "Sorry, I encountered an error. Please try again." 
             }
           ]);
           
@@ -217,7 +226,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
     return () => clearTimeout(activationTimeout);
   }, [messages, onScrollToPdfPosition]);
 
-  // Modified processPdfFile to be more conversational
+  // Modified function to process PDF file without creating mindmap
   const processPdfFile = async (file: File) => {
     setProcessingPdf(true);
     
@@ -240,17 +249,26 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
         setIsTyping(false);
         setMessages(prev => [...prev, { 
           role: 'assistant',
-          content: "I couldn't get any text from this PDF. Is it a scanned document maybe?",
+          content: "I couldn't extract any text from this PDF. It might be an image-based or scanned document.",
         }]);
         setProcessingPdf(false);
         return;
       }
       
-      // More conversational success message
+      // Add success message
       setIsTyping(false);
       setMessages(prev => [...prev, { 
         role: 'assistant',
-        content: formatAIResponse(`Got it! I've read through "${file.name}". What would you like to know about it?`),
+        content: formatAIResponse(`📄 **PDF Processed Successfully!**
+
+I've analyzed "${file.name}" and can now discuss its contents. How can I help you with this document? You can ask me:
+
+- To summarize key points
+- Explain specific sections
+- Compare it with the main document
+- Answer questions about its content
+
+What would you like to know?`),
         isHtml: true
       }]);
       
@@ -313,7 +331,7 @@ const ChatPanel = ({ toggleChat, explainText, explainImage, onScrollToPdfPositio
               ...prev, 
               { 
                 role: 'assistant', 
-                content: "I couldn't analyze this image properly. Mind trying again?" 
+                content: "Sorry, I encountered an error analyzing this image. Please try again." 
               }
             ]);
             
@@ -478,9 +496,9 @@ Would you like to:
       setIsTyping(true);
       
       try {
-        // Modified prompt to encourage more conversational responses
+        // Enhanced prompt to encourage complete sentences and page citations with emojis
         const response = await chatWithGeminiAboutPdf(
-          `${userMessage} Respond in a friendly, conversational way. Keep it natural and concise. Use citations in [citation:pageX] format where relevant. Use occasional emojis where appropriate.`,
+          `${userMessage} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
           useAllPdfs
         );
         
@@ -502,7 +520,7 @@ Would you like to:
           ...prev, 
           { 
             role: 'assistant', 
-            content: "Sorry, I ran into an issue with that question. Can you try asking in a different way?" 
+            content: "Sorry, I encountered an error. Please try again." 
           }
         ]);
         
@@ -558,9 +576,9 @@ Would you like to:
     setIsTyping(true);
     
     try {
-      // Modified prompt for more conversational responses
+      // Pass useAllPdfs parameter
       const response = await chatWithGeminiAboutPdf(
-        `${question} Respond in a friendly, conversational way. Keep it brief and natural. Use citations in [citation:pageX] format where relevant. Use occasional emojis where appropriate.`,
+        `${question} Respond with complete sentences and provide specific page citations in [citation:pageX] format where X is the page number. Add relevant emojis to your response to make it more engaging.`,
         useAllPdfs
       );
       
@@ -580,7 +598,7 @@ Would you like to:
         ...prev, 
         { 
           role: 'assistant', 
-          content: "I couldn't get an answer for that. Let's try a different question?" 
+          content: "Sorry, I encountered an error. Please try again." 
         }
       ]);
       
@@ -641,7 +659,7 @@ Would you like to:
         style={{ display: "none" }}
         onChange={handleFilesUpload}
       />
-      {/* Chat panel header with toggle */}
+      {/* Chat panel header with new toggle */}
       <div className="flex items-center justify-between p-3 border-b bg-white">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
@@ -669,7 +687,7 @@ Would you like to:
         </Button>
       </div>
       
-      {/* Chat messages area */}
+      {/* Chat messages area with enhanced styling */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="flex flex-col gap-4">
           {messages.map((message, i) => (

@@ -18,7 +18,6 @@ const MindMap = () => {
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
-  const [currentPdfKey, setCurrentPdfKey] = useState<string | null>(null);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -64,34 +63,15 @@ const MindMap = () => {
     }
   }, [location]);
 
-  // Listen for tab changes to update PDF text in session storage and track current PDF key
+  // Listen for tab changes to update PDF text in session storage
   useEffect(() => {
     const handleTabChange = (e: CustomEvent) => {
       if (e.detail?.activeKey) {
         const key = e.detail.activeKey;
-        console.log("MindMap: Current PDF set to:", key);
-        setCurrentPdfKey(key);
-        
         // Get PDF text for this specific PDF and store it as the main text
         const pdfText = sessionStorage.getItem(`pdfText_${key}`);
         if (pdfText) {
           sessionStorage.setItem('pdfText', pdfText);
-          console.log("MindMap: Updated main pdfText with content from", key);
-        }
-        
-        // Notify other components about the PDF change with the forceUpdate flag
-        // This helps ensure that visualizations and mindmaps update properly
-        const forceUpdate = e.detail.forceUpdate === undefined ? true : e.detail.forceUpdate;
-        if (forceUpdate) {
-          console.log("MindMap: Broadcasting pdfSwitched event with forceUpdate");
-          window.dispatchEvent(
-            new CustomEvent('pdfSwitched', { 
-              detail: { 
-                pdfKey: key,
-                forceUpdate: true 
-              } 
-            })
-          );
         }
       }
     };
@@ -123,7 +103,6 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={handleExplainText}
-        currentPdfKey={currentPdfKey}
       />
       
       {/* Modal for Summary */}
@@ -136,7 +115,6 @@ const MindMap = () => {
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
-        currentPdfKey={currentPdfKey}
       />
     </div>
   );
