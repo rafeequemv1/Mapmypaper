@@ -211,6 +211,15 @@ export function createSelectionRect(containerElement: HTMLElement) {
     }
   };
   
+  // Add scroll listener to update rectangle position when scrolling
+  const handleScroll = () => {
+    if (selectionRect.style.display !== 'none') {
+      updateRect(startX, startY);
+    }
+  };
+  
+  containerElement.addEventListener('scroll', handleScroll);
+  
   // Set up click handler for the tooltip
   captureTooltip.addEventListener('click', () => {
     if (isCapturing) return; // Prevent multiple captures
@@ -226,6 +235,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
   
   // Remove selection elements
   const destroy = () => {
+    containerElement.removeEventListener('scroll', handleScroll);
+    
     if (containerElement.contains(selectionRect)) {
       containerElement.removeChild(selectionRect);
     }

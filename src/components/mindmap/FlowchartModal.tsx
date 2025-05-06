@@ -9,13 +9,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import mermaid from "mermaid";
 import html2canvas from "html2canvas";
 import { downloadBlob } from "@/utils/downloadUtils";
+import PdfTabs, { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 // Initialize mermaid
 mermaid.initialize({
   startOnLoad: true,
   theme: 'default',
   flowchart: {
-    useMaxWidth: false,
+    useMaxWidth: true,
     htmlLabels: true,
     curve: 'basis'
   },
@@ -36,13 +37,20 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [diagramCode, setDiagramCode] = useState<string>("");
   const [diagramType, setDiagramType] = useState<DiagramType>('flowchart');
   const diagramRef = useRef<HTMLDivElement>(null);
+  
+  // Add state for active PDF key
+  const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
+    const metas = getAllPdfs();
+    if (metas.length === 0) return null;
+    return getPdfKey(metas[0]);
+  });
 
-  // Generate diagram when the modal is opened or type changes
+  // Generate diagram when the modal is opened or type changes or PDF changes
   useEffect(() => {
-    if (open && (!diagramCode || diagramType === 'flowchart')) {
+    if (open && ((!diagramCode || diagramType === 'flowchart') || activePdfKey)) {
       generateDiagram();
     }
-  }, [open, diagramType]);
+  }, [open, diagramType, activePdfKey]);
 
   // Render diagram whenever the code changes
   useEffect(() => {
@@ -107,6 +115,11 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         container.style.display = 'flex';
         container.style.justifyContent = 'center';
         container.style.alignItems = 'center';
+      } else {
+        // For flowcharts, ensure it stays within the canvas
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.overflow = 'auto';
       }
       
       container.textContent = diagramCode;
@@ -128,6 +141,14 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           svg.style.maxHeight = '60vh';
           svg.setAttribute('width', '100%');
           svg.setAttribute('height', '100%');
+        }
+      } else if (diagramType === 'flowchart') {
+        // For flowcharts, ensure SVG fits within container
+        const svg = container.querySelector('svg');
+        if (svg) {
+          svg.style.maxWidth = '100%';
+          svg.style.height = 'auto';
+          svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
         }
       }
     } catch (error) {
@@ -151,6 +172,21 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       setDiagramType(value);
       setDiagramCode(""); // Clear current diagram
     }
+  };
+
+  // Handle PDF tab change
+  const handlePdfChange = (key: string) => {
+    setActivePdfKey(key);
+    
+    // Dispatch an event to inform other components about tab change
+    window.dispatchEvent(
+      new CustomEvent('pdfTabChanged', { 
+        detail: { activeKey: key } 
+      })
+    );
+    
+    // Clear current diagram so it regenerates for the selected PDF
+    setDiagramCode("");
   };
 
   // Download the diagram as PNG
@@ -232,6 +268,15 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           </DialogTitle>
         </DialogHeader>
 
+        {/* PDF tabs */}
+        <div className="mb-1">
+          <PdfTabs
+            activeKey={activePdfKey}
+            onTabChange={handlePdfChange}
+            onRemove={() => {}} // We don't want to allow removal from this modal
+          />
+        </div>
+
         <div className="flex items-center justify-center mb-4 mt-2">
           <RadioGroup 
             className="flex gap-4" 
@@ -264,10 +309,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
             </p>
           </div>
         ) : (
-          <div className="flex-1 overflow-auto py-4">
+          <div className="flex-1 overflow-auto py-4 relative">
             <div 
               ref={diagramRef} 
-              className={`flex justify-center items-center min-h-[65vh] ${diagramType === 'mindmap' ? 'w-full h-full' : ''} p-4 bg-white`}
+              className={`flex justify-center items-center ${diagramType === 'mindmap' ? 'w-full h-full min-h-[65vh]' : 'w-full min-h-[65vh] overflow-auto'} p-4 bg-white`}
             >
               {!diagramCode && (
                 <div className="text-center text-muted-foreground">
