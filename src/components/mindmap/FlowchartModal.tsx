@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -39,6 +38,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const diagramRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   
+  // Store diagram codes by PDF key and type for instant switching
+  const [diagramCodeCache, setDiagramCodeCache] = useState<Record<string, Record<DiagramType, string>>>({});
+  
   // Add state for active PDF key
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
     const metas = getAllPdfs();
@@ -46,10 +48,34 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     return getPdfKey(metas[0]);
   });
 
+  // Listen for tab changes from outside this component
+  useEffect(() => {
+    const handlePdfTabChanged = (event: CustomEvent) => {
+      if (event.detail?.activeKey) {
+        setActivePdfKey(event.detail.activeKey);
+      }
+    };
+    
+    window.addEventListener('pdfTabChanged', handlePdfTabChanged as EventListener);
+    
+    return () => {
+      window.removeEventListener('pdfTabChanged', handlePdfTabChanged as EventListener);
+    };
+  }, []);
+
   // Generate diagram when the modal is opened or type changes or PDF changes
   useEffect(() => {
-    if (open && ((!diagramCode || diagramType === 'flowchart') || activePdfKey)) {
-      generateDiagram();
+    if (open && activePdfKey) {
+      // Check if we have cached data for this PDF and diagram type
+      const cachedDiagram = diagramCodeCache[activePdfKey]?.[diagramType];
+      
+      if (cachedDiagram) {
+        // If cached data exists, use it immediately
+        setDiagramCode(cachedDiagram);
+      } else {
+        // Otherwise generate new diagram
+        generateDiagram();
+      }
     }
   }, [open, diagramType, activePdfKey]);
 
@@ -62,6 +88,8 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
 
   // Generate diagram based on selected type
   const generateDiagram = async () => {
+    if (!activePdfKey) return;
+    
     setIsLoading(true);
     try {
       let mermaidCode;
@@ -74,7 +102,19 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       } else {
         mermaidCode = await generateMindmapFromPdf();
       }
+      
+      // Update the diagram code
       setDiagramCode(mermaidCode);
+      
+      // Cache the diagram code for future use
+      setDiagramCodeCache(prev => ({
+        ...prev,
+        [activePdfKey as string]: {
+          ...(prev[activePdfKey as string] || {}),
+          [diagramType]: mermaidCode
+        }
+      }));
+      
     } catch (error) {
       console.error(`Error generating ${diagramType}:`, error);
       toast({
@@ -171,7 +211,17 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const handleDiagramTypeChange = (value: DiagramType) => {
     if (value !== diagramType) {
       setDiagramType(value);
-      setDiagramCode(""); // Clear current diagram
+      
+      // Check if we have cached data for this diagram type and PDF
+      const cachedDiagram = diagramCodeCache[activePdfKey as string]?.[value];
+      
+      if (cachedDiagram) {
+        // Use cached diagram immediately
+        setDiagramCode(cachedDiagram);
+      } else {
+        // Otherwise clear and generate new
+        setDiagramCode("");
+      }
     }
   };
 
@@ -186,8 +236,16 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
       })
     );
     
-    // Clear current diagram so it regenerates for the selected PDF
-    setDiagramCode("");
+    // Check if we have cached data for this PDF and current diagram type
+    const cachedDiagram = diagramCodeCache[key]?.[diagramType];
+    
+    if (cachedDiagram) {
+      // Use cached diagram immediately 
+      setDiagramCode(cachedDiagram);
+    } else {
+      // Clear and generate new diagram
+      setDiagramCode("");
+    }
   };
 
   // Download the diagram as PNG
