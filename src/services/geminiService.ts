@@ -772,4 +772,157 @@ const cleanSequenceDiagramSyntax = (code: string): string => {
       let fixedLine = line;
       
       // Fix arrows with two dashes only
-      fixedLine
+      fixedLine = fixedLine.replace(/([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)/g, "$1->>$2");
+      
+      // Remove semicolons which can cause issues
+      fixedLine = fixedLine.replace(/;/g, "");
+      
+      validLines.push(fixedLine);
+    });
+    
+    return validLines.join('\n');
+  } catch (error) {
+    console.error("Error cleaning sequence diagram syntax:", error);
+    return `sequenceDiagram
+      participant Error
+      participant System
+      
+      Error->>System: Syntax Cleaning Failed
+      System->>Error: Please try again`;
+  }
+};
+
+// New function to generate mindmap from PDF content
+export const generateMindmapFromPdf = async (): Promise<string> => {
+  try {
+    // Retrieve stored PDF text from sessionStorage
+    const pdfText = sessionStorage.getItem('pdfText');
+    
+    if (!pdfText || pdfText.trim() === '') {
+      return `mindmap
+        root((Error))
+          No PDF Content
+            Please upload a PDF first`;
+    }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+    Create a valid Mermaid mindmap based on this document text. 
+    
+    IMPORTANT: Use ACTUAL SPECIFIC content from the document, not generic labels.
+    
+    CRITICAL MERMAID SYNTAX RULES:
+    1. Start with 'mindmap'
+    2. Use proper indentation for hierarchy
+    3. Root node must use this exact syntax: root((Paper Title))
+    4. First level nodes use text on their own line with proper indentation
+    5. You can use these node styles:
+       - Regular text node (just text)
+       - Text in square brackets [Text]
+       - Text in parentheses (Text)
+       - Text in double parentheses ((Text))
+    6. Max 3 levels of hierarchy
+    7. Max 15 nodes total
+    8. AVOID special characters that might break syntax
+    9. NEVER use class declarations like "class node className"
+    
+    EXAMPLE CORRECT SYNTAX:
+    mindmap
+      root((Research on Machine Learning))
+        Introduction
+          Background on neural networks
+          Problem of overfitting data
+        Methodology
+          LSTM architecture used
+          Training on 50,000 samples
+        Results
+          Achieved 94% accuracy
+          Reduced training time by 30%
+    
+    Here's the document text:
+    ${pdfText.slice(0, 12000)}
+    
+    Generate ONLY valid Mermaid mindmap code, nothing else.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    
+    // Remove markdown code blocks if present
+    const mermaidCode = text
+      .replace(/```mermaid\s?/g, "")
+      .replace(/```\s?/g, "")
+      .trim();
+    
+    return cleanMindmapSyntax(mermaidCode);
+  } catch (error) {
+    console.error("Gemini API mindmap generation error:", error);
+    return `mindmap
+      root((Error))
+        Failed to generate mindmap
+          Please try again`;
+  }
+};
+
+// Helper function to clean and fix common mindmap syntax issues
+const cleanMindmapSyntax = (code: string): string => {
+  if (!code || !code.trim()) {
+    return `mindmap
+      root((Error))
+        Empty mindmap
+          Please try again`;
+  }
+
+  try {
+    // Ensure the code starts with mindmap directive
+    let cleaned = code.trim();
+    if (!cleaned.startsWith("mindmap")) {
+      cleaned = "mindmap\n" + cleaned;
+    }
+
+    // Process line by line to ensure each line is valid
+    const lines = cleaned.split('\n');
+    const validLines: string[] = [];
+    
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      
+      // Skip empty lines and keep comments
+      if (trimmedLine === '') {
+        return;
+      }
+      
+      // Keep the mindmap directive
+      if (trimmedLine === 'mindmap') {
+        validLines.push(trimmedLine);
+        return;
+      }
+      
+      // Fix common issues with the root node
+      if (trimmedLine.includes('root') && !trimmedLine.includes('((')) {
+        const rootText = trimmedLine.replace(/root\s*\(?([^(]*)\)?/, '$1').trim();
+        validLines.push(`  root((${rootText}))`);
+        return;
+      }
+      
+      // Keep valid lines, ensuring proper indentation
+      validLines.push(line);
+    });
+    
+    // Ensure we have at least a root node
+    if (!validLines.some(line => line.includes('root(('))) {
+      validLines.splice(1, 0, '  root((Document))');
+    }
+    
+    return validLines.join('\n');
+  } catch (error) {
+    console.error("Error cleaning mindmap syntax:", error);
+    return `mindmap
+      root((Error))
+        Syntax Cleaning Failed
+          Please try again`;
+  }
+};
