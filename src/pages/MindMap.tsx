@@ -19,6 +19,7 @@ const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false); // New state to track capture status
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -94,12 +95,28 @@ const MindMap = () => {
     };
   }, [toast]);
 
+  // New effect to track capture progress
+  useEffect(() => {
+    const handleCaptureProgress = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setIsCapturing(!!customEvent.detail.inProgress);
+      }
+    };
+    
+    window.addEventListener('captureInProgress', handleCaptureProgress);
+    
+    return () => {
+      window.removeEventListener('captureInProgress', handleCaptureProgress);
+    };
+  }, []);
+
   // Listen for text selection events that should activate chat
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
       if (e.detail?.text) {
         setExplainText(e.detail.text);
-        // Open chat panel if it's not already open
+        // Always open chat panel
         if (!showChat) {
           setShowChat(true);
         }
@@ -113,7 +130,7 @@ const MindMap = () => {
     };
   }, [showChat]);
 
-  // New effect to handle captured images and open chat
+  // Enhanced effect to handle captured images and ensure chat opens
   useEffect(() => {
     const handleImageCaptured = (e: CustomEvent) => {
       // Always open chat when an image is captured
@@ -193,6 +210,14 @@ const MindMap = () => {
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
       />
+
+      {/* Capture in progress indicator */}
+      {isCapturing && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+          <span>Capturing screenshot...</span>
+        </div>
+      )}
 
       {/* Display temporary message if a capture error occurs */}
       {captureError && (

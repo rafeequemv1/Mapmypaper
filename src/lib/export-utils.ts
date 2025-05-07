@@ -76,6 +76,9 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
       console.log('Using CORS-friendly options for custom domain:', window.location.hostname);
     }
     
+    // Show a notification that capturing is in progress
+    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true } }));
+    
     const canvas = await html2canvas(element, options);
     
     const dataUrl = canvas.toDataURL('image/png');
@@ -87,8 +90,15 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // Signal that capture is complete
+    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: false } }));
+    return dataUrl;
   } catch (error) {
     console.error("Error exporting element as PNG:", error);
+    
+    // Signal that capture failed
+    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: false, error: true } }));
     
     // Provide more detailed error information
     if (error instanceof Error) {

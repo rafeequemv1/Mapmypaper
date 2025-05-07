@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -39,7 +38,7 @@ const PanelStructure = ({
   const [isLoadingMindMap, setIsLoadingMindMap] = useState(false);
   const { toast } = useToast();
   
-  // New state for captured image with flag to prevent double processing
+  // Updated state for captured image with flag to prevent double processing
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [processingCapture, setProcessingCapture] = useState(false);
 
@@ -255,7 +254,7 @@ const PanelStructure = ({
     }
   };
 
-  // Handle image captured from PDF viewer
+  // Handle image captured from PDF viewer - improved to ensure chat opens
   const handleImageCaptured = (imageData: string) => {
     // Exit if we're currently processing an image to prevent duplicates
     if (processingCapture) return;
@@ -266,7 +265,7 @@ const PanelStructure = ({
     // Store the image data
     setCapturedImage(imageData);
     
-    // Open chat panel if not already open
+    // Open chat panel if not already open - ALWAYS open chat when capturing image
     if (!showChat) {
       toggleChat();
     }
@@ -284,7 +283,7 @@ const PanelStructure = ({
     // Reset processing flag after a delay to prevent rapid successive captures
     setTimeout(() => {
       setProcessingCapture(false);
-    }, 800);
+    }, 1500); // Increased timeout to prevent issues
   };
 
   useEffect(() => {
@@ -298,9 +297,10 @@ const PanelStructure = ({
     };
   }, []);
 
-  // Enhanced event listener for opening chat with text
+  // Enhanced event listener for opening chat with text - ALWAYS open chat
   useEffect(() => {
     const handleOpenChat = (event: any) => {
+      // Always open chat when text is selected for explanation
       if (!showChat) {
         toggleChat();
       }
@@ -314,7 +314,7 @@ const PanelStructure = ({
     };
   }, [showChat, toggleChat, onExplainText]);
 
-  // Add new effect to handle openChatWithImage event coming from outside sources
+  // Improved event handler to handle openChatWithImage event
   useEffect(() => {
     const handleOpenChatWithImage = (event: CustomEvent) => {
       // Only process if we're not already handling an image capture
@@ -324,19 +324,15 @@ const PanelStructure = ({
         setProcessingCapture(true);
         setCapturedImage(event.detail.imageData);
         
-        // Open chat if not already open
+        // Always open chat when image is captured
         if (!showChat) {
           toggleChat();
-          // Trigger the open chat event
-          window.dispatchEvent(new CustomEvent('openChatWithImage', { 
-            detail: { imageData: event.detail.imageData } 
-          }));
         }
         
         // Reset processing flag after a delay
         setTimeout(() => {
           setProcessingCapture(false);
-        }, 800);
+        }, 1500); // Increased timeout
       }
     };
     

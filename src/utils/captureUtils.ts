@@ -39,10 +39,18 @@ export async function captureElementArea(
       console.log('Using CORS-friendly capture method for published domain');
     }
     
+    // Dispatch event to notify UI that capture is in progress
+    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true } }));
+    
     const canvas = await html2canvas(element, captureOptions);
     
     // Convert the canvas to a data URL
-    return canvas.toDataURL('image/png');
+    const imageUrl = canvas.toDataURL('image/png');
+    
+    // Dispatch event to notify UI that capture is complete
+    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: false, success: true } }));
+    
+    return imageUrl;
   } catch (error) {
     console.error('Error capturing element area:', error);
     
@@ -52,9 +60,13 @@ export async function captureElementArea(
       console.error('Error stack:', error.stack);
     }
     
-    // Report user-friendly error
+    // Report user-friendly error and notify UI that capture failed
     window.dispatchEvent(new CustomEvent('captureError', { 
       detail: { message: 'Failed to capture screenshot. This may be due to security restrictions on your domain.' } 
+    }));
+    
+    window.dispatchEvent(new CustomEvent('captureInProgress', { 
+      detail: { inProgress: false, error: true } 
     }));
     
     return null;
@@ -123,6 +135,7 @@ export function createSelectionRect(containerElement: HTMLElement) {
   let startY = 0;
   let currentRect = { x: 0, y: 0, width: 0, height: 0 };
   let isCapturing = false;
+  let isCaptureComplete = false;
   
   // Update rectangle position and dimensions
   const updateRect = (endX: number, endY: number) => {
@@ -160,6 +173,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
   
   // Start selection
   const startSelection = (x: number, y: number) => {
+    if (isCapturing) return; // Don't start a new selection if we're already capturing
+    
     isSelecting = true;
     startX = x;
     startY = y;
@@ -171,7 +186,7 @@ export function createSelectionRect(containerElement: HTMLElement) {
   
   // End selection
   const endSelection = (x: number, y: number) => {
-    if (!isSelecting) return null;
+    if (!isSelecting || isCapturing) return null;
     
     isSelecting = false;
     const rect = updateRect(x, y);
@@ -193,13 +208,17 @@ export function createSelectionRect(containerElement: HTMLElement) {
   
   // Move selection
   const moveSelection = (x: number, y: number) => {
-    if (!isSelecting) return;
+    if (!isSelecting || isCapturing) return;
     updateRect(x, y);
   };
   
   // Cancel selection
   const cancelSelection = () => {
+    // Don't cancel if we're in the middle of capturing
+    if (isCapturing && !isCaptureComplete) return;
+    
     isSelecting = false;
+    isCaptureComplete = false;
     selectionRect.style.display = 'none';
     captureTooltip.style.display = 'none';
     isCapturing = false;
@@ -217,8 +236,8 @@ export function createSelectionRect(containerElement: HTMLElement) {
       captureTooltip.classList.add('bg-blue-800');
       captureTooltip.classList.remove('hover:bg-blue-700');
       captureTooltip.style.cursor = 'default';
-    } else {
-      // Reset to normal state
+    } else if (!isCaptureComplete) {
+      // Reset to normal state only if not showing completion state
       captureTooltip.textContent = 'Capture';
       captureTooltip.classList.remove('bg-blue-800');
       captureTooltip.classList.add('hover:bg-blue-700');
@@ -227,6 +246,26 @@ export function createSelectionRect(containerElement: HTMLElement) {
       toggleTextSelection(true);
     }
   };
+  
+  // Listen for global capture progress events
+  const handleCaptureProgress = (e: Event) => {
+    const customEvent = e as CustomEvent;
+    if (customEvent.detail) {
+      if (customEvent.detail.inProgress === true) {
+        setCapturing(true);
+      } else if (customEvent.detail.inProgress === false) {
+        if (customEvent.detail.success) {
+          captureComplete();
+        } else if (customEvent.detail.error) {
+          captureError();
+        } else {
+          setCapturing(false);
+        }
+      }
+    }
+  };
+  
+  window.addEventListener('captureInProgress', handleCaptureProgress);
   
   // Add scroll listener to update rectangle position when scrolling
   const handleScroll = () => {
@@ -251,20 +290,18 @@ export function createSelectionRect(containerElement: HTMLElement) {
   });
   
   // Add error handling for capture failures
-  containerElement.addEventListener('captureError', (e: Event) => {
-    const customEvent = e as CustomEvent;
-    if (customEvent.detail?.message) {
-      // Display error message
-      captureTooltip.textContent = 'Capture failed';
-      captureTooltip.classList.add('bg-red-600');
-      
-      // Reset after a delay
-      setTimeout(() => {
-        setCapturing(false);
-        cancelSelection();
-      }, 2000);
-    }
-  });
+  const captureError = () => {
+    // Display error message
+    captureTooltip.textContent = 'Capture failed';
+    captureTooltip.classList.add('bg-red-600');
+    
+    // Reset after a delay
+    setTimeout(() => {
+      setCapturing(false);
+      isCaptureComplete = false;
+      cancelSelection();
+    }, 2000);
+  };
   
   // Capture complete handler - Keep the tooltip shown until explicitly told to hide
   const captureComplete = () => {
@@ -272,17 +309,21 @@ export function createSelectionRect(containerElement: HTMLElement) {
     captureTooltip.textContent = 'Captured!';
     captureTooltip.classList.remove('bg-blue-800');
     captureTooltip.classList.add('bg-green-600');
+    isCapturing = false;
+    isCaptureComplete = true;
     
     // After showing success, remove after delay
     setTimeout(() => {
-      if (containerElement.contains(captureTooltip)) {
-        captureTooltip.style.display = 'none';
+      if (containerElement.contains(captureTooltip) && isCaptureComplete) {
+        cancelSelection();
       }
-    }, 1500);
+    }, 2000);
   };
   
   // Remove selection elements
   const destroy = () => {
+    // Remove global event listener
+    window.removeEventListener('captureInProgress', handleCaptureProgress);
     containerElement.removeEventListener('scroll', handleScroll);
     
     if (containerElement.contains(selectionRect)) {
@@ -303,6 +344,7 @@ export function createSelectionRect(containerElement: HTMLElement) {
     cancelSelection,
     setCapturing,
     captureComplete,
+    captureError,
     destroy,
     isSelecting: () => isSelecting,
     isCapturing: () => isCapturing
