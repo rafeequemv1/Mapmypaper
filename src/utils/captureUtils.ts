@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for capturing screenshot areas of the PDF
  */
@@ -40,6 +41,7 @@ export async function captureElementArea(
     }
     
     // Dispatch event to notify UI that capture is in progress
+    // We trigger this here as well to ensure UI is updated as early as possible
     window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true } }));
     
     const canvas = await html2canvas(element, captureOptions);
@@ -47,8 +49,9 @@ export async function captureElementArea(
     // Convert the canvas to a data URL
     const imageUrl = canvas.toDataURL('image/png');
     
-    // Dispatch event to notify UI that capture is complete
-    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: false, success: true } }));
+    // We don't dispatch completion here - we let exportUtils handle that
+    // This prevents premature hiding of the selection rectangle
+    // The completion event will be dispatched by the calling function after processing the image
     
     return imageUrl;
   } catch (error) {
@@ -60,14 +63,12 @@ export async function captureElementArea(
       console.error('Error stack:', error.stack);
     }
     
-    // Report user-friendly error and notify UI that capture failed
+    // Report user-friendly error but don't hide UI elements yet
     window.dispatchEvent(new CustomEvent('captureError', { 
       detail: { message: 'Failed to capture screenshot. This may be due to security restrictions on your domain.' } 
     }));
     
-    window.dispatchEvent(new CustomEvent('captureInProgress', { 
-      detail: { inProgress: false, error: true } 
-    }));
+    // We'll let the parent function handle finalizing the capture state
     
     return null;
   }

@@ -1,4 +1,3 @@
-
 import { MindElixirInstance } from "mind-elixir";
 
 /**
@@ -57,6 +56,9 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
  */
 export const downloadElementAsPNG = async (element: HTMLElement, fileName: string = 'image'): Promise<string> => {
   try {
+    // Signal that capture process is starting before doing any work
+    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true } }));
+    
     // Dynamically import html2canvas to ensure it's available
     const html2canvas = (await import('html2canvas')).default;
     
@@ -77,10 +79,10 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
       console.log('Using CORS-friendly options for custom domain:', window.location.hostname);
     }
     
-    // Show a notification that capturing is in progress
-    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true } }));
-    
+    // Start the capture process - this might take a while
+    console.log('Starting HTML2Canvas capture...');
     const canvas = await html2canvas(element, options);
+    console.log('HTML2Canvas capture completed');
     
     const dataUrl = canvas.toDataURL('image/png');
     
@@ -92,30 +94,40 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     link.click();
     document.body.removeChild(link);
     
-    // Signal that capture is complete
-    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: false } }));
+    // Wait a brief moment before signaling completion to allow UI to update properly
+    // This small delay helps ensure the rectangle stays visible long enough for feedback
+    setTimeout(() => {
+      // Signal that capture is complete with success flag
+      window.dispatchEvent(new CustomEvent('captureInProgress', { 
+        detail: { inProgress: false, success: true } 
+      }));
+    }, 500);
     
     // Return the data URL for other uses
     return dataUrl;
   } catch (error) {
     console.error("Error exporting element as PNG:", error);
     
-    // Signal that capture failed
-    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: false, error: true } }));
-    
-    // Provide more detailed error information
-    if (error instanceof Error) {
-      console.error(`Error name: ${error.name}, message: ${error.message}`);
-      console.error("Error stack:", error.stack);
-      
-      // Dispatch an event with additional details for the UI
-      window.dispatchEvent(new CustomEvent('captureError', { 
-        detail: { 
-          message: `Screenshot failed: ${error.message}. Check console for details.`,
-          error: error 
-        } 
+    // Signal that capture failed but keep the UI element visible a bit longer
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('captureInProgress', { 
+        detail: { inProgress: false, error: true } 
       }));
-    }
+      
+      // Provide more detailed error information
+      if (error instanceof Error) {
+        console.error(`Error name: ${error.name}, message: ${error.message}`);
+        console.error("Error stack:", error.stack);
+        
+        // Dispatch an event with additional details for the UI
+        window.dispatchEvent(new CustomEvent('captureError', { 
+          detail: { 
+            message: `Screenshot failed: ${error.message}. Check console for details.`,
+            error: error 
+          } 
+        }));
+      }
+    }, 1000);
     
     throw error;
   }
