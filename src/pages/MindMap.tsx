@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +18,8 @@ const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false); // New state to track capture status
+  const [isCapturing, setIsCapturing] = useState(false); // State to track capture status
+  const [isCapturingInPdf, setIsCapturingInPdf] = useState(false); // New state to track if capture is happening in PDF
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -95,12 +95,17 @@ const MindMap = () => {
     };
   }, [toast]);
 
-  // New effect to track capture progress
+  // Modified effect to track capture progress with PDF flag
   useEffect(() => {
     const handleCaptureProgress = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail) {
         setIsCapturing(!!customEvent.detail.inProgress);
+        
+        // Only set the PDF capturing flag if specifically mentioned
+        if (customEvent.detail.inPdf !== undefined) {
+          setIsCapturingInPdf(!!customEvent.detail.inPdf);
+        }
       }
     };
     
@@ -211,8 +216,8 @@ const MindMap = () => {
         onOpenChange={setShowFlowchart}
       />
 
-      {/* Capture in progress indicator */}
-      {isCapturing && (
+      {/* Capture in progress indicator - ONLY SHOW IF NOT IN PDF */}
+      {isCapturing && !isCapturingInPdf && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
           <span>Capturing screenshot...</span>

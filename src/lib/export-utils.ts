@@ -1,3 +1,4 @@
+
 import { MindElixirInstance } from "mind-elixir";
 
 /**
@@ -57,7 +58,8 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
 export const downloadElementAsPNG = async (element: HTMLElement, fileName: string = 'image'): Promise<string> => {
   try {
     // Signal that capture process is starting before doing any work
-    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true } }));
+    // Added inPdf: false to indicate this is a global capture, not from PDF viewer
+    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true, inPdf: false } }));
     
     // Dynamically import html2canvas to ensure it's available
     const html2canvas = (await import('html2canvas')).default;
@@ -99,7 +101,7 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     setTimeout(() => {
       // Signal that capture is complete with success flag
       window.dispatchEvent(new CustomEvent('captureInProgress', { 
-        detail: { inProgress: false, success: true } 
+        detail: { inProgress: false, success: true, inPdf: false } 
       }));
     }, 500);
     
@@ -111,7 +113,7 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     // Signal that capture failed but keep the UI element visible a bit longer
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('captureInProgress', { 
-        detail: { inProgress: false, error: true } 
+        detail: { inProgress: false, error: true, inPdf: false } 
       }));
       
       // Provide more detailed error information

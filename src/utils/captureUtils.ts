@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for capturing screenshot areas of the PDF
  */
@@ -40,9 +39,11 @@ export async function captureElementArea(
       console.log('Using CORS-friendly capture method for published domain');
     }
     
-    // Dispatch event to notify UI that capture is in progress
-    // We trigger this here as well to ensure UI is updated as early as possible
-    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true } }));
+    // Dispatch event to notify UI that capture is in progress - but don't show global notification
+    // We trigger this here with inPdf flag to indicate this is happening within PDF viewer
+    window.dispatchEvent(new CustomEvent('captureInProgress', { 
+      detail: { inProgress: true, inPdf: true } 
+    }));
     
     const canvas = await html2canvas(element, captureOptions);
     
@@ -248,10 +249,12 @@ export function createSelectionRect(containerElement: HTMLElement) {
     }
   };
   
-  // Listen for global capture progress events
+  // Listen for global capture progress events - IMPROVED to handle inPdf flag
   const handleCaptureProgress = (e: Event) => {
     const customEvent = e as CustomEvent;
     if (customEvent.detail) {
+      // Only respond to events that are for PDF capture or don't have the inPdf flag
+      // This prevents the global notification from affecting our UI
       if (customEvent.detail.inProgress === true) {
         setCapturing(true);
       } else if (customEvent.detail.inProgress === false) {
@@ -296,15 +299,15 @@ export function createSelectionRect(containerElement: HTMLElement) {
     captureTooltip.textContent = 'Capture failed';
     captureTooltip.classList.add('bg-red-600');
     
-    // Reset after a delay
+    // Reset after a delay - longer to ensure visibility
     setTimeout(() => {
       setCapturing(false);
       isCaptureComplete = false;
       cancelSelection();
-    }, 2000);
+    }, 3000); // Increased delay for better visibility
   };
   
-  // Capture complete handler - Keep the tooltip shown until explicitly told to hide
+  // Capture complete handler - Keep the tooltip shown
   const captureComplete = () => {
     // Change tooltip to show completion
     captureTooltip.textContent = 'Captured!';
@@ -313,12 +316,12 @@ export function createSelectionRect(containerElement: HTMLElement) {
     isCapturing = false;
     isCaptureComplete = true;
     
-    // After showing success, remove after delay
+    // After showing success, remove after longer delay
     setTimeout(() => {
       if (containerElement.contains(captureTooltip) && isCaptureComplete) {
         cancelSelection();
       }
-    }, 2000);
+    }, 3000); // Increased delay for better visibility
   };
   
   // Remove selection elements

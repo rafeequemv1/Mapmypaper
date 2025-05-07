@@ -254,7 +254,7 @@ const PanelStructure = ({
     }
   };
 
-  // Handle image captured from PDF viewer - improved to ensure chat opens
+  // Handle image captured from PDF viewer - improved to ensure chat opens and properly handle PDF capture mode
   const handleImageCaptured = (imageData: string) => {
     // Exit if we're currently processing an image to prevent duplicates
     if (processingCapture) return;
@@ -275,9 +275,9 @@ const PanelStructure = ({
       new CustomEvent('openChatWithImage', { detail: { imageData } })
     );
     
-    // Signal that capture was successful to update UI
+    // Signal that capture was successful to update UI - use inPdf flag to ensure rectangle stays visible
     window.dispatchEvent(
-      new CustomEvent('captureDone', { detail: { success: true } })
+      new CustomEvent('captureDone', { detail: { success: true, inPdf: true } })
     );
     
     // Reset processing flag after a delay to prevent rapid successive captures
