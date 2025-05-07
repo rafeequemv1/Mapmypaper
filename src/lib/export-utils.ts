@@ -53,8 +53,9 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
  * Downloads an HTML element as PNG image using html2canvas
  * @param element Reference to the HTML element to download
  * @param fileName Name of the file without extension
+ * @returns Promise that resolves with the data URL of the captured image
  */
-export const downloadElementAsPNG = async (element: HTMLElement, fileName: string = 'image'): Promise<void> => {
+export const downloadElementAsPNG = async (element: HTMLElement, fileName: string = 'image'): Promise<string> => {
   try {
     // Dynamically import html2canvas to ensure it's available
     const html2canvas = (await import('html2canvas')).default;
@@ -93,6 +94,8 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     
     // Signal that capture is complete
     window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: false } }));
+    
+    // Return the data URL for other uses
     return dataUrl;
   } catch (error) {
     console.error("Error exporting element as PNG:", error);
