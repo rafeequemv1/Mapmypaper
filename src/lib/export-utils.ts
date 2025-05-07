@@ -63,7 +63,11 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
       scale: 2, // Higher resolution
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      foreignObjectRendering: false, // Disable foreignObject for better cross-domain compatibility
+      proxy: window.location.hostname !== 'localhost' && !window.location.hostname.includes('lovable') 
+        ? '/cors-proxy' // Optional CORS proxy path if you have one set up
+        : null
     });
     
     const dataUrl = canvas.toDataURL('image/png');
@@ -80,3 +84,4 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     throw error;
   }
 };
+

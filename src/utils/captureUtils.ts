@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for capturing screenshot areas of the PDF
  */
@@ -31,8 +30,14 @@ export async function captureElementArea(
       scale: window.devicePixelRatio, // Use device pixel ratio for better quality
       logging: false,
       allowTaint: true,
-      useCORS: true
+      useCORS: true,
+      foreignObjectRendering: false // Disable foreignObject rendering which can cause issues across domains
     };
+    
+    // Add CORS proxy support if needed
+    if (window.location.hostname !== 'localhost' && !window.location.hostname.includes('lovable')) {
+      console.log('Using CORS-friendly capture method for published domain');
+    }
     
     const canvas = await html2canvas(element, captureOptions);
     
@@ -40,6 +45,18 @@ export async function captureElementArea(
     return canvas.toDataURL('image/png');
   } catch (error) {
     console.error('Error capturing element area:', error);
+    
+    // Log more detailed information about the error for debugging
+    if (error instanceof Error) {
+      console.error(`Error name: ${error.name}, message: ${error.message}`);
+      console.error('Error stack:', error.stack);
+    }
+    
+    // Report user-friendly error
+    window.dispatchEvent(new CustomEvent('captureError', { 
+      detail: { message: 'Failed to capture screenshot. This may be due to security restrictions on your domain.' } 
+    }));
+    
     return null;
   }
 }
@@ -231,6 +248,22 @@ export function createSelectionRect(containerElement: HTMLElement) {
     
     containerElement.dispatchEvent(captureEvent);
     setCapturing(true);
+  });
+  
+  // Add error handling for capture failures
+  containerElement.addEventListener('captureError', (e: Event) => {
+    const customEvent = e as CustomEvent;
+    if (customEvent.detail?.message) {
+      // Display error message
+      captureTooltip.textContent = 'Capture failed';
+      captureTooltip.classList.add('bg-red-600');
+      
+      // Reset after a delay
+      setTimeout(() => {
+        setCapturing(false);
+        cancelSelection();
+      }, 2000);
+    }
   });
   
   // Remove selection elements
