@@ -63,6 +63,7 @@ const MindMap = () => {
   // Handle text selected for explanation
   const handleExplainText = useCallback((text: string) => {
     setExplainText(text);
+    // Always open chat when text is selected for explanation
     if (!showChat) {
       setShowChat(true);
       toast({
@@ -111,6 +112,26 @@ const MindMap = () => {
       window.removeEventListener('openChatWithText', handleTextSelected as EventListener);
     };
   }, [showChat]);
+
+  // New effect to handle captured images and open chat
+  useEffect(() => {
+    const handleImageCaptured = (e: CustomEvent) => {
+      // Always open chat when an image is captured
+      if (!showChat) {
+        setShowChat(true);
+        toast({
+          title: "Image Captured",
+          description: "Opening chat with your selected area.",
+        });
+      }
+    };
+    
+    window.addEventListener('openChatWithImage', handleImageCaptured as EventListener);
+    
+    return () => {
+      window.removeEventListener('openChatWithImage', handleImageCaptured as EventListener);
+    };
+  }, [showChat, toast]);
 
   useEffect(() => {
     if (location.state?.presetQuestion) {

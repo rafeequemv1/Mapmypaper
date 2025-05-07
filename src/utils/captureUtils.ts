@@ -266,6 +266,21 @@ export function createSelectionRect(containerElement: HTMLElement) {
     }
   });
   
+  // Capture complete handler - Keep the tooltip shown until explicitly told to hide
+  const captureComplete = () => {
+    // Change tooltip to show completion
+    captureTooltip.textContent = 'Captured!';
+    captureTooltip.classList.remove('bg-blue-800');
+    captureTooltip.classList.add('bg-green-600');
+    
+    // After showing success, remove after delay
+    setTimeout(() => {
+      if (containerElement.contains(captureTooltip)) {
+        captureTooltip.style.display = 'none';
+      }
+    }, 1500);
+  };
+  
   // Remove selection elements
   const destroy = () => {
     containerElement.removeEventListener('scroll', handleScroll);
@@ -287,7 +302,9 @@ export function createSelectionRect(containerElement: HTMLElement) {
     endSelection,
     cancelSelection,
     setCapturing,
+    captureComplete,
     destroy,
-    isSelecting: () => isSelecting
+    isSelecting: () => isSelecting,
+    isCapturing: () => isCapturing
   };
 }

@@ -193,6 +193,32 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
+    // Listen for capture complete events to update UI
+    useEffect(() => {
+      const handleCaptureDone = (e: CustomEvent) => {
+        if (selectionRectRef.current && e.detail?.success) {
+          // Update the selection rectangle UI to show completion
+          selectionRectRef.current.captureComplete();
+          
+          // After a short delay, reset snapshot mode
+          setTimeout(() => {
+            if (selectionRectRef.current) {
+              // Don't cancel selection yet - let the success UI remain visible
+              // Instead we'll just exit snapshot mode
+              setIsSnapshotMode(false);
+              setIsProcessingCapture(false);
+            }
+          }, 1000);
+        }
+      };
+      
+      window.addEventListener('captureDone', handleCaptureDone as EventListener);
+      
+      return () => {
+        window.removeEventListener('captureDone', handleCaptureDone as EventListener);
+      };
+    }, []);
+
     // Updated effect for snapshot mode with capture tooltip - modified to prevent duplicate events
     useEffect(() => {
       if (!pdfContainerRef.current || !viewportRef.current) return;
@@ -270,14 +296,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               description: "Failed to capture the selected area",
               variant: "destructive"
             });
-          } finally {
+            
             // Reset the capturing state and clean up
             if (selectionRectRef.current) {
               selectionRectRef.current.setCapturing(false);
               selectionRectRef.current.cancelSelection();
             }
             setIsSnapshotMode(false);
-            // Re-enable text selection when capture is complete
+            // Re-enable text selection when capture fails
             toggleTextSelection(true);
             
             // Reset processing flag after a short delay
@@ -285,6 +311,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               setIsProcessingCapture(false);
             }, 500);
           }
+          
+          // Note: We DON'T reset here - we wait for the captureDone event
+          // which is dispatched from the handler in PanelStructure
         };
         
         // Add event listeners
@@ -729,15 +758,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               {isSnapshotMode && (
                 <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
                   <Camera className="h-4 w-4" />
-                  <span>Draw to capture area</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="ml-2 bg-blue-600 hover:bg-blue-700 p-1 h-6" 
-                    onClick={() => setIsSnapshotMode(false)}
-                  >
-                    Cancel
-                  </Button>
+                  <span>{isProcessingCapture ? "Processing capture..." : "Draw to capture area"}</span>
+                  {!isProcessingCapture && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="ml-2 bg-blue-600 hover:bg-blue-700 p-1 h-6" 
+                      onClick={() => setIsSnapshotMode(false)}
+                    >
+                      Cancel
+                    </Button>
+                  )}
                 </div>
               )}
               

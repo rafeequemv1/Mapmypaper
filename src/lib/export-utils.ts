@@ -59,16 +59,24 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     // Dynamically import html2canvas to ensure it's available
     const html2canvas = (await import('html2canvas')).default;
     
-    const canvas = await html2canvas(element, {
+    // Check if we're on a custom domain or lovable.app
+    const isCustomDomain = window.location.hostname !== 'localhost' && !window.location.hostname.includes('lovable');
+    
+    // Create HTML2Canvas options with CORS handling for custom domains
+    const options = {
       scale: 2, // Higher resolution
-      useCORS: true,
-      allowTaint: true,
+      useCORS: true, // Always try to use CORS
+      allowTaint: true, // Allow tainted canvas if CORS fails
       backgroundColor: '#ffffff',
-      foreignObjectRendering: false, // Disable foreignObject for better cross-domain compatibility
-      proxy: window.location.hostname !== 'localhost' && !window.location.hostname.includes('lovable') 
-        ? '/cors-proxy' // Optional CORS proxy path if you have one set up
-        : null
-    });
+      logging: isCustomDomain, // Enable logging on custom domains to help with debugging
+      foreignObjectRendering: false // Disable foreignObject for better cross-domain compatibility
+    };
+    
+    if (isCustomDomain) {
+      console.log('Using CORS-friendly options for custom domain:', window.location.hostname);
+    }
+    
+    const canvas = await html2canvas(element, options);
     
     const dataUrl = canvas.toDataURL('image/png');
     
@@ -81,7 +89,21 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     document.body.removeChild(link);
   } catch (error) {
     console.error("Error exporting element as PNG:", error);
+    
+    // Provide more detailed error information
+    if (error instanceof Error) {
+      console.error(`Error name: ${error.name}, message: ${error.message}`);
+      console.error("Error stack:", error.stack);
+      
+      // Dispatch an event with additional details for the UI
+      window.dispatchEvent(new CustomEvent('captureError', { 
+        detail: { 
+          message: `Screenshot failed: ${error.message}. Check console for details.`,
+          error: error 
+        } 
+      }));
+    }
+    
     throw error;
   }
 };
-

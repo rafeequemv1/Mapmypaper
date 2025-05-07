@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -275,10 +276,15 @@ const PanelStructure = ({
       new CustomEvent('openChatWithImage', { detail: { imageData } })
     );
     
+    // Signal that capture was successful to update UI
+    window.dispatchEvent(
+      new CustomEvent('captureDone', { detail: { success: true } })
+    );
+    
     // Reset processing flag after a delay to prevent rapid successive captures
     setTimeout(() => {
       setProcessingCapture(false);
-    }, 500);
+    }, 800);
   };
 
   useEffect(() => {
@@ -321,12 +327,16 @@ const PanelStructure = ({
         // Open chat if not already open
         if (!showChat) {
           toggleChat();
+          // Trigger the open chat event
+          window.dispatchEvent(new CustomEvent('openChatWithImage', { 
+            detail: { imageData: event.detail.imageData } 
+          }));
         }
         
         // Reset processing flag after a delay
         setTimeout(() => {
           setProcessingCapture(false);
-        }, 500);
+        }, 800);
       }
     };
     
