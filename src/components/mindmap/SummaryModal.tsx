@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,8 @@ const emptyMappedSummary: Summary = {
   Objectives: "Loading...",
   Methods: "Loading...",
   Results: "Loading...",
-  Conclusions: "Loading..."
+  Conclusions: "Loading...",
+  "Key Concepts": "Loading..."
 };
 
 interface SummaryModalProps {
