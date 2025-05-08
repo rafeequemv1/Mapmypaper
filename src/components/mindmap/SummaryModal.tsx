@@ -218,12 +218,12 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent 
-          className="max-w-[65vw] max-h-[90vh] overflow-hidden flex flex-col"
-          style={{ maxWidth: '65vw' }} // Reduced from 75vw to 65vw
+          className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-white"
+          style={{ maxWidth: '650px' }} // Reduced width to match the image reference
         >
-          <DialogHeader>
-            <DialogTitle className="flex justify-between items-center text-xl">
-              <span>Paper Summary</span>
+          <DialogHeader className="border-b pb-3">
+            <DialogTitle className="flex justify-between items-center text-xl font-semibold">
+              <span>Structured summary</span>
               <div className="flex gap-2">
                 <Button 
                   size="sm"
@@ -263,27 +263,26 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             </div>
           ) : (
             <div className="flex-1 overflow-auto pr-2">
-              <div ref={summaryRef} className="p-4 space-y-6">
-                {/* Always show Easy Summary Section */}
+              <div ref={summaryRef} className="p-6 space-y-8">
+                {/* Snapshot Section (replaces Easy Summary) */}
                 {(easySummaryBullets.length > 0) && (
-                  <div className="summary-section">
-                    <h3 className="text-xl font-bold border-b pb-1 mb-3">Easy Summary</h3>
-                    <ul className="list-disc list-inside space-y-2 text-base">
-                      {easySummaryBullets.map((bullet, idx) => (
-                        <li key={idx}>{bullet}</li>
-                      ))}
-                    </ul>
+                  <div className="summary-section bg-gray-50 rounded-lg p-5">
+                    <h3 className="text-xl font-bold mb-3">Snapshot</h3>
+                    <div className="text-base leading-relaxed">
+                      {easySummaryText}
+                    </div>
                   </div>
                 )}
 
-                {/* Detailed Sections */}
+                {/* Key Sections with improved styling */}
                 {Object.entries(cleanedSummary).map(([key, value]) => {
-                  // Skip Easy Summary as it's separately rendered
+                  // Skip Summary as it's already shown as Snapshot
                   if (key === "Summary") return null;
+                  
                   return (
-                    <div key={key} className="summary-section">
-                      <h3 className="text-xl font-bold border-b pb-1 mb-3">{key}</h3>
-                      <div className="summary-section-content pl-2 text-base leading-relaxed">
+                    <div key={key} className="summary-section bg-gray-50 rounded-lg p-5">
+                      <h3 className="text-xl font-bold mb-3">{key}</h3>
+                      <div className="summary-section-content text-base leading-relaxed">
                         {value}
                       </div>
                     </div>
@@ -311,6 +310,30 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <style jsx global>{`
+        /* Custom styling for citations */
+        .citation-circle {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 1.5rem;
+          height: 1.5rem;
+          background-color: #e5e7eb;
+          color: #4b5563;
+          border-radius: 9999px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          margin: 0 0.25rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          vertical-align: middle;
+        }
+        
+        .citation-circle:hover {
+          background-color: #d1d5db;
+        }
+      `}</style>
     </>
   );
 };
