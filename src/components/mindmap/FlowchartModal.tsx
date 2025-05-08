@@ -59,6 +59,41 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     }
   }, [diagramCode, open]);
 
+  // Process mindmap text to ensure proper syntax
+  const processMindMapText = (text: string): string => {
+    // Remove any non-compliant characters or formatting
+    let processed = text.replace(/\(/g, ' ');
+    processed = processed.replace(/\)/g, ' ');
+    
+    // Ensure lines are properly formatted with indentation instead of spaces
+    const lines = processed.split('\n');
+    let result = 'mindmap\n';
+    
+    // Add the root node
+    if (lines.length > 0) {
+      const title = lines[0].trim().replace(/["']/g, '');
+      result += `  root((${title}))\n`;
+      
+      // Process the remaining lines as child nodes with proper indentation
+      let currentLevel = 1;
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        // Skip lines that might cause parsing errors
+        if (line.includes('(') || line.includes(')') || line.includes('{') || line.includes('}') || line.includes('[') || line.includes(']')) {
+          continue;
+        }
+        
+        // Add proper indentation
+        const indent = '    '.repeat(currentLevel);
+        result += `${indent}${line}\n`;
+      }
+    }
+    
+    return result;
+  };
+
   // Generate diagram based on selected type
   const generateDiagram = async () => {
     setIsLoading(true);
@@ -71,7 +106,9 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           mermaidCode = mermaidCode.replace(/flowchart (TD|TB)/, 'flowchart LR');
         }
       } else {
-        mermaidCode = await generateMindmapFromPdf();
+        let rawMindmapCode = await generateMindmapFromPdf();
+        // Process the mind map syntax to ensure proper formatting
+        mermaidCode = processMindMapText(rawMindmapCode);
       }
       setDiagramCode(mermaidCode);
     } catch (error) {
@@ -122,39 +159,45 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         container.style.overflow = 'auto';
       }
       
+      console.log("Rendering diagram with code:", diagramCode);
       container.textContent = diagramCode;
       
       // Add to the DOM
       diagramRef.current.appendChild(container);
       
-      // Render with mermaid
-      await mermaid.run({
-        nodes: [container]
-      });
-      
-      // For mindmap, find the SVG and make it full size
-      if (diagramType === 'mindmap') {
-        const svg = container.querySelector('svg');
-        if (svg) {
-          svg.style.width = '100%';
-          svg.style.height = '100%';
-          svg.style.maxHeight = '60vh';
-          svg.setAttribute('width', '100%');
-          svg.setAttribute('height', '100%');
+      try {
+        // Render with mermaid
+        await mermaid.run({
+          nodes: [container]
+        });
+        
+        // For mindmap, find the SVG and make it full size
+        if (diagramType === 'mindmap') {
+          const svg = container.querySelector('svg');
+          if (svg) {
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.maxHeight = '60vh';
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+          }
+        } else if (diagramType === 'flowchart') {
+          // For flowcharts, ensure SVG fits within container
+          const svg = container.querySelector('svg');
+          if (svg) {
+            svg.style.maxWidth = '100%';
+            svg.style.height = 'auto';
+            svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+          }
         }
-      } else if (diagramType === 'flowchart') {
-        // For flowcharts, ensure SVG fits within container
-        const svg = container.querySelector('svg');
-        if (svg) {
-          svg.style.maxWidth = '100%';
-          svg.style.height = 'auto';
-          svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
-        }
+      } catch (renderError) {
+        console.error("Mermaid rendering error:", renderError);
+        throw renderError;
       }
     } catch (error) {
       console.error("Mermaid rendering error:", error);
       
-      // Simple fallback - show the code instead
+      // Simple fallback - show the error and code instead
       if (diagramRef.current) {
         diagramRef.current.innerHTML = `
           <div class="p-4 border border-red-300 bg-red-50 rounded-md">
