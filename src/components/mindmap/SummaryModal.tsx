@@ -28,8 +28,7 @@ const emptyMappedSummary: Summary = {
   Objectives: "Loading...",
   Methods: "Loading...",
   Results: "Loading...",
-  Conclusions: "Loading...",
-  "Key Concepts": "Loading..."
+  Conclusions: "Loading..."
 };
 
 interface SummaryModalProps {
@@ -311,7 +310,9 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         </AlertDialogContent>
       </AlertDialog>
       
-      <style jsx global>{`
+      {/* Fixed the TypeScript error by using style element without jsx and global props */}
+      <style dangerouslySetInnerHTML={{ 
+        __html: `
         /* Custom styling for citations */
         .citation-circle {
           display: inline-flex;
@@ -333,7 +334,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         .citation-circle:hover {
           background-color: #d1d5db;
         }
-      `}</style>
+      `}} />
     </>
   );
 };
