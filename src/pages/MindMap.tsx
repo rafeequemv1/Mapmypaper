@@ -32,7 +32,7 @@ const MindMap = () => {
       if (operation.name === 'editTopic') {
         const nodeObj = operation.obj;
         if (nodeObj && nodeObj.topic) {
-          // Format node text to enforce 3-5 words per line
+          // Format node text to enforce max 6 words per node
           const isRoot = nodeObj.id === 'root';
           const wordsPerLine = isRoot ? 3 : 4;
           
@@ -44,17 +44,26 @@ const MindMap = () => {
             if (currentNode) {
               // Apply formatting rules
               const words = currentNode.topic.split(' ');
-              if (words.length > wordsPerLine) {
-                let formattedText = '';
-                for (let i = 0; i < words.length; i += wordsPerLine) {
-                  const chunk = words.slice(i, i + wordsPerLine).join(' ');
-                  formattedText += chunk + (i + wordsPerLine < words.length ? '\n' : '');
-                }
-                
-                // Update the node text with formatted version
-                // Using type assertion (as any) to access methods not defined in the TypeScript interface
-                (instance as any).updateNodeText(nodeObj.id, formattedText);
+              
+              // Limit to maximum 6 words total
+              const maxWords = 6;
+              const limitedWords = words.length > maxWords ? words.slice(0, maxWords) : words;
+              
+              // Add ellipsis if truncated
+              if (limitedWords.length < words.length) {
+                limitedWords[limitedWords.length - 1] += '...';
               }
+              
+              // Apply line breaks for readability
+              let formattedText = '';
+              for (let i = 0; i < limitedWords.length; i += wordsPerLine) {
+                const chunk = limitedWords.slice(i, i + wordsPerLine).join(' ');
+                formattedText += chunk + (i + wordsPerLine < limitedWords.length ? '\n' : '');
+              }
+              
+              // Update the node text with formatted version
+              // Using type assertion (as any) to access methods not defined in the TypeScript interface
+              (instance as any).updateNodeText(nodeObj.id, formattedText);
             }
           }, 100);
         }

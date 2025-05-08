@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -23,7 +22,7 @@ const formatNodeText = (text: string, wordsPerLine: number = 4, isRoot: boolean 
   if (!text) return '';
   
   // Use fewer words per line for root node
-  const effectiveWordsPerLine = isRoot ? 3 : wordsPerLine;
+  const effectiveWordsPerLine = isRoot ? 3 : Math.min(wordsPerLine, 6);
   
   // For root nodes, extract just the title part (first sentence or phrase)
   let processedText = text;
@@ -47,14 +46,25 @@ const formatNodeText = (text: string, wordsPerLine: number = 4, isRoot: boolean 
     processedText = ensureCompleteSentence(processedText);
   }
   
-  // Apply line breaks for better readability - strictly limit to 3-5 words per line
+  // Apply line breaks for better readability - strictly limit to max 6 words per line
   const words = processedText.split(' ');
-  if (words.length <= effectiveWordsPerLine) return processedText;
+  
+  // Truncate to maximum 6 words per node if longer
+  const maxTotalWords = 6;
+  const truncatedWords = words.length > maxTotalWords ? words.slice(0, maxTotalWords) : words;
+  
+  // If words were truncated, add ellipsis
+  if (truncatedWords.length < words.length) {
+    truncatedWords[truncatedWords.length - 1] += '...';
+  }
+  
+  // Apply line breaks based on words per line limit
+  if (truncatedWords.length <= effectiveWordsPerLine) return truncatedWords.join(' ');
   
   let result = '';
-  for (let i = 0; i < words.length; i += effectiveWordsPerLine) {
-    const chunk = words.slice(i, i + effectiveWordsPerLine).join(' ');
-    result += chunk + (i + effectiveWordsPerLine < words.length ? '\n' : '');
+  for (let i = 0; i < truncatedWords.length; i += effectiveWordsPerLine) {
+    const chunk = truncatedWords.slice(i, i + effectiveWordsPerLine).join(' ');
+    result += chunk + (i + effectiveWordsPerLine < truncatedWords.length ? '\n' : '');
   }
   
   return result;
@@ -374,6 +384,7 @@ const MindMapViewer = ({
                 node.topic = formatNodeText(node.topic, 3, true);
               } else {
                 // Enforce 3-5 words per line limit for all non-root nodes
+                // Now with max 6 words total per node
                 node.topic = formatNodeText(node.topic, 4);
               }
             }
@@ -622,6 +633,33 @@ const MindMapViewer = ({
         setIsReady(true);
       }, 300);
       
+      // Add event listener for node operations to enforce word limit per line
+      mind.bus.addListener('operation', (operation: any) => {
+        if (operation.name === 'editTopic') {
+          const nodeObj = operation.obj;
+          if (nodeObj && nodeObj.topic) {
+            // Format node text to enforce max 6 words per node
+            const isRoot = nodeObj.id === 'root';
+            const wordsPerLine = isRoot ? 3 : 4;
+            
+            // Format the node text after a short delay to allow the edit to complete
+            setTimeout(() => {
+              // Get the current node text after editing
+              // Using type assertion (as any) to access methods not defined in the TypeScript interface
+              const currentNode = (mind as any).findNodeObj(nodeObj.id);
+              if (currentNode) {
+                // Format with max 6 words total per node
+                const formattedText = formatNodeText(currentNode.topic, wordsPerLine, isRoot);
+                
+                // Update the node text with formatted version
+                // Using type assertion (as any) to access methods not defined in the TypeScript interface
+                (mind as any).updateNodeText(nodeObj.id, formattedText);
+              }
+            }, 100);
+          }
+        }
+      });
+      
       // Cleanup function
       return () => {
         styleObserver.disconnect();
@@ -696,105 +734,3 @@ const MindMapViewer = ({
     
     // Count the number of nodes for statistics
     const countNodes = (node: any): number => {
-      if (!node) return 0;
-      
-      let count = 1; // Count this node
-      
-      if (node.children && node.children.length > 0) {
-        for (const child of node.children) {
-          count += countNodes(child);
-        }
-      }
-      
-      return count;
-    };
-    
-    const hierarchySummary = extractTopics(nodeData);
-    const totalNodes = countNodes(nodeData);
-    
-    summaryText += hierarchySummary;
-    summaryText += `\n\n### Statistics\n`;
-    summaryText += `- Total topics: ${totalNodes}\n`;
-    summaryText += `- Depth: ${nodeData.children ? Math.max(...nodeData.children.map((c: any) => countNodes(c))) : 1}\n`;
-    
-    setSummary(summaryText);
-    setShowSummary(true);
-    
-    // If there's an onExplainText callback, send the summary
-    if (onExplainText) {
-      onExplainText(summaryText);
-    }
-    
-    if (onRequestOpenChat) {
-      onRequestOpenChat();
-    }
-    
-    toast({
-      title: "Summary Generated",
-      description: "The summary has been sent to the chat panel.",
-      duration: 3000,
-    });
-  };
-
-  return (
-    <div className="w-full h-full flex flex-col min-h-[300px] relative">
-      {/* Loading overlay - show when isLoading is true */}
-      {(isLoading || loadingProgress > 0) && (
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center">
-          <LoaderCircle className="h-12 w-12 text-purple-600 animate-spin mb-4" />
-          <h3 className="text-lg font-medium mb-2">Generating Mind Map</h3>
-          <div className="w-64 mb-2">
-            <Progress value={loadingProgress} className="h-2" />
-          </div>
-          <p className="text-sm text-gray-500">Please wait while we analyze the document...</p>
-        </div>
-      )}
-
-      {/* Placeholder when no map is generated yet */}
-      {!isMapGenerated && !isLoading && (
-        <div className="h-full w-full flex flex-col items-center justify-center bg-gray-50 rounded-md border border-dashed border-gray-300 p-8">
-          <FileText className="h-16 w-16 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Mind Map Yet</h3>
-          <p className="text-center text-gray-500 max-w-md mb-4">
-            Click the "Generate Mind Map" button to create a visual representation of your document.
-          </p>
-          <Button 
-            onClick={onRequestOpenChat}
-            variant="outline"
-            className="gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Open Chat
-          </Button>
-        </div>
-      )}
-      
-      {/* Summary display for nodes */}
-      {showSummary && (
-        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col p-4 overflow-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Node Summary</h3>
-            <Button variant="outline" size="sm" onClick={() => setShowSummary(false)}>
-              Close
-            </Button>
-          </div>
-          <div className="prose prose-sm max-w-none overflow-auto flex-1">
-            {summary.split('\n').map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Mind Map Container */}
-      <div 
-        ref={containerRef} 
-        className={`flex-1 overflow-hidden transition-opacity duration-300 ${isReady ? 'opacity-100' : 'opacity-0'}`}
-      >
-        {/* Mind Elixir will render here */}
-      </div>
-    </div>
-  );
-};
-
-export default MindMapViewer;
