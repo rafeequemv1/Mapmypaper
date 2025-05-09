@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +20,7 @@ interface PdfViewerProps {
   onPdfLoaded?: () => void;
   onImageCaptured?: (imageData: string) => void;
   renderTooltipContent?: () => React.ReactNode;
+  highlightByDefault?: boolean; // Added the missing prop
 }
 
 interface PdfViewerHandle {
@@ -28,7 +28,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, onImageCaptured, renderTooltipContent }, ref) => {
+  ({ onTextSelected, onPdfLoaded, onImageCaptured, renderTooltipContent, highlightByDefault = false }, ref) => {
     // Original PdfViewer component implementation with modifications
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
@@ -136,9 +136,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [showSearch]);
 
-    // Updated text selection handling to use absolute positioning within PDF container
+    // Updated effect for text selection to respect highlightByDefault prop
     useEffect(() => {
       let selectionTimeout: number | null = null;
+      
+      // Enable text selection by default if highlightByDefault is true
+      if (highlightByDefault) {
+        toggleTextSelection(true);
+      }
       
       const handleTextSelection = () => {
         const selection = window.getSelection();
@@ -196,7 +201,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         document.removeEventListener('mouseup', handleTextSelection);
         if (selectionTimeout) window.clearTimeout(selectionTimeout);
       };
-    }, []);
+    }, [highlightByDefault]);
 
     // Listen for capture complete events to update UI
     useEffect(() => {
@@ -856,17 +861,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 className="ml-auto text-red-700 hover:text-red-900"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+                  <path strokeLinecap="round" strokeLinejoin="round
