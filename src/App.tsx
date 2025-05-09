@@ -18,10 +18,6 @@ import Contact from "./pages/Contact";
 import Policy from "./pages/Policy";
 import Refund from "./pages/Refund";
 import Features from "./pages/Features";
-import Admin from "./pages/Admin";
-
-// Admin email constant with corrected spelling
-const ADMIN_EMAIL = "rafeequemavoor@gmail.com";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -65,18 +61,6 @@ const App = () => (
                 <Route path="/refund" element={<Refund />} />
                 <Route path="/features" element={<Features />} />
                 <Route path="/" element={<PdfUpload />} />
-                
-                {/* Admin routes */}
-                <Route path="/admin" element={
-                  <RequireAuth>
-                    <Admin />
-                  </RequireAuth>
-                } />
-                <Route path="/admin/:section" element={
-                  <RequireAuth>
-                    <Admin />
-                  </RequireAuth>
-                } />
               </Route>
               
               {/* Routes without any wrappers */}
