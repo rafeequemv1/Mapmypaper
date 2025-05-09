@@ -196,7 +196,8 @@ const MindMapViewer = ({
   const [summary, setSummary] = useState<string>('');
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
-  const [direction, setDirection] = useState<'vertical' | 'horizontal'>('vertical');
+  // Changed initial direction from 'vertical' to 'horizontal'
+  const [direction, setDirection] = useState<'vertical' | 'horizontal'>('horizontal');
   const [zoomLevel, setZoomLevel] = useState(50); // Changed initial zoom to 50% (lowest)
   const {
     toast
@@ -263,7 +264,8 @@ const MindMapViewer = ({
       };
       const options = {
         el: containerRef.current,
-        direction: 1 as const,
+        // Changed direction from 1 to 0 (0 = horizontal, 1 = vertical)
+        direction: 0 as const,
         draggable: true,
         editable: true,
         contextMenu: true,
@@ -738,129 +740,3 @@ const MindMapViewer = ({
       // We need to access the mind map instance's methods differently
       if (mindMapRef.current) {
         // Cast to any to access extended methods that aren't in the TypeScript interface
-        const mindElixirInstance = mindMapRef.current as any;
-        if (typeof mindElixirInstance.direction === 'function') {
-          mindElixirInstance.direction(directionValue);
-        } else {
-          // Alternative approach if direction isn't a function
-          mindElixirInstance.tempDirection = directionValue;
-          mindElixirInstance.refresh();
-        }
-      }
-
-      // Update direction state
-      setDirection(newDirection);
-      
-      // Show toast notification
-      toast({
-        title: `Direction Changed`,
-        description: `Mind map is now in ${newDirection} layout`,
-        duration: 3000
-      });
-    }
-  };
-  
-  // Function to generate node summary (placeholder for the function referenced in node menu)
-  const generateNodeSummary = (node: any) => {
-    if (!node || !node.topic) return;
-    
-    // Show a loading toast
-    toast({
-      title: "Generating Summary",
-      description: "Creating summary of selected node and its children...",
-      duration: 3000
-    });
-    
-    // Set summary text and show summary dialog
-    const summaryText = `Summary for "${node.topic}":\n\nThis node contains important information about ${node.topic.toLowerCase()}.`;
-    setSummary(summaryText);
-    setShowSummary(true);
-  };
-  
-  // Render the mind map viewer with loading state and zoom controls
-  return (
-    <div className="relative w-full h-full flex flex-col">
-      {/* Loading indicator */}
-      {loadingProgress > 0 && (
-        <div className="absolute top-0 left-0 right-0 z-10">
-          <Progress value={loadingProgress} className="h-1" />
-        </div>
-      )}
-      
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-2 py-1 bg-white border-b">
-        <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={toggleDirection}
-            title={`Switch to ${direction === 'vertical' ? 'horizontal' : 'vertical'} layout`}
-          >
-            {direction === 'vertical' ? <ArrowDown className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
-          </Button>
-        </div>
-        
-        <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={handleZoomOut}
-            disabled={zoomLevel <= 50}
-            title="Zoom out"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          
-          <span className="text-xs font-medium w-14 text-center">
-            {zoomLevel}%
-          </span>
-          
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={handleZoomIn}
-            disabled={zoomLevel >= 200}
-            title="Zoom in"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      
-      {/* Mind map container */}
-      <div 
-        ref={containerRef} 
-        className="flex-1 w-full overflow-hidden bg-gray-50"
-      />
-      
-      {/* Loading state */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-20">
-          <div className="flex flex-col items-center gap-4">
-            <LoaderCircle className="h-8 w-8 animate-spin text-purple-600" />
-            <p className="text-sm font-medium text-gray-700">Generating Mind Map...</p>
-          </div>
-        </div>
-      )}
-      
-      {/* Summary dialog */}
-      {showSummary && (
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Node Summary</DialogTitle>
-              <DialogDescription>
-                Summary of the selected node and its children
-              </DialogDescription>
-            </DialogHeader>
-            <div className="max-h-96 overflow-y-auto">
-              <p className="whitespace-pre-wrap">{summary}</p>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
-  );
-};
-
-export default MindMapViewer;
