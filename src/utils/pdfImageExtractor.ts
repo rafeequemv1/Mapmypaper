@@ -1,10 +1,10 @@
-
 import * as pdfjs from 'pdfjs-dist';
 
 // Set the worker path for PDF.js
 // This is needed for PDF.js to work in a browser environment
-const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Using a more compatible way to load the worker
+const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker.default;
 
 /**
  * Extract images from a PDF file

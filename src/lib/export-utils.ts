@@ -1,4 +1,3 @@
-
 import { MindElixirInstance } from "mind-elixir";
 
 /**
@@ -46,6 +45,74 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
   } catch (error) {
     console.error("Error exporting as SVG:", error);
     throw error;
+  }
+};
+
+/**
+ * Downloads the mind map data as JSON file
+ * @param instance Mind Elixir instance
+ * @param fileName Name of the file without extension
+ */
+export const downloadMindMapAsJSON = (instance: MindElixirInstance, fileName: string = 'mindmap'): void => {
+  try {
+    const data = instance.getData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${fileName}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error exporting as JSON:", error);
+    throw error;
+  }
+};
+
+/**
+ * Exports the mind map as SVG file
+ * @param instance Mind Elixir instance
+ * @param callback Callback function with result
+ */
+export const exportSVG = (instance: MindElixirInstance, callback: (result: {success: boolean, error?: string}) => void): void => {
+  try {
+    downloadMindMapAsSVG(instance);
+    callback({success: true});
+  } catch (error) {
+    console.error("Error exporting SVG:", error);
+    callback({success: false, error: error instanceof Error ? error.message : "Unknown error"});
+  }
+};
+
+/**
+ * Exports the mind map as PNG file
+ * @param instance Mind Elixir instance
+ * @param callback Callback function with result
+ */
+export const exportPNG = async (instance: MindElixirInstance, callback: (result: {success: boolean, error?: string}) => void): Promise<void> => {
+  try {
+    await downloadMindMapAsPNG(instance);
+    callback({success: true});
+  } catch (error) {
+    console.error("Error exporting PNG:", error);
+    callback({success: false, error: error instanceof Error ? error.message : "Unknown error"});
+  }
+};
+
+/**
+ * Exports the mind map data as JSON file
+ * @param instance Mind Elixir instance
+ * @param callback Callback function with result
+ */
+export const exportJSON = (instance: MindElixirInstance, callback: (result: {success: boolean, error?: string}) => void): void => {
+  try {
+    downloadMindMapAsJSON(instance);
+    callback({success: true});
+  } catch (error) {
+    console.error("Error exporting JSON:", error);
+    callback({success: false, error: error instanceof Error ? error.message : "Unknown error"});
   }
 };
 
