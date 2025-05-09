@@ -17,7 +17,7 @@ interface PanelStructureProps {
 const PanelStructure = ({
   leftPanel,
   rightPanel,
-  defaultLayout = [50, 50],
+  defaultLayout = [40, 60],
   className,
 }: PanelStructureProps) => {
   return (
@@ -25,7 +25,7 @@ const PanelStructure = ({
       direction="horizontal"
       className={cn("min-h-[calc(100vh-4rem)] w-full", className)}
     >
-      <ResizablePanel defaultSize={defaultLayout[0]} minSize={30}>
+      <ResizablePanel defaultSize={defaultLayout[0]} minSize={20}>
         {leftPanel}
       </ResizablePanel>
       <ResizableHandle />
