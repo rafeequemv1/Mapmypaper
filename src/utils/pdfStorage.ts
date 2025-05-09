@@ -1,5 +1,5 @@
 
-// PDF Storage Utility for IndexedDB
+// PDF Storage Utility for IndexedDB with Caching
 // Manages PDF data storage, retrieval, and state management
 
 // Database configuration
@@ -7,6 +7,9 @@ const DB_NAME = 'PdfStorageDB';
 const DB_VERSION = 1;
 const PDF_STORE = 'pdfStore';
 const CURRENT_PDF_KEY = 'currentPdfKey';
+
+// Local cache to avoid redundant fetches from IndexedDB
+const pdfDataCache = new Map<string, string>();
 
 // Helper function to open the database connection
 const openDatabase = (): Promise<IDBDatabase> => {
@@ -56,9 +59,55 @@ const openDatabase = (): Promise<IDBDatabase> => {
   });
 };
 
-// Store PDF data in IndexedDB
+// Preload all PDF keys into cache on startup
+export const preloadPdfCache = async (): Promise<void> => {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([PDF_STORE], 'readonly');
+      const store = transaction.objectStore(PDF_STORE);
+      const request = store.getAllKeys();
+      
+      request.onsuccess = () => {
+        const keys = request.result as string[];
+        console.log(`Found ${keys.length} PDF keys to preload`);
+        
+        // Filter out special keys like CURRENT_PDF_KEY
+        const pdfKeys = keys.filter(k => k !== CURRENT_PDF_KEY);
+        
+        // Don't load the actual PDF data yet, just mark it as available
+        pdfKeys.forEach(key => {
+          if (!key.startsWith('mindMapReady_')) {
+            pdfDataCache.set(key, 'pending');
+          }
+        });
+        
+        resolve();
+      };
+      
+      request.onerror = () => {
+        console.error("Error preloading PDF keys:", request.error);
+        reject(new Error(`Failed to preload PDF keys: ${request.error?.message || 'Unknown error'}`));
+      };
+      
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error("Error in preloadPdfCache:", error);
+  }
+};
+
+// Call preload on module init
+preloadPdfCache();
+
+// Store PDF data in IndexedDB and cache
 export const storePdfData = async (key: string, pdfData: string): Promise<void> => {
   try {
+    // Store in cache immediately for instant access
+    pdfDataCache.set(key, pdfData);
+    
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([PDF_STORE], 'readwrite');
@@ -86,9 +135,21 @@ export const storePdfData = async (key: string, pdfData: string): Promise<void> 
   }
 };
 
-// Retrieve PDF data from IndexedDB by key
+// Retrieve PDF data from cache first, then IndexedDB if not cached
 export const getPdfData = async (key: string): Promise<string | null> => {
   try {
+    // Check cache first for instant retrieval
+    if (pdfDataCache.has(key)) {
+      const cachedData = pdfDataCache.get(key);
+      
+      // If it's marked as pending, load from IndexedDB
+      if (cachedData !== 'pending') {
+        console.log(`PDF data retrieved from cache for key: ${key}`);
+        return cachedData || null;
+      }
+    }
+    
+    // Not in cache or marked as pending, get from IndexedDB
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([PDF_STORE], 'readonly');
@@ -98,6 +159,13 @@ export const getPdfData = async (key: string): Promise<string | null> => {
       
       request.onsuccess = () => {
         const pdfData = request.result;
+        
+        // Store in cache for future fast access
+        if (pdfData) {
+          pdfDataCache.set(key, pdfData);
+        }
+        
+        console.log(`PDF data retrieved from IndexedDB for key: ${key}`);
         resolve(pdfData || null);
       };
       
@@ -116,9 +184,18 @@ export const getPdfData = async (key: string): Promise<string | null> => {
   }
 };
 
-// Set current active PDF key
+// Set current active PDF key with caching
 export const setCurrentPdf = async (key: string): Promise<void> => {
   try {
+    // Update current key in memory
+    pdfDataCache.set(CURRENT_PDF_KEY, key);
+    
+    // Start preloading the actual PDF data if it's not already cached
+    if (pdfDataCache.has(key) && pdfDataCache.get(key) === 'pending') {
+      // Don't await to avoid blocking the UI
+      getPdfData(key).catch(err => console.error("Background preload error:", err));
+    }
+    
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([PDF_STORE], 'readwrite');
@@ -146,9 +223,17 @@ export const setCurrentPdf = async (key: string): Promise<void> => {
   }
 };
 
-// Get current active PDF data
+// Get current active PDF data with caching
 export const getCurrentPdfData = async (): Promise<string | null> => {
   try {
+    // Check if current key is in cache
+    const cachedCurrentKey = pdfDataCache.get(CURRENT_PDF_KEY);
+    
+    if (cachedCurrentKey) {
+      // If we have the current key cached, get PDF data for that key
+      return getPdfData(cachedCurrentKey);
+    }
+    
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([PDF_STORE], 'readonly');
@@ -166,11 +251,20 @@ export const getCurrentPdfData = async (): Promise<string | null> => {
           return;
         }
         
+        // Cache the current key
+        pdfDataCache.set(CURRENT_PDF_KEY, currentKey);
+        
         // Then get the PDF data using that key
         const dataRequest = store.get(currentKey);
         
         dataRequest.onsuccess = () => {
           const pdfData = dataRequest.result;
+          
+          // Cache the PDF data
+          if (pdfData) {
+            pdfDataCache.set(currentKey, pdfData);
+          }
+          
           resolve(pdfData || null);
         };
         
@@ -195,9 +289,12 @@ export const getCurrentPdfData = async (): Promise<string | null> => {
   }
 };
 
-// Clear/remove PDF data for a specific key
+// Clear/remove PDF data for a specific key from both cache and IndexedDB
 export const clearPdfData = async (key: string): Promise<void> => {
   try {
+    // Remove from cache immediately
+    pdfDataCache.delete(key);
+    
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([PDF_STORE], 'readwrite');

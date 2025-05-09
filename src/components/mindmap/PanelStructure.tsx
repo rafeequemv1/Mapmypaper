@@ -6,7 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { storePdfData, setCurrentPdf, getPdfData, clearPdfData, isMindMapReady } from "@/utils/pdfStorage";
+import { storePdfData, setCurrentPdf, getPdfData, clearPdfData, isMindMapReady, preloadPdfCache } from "@/utils/pdfStorage";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -51,18 +51,30 @@ const PanelStructure = ({
 
   // File input for adding PDFs
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Preload PDF cache on component mount
+  useEffect(() => {
+    preloadPdfCache().catch(err => 
+      console.error("Error preloading PDF cache:", err)
+    );
+  }, []);
 
-  // Handle active PDF change
+  // Handle active PDF change - optimized for instant loading
   const handleTabChange = async (key: string) => {
     try {
+      // Update the active key immediately for UI response
       setActivePdfKey(key);
       
-      // Check if PDF data exists before attempting to switch
+      // Set as current in IndexedDB - doesn't block UI
+      setCurrentPdf(key).catch(error => 
+        console.error("Error setting current PDF:", error)
+      );
+      
+      // Check if PDF data exists (from cache first, then IndexedDB)
       const pdfDataExists = await getPdfData(key);
       
       if (!pdfDataExists) {
-        // If PDF data doesn't exist in IndexedDB but we have meta in sessionStorage
-        // This could happen if browser storage was cleared or after a page refresh
+        // If PDF data doesn't exist in storage but we have meta in sessionStorage
         toast({
           title: "PDF Data Missing",
           description: "PDF data not found. You may need to re-upload this PDF.",
@@ -72,7 +84,7 @@ const PanelStructure = ({
         // Remove the orphaned PDF metadata
         sessionStorage.removeItem(`pdfMeta_${key}`);
         sessionStorage.removeItem(`mindMapData_${key}`);
-        sessionStorage.removeItem(`hasPdfData_${key}`);
+        sessionStorage.removeItem(`mindMapReady_${key}`);
         
         // Try to find another PDF to switch to
         const metas = getAllPdfs();
@@ -94,9 +106,7 @@ const PanelStructure = ({
         setIsLoadingMindMap(true);
       }
       
-      // Set the selected PDF as current in IndexedDB
-      await setCurrentPdf(key);
-      
+      // Notify components about PDF switch
       window.dispatchEvent(new CustomEvent('pdfSwitched', { detail: { pdfKey: key } }));
       
       // Only display the toast for switching if we're not loading a new mindmap
@@ -112,7 +122,7 @@ const PanelStructure = ({
       if (!isMindMapReady(key)) {
         setTimeout(() => {
           setIsLoadingMindMap(false);
-        }, 1000);
+        }, 500);
       }
     } catch (error) {
       console.error("Error switching PDF:", error);
@@ -133,7 +143,8 @@ const PanelStructure = ({
         // Then remove from session storage
         sessionStorage.removeItem(`pdfMeta_${key}`);
         sessionStorage.removeItem(`mindMapData_${key}`);
-        sessionStorage.removeItem(`hasPdfData_${key}`);
+        sessionStorage.removeItem(`mindMapReady_${key}`);
+        sessionStorage.removeItem(`pdfText_${key}`);
         
         const metas = getAllPdfs();
         if (activePdfKey === key) {
@@ -160,7 +171,7 @@ const PanelStructure = ({
       });
   }
 
-  // Generate Mindmap after extracting PDF text
+  // Generate Mindmap after extracting PDF text - optimized for performance
   async function handleAddPdf(files: FileList | null) {
     if (!files || files.length === 0) return;
     const pdfFiles = Array.from(files).filter(f => f.type === "application/pdf");
@@ -172,6 +183,7 @@ const PanelStructure = ({
       });
       return;
     }
+    
     for (const file of pdfFiles) {
       const pdfKey = getPdfKey({ name: file.name, size: file.size, lastModified: file.lastModified });
       // Prevent duplicates
@@ -188,21 +200,31 @@ const PanelStructure = ({
         `pdfMeta_${pdfKey}`,
         JSON.stringify({ name: file.name, size: file.size, lastModified: file.lastModified })
       );
+      
       try {
-        // Read and process PDF file as dataURL
+        // Read and process PDF file as dataURL - in parallel with text extraction
         const reader = new FileReader();
+        
         const pdfDataPromise = new Promise<string>((resolve, reject) => {
           reader.onload = e => resolve(e.target?.result as string);
           reader.onerror = () => reject();
           reader.readAsDataURL(file);
         });
+        
+        // Start text extraction in parallel with reading the PDF data
+        const textExtractionPromise = PdfToText(file);
+        
+        // Wait for PDF data to be read
         const pdfData = await pdfDataPromise;
         
-        // Store PDF data in IndexedDB only, not in sessionStorage
-        await storePdfData(pdfKey, pdfData);
+        // Store PDF data in cache and IndexedDB immediately - don't block UI
+        storePdfData(pdfKey, pdfData)
+          .then(() => console.log(`PDF data stored for: ${file.name}`))
+          .catch(err => console.error("Error storing PDF data:", err));
         
-        // Extract text from PDF
-        const extractedText = await PdfToText(file);
+        // Get the extracted text result
+        const extractedText = await textExtractionPromise;
+        
         if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
           toast({
             title: "No extractable text",
@@ -254,7 +276,7 @@ const PanelStructure = ({
     }
   };
 
-  // Handle image captured from PDF viewer - improved to ensure chat opens and properly handle PDF capture mode
+  // Handle image captured from PDF viewer
   const handleImageCaptured = (imageData: string) => {
     // Exit if we're currently processing an image to prevent duplicates
     if (processingCapture) return;
@@ -289,7 +311,7 @@ const PanelStructure = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsRendered(true);
-    }, 100);
+    }, 50); // Reduced from 100ms to 50ms for faster rendering
 
     return () => {
       clearTimeout(timer);
@@ -332,7 +354,7 @@ const PanelStructure = ({
         // Reset processing flag after a delay
         setTimeout(() => {
           setProcessingCapture(false);
-        }, 1500); // Increased timeout
+        }, 1000); // Reduced to 1000ms for faster responses
       }
     };
     
@@ -356,7 +378,12 @@ const PanelStructure = ({
   };
 
   if (!isRendered) {
-    return <div className="h-full w-full flex justify-center items-center">Loading panels...</div>;
+    return <div className="h-full w-full flex justify-center items-center">
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
+        <p>Loading panels...</p>
+      </div>
+    </div>;
   }
 
   return (

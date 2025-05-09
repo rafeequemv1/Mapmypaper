@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -6,9 +7,11 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import { MindElixirInstance } from "mind-elixir";
+import { preloadPdfCache } from "@/utils/pdfStorage";
 
 const MindMap = () => {
-  const [showPdf, setShowPdf] = useState(false); // Changed default to false (PDF closed)
+  // Initialize showPdf as false (collapsed) initially for faster loading
+  const [showPdf, setShowPdf] = useState(false); 
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
@@ -19,6 +22,14 @@ const MindMap = () => {
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false); // State to track capture status
+
+  // Preload PDF cache when component mounts
+  useEffect(() => {
+    // Preload PDF data in background
+    preloadPdfCache().catch(err => 
+      console.error("Error preloading PDF cache:", err)
+    );
+  }, []);
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -173,6 +184,11 @@ const MindMap = () => {
     };
   }, [showChat, toast]);
 
+  // Modified PDF toggle to ensure smooth transition
+  const togglePdf = useCallback(() => {
+    setShowPdf(prev => !prev);
+  }, []);
+
   useEffect(() => {
     if (location.state?.presetQuestion) {
       setExplainText(location.state.presetQuestion);
@@ -204,7 +220,7 @@ const MindMap = () => {
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header with left sidebar icons */}
       <Header 
-        togglePdf={() => setShowPdf(!showPdf)}
+        togglePdf={togglePdf}
         toggleChat={() => setShowChat(!showChat)}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
@@ -216,7 +232,7 @@ const MindMap = () => {
         showPdf={showPdf}
         showChat={showChat}
         toggleChat={() => setShowChat(!showChat)}
-        togglePdf={() => setShowPdf(!showPdf)}
+        togglePdf={togglePdf}
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={handleExplainText}
