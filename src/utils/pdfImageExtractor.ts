@@ -1,10 +1,20 @@
+
 import * as pdfjs from 'pdfjs-dist';
 
-// Set the worker path for PDF.js
-// This is needed for PDF.js to work in a browser environment
-// Using a more compatible way to load the worker
-const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker.default;
+// Set up the PDF.js worker
+function setupPdfWorker() {
+  // Only set the worker once
+  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    // Using a regular import to avoid top-level await
+    // This will be handled by the bundler appropriately
+    import('pdfjs-dist/build/pdf.worker.entry').then(worker => {
+      pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+    });
+  }
+}
+
+// Initialize worker when the module is imported
+setupPdfWorker();
 
 /**
  * Extract images from a PDF file
@@ -15,6 +25,9 @@ export async function extractImagesFromPdf(pdfData: string | ArrayBuffer): Promi
   const extractedImages: ExtractedImage[] = [];
   
   try {
+    // Ensure worker is set up
+    setupPdfWorker();
+    
     // If PDF data is a data URL, convert it to ArrayBuffer
     let pdfBuffer: ArrayBuffer;
     if (typeof pdfData === 'string' && pdfData.startsWith('data:application/pdf;base64,')) {
