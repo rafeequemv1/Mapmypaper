@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminOverview from "@/components/admin/AdminOverview";
 
-const ADMIN_EMAIL = "rafeequemavoor@gmal.com"; // Specific admin email
+const ADMIN_EMAIL = "rafeequemavoor@gmail.com"; // Corrected email address
 
 const Admin = () => {
   const { user, isLoading } = useAuth();

@@ -6,8 +6,8 @@ import { LogIn, UserPlus, DollarSign, Home, Settings } from "lucide-react";
 import UserMenu from "./UserMenu";
 import Logo from "./Logo";
 
-// Admin email constant
-const ADMIN_EMAIL = "rafeequemavoor@gmal.com";
+// Admin email constant with corrected spelling
+const ADMIN_EMAIL = "rafeequemavoor@gmail.com";
 
 const TopBar = () => {
   const navigate = useNavigate();
