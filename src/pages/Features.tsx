@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, FileImage, File, ChartPie, Download, Network } from "lucide-react";
+import { FileText, FileImage, File, ChartPie, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Features = () => {
@@ -38,10 +38,10 @@ const Features = () => {
       action: "Get Summaries"
     },
     {
-      title: "Interactive Connections",
-      description: "Discover relationships between concepts across multiple documents with our intelligent connection mapping system.",
-      icon: <Network className="h-12 w-12 text-primary" />,
-      action: "Map Connections"
+      title: "File Downloads",
+      description: "Easily download your enhanced documents, annotations, summaries, and visual maps in multiple formats for sharing and reference.",
+      icon: <Download className="h-12 w-12 text-primary" />,
+      action: "Download Files"
     }
   ];
 

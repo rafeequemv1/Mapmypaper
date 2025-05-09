@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -370,9 +369,9 @@ const PanelStructure = ({
         onChange={e => handleAddPdf(e.target.files)}
       />
       <div className="h-full w-full flex pl-12">
-        {/* PDF Panel - Modified to use 40% width (previous UI style) */}
+        {/* PDF Panel - Fixed to 40% width */}
         {showPdf && (
-          <div className="h-full w-2/5 flex-shrink-0 flex flex-col">
+          <div className="h-full w-[40%] flex-shrink-0 flex flex-col">
             {/* PDF tabs above viewer */}
             <PdfTabs
               activeKey={activePdfKey}
@@ -390,8 +389,8 @@ const PanelStructure = ({
           </div>
         )}
 
-        {/* Mind Map Panel - Takes up remaining space when PDF and Chat are both visible */}
-        <div className={`h-full ${showPdf ? (showChat ? 'w-2/5' : 'w-3/5') : (showChat ? 'w-4/5' : 'w-full')}`}>
+        {/* Mind Map Panel - Takes up remaining space */}
+        <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
           <MindMapViewer
             isMapGenerated={isMapGenerated}
             onMindMapReady={onMindMapReady}
@@ -401,9 +400,8 @@ const PanelStructure = ({
           />
         </div>
 
-        {/* Chat Panel - Modified to use 1/5 width (previous UI style) */}
         {showChat && (
-          <div className="h-full w-1/5 flex-shrink-0">
+          <div className="h-full w-[30%] flex-shrink-0">
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}

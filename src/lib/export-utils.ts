@@ -1,83 +1,136 @@
+
 import { MindElixirInstance } from "mind-elixir";
-import html2canvas from "html2canvas";
 
 /**
- * Get SVG data from a mind map instance
- * @param mindMap 
- * @returns SVG data as string
+ * Downloads the mind map as PNG image
+ * @param instance Mind Elixir instance
+ * @param fileName Name of the file without extension
  */
-export const getSvg = (mindMap: MindElixirInstance): string => {
-  // Use a safeguard approach to handle mind-elixir's unstable API
-  // First try the built-in export function if available
-  if (typeof mindMap.exportSvg === 'function') {
-    const svgData = mindMap.exportSvg();
-    // Make sure we're returning a string, not a Blob
-    if (typeof svgData === 'string') {
-      return svgData;
-    } else if (svgData instanceof Blob) {
-      // We can't directly serialize a Blob, so we'll need to use the container's SVG instead
-      return getSvgFromContainer(mindMap);
-    } else if (svgData && typeof svgData === 'object' && 'nodeType' in svgData) {
-      // If it's a DOM node, we can serialize it
-      return new XMLSerializer().serializeToString(svgData as Node);
-    } else {
-      // Fallback to container method if type is unknown
-      return getSvgFromContainer(mindMap);
+export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
+  try {
+    const blob = await instance.exportPng();
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
+  } catch (error) {
+    console.error("Error exporting as PNG:", error);
+    throw error;
   }
-  
-  // Fallback: Get the SVG from container
-  return getSvgFromContainer(mindMap);
 };
 
 /**
- * Extract SVG from the mind map container
+ * Downloads the mind map as SVG image
+ * @param instance Mind Elixir instance
+ * @param fileName Name of the file without extension
  */
-const getSvgFromContainer = (mindMap: MindElixirInstance): string => {
-  const container = mindMap.container as HTMLElement;
-  const svgElement = container.querySelector('svg');
-  
-  if (!svgElement) {
-    throw new Error('SVG element not found in mind map');
+export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: string = 'mindmap'): void => {
+  try {
+    const blob = instance.exportSvg();
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.svg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  } catch (error) {
+    console.error("Error exporting as SVG:", error);
+    throw error;
   }
-  
-  // Clone the SVG to avoid modifying the original
-  const svgClone = svgElement.cloneNode(true) as SVGElement;
-  
-  // Add XML namespace
-  svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  
-  // Return the SVG as string
-  return new XMLSerializer().serializeToString(svgClone);
 };
 
 /**
- * Get image data URL from a mind map instance
- * @param mindMap 
- * @returns Promise resolving to a data URL
+ * Downloads an HTML element as PNG image using html2canvas
+ * @param element Reference to the HTML element to download
+ * @param fileName Name of the file without extension
+ * @returns Promise that resolves with the data URL of the captured image
  */
-export const getImage = async (mindMap: MindElixirInstance): Promise<string> => {
-  const container = mindMap.container as HTMLElement;
-  
-  // Use html2canvas to capture the mindmap as an image
-  const canvas = await html2canvas(container, {
-    backgroundColor: '#ffffff',
-    scale: 2, // Higher resolution
-    logging: false,
-    useCORS: true,
-    allowTaint: true,
-  });
-  
-  // Return as data URL
-  return canvas.toDataURL('image/png');
-};
-
-/**
- * Get JSON data from a mind map instance
- * @param mindMap 
- * @returns JSON data as object
- */
-export const getJson = (mindMap: MindElixirInstance): any => {
-  // Use the mind-elixir getData method
-  return mindMap.getData();
+export const downloadElementAsPNG = async (element: HTMLElement, fileName: string = 'image'): Promise<string> => {
+  try {
+    // Signal that capture process is starting before doing any work
+    // Added inPdf: false to indicate this is a global capture, not from PDF viewer
+    window.dispatchEvent(new CustomEvent('captureInProgress', { detail: { inProgress: true, inPdf: false } }));
+    
+    // Dynamically import html2canvas to ensure it's available
+    const html2canvas = (await import('html2canvas')).default;
+    
+    // Check if we're on a custom domain or lovable.app
+    const isCustomDomain = window.location.hostname !== 'localhost' && !window.location.hostname.includes('lovable');
+    
+    // Create HTML2Canvas options with CORS handling for custom domains
+    const options = {
+      scale: 2, // Higher resolution
+      useCORS: true, // Always try to use CORS
+      allowTaint: true, // Allow tainted canvas if CORS fails
+      backgroundColor: '#ffffff',
+      logging: isCustomDomain, // Enable logging on custom domains to help with debugging
+      foreignObjectRendering: false // Disable foreignObject for better cross-domain compatibility
+    };
+    
+    if (isCustomDomain) {
+      console.log('Using CORS-friendly options for custom domain:', window.location.hostname);
+    }
+    
+    // Start the capture process - this might take a while
+    console.log('Starting HTML2Canvas capture...');
+    const canvas = await html2canvas(element, options);
+    console.log('HTML2Canvas capture completed');
+    
+    const dataUrl = canvas.toDataURL('image/png');
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `${fileName}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Wait a brief moment before signaling completion to allow UI to update properly
+    // This small delay helps ensure the rectangle stays visible long enough for feedback
+    setTimeout(() => {
+      // Signal that capture is complete with success flag
+      window.dispatchEvent(new CustomEvent('captureInProgress', { 
+        detail: { inProgress: false, success: true, inPdf: false } 
+      }));
+    }, 500);
+    
+    // Return the data URL for other uses
+    return dataUrl;
+  } catch (error) {
+    console.error("Error exporting element as PNG:", error);
+    
+    // Signal that capture failed but keep the UI element visible a bit longer
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('captureInProgress', { 
+        detail: { inProgress: false, error: true, inPdf: false } 
+      }));
+      
+      // Provide more detailed error information
+      if (error instanceof Error) {
+        console.error(`Error name: ${error.name}, message: ${error.message}`);
+        console.error("Error stack:", error.stack);
+        
+        // Dispatch an event with additional details for the UI
+        window.dispatchEvent(new CustomEvent('captureError', { 
+          detail: { 
+            message: `Screenshot failed: ${error.message}. Check console for details.`,
+            error: error 
+          } 
+        }));
+      }
+    }, 1000);
+    
+    throw error;
+  }
 };
