@@ -9,9 +9,18 @@ const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
 
-const DialogPortal = DialogPrimitive.Portal
-
-const DialogClose = DialogPrimitive.Close
+const DialogPortal = ({
+  className,
+  children,
+  ...props
+}: DialogPrimitive.DialogPortalProps) => (
+  <DialogPrimitive.Portal {...props}>
+    <div className={cn(className)}>
+      {children}
+    </div>
+  </DialogPrimitive.Portal>
+)
+DialogPortal.displayName = DialogPrimitive.Portal.displayName
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
@@ -106,6 +115,8 @@ const DialogDescription = React.forwardRef<
   />
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+const DialogClose = DialogPrimitive.Close
 
 export {
   Dialog,
