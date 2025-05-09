@@ -6,11 +6,13 @@ import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
+import TabContent from "@/components/mindmap/TabContent";
+import MindMapViewer from "@/components/MindMapViewer";
+import PdfViewer from "@/components/PdfViewer";
+import ChatPanel from "@/components/mindmap/ChatPanel";
 import { MindElixirInstance } from "mind-elixir";
 
 const MindMap = () => {
-  const [showPdf, setShowPdf] = useState(true);
-  const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
@@ -19,9 +21,11 @@ const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false); // State to track capture status
-  const [isCapturingInPdf, setIsCapturingInPdf] = useState(false); // New state to track if capture is happening in PDF
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [isCapturingInPdf, setIsCapturingInPdf] = useState(false);
+  const [activeTab, setActiveTab] = useState("mindmap");
 
+  // Handler for mindmap ready
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
     setIsMapGenerated(true);
@@ -74,15 +78,9 @@ const MindMap = () => {
   // Handle text selected for explanation
   const handleExplainText = useCallback((text: string) => {
     setExplainText(text);
-    // Always open chat when text is selected for explanation
-    if (!showChat) {
-      setShowChat(true);
-      toast({
-        title: "Explain Feature",
-        description: "Opening chat to explain selected text.",
-      });
-    }
-  }, [showChat, toast]);
+    // Switch to chat tab when text is selected for explanation
+    setActiveTab("chat");
+  }, []);
 
   // Listen for capture errors from utils
   useEffect(() => {
@@ -105,7 +103,7 @@ const MindMap = () => {
     };
   }, [toast]);
 
-  // Modified effect to track capture progress with PDF flag
+  // Effect to track capture progress with PDF flag
   useEffect(() => {
     const handleCaptureProgress = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -131,10 +129,8 @@ const MindMap = () => {
     const handleTextSelected = (e: CustomEvent) => {
       if (e.detail?.text) {
         setExplainText(e.detail.text);
-        // Always open chat panel
-        if (!showChat) {
-          setShowChat(true);
-        }
+        // Switch to chat tab
+        setActiveTab("chat");
       }
     };
     
@@ -143,19 +139,17 @@ const MindMap = () => {
     return () => {
       window.removeEventListener('openChatWithText', handleTextSelected as EventListener);
     };
-  }, [showChat]);
+  }, []);
 
   // Enhanced effect to handle captured images and ensure chat opens
   useEffect(() => {
     const handleImageCaptured = (e: CustomEvent) => {
-      // Always open chat when an image is captured
-      if (!showChat) {
-        setShowChat(true);
-        toast({
-          title: "Image Captured",
-          description: "Opening chat with your selected area.",
-        });
-      }
+      // Switch to chat tab when an image is captured
+      setActiveTab("chat");
+      toast({
+        title: "Image Captured",
+        description: "Opening chat with your selected area.",
+      });
     };
     
     window.addEventListener('openChatWithImage', handleImageCaptured as EventListener);
@@ -163,7 +157,7 @@ const MindMap = () => {
     return () => {
       window.removeEventListener('openChatWithImage', handleImageCaptured as EventListener);
     };
-  }, [showChat, toast]);
+  }, [toast]);
 
   useEffect(() => {
     if (location.state?.presetQuestion) {
@@ -194,24 +188,39 @@ const MindMap = () => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* Header with left sidebar icons */}
+      {/* Header with icons */}
       <Header 
-        togglePdf={() => setShowPdf(!showPdf)}
-        toggleChat={() => setShowChat(!showChat)}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
-        isPdfActive={showPdf}
-        isChatActive={showChat}
+        isPdfActive={true} // Always active since PDF is always visible
+        isChatActive={activeTab === "chat"}
         mindMap={mindMapInstance}
       />
       <PanelStructure
-        showPdf={showPdf}
-        showChat={showChat}
-        toggleChat={() => setShowChat(!showChat)}
-        togglePdf={() => setShowPdf(!showPdf)}
-        onMindMapReady={handleMindMapReady}
-        explainText={explainText}
-        onExplainText={handleExplainText}
+        leftPanel={<PdfViewer onExplainText={handleExplainText} />}
+        rightPanel={
+          <TabContent
+            mindMapView={
+              <MindMapViewer
+                isMapGenerated={isMapGenerated}
+                onMindMapReady={handleMindMapReady}
+                onExplainText={handleExplainText}
+              />
+            }
+            chatView={
+              <ChatPanel 
+                explainText={explainText} 
+                mindMap={mindMapInstance}
+              />
+            }
+            onShowSummary={() => setShowSummary(true)}
+            onShowFlowchart={() => setShowFlowchart(true)}
+            explainText={explainText}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+        }
+        defaultLayout={[50, 50]}
       />
       
       {/* Modal for Summary */}
