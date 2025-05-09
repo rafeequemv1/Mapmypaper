@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import MindElixir, { MindElixirInstance } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
-import "../styles/node-menu.css";
+import "../../styles/node-menu.css"; // Fix the import path
 
 interface MindmapModalProps {
   isOpen: boolean;
@@ -77,7 +77,20 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
               palette: [
                 '#dd7878', '#ea76cb', '#8839ef', '#e64553', 
                 '#fe640b', '#df8e1d', '#40a02b', '#209fb5'
-              ]
+              ],
+              // Add the required cssVar property
+              cssVar: {
+                '--main-color': '#8B5CF6',
+                '--main-bgcolor': '#F9F7FF',
+                '--color1': '#dd7878',
+                '--color2': '#ea76cb',
+                '--color3': '#8839ef',
+                '--color4': '#e64553',
+                '--color5': '#fe640b',
+                '--color6': '#df8e1d',
+                '--color7': '#40a02b',
+                '--color8': '#209fb5'
+              }
             }
           };
           
