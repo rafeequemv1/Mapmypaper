@@ -738,3 +738,192 @@ const MindMapViewer = ({
     if (mindMapRef.current) {
       mindMapRef.current.scale(1.1);
       setZoomLevel(prev => Math.min(prev + 10, 200));
+    }
+  };
+
+  // Function to handle zoom out
+  const handleZoomOut = () => {
+    if (mindMapRef.current) {
+      mindMapRef.current.scale(0.9);
+      setZoomLevel(prev => Math.max(prev - 10, 20));
+    }
+  };
+
+  // Function to toggle layout direction
+  const toggleDirection = (value: 'vertical' | 'horizontal' | 'both') => {
+    if (!mindMapRef.current) return;
+    
+    let directionValue: number;
+    switch (value) {
+      case 'horizontal':
+        directionValue = 0;
+        break;
+      case 'vertical':
+        directionValue = 1;
+        break;
+      case 'both':
+      default:
+        directionValue = 2;
+        break;
+    }
+    
+    // Update direction in mind map instance
+    if (mindMapRef.current) {
+      // Access direction property using type assertion
+      (mindMapRef.current as any).direction = directionValue;
+      // Re-render the mind map with new direction
+      mindMapRef.current.refresh();
+    }
+    
+    setDirection(value);
+  };
+
+  // Function to generate a node summary when requested from context menu
+  const generateNodeSummary = (node: any) => {
+    if (!node || !node.topic) return;
+    
+    // Get node text and children text to provide context
+    let nodeText = node.topic;
+    let childrenText = '';
+    
+    if (node.children && node.children.length > 0) {
+      childrenText = node.children.map((child: any) => child.topic).join(', ');
+    }
+    
+    // Create a summary based on node and its children
+    const nodeSummary = `Topic: ${nodeText}\n\nSubtopics: ${childrenText || 'None'}`;
+    
+    // Set summary and show dialog
+    setSummary(nodeSummary);
+    setShowSummary(true);
+    
+    // If chat panel integration is available, send to chat
+    if (onExplainText) {
+      const prompt = `Please explain more about this topic: ${nodeText}. Include information about these subtopics if relevant: ${childrenText}`;
+      onExplainText(prompt);
+      onRequestOpenChat?.();
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full flex flex-col">
+      {/* Loading progress indicator */}
+      {loadingProgress > 0 && loadingProgress < 100 && (
+        <div className="absolute top-0 left-0 w-full z-10">
+          <Progress value={loadingProgress} className="h-1 rounded-none" />
+        </div>
+      )}
+
+      {/* Main mind map container */}
+      <div className="flex-1 relative overflow-hidden">
+        {isLoading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-3/4 max-w-3xl">
+              <div className="flex items-center gap-2 mb-4">
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+                <p className="text-sm font-medium">Generating mind map...</p>
+              </div>
+              <Skeleton className="h-[60vh] w-full rounded-lg" />
+            </div>
+          </div>
+        ) : (
+          <div
+            ref={containerRef}
+            className="w-full h-full mind-elixir-container"
+            style={{ visibility: isMapGenerated ? 'visible' : 'hidden' }}
+          />
+        )}
+      </div>
+
+      {/* Controls overlay */}
+      <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
+        {/* Zoom controls */}
+        <div className="flex flex-col gap-1 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm p-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            onClick={handleZoomIn}
+            title="Zoom in"
+          >
+            <ZoomIn size={16} />
+          </Button>
+          <div className="text-xs text-center font-medium">
+            {zoomLevel}%
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            onClick={handleZoomOut}
+            title="Zoom out"
+          >
+            <ZoomOut size={16} />
+          </Button>
+        </div>
+
+        {/* Direction controls */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm p-2">
+          <ToggleGroup
+            type="single"
+            size="sm"
+            value={direction}
+            onValueChange={(value) => {
+              if (value) toggleDirection(value as 'vertical' | 'horizontal' | 'both');
+            }}
+          >
+            <ToggleGroupItem value="horizontal" title="Horizontal layout">
+              <ArrowRight size={16} />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="vertical" title="Vertical layout">
+              <ArrowDown size={16} />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="both" title="Bidirectional layout">
+              <div className="flex">
+                <ArrowLeft size={16} />
+                <ArrowRight size={16} />
+              </div>
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      </div>
+
+      {/* Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Node Summary</DialogTitle>
+            <DialogDescription>
+              Details about the selected node and its connections
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 bg-slate-50 rounded-lg">
+            <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSummary(false)}
+            >
+              Close
+            </Button>
+            {onExplainText && (
+              <Button
+                onClick={() => {
+                  onExplainText(summary);
+                  onRequestOpenChat?.();
+                  setShowSummary(false);
+                }}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Explain in Chat
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default MindMapViewer;
