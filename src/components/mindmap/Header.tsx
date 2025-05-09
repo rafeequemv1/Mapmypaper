@@ -1,133 +1,129 @@
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
 import { useToast } from "@/hooks/use-toast";
-import { downloadMindMapAsSVG as exportSVG, downloadMindMapAsPNG as exportPNG, downloadMindMapAsSVG as exportJSON } from "@/lib/export-utils";
+import { exportSVG, exportPNG, exportJSON } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
-  isPdfActive: boolean;
-  isChatActive: boolean;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowGallery: React.Dispatch<React.SetStateAction<boolean>>; // Add gallery state setter
+  isPdfActive: boolean;
+  isChatActive: boolean;
   mindMap: MindElixirInstance | null;
 }
 
-const Header: React.FC<HeaderProps> = ({
-  togglePdf,
-  toggleChat,
-  isPdfActive,
-  isChatActive,
+const Header: React.FC<HeaderProps> = ({ 
+  togglePdf, 
+  toggleChat, 
   setShowSummary,
   setShowFlowchart,
-  mindMap,
+  setShowGallery,
+  isPdfActive,
+  isChatActive,
+  mindMap
 }) => {
-  const [showGallery, setShowGallery] = useState(false);
   const { toast } = useToast();
+  const [showImageGallery, setShowImageGallery] = useState(false);
   
   // Import the ImageGalleryModal component dynamically
   const ImageGalleryModal = React.lazy(() => import('./ImageGalleryModal'));
   
-  // Using the correct export function names from export-utils.ts
   const handleExportSVG = useCallback(() => {
     if (!mindMap) {
       toast({
-        title: "Export Failed",
-        description: "Mind map not ready to export.",
+        title: "Export Error",
+        description: "Mindmap not initialized. Please try again.",
         variant: "destructive",
       });
       return;
     }
     
-    try {
-      exportSVG(mindMap);
-      toast({
-        title: "Export Successful",
-        description: "Mind map exported as SVG.",
-      });
-    } catch (error) {
-      console.error("Error exporting SVG:", error);
-      toast({
-        title: "Export Failed",
-        description: "Could not export as SVG. Try again later.",
-        variant: "destructive",
-      });
-    }
+    exportSVG(mindMap, (result) => {
+      if (result.success) {
+        toast({
+          title: "Export Successful",
+          description: "Mind map exported as SVG.",
+        });
+      } else {
+        toast({
+          title: "Export Failed",
+          description: result.error || "Unable to export mind map.",
+          variant: "destructive",
+        });
+      }
+    });
   }, [mindMap, toast]);
-
+  
   const handleExportPNG = useCallback(() => {
     if (!mindMap) {
       toast({
-        title: "Export Failed",
-        description: "Mind map not ready to export.",
+        title: "Export Error",
+        description: "Mindmap not initialized. Please try again.",
         variant: "destructive",
       });
       return;
     }
     
-    try {
-      exportPNG(mindMap);
-      toast({
-        title: "Export Successful",
-        description: "Mind map exported as PNG.",
-      });
-    } catch (error) {
-      console.error("Error exporting PNG:", error);
-      toast({
-        title: "Export Failed",
-        description: "Could not export as PNG. Try again later.",
-        variant: "destructive",
-      });
-    }
+    exportPNG(mindMap, (result) => {
+      if (result.success) {
+        toast({
+          title: "Export Successful",
+          description: "Mind map exported as PNG.",
+        });
+      } else {
+        toast({
+          title: "Export Failed",
+          description: result.error || "Unable to export mind map.",
+          variant: "destructive",
+        });
+      }
+    });
   }, [mindMap, toast]);
-
+  
   const handleExportJSON = useCallback(() => {
     if (!mindMap) {
       toast({
-        title: "Export Failed",
-        description: "Mind map not ready to export.",
+        title: "Export Error",
+        description: "Mindmap not initialized. Please try again.",
         variant: "destructive",
       });
       return;
     }
     
-    try {
-      exportJSON(mindMap);
-      toast({
-        title: "Export Successful",
-        description: "Mind map data exported as JSON.",
-      });
-    } catch (error) {
-      console.error("Error exporting JSON:", error);
-      toast({
-        title: "Export Failed",
-        description: "Could not export as JSON. Try again later.",
-        variant: "destructive",
-      });
-    }
+    exportJSON(mindMap, (result) => {
+      if (result.success) {
+        toast({
+          title: "Export Successful",
+          description: "Mind map data exported as JSON.",
+        });
+      } else {
+        toast({
+          title: "Export Failed",
+          description: result.error || "Unable to export mind map data.",
+          variant: "destructive",
+        });
+      }
+    });
   }, [mindMap, toast]);
-  
+
   return (
     <>
-      <HeaderSidebar
+      <HeaderSidebar 
         isPdfActive={isPdfActive}
         isChatActive={isChatActive}
         togglePdf={togglePdf}
         toggleChat={toggleChat}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
-        setShowGallery={setShowGallery}
+        setShowGallery={setShowGallery} // Pass the gallery state setter
         onExportSVG={handleExportSVG}
         onExportPNG={handleExportPNG}
         onExportJSON={handleExportJSON}
       />
-      
-      {/* Lazy load the gallery modal to improve initial load time */}
-      <React.Suspense fallback={null}>
-        {showGallery && <ImageGalleryModal open={showGallery} onOpenChange={setShowGallery} />}
-      </React.Suspense>
     </>
   );
 };

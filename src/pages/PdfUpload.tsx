@@ -1,9 +1,8 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import PdfToText from "react-pdftotext";
-import { Brain, Upload, AlertCircle, X } from "lucide-react";
+import { Brain, Upload, AlertCircle, X, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateMindMapFromText } from "@/services/geminiService";
 import { storePdfData, setCurrentPdf } from "@/utils/pdfStorage";
@@ -19,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { extractImagesFromPdf, storeExtractedImages } from "@/utils/pdfImageExtractor";
 
 function getPdfKey(file: File) {
   // You could enhance this by hashing the file if needed, but name+size+lastModified is a good-enough ID for most use-cases.
@@ -39,6 +40,7 @@ const PdfUpload = () => {
   const maxRetries = 3;
   const retryDelay = 15000; // 15 seconds
   const [retryAttempt, setRetryAttempt] = useState(0);
+  const [extractImages, setExtractImages] = useState(true); // New state for image extraction toggle
 
   // Keep all mindMap data by pdfKey in sessionStorage
   const mindMapKeyPrefix = "mindMapData_";
@@ -181,8 +183,7 @@ const PdfUpload = () => {
     });
 
     await processAndGenerateMindMap(selectedFile, activePdfKey);
-  // eslint-disable-next-line
-  }, [activePdfKey, pdfFiles, toast]);  
+  }, [activePdfKey, pdfFiles, toast, extractImages]);
 
   async function processAndGenerateMindMap(selectedFile: File, pdfKey: string) {
     try {
@@ -209,6 +210,36 @@ const PdfUpload = () => {
       await setCurrentPdf(pdfKey);
       
       console.log(`PDF data stored for: ${selectedFile.name}`);
+
+      // Extract images if enabled
+      if (extractImages) {
+        toast({
+          title: "Extracting Images",
+          description: "Looking for images in the PDF...",
+        });
+        
+        try {
+          // Run image extraction in parallel with text extraction
+          extractImagesFromPdf(pdfData)
+            .then(images => {
+              if (images.length > 0) {
+                storeExtractedImages(pdfKey, images);
+                toast({
+                  title: "Images Extracted",
+                  description: `Found ${images.length} images in the PDF`,
+                });
+              } else {
+                console.log("No images found in PDF");
+              }
+            })
+            .catch(err => {
+              console.error("Error extracting images:", err);
+            });
+        } catch (imgError) {
+          console.error("Failed to extract images:", imgError);
+          // Non-critical error, continue with mind map generation
+        }
+      }
 
       // Extract text
       const extractedText = await PdfToText(selectedFile);
@@ -326,6 +357,22 @@ const PdfUpload = () => {
               <p className="text-lg font-medium">Drag and drop your PDFs here</p>
               <p className="text-gray-500">or select files from your computer</p>
             </div>
+          </div>
+
+          {/* Extract Images toggle */}
+          <div className="flex items-center justify-between mb-6 p-3 bg-gray-50 rounded-md">
+            <div className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-gray-500" />
+              <div>
+                <div className="font-medium">Extract images</div>
+                <div className="text-xs text-gray-500">Extract and save images from PDFs</div>
+              </div>
+            </div>
+            <Switch
+              checked={extractImages}
+              onCheckedChange={setExtractImages}
+              aria-label="Extract images from PDF"
+            />
           </div>
 
           {pdfFiles.length > 0 && (

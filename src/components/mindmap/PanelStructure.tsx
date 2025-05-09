@@ -6,7 +6,9 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import ImageGalleryModal from "@/components/mindmap/ImageGalleryModal";
 import { storePdfData, setCurrentPdf, getPdfData, clearPdfData, isMindMapReady, preloadPdfCache } from "@/utils/pdfStorage";
+import { extractImagesFromPdf, storeExtractedImages } from "@/utils/pdfImageExtractor";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -41,6 +43,9 @@ const PanelStructure = ({
   // Updated state for captured image with flag to prevent double processing
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [processingCapture, setProcessingCapture] = useState(false);
+  
+  // Add state for gallery modal
+  const [showGallery, setShowGallery] = useState(false);
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -222,6 +227,25 @@ const PanelStructure = ({
           .then(() => console.log(`PDF data stored for: ${file.name}`))
           .catch(err => console.error("Error storing PDF data:", err));
         
+        // Extract images if enabled (check sessionStorage for the setting)
+        const shouldExtractImages = sessionStorage.getItem('extractImages') !== 'false';
+        if (shouldExtractImages) {
+          // Run image extraction in parallel with other processes
+          extractImagesFromPdf(pdfData)
+            .then(images => {
+              if (images.length > 0) {
+                storeExtractedImages(pdfKey, images);
+                toast({
+                  title: "Images Extracted",
+                  description: `Found ${images.length} images in the PDF`,
+                });
+              }
+            })
+            .catch(err => {
+              console.error("Error extracting images:", err);
+            });
+        }
+        
         // Get the extracted text result
         const extractedText = await textExtractionPromise;
         
@@ -377,6 +401,18 @@ const PanelStructure = ({
     }
   };
 
+  // Listen for image gallery opening requests
+  useEffect(() => {
+    const handleOpenGallery = () => {
+      setShowGallery(true);
+    };
+    
+    window.addEventListener('openImageGallery', handleOpenGallery);
+    return () => {
+      window.removeEventListener('openImageGallery', handleOpenGallery);
+    };
+  }, []);
+
   if (!isRendered) {
     return <div className="h-full w-full flex justify-center items-center">
       <div className="flex items-center gap-2">
@@ -446,6 +482,12 @@ const PanelStructure = ({
           explainImage={capturedImage}
         />
       </div>
+
+      {/* Image Gallery Modal */}
+      <ImageGalleryModal 
+        open={showGallery} 
+        onOpenChange={setShowGallery} 
+      />
     </>
   );
 };
