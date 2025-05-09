@@ -2,7 +2,7 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Gallery } from "lucide-react";
+import { Camera } from "lucide-react";
 
 interface ImageGalleryModalProps {
   open: boolean;
@@ -30,7 +30,7 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Gallery className="mr-2 h-5 w-5" /> 
+            <Camera className="mr-2 h-5 w-5" /> 
             Image Gallery
           </DialogTitle>
         </DialogHeader>

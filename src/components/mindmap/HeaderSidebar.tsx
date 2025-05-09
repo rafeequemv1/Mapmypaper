@@ -6,7 +6,7 @@ import {
   FileText,
   Home,
   Network,
-  Gallery
+  Camera
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
@@ -86,7 +86,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
       <div className="mt-auto">
         <HeaderSidebarIcon
           onClick={() => setShowGallery(true)}
-          icon={<Gallery className="h-4 w-4" />}
+          icon={<Camera className="h-4 w-4" />}
           title="Image Gallery"
         />
       </div>

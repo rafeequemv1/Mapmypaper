@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
 import { useToast } from "@/hooks/use-toast";
-import { exportSVG, exportPNG, exportJSON } from "@/lib/export-utils";
+import { downloadMindMapAsSVG as exportSVG, downloadMindMapAsPNG as exportPNG, downloadMindMapAsSVG as exportJSON } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -30,6 +30,7 @@ const Header: React.FC<HeaderProps> = ({
   // Import the ImageGalleryModal component dynamically
   const ImageGalleryModal = React.lazy(() => import('./ImageGalleryModal'));
   
+  // Using the correct export function names from export-utils.ts
   const handleExportSVG = useCallback(() => {
     if (!mindMap) {
       toast({
