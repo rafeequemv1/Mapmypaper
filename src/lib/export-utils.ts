@@ -8,7 +8,7 @@ import { MindElixirInstance } from "mind-elixir";
  */
 export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
   try {
-    const blob = await instance.exportPng(true); // Pass boolean instead of number
+    const blob = await instance.exportPng();
     if (blob) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -47,25 +47,6 @@ export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: str
     console.error("Error exporting as SVG:", error);
     throw error;
   }
-};
-
-/**
- * Helper function to get SVG data from mind map
- * @param instance Mind Elixir instance
- * @returns SVG data as string
- */
-export const getSvg = (instance: MindElixirInstance): string => {
-  return instance.getSvgData();
-};
-
-/**
- * Helper function to get PNG image from mind map
- * @param instance Mind Elixir instance
- * @returns Promise that resolves with PNG data URL
- */
-export const getImage = async (instance: MindElixirInstance): Promise<string> => {
-  const blob = await instance.exportPng(true); // Pass boolean instead of number
-  return URL.createObjectURL(blob);
 };
 
 /**
