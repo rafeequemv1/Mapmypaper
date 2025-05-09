@@ -737,6 +737,169 @@ const MindMapViewer = ({
 
       // Apply direction change to the mind map
       // Use the correct method: MindElixir has a tempDirection property but not updateDirection
-      // We need to access the mind map instance's methods differently
       if (mindMapRef.current) {
         // Cast to any to access extended methods that aren't in the TypeScript interface
+        (mindMapRef.current as any).direction = directionValue;
+        (mindMapRef.current as any).init((mindMapRef.current as any).nodeData);
+        
+        // Update the state to reflect the new direction
+        setDirection(newDirection);
+        
+        // Show a toast notification about the direction change
+        toast({
+          title: "Layout Changed",
+          description: `Mind map changed to ${newDirection} layout.`,
+          duration: 3000
+        });
+      }
+    }
+  };
+
+  // Generate a summary for a node and its children
+  const generateNodeSummary = (node: any) => {
+    // Show loading state
+    toast({
+      title: "Generating Summary",
+      description: "Processing node content...",
+      duration: 3000
+    });
+
+    // Extract the node topic and its children
+    const nodeTopic = node.topic || '';
+    const childTopics: string[] = [];
+    
+    // Collect all child topics
+    const collectChildTopics = (children: any[] | undefined) => {
+      if (!children || !Array.isArray(children)) return;
+      
+      for (const child of children) {
+        if (child.topic) {
+          childTopics.push(child.topic);
+        }
+        if (child.children) {
+          collectChildTopics(child.children);
+        }
+      }
+    };
+    
+    if (node.children) {
+      collectChildTopics(node.children);
+    }
+    
+    // Generate a summary based on the node and its children
+    // In a real app, this might call an AI service
+    const generatedSummary = `Summary for "${nodeTopic}"\n\nThis section contains ${childTopics.length} sub-topics:\n- ${childTopics.slice(0, 5).join('\n- ')}${childTopics.length > 5 ? '\n- ...' : ''}`;
+    
+    // Display the summary dialog
+    setSummary(generatedSummary);
+    setShowSummary(true);
+  };
+
+  if (!isMapGenerated) {
+    return (
+      <div className="h-full w-full flex flex-col justify-center items-center p-8 relative">
+        {/* Show loading animation when isLoading is true */}
+        {isLoading ? (
+          <div className="w-full max-w-md">
+            <div className="flex flex-col items-center space-y-4 mb-8">
+              <LoaderCircle className="h-12 w-12 text-purple-500 animate-spin" />
+              <h2 className="text-xl font-semibold text-gray-800">Generating Mind Map</h2>
+              <p className="text-gray-600 text-center">
+                Creating a visual representation of your document...
+              </p>
+              {loadingProgress > 0 && (
+                <Progress value={loadingProgress} className="w-full" />
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="w-full max-w-md space-y-6">
+            <div className="flex flex-col items-center space-y-4">
+              <FileText className="h-16 w-16 text-gray-400" />
+              <h2 className="text-2xl font-semibold text-gray-800">No Mind Map Available</h2>
+              <p className="text-gray-600 text-center">
+                Upload a PDF or document to generate a mind map visualization.
+              </p>
+            </div>
+            <div className="grid gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-60" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full relative">
+      {/* Mind Map Container */}
+      <div 
+        ref={containerRef} 
+        className="h-full w-full overflow-hidden" 
+      />
+
+      {/* Control Panel - moved to top-left corner for better access */}
+      <div className="absolute top-2 left-2 flex flex-col p-2 bg-white/80 backdrop-blur-sm rounded-lg shadow-md">
+        {/* Zoom Controls */}
+        <div className="flex items-center mb-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleZoomOut} 
+            className="h-8 w-8 p-0"
+            aria-label="Zoom out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-xs font-medium mx-2">{zoomLevel}%</span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleZoomIn} 
+            className="h-8 w-8 p-0"
+            aria-label="Zoom in"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Layout Direction Toggle */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleDirection}
+          className="flex items-center justify-center mb-2 h-8"
+          aria-label={`Switch to ${direction === 'vertical' ? 'horizontal' : 'vertical'} layout`}
+        >
+          {direction === 'horizontal' ? <ArrowDown className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+          <span className="ml-2 text-xs">Layout</span>
+        </Button>
+      </div>
+
+      {/* Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Node Summary</DialogTitle>
+            <DialogDescription>
+              A summary of the selected node and its children.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-96 overflow-auto">
+            <pre className="whitespace-pre-wrap text-sm p-4 rounded bg-slate-50">{summary}</pre>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default MindMapViewer;
