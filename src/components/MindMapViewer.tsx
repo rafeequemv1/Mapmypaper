@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { FileText, LoaderCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import ZoomControls from "./ZoomControls";
 
 interface MindMapViewerProps {
   isMapGenerated: boolean;
@@ -207,58 +207,6 @@ const MindMapViewer = ({
   const [summary, setSummary] = useState<string>('');
   const [loadingProgress, setLoadingProgress] = useState(0);
   const { toast } = useToast();
-  const [currentDirection, setCurrentDirection] = useState<number>(1); // 0: LR, 1: TB
-
-  // Zoom control handlers
-  const handleZoomIn = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.zoomIn();
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (mindMapRef.current) {
-      mindMapRef.current.zoomOut();
-    }
-  };
-
-  // Toggle direction handler
-  const handleToggleDirection = () => {
-    if (mindMapRef.current) {
-      // Toggle between directions: 0 (LR), 1 (TB), 2 (RL), 3 (BT)
-      // For simplicity, we'll just toggle between LR (0) and TB (1)
-      const newDirection = currentDirection === 1 ? 0 : 1;
-      setCurrentDirection(newDirection);
-      
-      try {
-        // Get current data
-        const currentData = mindMapRef.current.getData();
-        
-        // Update direction
-        mindMapRef.current.direction = newDirection;
-        
-        // Re-init with the same data but new direction
-        mindMapRef.current.init(currentData);
-        
-        // Update any saved data
-        if (pdfKey) {
-          sessionStorage.setItem(`mindMapData_${pdfKey}`, JSON.stringify(currentData));
-        }
-        
-        toast({
-          title: "Direction Changed",
-          description: `Mind map direction set to ${newDirection === 0 ? "Left-Right" : "Top-Bottom"}`,
-        });
-      } catch (error) {
-        console.error("Error changing direction:", error);
-        toast({
-          title: "Error",
-          description: "Failed to change mind map direction",
-          variant: "destructive",
-        });
-      }
-    }
-  };
 
   // Simulate loading progress when isLoading is true
   useEffect(() => {
@@ -329,7 +277,7 @@ const MindMapViewer = ({
       
       const options = {
         el: containerRef.current,
-        direction: currentDirection as const, // Use the current direction state
+        direction: 1 as const,
         draggable: true,
         editable: true,
         contextMenu: true, 
@@ -719,7 +667,7 @@ const MindMapViewer = ({
         observer.disconnect();
       };
     }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfKey, currentDirection]);
+  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfKey]);
 
   // Listen for PDF switching events and update mindmap
   useEffect(() => {
@@ -859,15 +807,6 @@ const MindMapViewer = ({
         className="w-full h-full overflow-hidden"
         style={{ opacity: isReady ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }}
       />
-      
-      {/* Add Zoom Controls */}
-      {isMapGenerated && isReady && (
-        <ZoomControls 
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onToggleDirection={handleToggleDirection}
-        />
-      )}
       
       {/* Summary modal */}
       {showSummary && (
