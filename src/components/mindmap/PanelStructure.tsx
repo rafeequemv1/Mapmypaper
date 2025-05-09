@@ -369,9 +369,9 @@ const PanelStructure = ({
         onChange={e => handleAddPdf(e.target.files)}
       />
       <div className="h-full w-full flex pl-12">
-        {/* PDF Panel - Now fixed to 50% width when visible */}
+        {/* PDF Panel - Fixed to 40% width */}
         {showPdf && (
-          <div className="h-full w-1/2 flex-shrink-0 flex flex-col">
+          <div className="h-full w-[40%] flex-shrink-0 flex flex-col">
             {/* PDF tabs above viewer */}
             <PdfTabs
               activeKey={activePdfKey}
@@ -389,8 +389,8 @@ const PanelStructure = ({
           </div>
         )}
 
-        {/* Mind Map Panel - Takes up remaining space when PDF and Chat are both visible */}
-        <div className={`h-full ${showPdf ? (showChat ? 'hidden' : 'w-1/2') : (showChat ? 'w-1/2' : 'w-full')}`}>
+        {/* Mind Map Panel - Takes up remaining space */}
+        <div className={`h-full ${showPdf ? (showChat ? 'w-[30%]' : 'w-[60%]') : (showChat ? 'w-[70%]' : 'w-full')}`}>
           <MindMapViewer
             isMapGenerated={isMapGenerated}
             onMindMapReady={onMindMapReady}
@@ -400,9 +400,8 @@ const PanelStructure = ({
           />
         </div>
 
-        {/* Chat Panel - Now fixed to 50% width when visible */}
         {showChat && (
-          <div className="h-full w-1/2 flex-shrink-0">
+          <div className="h-full w-[30%] flex-shrink-0">
             <ChatPanel
               toggleChat={toggleChat}
               explainText={explainText}
