@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -723,4 +724,205 @@ const MindMapViewer = ({
       const directionValue = newDirection === 'vertical' ? 1 : 0;
       
       // Apply direction change to the mind map
-      // Use the correct method: MindElixir has a
+      // Set direction in the MindElixir instance
+      if (mindMapRef.current.direction !== directionValue) {
+        // Update direction in mind map (this line varies depending on the MindElixir version)
+        // Some versions use setDirection, others modify the property directly
+        try {
+          // First try the standard method if available
+          if (typeof mindMapRef.current.init === 'function') {
+            // Create a new data structure with updated direction
+            const currentData = mindMapRef.current.getData();
+            mindMapRef.current.init({
+              ...currentData,
+              direction: directionValue
+            });
+          } else {
+            // Fallback to directly setting the property
+            mindMapRef.current.direction = directionValue;
+            // Force a re-render if needed
+            mindMapRef.current.refresh();
+          }
+          
+          // Update local state
+          setDirection(newDirection);
+          
+          // Show success toast
+          toast({
+            title: `Direction Changed`,
+            description: `Mind map is now in ${newDirection} layout`,
+          });
+        } catch (err) {
+          console.error("Error changing direction:", err);
+          toast({
+            title: "Direction Change Failed",
+            description: "Could not change the mind map direction",
+            variant: "destructive"
+          });
+        }
+      }
+    }
+  };
+
+  // Function to generate summary for a node
+  const generateNodeSummary = (node: any) => {
+    if (!node) return;
+    
+    // Extract the topic and any child topics
+    const nodeTopic = node.topic;
+    const childTopics = node.children?.map((child: any) => child.topic) || [];
+    
+    // Construct a summary request 
+    const summaryText = `Node: ${nodeTopic}\nChildren: ${childTopics.join(', ')}`;
+    
+    // Set summary
+    setSummary(summaryText);
+    setShowSummary(true);
+    
+    // Potentially request chat to open with this text
+    if (onExplainText) {
+      onExplainText(`Summarize this mind map node: ${nodeTopic}`);
+    }
+    
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+  };
+
+  // Function to open the gallery modal
+  const openGallery = () => {
+    setShowGallery(true);
+  };
+
+  // Placeholder images for the gallery
+  const galleryImages = [
+    { src: "/placeholder.svg", caption: "Figure 1: Research methodology diagram" },
+    { src: "/placeholder.svg", caption: "Figure 2: Key results visualization" },
+    { src: "/placeholder.svg", caption: "Figure 3: Comparison with prior work" },
+    { src: "/placeholder.svg", caption: "Figure 4: System architecture" },
+    { src: "/placeholder.svg", caption: "Figure 5: Data collection process" },
+    { src: "/placeholder.svg", caption: "Figure 6: Experimental results" }
+  ];
+
+  return (
+    <div className="relative h-full w-full flex flex-col">
+      {/* Loading state indicator */}
+      {loadingProgress > 0 && (
+        <div className="absolute top-0 left-0 right-0 z-10">
+          <Progress value={loadingProgress} className="h-1" />
+        </div>
+      )}
+      
+      {/* Main container */}
+      <div className="relative flex-grow">
+        {/* Mind map container */}
+        <div 
+          ref={containerRef}
+          className={`w-full h-full transition-opacity duration-300 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+          style={{
+            position: 'relative',
+            minHeight: '300px'
+          }}
+        >
+          {/* Default state or loading state */}
+          {!isReady && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              {isLoading ? (
+                <div className="flex flex-col items-center gap-3">
+                  <LoaderCircle className="h-10 w-10 animate-spin text-purple-600" />
+                  <p className="text-sm text-gray-500">Generating mind map...</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <Skeleton className="h-[40vh] w-[80%] rounded-md" />
+                  <p className="text-sm text-gray-500">Mind map loading...</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Mind map control buttons - positioned at bottom right */}
+        {isReady && (
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
+            {/* Zoom controls */}
+            <Button 
+              size="icon" 
+              variant="outline" 
+              onClick={handleZoomIn} 
+              className="bg-white/90 shadow-md hover:bg-white"
+            >
+              <ZoomIn className="h-5 w-5" />
+              <span className="sr-only">Zoom In</span>
+            </Button>
+            
+            <Button 
+              size="icon" 
+              variant="outline" 
+              onClick={handleZoomOut}
+              className="bg-white/90 shadow-md hover:bg-white"
+            >
+              <ZoomOut className="h-5 w-5" />
+              <span className="sr-only">Zoom Out</span>
+            </Button>
+            
+            {/* Toggle direction button */}
+            <Button 
+              size="icon" 
+              variant="outline" 
+              onClick={toggleDirection}
+              className="bg-white/90 shadow-md hover:bg-white"
+            >
+              {direction === 'vertical' ? (
+                <ArrowDown className="h-5 w-5" />
+              ) : (
+                <ArrowRight className="h-5 w-5" />
+              )}
+              <span className="sr-only">Toggle Direction</span>
+            </Button>
+            
+            {/* Open gallery button */}
+            <Button 
+              size="icon" 
+              variant="outline" 
+              onClick={openGallery}
+              className="bg-white/90 shadow-md hover:bg-white"
+            >
+              <Images className="h-5 w-5" />
+              <span className="sr-only">View Figures</span>
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Gallery Dialog */}
+      <Dialog open={showGallery} onOpenChange={setShowGallery}>
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Research Figures Gallery</DialogTitle>
+            <DialogDescription>
+              Key visualizations from the research paper
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+            {galleryImages.map((image, index) => (
+              <div key={index} className="border rounded-lg overflow-hidden">
+                <img 
+                  src={image.src} 
+                  alt={`Figure ${index + 1}`} 
+                  className="w-full h-48 object-cover"
+                />
+                <div className="p-3 bg-gray-50">
+                  <p className="text-sm text-gray-700">{image.caption}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default MindMapViewer;
