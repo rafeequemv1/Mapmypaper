@@ -25,6 +25,16 @@ const MindMap = () => {
   const [isCapturingInPdf, setIsCapturingInPdf] = useState(false);
   const [activeTab, setActiveTab] = useState("mindmap");
   const pdfViewerRef = useRef(null);
+  
+  // Determine the layout based on whether chat is active and which tab is selected
+  const getPanelLayout = () => {
+    if (showChat && activeTab === "chat") {
+      // When chat is active and selected, use 50/50 split
+      return [50, 50];
+    }
+    // Otherwise use the default layout (could be customized further)
+    return [30, 70];
+  };
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -305,6 +315,7 @@ const MindMap = () => {
           />
         }
         rightPanel={renderRightPanel()}
+        defaultLayout={getPanelLayout()}
       />
       
       {/* Capture in progress indicator - ONLY SHOW IF NOT IN PDF */}
