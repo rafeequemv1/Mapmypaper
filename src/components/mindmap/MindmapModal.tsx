@@ -40,12 +40,13 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       Pen and paper
       Mermaid`;
 
-  // Safe cleanup and rendering management
+  // Safe cleanup and rendering management with improved DOM handling
   useEffect(() => {
     // Only run when modal is open
     if (!isOpen) return;
     
     let isMounted = true;
+    
     const renderMindmap = async () => {
       try {
         if (!isMounted) return;
@@ -54,10 +55,8 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
         setError(null);
         
         if (containerRef.current) {
-          // Clear any previous content
-          while (containerRef.current.firstChild) {
-            containerRef.current.removeChild(containerRef.current.firstChild);
-          }
+          // Safely clear any previous content - using innerHTML instead of direct node removal
+          containerRef.current.innerHTML = '';
           
           // Display simplified mindmap visualization instead
           const content = document.createElement('div');
@@ -137,11 +136,13 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
     
     renderMindmap();
     
-    // Cleanup function
+    // Improved cleanup function
     return () => {
       isMounted = false;
+      // Safer DOM cleanup - use HTML clearing instead of node removal
       if (containerRef.current) {
-        // Using safer inner HTML clear instead of direct node removal
+        // This approach avoids the "removeChild" error that happens
+        // when React tries to remove nodes during unmounting
         containerRef.current.innerHTML = '';
       }
     };

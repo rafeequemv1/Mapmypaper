@@ -44,22 +44,24 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
-// Improved DialogContent with better cleanup handling
+// Enhanced DialogContent with improved cleanup handling and DOM event prevention
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  // Using useEffect with empty cleanup function to handle unmounting safely
-  React.useEffect(() => {
-    // This helps prevent the 'removeChild' error by ensuring proper timing
+  // Using useLayoutEffect for DOM operations to avoid timing issues
+  React.useLayoutEffect(() => {
+    // Store original body style
     const originalOverflowY = document.body.style.overflowY;
+    const originalPaddingRight = document.body.style.paddingRight;
     
     // Return cleanup function
     return () => {
-      // Restore original overflow after a slight delay to avoid React's immediate cleanup
+      // Use a micro-delay to avoid removeChild issues
       setTimeout(() => {
         document.body.style.overflowY = originalOverflowY;
-      }, 10);
+        document.body.style.paddingRight = originalPaddingRight;
+      }, 50);
     };
   }, []);
 
@@ -72,10 +74,28 @@ const DialogContent = React.forwardRef<
           "fixed left-[50%] top-[50%] z-[9999] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
           className
         )}
+        // Prevent autofocus events that may trigger DOM operations during unmount
         onCloseAutoFocus={(e) => {
-          // Prevent React from trying to focus elements that might be unmounted
-          e.preventDefault();
-          props.onCloseAutoFocus?.(e);
+          e.preventDefault(); // Prevent React events that could trigger node operations
+          
+          // Still call original prop if provided
+          if (props.onCloseAutoFocus) {
+            props.onCloseAutoFocus(e);
+          }
+        }}
+        // Prevent escape key causing issues during animation
+        onEscapeKeyDown={(e) => {
+          // Still call original prop if provided
+          if (props.onEscapeKeyDown) {
+            props.onEscapeKeyDown(e);
+          }
+        }}
+        // Prevent pointer down events from causing issues
+        onPointerDownOutside={(e) => {
+          // Still call original prop if provided
+          if (props.onPointerDownOutside) {
+            props.onPointerDownOutside(e);
+          }
         }}
         {...props}
       >
