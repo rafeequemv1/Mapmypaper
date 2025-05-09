@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -734,3 +735,108 @@ const MindMapViewer = ({
     
     // Count the number of nodes for statistics
     const countNodes = (node: any): number => {
+      if (!node) return 0;
+      
+      let count = 1; // Count the current node
+      
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          count += countNodes(child);
+        }
+      }
+      
+      return count;
+    };
+    
+    // Add statistics to the summary
+    const totalNodes = countNodes(nodeData);
+    const directChildren = nodeData.children ? nodeData.children.length : 0;
+    summaryText += `**Statistics:** ${totalNodes} total nodes, ${directChildren} direct sub-topics\n\n`;
+    
+    // Add hierarchical summary
+    summaryText += extractTopics(nodeData);
+    
+    // Display the summary
+    setSummary(summaryText);
+    setShowSummary(true);
+    
+    // If there's a chat request handler, send the summary there
+    if (onExplainText) {
+      onExplainText(`Please explain this mind map section: ${nodeData.topic}`);
+    }
+    
+    // Open chat if available
+    if (onRequestOpenChat) {
+      onRequestOpenChat();
+    }
+  };
+
+  // Render loading state or mind map
+  if (loadingProgress > 0) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8">
+        <div className="flex items-center gap-2">
+          <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
+          <span className="text-lg font-medium">Generating Mind Map...</span>
+        </div>
+        <Progress value={loadingProgress} className="w-64" />
+        <p className="text-muted-foreground text-sm">Analyzing document structure and creating visual representation</p>
+      </div>
+    );
+  }
+
+  if (!isMapGenerated) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center p-8 gap-6">
+        <div className="flex flex-col items-center gap-4">
+          <FileText className="h-16 w-16 text-muted-foreground/40" />
+          <h2 className="text-xl font-semibold tracking-tight">No Mind Map Generated</h2>
+          <p className="text-center text-muted-foreground max-w-md">
+            Upload and process a PDF document to generate an interactive mind map visualization.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Mind map container */}
+      <div 
+        ref={containerRef} 
+        className="w-full h-full overflow-hidden"
+        style={{ opacity: isReady ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }}
+      />
+      
+      {/* Summary modal */}
+      {showSummary && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl max-h-[80vh] overflow-auto">
+            <h3 className="text-lg font-semibold mb-4">Mind Map Section Summary</h3>
+            <div className="whitespace-pre-wrap text-sm">
+              {summary}
+            </div>
+            <div className="flex justify-end mt-4 gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  if (onExplainText && summary) {
+                    onExplainText(`Please explain this mind map summary: ${summary.substring(0, 500)}${summary.length > 500 ? '...' : ''}`);
+                  }
+                  if (onRequestOpenChat) {
+                    onRequestOpenChat();
+                  }
+                }}
+              >
+                Ask AI to Explain
+              </Button>
+              <Button onClick={() => setShowSummary(false)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MindMapViewer;
