@@ -1,11 +1,11 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet, useNavigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
 import RequireAuth from "@/components/RequireAuth";
 import TopBar from "@/components/TopBar";
 import Footer from "@/components/Footer";
@@ -46,9 +46,6 @@ const Layout = () => (
 
 // Layout without TopBar and Footer for the editor
 const EditorLayout = () => <Outlet />;
-
-// Remove this component as we're handling admin routing directly in the Admin component
-// AdminRoute is no longer needed as the checks are already in the Admin component
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
