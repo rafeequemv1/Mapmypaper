@@ -8,14 +8,6 @@ import { FileText, LoaderCircle, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, ArrowDo
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-interface MindMapViewerProps {
-  isMapGenerated: boolean;
-  onMindMapReady?: (mindMap: MindElixirInstance) => void;
-  onExplainText?: (text: string) => void;
-  onRequestOpenChat?: () => void;
-  pdfKey?: string | null;
-  isLoading?: boolean; // New prop for loading state
-}
 
 // Enhanced helper function to format node text with line breaks and add emojis
 const formatNodeText = (text: string, wordsPerLine: number = 4, isRoot: boolean = false): string => {
@@ -180,6 +172,15 @@ const stringToColor = (str: string): string => {
   // Use the hash to select a color from palette
   return colors[Math.abs(hash) % colors.length];
 };
+interface MindMapViewerProps {
+  isMapGenerated: boolean;
+  onMindMapReady?: (mindMap: MindElixirInstance) => void;
+  onExplainText?: (text: string) => void;
+  onRequestOpenChat?: () => void;
+  pdfKey?: string | null;
+  isLoading?: boolean; // New prop for loading state
+}
+
 const MindMapViewer = ({
   isMapGenerated,
   onMindMapReady,
@@ -196,7 +197,7 @@ const MindMapViewer = ({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
   const [direction, setDirection] = useState<'vertical' | 'horizontal'>('vertical');
-  const [zoomLevel, setZoomLevel] = useState(100);
+  const [zoomLevel, setZoomLevel] = useState(50); // Changed initial zoom to 50% (lowest)
   const {
     toast
   } = useToast();
@@ -226,6 +227,7 @@ const MindMapViewer = ({
       if (interval) clearInterval(interval);
     };
   }, [isLoading, loadingProgress]);
+
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
       // Initialize the mind map only once when it's generated
@@ -508,6 +510,12 @@ const MindMapViewer = ({
 
       // Initialize the mind map with data
       mind.init(data);
+      
+      // Set initial zoom to lowest (50%)
+      setTimeout(() => {
+        mind.scale(0.5); // Set zoom to 50% (lowest)
+        setZoomLevel(50);
+      }, 300);
 
       // Enable debug mode for better troubleshooting
       (window as any).mind = mind;
@@ -732,199 +740,4 @@ const MindMapViewer = ({
         // Cast to any to access extended methods that aren't in the TypeScript interface
         const mindElixirInstance = mindMapRef.current as any;
         if (typeof mindElixirInstance.direction === 'function') {
-          mindElixirInstance.direction(directionValue);
-        } else if (typeof mindElixirInstance.setDirection === 'function') {
-          mindElixirInstance.setDirection(directionValue);
-        } else {
-          console.warn("Could not find method to update mind map direction");
-        }
-      }
-
-      // Update state
-      setDirection(newDirection);
-
-      // Show toast notification
-      toast({
-        title: "Layout Changed",
-        description: `Mind map layout changed to ${newDirection}.`,
-        duration: 3000
-      });
-    }
-  };
-
-  // Function to generate summaries for nodes and their children
-  const generateNodeSummary = (nodeData: any) => {
-    if (!nodeData) return;
-
-    // Generate a simple summary from the node hierarchy
-    let summaryText = `## Summary of "${nodeData.topic}"\n\n`;
-
-    // Helper function to extract node topics and build a hierarchical summary
-    const extractTopics = (node: any, level: number = 0) => {
-      if (!node) return '';
-      let indent = '';
-      for (let i = 0; i < level; i++) {
-        indent += '  ';
-      }
-
-      // Get clean topic text without emojis and formatting
-      let topicText = node.topic || '';
-
-      // Remove emojis
-      topicText = topicText.replace(/[\p{Emoji}]/gu, '').trim();
-
-      // Remove line breaks
-      topicText = topicText.replace(/\n/g, ' ');
-      let result = `${indent}- ${topicText}\n`;
-      if (node.children && node.children.length > 0) {
-        for (const child of node.children) {
-          result += extractTopics(child, level + 1);
-        }
-      }
-      return result;
-    };
-
-    // Count the number of nodes for statistics
-    const countNodes = (node: any): number => {
-      if (!node) return 0;
-      let count = 1; // Count the current node
-
-      if (node.children && node.children.length > 0) {
-        for (const child of node.children) {
-          count += countNodes(child);
-        }
-      }
-      return count;
-    };
-
-    // Add statistics to the summary
-    const totalNodes = countNodes(nodeData);
-    const directChildren = nodeData.children ? nodeData.children.length : 0;
-    summaryText += `**Statistics:** ${totalNodes} total nodes, ${directChildren} direct sub-topics\n\n`;
-
-    // Add hierarchical summary
-    summaryText += extractTopics(nodeData);
-
-    // Display the summary
-    setSummary(summaryText);
-    setShowSummary(true);
-
-    // If there's a chat request handler, send the summary there
-    if (onExplainText) {
-      onExplainText(`Please explain this mind map section: ${nodeData.topic}`);
-    }
-
-    // Open chat if available
-    if (onRequestOpenChat) {
-      onRequestOpenChat();
-    }
-  };
-
-  // Render loading state or mind map
-  if (loadingProgress > 0) {
-    return <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8">
-        <div className="flex items-center gap-2">
-          <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
-          <span className="text-lg font-medium">Generating Mind Map...</span>
-        </div>
-        <Progress value={loadingProgress} className="w-64" />
-        <p className="text-muted-foreground text-sm">Analyzing document structure and creating visual representation</p>
-      </div>;
-  }
-  if (!isMapGenerated) {
-    return <div className="w-full h-full flex flex-col items-center justify-center p-8 gap-6">
-        <div className="flex flex-col items-center gap-4">
-          <FileText className="h-16 w-16 text-muted-foreground/40" />
-          <h2 className="text-xl font-semibold tracking-tight">No Mind Map Generated</h2>
-          <p className="text-center text-muted-foreground max-w-md">
-            Upload and process a PDF document to generate an interactive mind map visualization.
-          </p>
-        </div>
-      </div>;
-  }
-  return <div className="relative w-full h-full">
-      {/* Mind map container */}
-      <div ref={containerRef} className="w-full h-full overflow-hidden" style={{
-      opacity: isReady ? 1 : 0,
-      transition: 'opacity 0.3s ease-in-out'
-    }} />
-      
-      {/* Control tools on the right side */}
-      
-      
-      {/* Summary modal */}
-      {showSummary && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-2xl max-h-[80vh] overflow-auto">
-            <h3 className="text-lg font-semibold mb-4">Mind Map Section Summary</h3>
-            <div className="whitespace-pre-wrap text-sm">
-              {summary}
-            </div>
-            <div className="flex justify-end mt-4 gap-2">
-              <Button variant="outline" onClick={() => {
-            if (onExplainText && summary) {
-              onExplainText(`Please explain this mind map summary: ${summary.substring(0, 500)}${summary.length > 500 ? '...' : ''}`);
-            }
-            if (onRequestOpenChat) {
-              onRequestOpenChat();
-            }
-          }}>
-                Ask AI to Explain
-              </Button>
-              <Button onClick={() => setShowSummary(false)}>Close</Button>
-            </div>
-          </div>
-        </div>}
-
-      {/* Image Gallery Dialog */}
-      <Dialog open={showGallery} onOpenChange={setShowGallery}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>Paper Figures Gallery</DialogTitle>
-            <DialogDescription>
-              Key visualizations and figures from the research paper
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            {/* Demo Images */}
-            <div className="border rounded-md overflow-hidden">
-              <img src="https://via.placeholder.com/600x400?text=Figure+1" alt="Figure 1" className="w-full h-auto" />
-              <div className="p-3 bg-gray-50">
-                <h4 className="font-medium text-sm">Figure 1</h4>
-                <p className="text-xs text-gray-600 mt-1">
-                  Experimental results showing the relationship between variables A and B with 95% confidence intervals
-                </p>
-              </div>
-            </div>
-            <div className="border rounded-md overflow-hidden">
-              <img src="https://via.placeholder.com/600x400?text=Figure+2" alt="Figure 2" className="w-full h-auto" />
-              <div className="p-3 bg-gray-50">
-                <h4 className="font-medium text-sm">Figure 2</h4>
-                <p className="text-xs text-gray-600 mt-1">
-                  System architecture diagram showing the components and their interactions
-                </p>
-              </div>
-            </div>
-            <div className="border rounded-md overflow-hidden">
-              <img src="https://via.placeholder.com/600x400?text=Figure+3" alt="Figure 3" className="w-full h-auto" />
-              <div className="p-3 bg-gray-50">
-                <h4 className="font-medium text-sm">Figure 3</h4>
-                <p className="text-xs text-gray-600 mt-1">
-                  Comparative analysis of proposed method against baseline approaches
-                </p>
-              </div>
-            </div>
-            <div className="border rounded-md overflow-hidden">
-              <img src="https://via.placeholder.com/600x400?text=Figure+4" alt="Figure 4" className="w-full h-auto" />
-              <div className="p-3 bg-gray-50">
-                <h4 className="font-medium text-sm">Figure 4</h4>
-                <p className="text-xs text-gray-600 mt-1">
-                  Timeline of experimental procedure with key measurement points
-                </p>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>;
-};
-export default MindMapViewer;
+          mindEl

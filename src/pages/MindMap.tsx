@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +8,7 @@ import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import { MindElixirInstance } from "mind-elixir";
 
 const MindMap = () => {
-  const [showPdf, setShowPdf] = useState(true);
+  const [showPdf, setShowPdf] = useState(false); // Changed default to false (PDF closed)
   const [showChat, setShowChat] = useState(false);
   const [explainText, setExplainText] = useState("");
   const [showSummary, setShowSummary] = useState(false);

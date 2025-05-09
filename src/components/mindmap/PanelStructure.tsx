@@ -384,6 +384,7 @@ const PanelStructure = ({
                 ref={pdfViewerRef}
                 onTextSelected={onExplainText}
                 onImageCaptured={handleImageCaptured}
+                highlightByDefault={true} // Enable text highlighting by default
               />
             </TooltipProvider>
           </div>
