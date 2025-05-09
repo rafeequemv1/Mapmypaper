@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import RequireAuth from "@/components/RequireAuth";
 import TopBar from "@/components/TopBar";
@@ -30,7 +30,7 @@ const queryClient = new QueryClient({
 });
 
 // Layout component that includes Footer only (removed TopBar)
-const Layout = () => (
+const Layout: React.FC = () => (
   <>
     <TopBar />
     <div className="pt-16 pb-8">
@@ -41,7 +41,7 @@ const Layout = () => (
 );
 
 // Layout without TopBar and Footer for the editor
-const EditorLayout = () => <Outlet />;
+const EditorLayout: React.FC = () => <Outlet />;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
