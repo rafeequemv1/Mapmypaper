@@ -820,24 +820,7 @@ const MindMapViewer = ({
         
 
         {/* Direction controls */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm p-2">
-          <ToggleGroup type="single" size="sm" value={direction} onValueChange={value => {
-          if (value) toggleDirection(value as 'vertical' | 'horizontal' | 'both');
-        }}>
-            <ToggleGroupItem value="horizontal" title="Horizontal layout">
-              <ArrowRight size={16} />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="vertical" title="Vertical layout">
-              <ArrowDown size={16} />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="both" title="Bidirectional layout">
-              <div className="flex">
-                <ArrowLeft size={16} />
-                <ArrowRight size={16} />
-              </div>
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
+        
       </div>
 
       {/* Summary Dialog */}
