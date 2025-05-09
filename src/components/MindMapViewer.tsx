@@ -1,3 +1,4 @@
+
 import React, {
   useState,
   useEffect,
@@ -389,7 +390,7 @@ const MindMapViewer: React.FC<MindMapViewerProps> = ({
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false)
   const [isMindmapDialogOpen, setIsMindmapDialogOpen] = useState(false)
   const [isPluginDialogOpen, setIsPluginDialogOpen] = useState(false)
-  const [isHistoryDialogOpen, setIsHistoryDialogOpen] useState(false)
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false)
   const [isDragDialogOpen, setIsDragDialogOpen] = useState(false)
   const [isKeyboardDialogOpen, setIsKeyboardDialogOpen] = useState(false)
   const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false)
@@ -524,7 +525,7 @@ const MindMapViewer: React.FC<MindMapViewerProps> = ({
   const [isAddingImportConfig, setIsAddingImportConfig] = useState(false)
   const [isAddingSettingsConfig, setIsAddingSettingsConfig] = useState(false)
   const [isAddingThemeConfig, setIsAddingThemeConfig] = useState(false)
-  const [isAddingLayoutConfigConfigConfig, setIsAddingLayoutConfigConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfig, setIsAddingLayoutConfigConfigConfig] = useState(false)
   const [isAddingNodeStyleConfigConfig, setIsAddingNodeStyleConfigConfig] = useState(false)
   const [isAddingLinkStyleConfigConfig, setIsAddingLinkStyleConfigConfig] = useState(false)
   const [isAddingMindmapStyleConfigConfig, setIsAddingMindmapStyleConfigConfig] = useState(false)
@@ -537,7 +538,7 @@ const MindMapViewer: React.FC<MindMapViewerProps> = ({
   const [isAddingZoomInConfigConfig, setIsAddingZoomInConfigConfig] = useState(false)
   const [isAddingZoomOutConfigConfig, setIsAddingZoomOutConfigConfig] = useState(false)
   const [isAddingZoomResetConfigConfig, setIsAddingZoomResetConfigConfig] = useState(false)
-  const [isAddingLayoutConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfigConfig] = useState(false)
   const [isAddingUndoConfigConfig, setIsAddingUndoConfigConfig] = useState(false)
   const [isAddingRedoConfigConfig, setIsAddingRedoConfigConfig] = useState(false)
   const [isAddingCopyConfigConfig, setIsAddingCopyConfigConfig] = useState(false)
@@ -638,4 +639,4 @@ const MindMapViewer: React.FC<MindMapViewerProps> = ({
   const [isAddingImportConfigConfigConfigConfig, setIsAddingImportConfigConfigConfigConfig] = useState(false)
   const [isAddingSettingsConfigConfigConfigConfig, setIsAddingSettingsConfigConfigConfigConfig] = useState(false)
   const [isAddingThemeConfigConfigConfigConfig, setIsAddingThemeConfigConfigConfigConfig] = useState(false)
-  const [isAddingLayoutConfigConfigConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfigConfigConfigConfig] = useState(false)
+}
