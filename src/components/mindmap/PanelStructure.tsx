@@ -17,7 +17,7 @@ interface PanelStructureProps {
 const PanelStructure = ({
   leftPanel,
   rightPanel,
-  defaultLayout = [50, 50],
+  defaultLayout = [50, 50], // Default to 50/50 split
   className,
 }: PanelStructureProps) => {
   return (

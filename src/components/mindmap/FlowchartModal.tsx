@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -27,7 +28,7 @@ const FlowchartModal = ({ open, onOpenChange, embedded = false }: FlowchartModal
           setIsLoading(true);
           // Simulate fetching flowchart - replace with actual API call
           await new Promise(resolve => setTimeout(resolve, 500));
-          const pdfText = await getPdfData();
+          const pdfText = await getPdfData('pdfText'); // Pass the key for getPdfData
           setFlowchart(pdfText ? 
             `graph TD;\n    A[Start] --> B[Process];\n    B --> C[Decision];\n    C -->|Yes| D[End];\n    C -->|No| B;` : 
             "No PDF text available for flowchart. Please ensure a document is loaded.");

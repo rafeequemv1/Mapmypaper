@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -27,7 +28,7 @@ const SummaryModal = ({ open, onOpenChange, embedded = false }: SummaryModalProp
           setIsLoading(true);
           // Simulate fetching summary - replace with actual API call
           await new Promise(resolve => setTimeout(resolve, 500));
-          const pdfText = await getPdfData();
+          const pdfText = await getPdfData('pdfText'); // Pass the key for getPdfData
           setSummary(pdfText ? `Summary of the document (${pdfText.substring(0, 150)}...)` : 
             "No PDF text available for summary. Please ensure a document is loaded.");
         } catch (error) {
