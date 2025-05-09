@@ -44,17 +44,22 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
-// Enhanced version of DialogContent to fix removeChild issues
+// Improved DialogContent with better cleanup handling
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  // Using useLayoutEffect to ensure proper timing with the DOM
-  React.useLayoutEffect(() => {
-    // This effect helps ensure clean unmounting
+  // Using useEffect with empty cleanup function to handle unmounting safely
+  React.useEffect(() => {
+    // This helps prevent the 'removeChild' error by ensuring proper timing
+    const originalOverflowY = document.body.style.overflowY;
+    
+    // Return cleanup function
     return () => {
-      // Let React handle cleanup in the next cycle
-      setTimeout(() => {}, 0);
+      // Restore original overflow after a slight delay to avoid React's immediate cleanup
+      setTimeout(() => {
+        document.body.style.overflowY = originalOverflowY;
+      }, 10);
     };
   }, []);
 
@@ -67,6 +72,11 @@ const DialogContent = React.forwardRef<
           "fixed left-[50%] top-[50%] z-[9999] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
           className
         )}
+        onCloseAutoFocus={(e) => {
+          // Prevent React from trying to focus elements that might be unmounted
+          e.preventDefault();
+          props.onCloseAutoFocus?.(e);
+        }}
         {...props}
       >
         {children}

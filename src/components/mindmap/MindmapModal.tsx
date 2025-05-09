@@ -40,86 +40,108 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
       Pen and paper
       Mermaid`;
 
+  // Safe cleanup and rendering management
   useEffect(() => {
+    // Only run when modal is open
     if (!isOpen) return;
     
+    let isMounted = true;
     const renderMindmap = async () => {
       try {
+        if (!isMounted) return;
+        
         setIsRendering(true);
         setError(null);
         
         if (containerRef.current) {
+          // Clear any previous content
+          while (containerRef.current.firstChild) {
+            containerRef.current.removeChild(containerRef.current.firstChild);
+          }
+          
           // Display simplified mindmap visualization instead
-          containerRef.current.innerHTML = `
-            <div class="p-4 bg-white rounded-md">
-              <div class="text-center mb-4">
-                <h3 class="text-lg font-bold">Simple Mindmap Visualization</h3>
-              </div>
-              <div class="flex justify-center">
-                <svg width="500" height="300" viewBox="0 0 500 300">
-                  <!-- Root node -->
-                  <circle cx="250" cy="50" r="30" fill="#E5DEFF" stroke="#8B5CF6" stroke-width="2"/>
-                  <text x="250" y="55" text-anchor="middle" font-size="12">Mindmap</text>
-                  
-                  <!-- Origin branch -->
-                  <line x1="250" y1="80" x2="150" y2="120" stroke="#8B5CF6" stroke-width="2"/>
-                  <circle cx="150" cy="120" r="25" fill="#D3E4FD" stroke="#0EA5E9" stroke-width="2"/>
-                  <text x="150" y="125" text-anchor="middle" font-size="10">Origins</text>
-                  
-                  <!-- Research branch -->
-                  <line x1="250" y1="80" x2="250" y2="120" stroke="#8B5CF6" stroke-width="2"/>
-                  <circle cx="250" cy="120" r="25" fill="#FDE1D3" stroke="#F97316" stroke-width="2"/>
-                  <text x="250" y="125" text-anchor="middle" font-size="10">Research</text>
-                  
-                  <!-- Tools branch -->
-                  <line x1="250" y1="80" x2="350" y2="120" stroke="#8B5CF6" stroke-width="2"/>
-                  <circle cx="350" cy="120" r="25" fill="#F2FCE2" stroke="#22C55E" stroke-width="2"/>
-                  <text x="350" y="125" text-anchor="middle" font-size="10">Tools</text>
-                  
-                  <!-- Origin subitems -->
-                  <line x1="150" y1="145" x2="100" y2="180" stroke="#0EA5E9" stroke-width="1.5"/>
-                  <rect x="70" y="170" width="60" height="20" rx="5" fill="#D3E4FD" stroke="#0EA5E9"/>
-                  <text x="100" y="185" text-anchor="middle" font-size="8">History</text>
-                  
-                  <line x1="150" y1="145" x2="150" y2="180" stroke="#0EA5E9" stroke-width="1.5"/>
-                  <rect x="120" y="170" width="60" height="20" rx="5" fill="#D3E4FD" stroke="#0EA5E9"/>
-                  <text x="150" y="185" text-anchor="middle" font-size="8">Popularization</text>
-                  
-                  <!-- Research subitems -->
-                  <line x1="250" y1="145" x2="200" y2="180" stroke="#F97316" stroke-width="1.5"/>
-                  <rect x="170" y="170" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
-                  <text x="200" y="185" text-anchor="middle" font-size="8">Effectiveness</text>
-                  
-                  <line x1="250" y1="145" x2="270" y2="180" stroke="#F97316" stroke-width="1.5"/>
-                  <rect x="240" y="170" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
-                  <text x="270" y="185" text-anchor="middle" font-size="8">Creation</text>
-                  
-                  <!-- Tools subitems -->
-                  <line x1="350" y1="145" x2="330" y2="180" stroke="#22C55E" stroke-width="1.5"/>
-                  <rect x="300" y="170" width="60" height="20" rx="5" fill="#F2FCE2" stroke="#22C55E"/>
-                  <text x="330" y="185" text-anchor="middle" font-size="8">Pen & Paper</text>
-                  
-                  <!-- Creation subitems -->
-                  <line x1="270" y1="190" x2="270" y2="220" stroke="#F97316" stroke-width="1"/>
-                  <rect x="240" y="220" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
-                  <text x="270" y="235" text-anchor="middle" font-size="8">Uses</text>
-                </svg>
-              </div>
+          const content = document.createElement('div');
+          content.className = 'p-4 bg-white rounded-md';
+          content.innerHTML = `
+            <div class="text-center mb-4">
+              <h3 class="text-lg font-bold">Simple Mindmap Visualization</h3>
+            </div>
+            <div class="flex justify-center">
+              <svg width="500" height="300" viewBox="0 0 500 300">
+                <!-- Root node -->
+                <circle cx="250" cy="50" r="30" fill="#E5DEFF" stroke="#8B5CF6" stroke-width="2"/>
+                <text x="250" y="55" text-anchor="middle" font-size="12">Mindmap</text>
+                
+                <!-- Origin branch -->
+                <line x1="250" y1="80" x2="150" y2="120" stroke="#8B5CF6" stroke-width="2"/>
+                <circle cx="150" cy="120" r="25" fill="#D3E4FD" stroke="#0EA5E9" stroke-width="2"/>
+                <text x="150" y="125" text-anchor="middle" font-size="10">Origins</text>
+                
+                <!-- Research branch -->
+                <line x1="250" y1="80" x2="250" y2="120" stroke="#8B5CF6" stroke-width="2"/>
+                <circle cx="250" cy="120" r="25" fill="#FDE1D3" stroke="#F97316" stroke-width="2"/>
+                <text x="250" y="125" text-anchor="middle" font-size="10">Research</text>
+                
+                <!-- Tools branch -->
+                <line x1="250" y1="80" x2="350" y2="120" stroke="#8B5CF6" stroke-width="2"/>
+                <circle cx="350" cy="120" r="25" fill="#F2FCE2" stroke="#22C55E" stroke-width="2"/>
+                <text x="350" y="125" text-anchor="middle" font-size="10">Tools</text>
+                
+                <!-- Origin subitems -->
+                <line x1="150" y1="145" x2="100" y2="180" stroke="#0EA5E9" stroke-width="1.5"/>
+                <rect x="70" y="170" width="60" height="20" rx="5" fill="#D3E4FD" stroke="#0EA5E9"/>
+                <text x="100" y="185" text-anchor="middle" font-size="8">History</text>
+                
+                <line x1="150" y1="145" x2="150" y2="180" stroke="#0EA5E9" stroke-width="1.5"/>
+                <rect x="120" y="170" width="60" height="20" rx="5" fill="#D3E4FD" stroke="#0EA5E9"/>
+                <text x="150" y="185" text-anchor="middle" font-size="8">Popularization</text>
+                
+                <!-- Research subitems -->
+                <line x1="250" y1="145" x2="200" y2="180" stroke="#F97316" stroke-width="1.5"/>
+                <rect x="170" y="170" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
+                <text x="200" y="185" text-anchor="middle" font-size="8">Effectiveness</text>
+                
+                <line x1="250" y1="145" x2="270" y2="180" stroke="#F97316" stroke-width="1.5"/>
+                <rect x="240" y="170" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
+                <text x="270" y="185" text-anchor="middle" font-size="8">Creation</text>
+                
+                <!-- Tools subitems -->
+                <line x1="350" y1="145" x2="330" y2="180" stroke="#22C55E" stroke-width="1.5"/>
+                <rect x="300" y="170" width="60" height="20" rx="5" fill="#F2FCE2" stroke="#22C55E"/>
+                <text x="330" y="185" text-anchor="middle" font-size="8">Pen & Paper</text>
+                
+                <!-- Creation subitems -->
+                <line x1="270" y1="190" x2="270" y2="220" stroke="#F97316" stroke-width="1"/>
+                <rect x="240" y="220" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
+                <text x="270" y="235" text-anchor="middle" font-size="8">Uses</text>
+              </svg>
             </div>
           `;
+          
+          // Safely append to container if still mounted
+          if (containerRef.current && isMounted) {
+            containerRef.current.appendChild(content);
+          }
         }
       } catch (err) {
         console.error("Error rendering mindmap:", err);
-        setError(String(err));
+        if (isMounted) {
+          setError(String(err));
+        }
       } finally {
-        setIsRendering(false);
+        if (isMounted) {
+          setIsRendering(false);
+        }
       }
     };
     
     renderMindmap();
     
+    // Cleanup function
     return () => {
+      isMounted = false;
       if (containerRef.current) {
+        // Using safer inner HTML clear instead of direct node removal
         containerRef.current.innerHTML = '';
       }
     };
@@ -136,6 +158,8 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   // Function to manually re-render the diagram
   const reRenderDiagram = () => {
     if (!containerRef.current) return;
+    
+    // Safely clear the container
     containerRef.current.innerHTML = '';
     
     // Force a re-render by changing a dependency the useEffect relies on
