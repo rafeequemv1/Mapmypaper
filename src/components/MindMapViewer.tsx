@@ -4,7 +4,7 @@ import nodeMenu from "@mind-elixir/node-menu-neo";
 import "../styles/node-menu.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileText, LoaderCircle, ZoomIn, ZoomOut, LayoutHorizontal, LayoutVertical, Images } from "lucide-react";
+import { FileText, LoaderCircle, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, ArrowDown, Images } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -723,7 +723,19 @@ const MindMapViewer = ({
       const directionValue = newDirection === 'vertical' ? 1 : 0;
       
       // Apply direction change to the mind map
-      mindMapRef.current.updateDirection(directionValue);
+      // Use the correct method: MindElixir has a tempDirection property but not updateDirection
+      // We need to access the mind map instance's methods differently
+      if (mindMapRef.current) {
+        // Cast to any to access extended methods that aren't in the TypeScript interface
+        const mindElixirInstance = mindMapRef.current as any;
+        if (typeof mindElixirInstance.direction === 'function') {
+          mindElixirInstance.direction(directionValue);
+        } else if (typeof mindElixirInstance.setDirection === 'function') {
+          mindElixirInstance.setDirection(directionValue);
+        } else {
+          console.warn("Could not find method to update mind map direction");
+        }
+      }
       
       // Update state
       setDirection(newDirection);
@@ -872,9 +884,9 @@ const MindMapViewer = ({
           title={direction === 'vertical' ? 'Switch to Horizontal Layout' : 'Switch to Vertical Layout'}
         >
           {direction === 'vertical' ? (
-            <LayoutHorizontal className="h-5 w-5 text-gray-700" />
+            <ArrowRight className="h-5 w-5 text-gray-700" />
           ) : (
-            <LayoutVertical className="h-5 w-5 text-gray-700" />
+            <ArrowDown className="h-5 w-5 text-gray-700" />
           )}
         </button>
         <div className="my-1 h-px bg-gray-200 w-full" />
