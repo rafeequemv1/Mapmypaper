@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, Camera, X } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
@@ -28,6 +28,7 @@ interface PdfViewerHandle {
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
   ({ onTextSelected, onPdfLoaded, onImageCaptured, renderTooltipContent }, ref) => {
+    // Original PdfViewer component implementation with modifications
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
     const [pdfData, setPdfData] = useState<string | null>(null);
@@ -661,17 +662,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               <RotateCw className="h-3 w-3" />
             </Button>
-            
-            {/* Add snapshot button */}
-            <Button 
-              variant={isSnapshotMode ? "default" : "ghost"}
-              size="icon"
-              className={`h-6 w-6 p-0 ml-2 ${isSnapshotMode ? 'bg-blue-500 text-white' : 'text-black'}`}
-              onClick={toggleSnapshotMode}
-              title="Take Snapshot"
-            >
-              <Camera className="h-3 w-3" />
-            </Button>
           </div>
           
           {/* Search Section - Modified to be toggled */}
@@ -757,7 +747,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               {/* Snapshot mode indicator */}
               {isSnapshotMode && (
                 <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
                   <span>{isProcessingCapture ? "Processing capture..." : "Draw to capture area"}</span>
                   {!isProcessingCapture && (
                     <Button 
@@ -856,11 +845,24 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             )}
           </div>
         )}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+        
+        {/* The floating controls on the right have been removed */}
+        
+        {/* Display temporary message if a capture error occurs */}
+        {captureError && (
+          <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md z-50">
+            <div className="flex items-center">
+              <div className="py-1">
+                <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 10.32 10.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/>
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold">Screenshot Error</p>
+                <p className="text-sm">{captureError}</p>
+              </div>
+              <button 
+                onClick={() => setCaptureError(null)} 
+                className="ml-auto text-red-700 hover:text-red-900"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
