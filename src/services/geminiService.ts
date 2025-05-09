@@ -8,106 +8,106 @@ const apiKey = "AIzaSyAiqTjjCuc3p8TIV8PuWqtPJ-HmgDoVm6A";
 // Get the current API key
 export const getGeminiApiKey = () => apiKey;
 
+// Create a standard research paper template for fallback - moved outside the function
+const researchPaperTemplate = {
+  "nodeData": {
+    "id": "root",
+    "topic": "Research Paper Title",
+    "root": true,
+    "children": [
+      {
+        "id": "summary",
+        "topic": "Paper Summary",
+        "direction": 0,
+        "children": [
+          { "id": "summary1", "topic": "Key Points" },
+          { "id": "summary2", "topic": "Main Contributions" },
+          { "id": "summary3", "topic": "Significance" }
+        ]
+      },
+      {
+        "id": "intro",
+        "topic": "Introduction",
+        "direction": 0,
+        "children": [
+          { "id": "intro1", "topic": "Background / Context" },
+          { "id": "intro2", "topic": "Motivation / Problem Statement" },
+          { "id": "intro3", "topic": "Research Gap" },
+          { "id": "intro4", "topic": "Objective / Hypothesis" }
+        ]
+      },
+      {
+        "id": "method",
+        "topic": "Methodology",
+        "direction": 0,
+        "children": [
+          { "id": "method1", "topic": "Experimental Setup / Data Collection" },
+          { "id": "method2", "topic": "Models / Theories / Frameworks" },
+          { "id": "method3", "topic": "Procedures / Algorithms" },
+          { "id": "method4", "topic": "Variables / Parameters" }
+        ]
+      },
+      {
+        "id": "results",
+        "topic": "Results",
+        "direction": 1,
+        "children": [
+          { "id": "results1", "topic": "Key Findings" },
+          { "id": "results2", "topic": "Figures / Tables / Visualizations" },
+          { "id": "results3", "topic": "Statistical Analysis" },
+          { "id": "results4", "topic": "Observations" }
+        ]
+      },
+      {
+        "id": "discuss",
+        "topic": "Discussion",
+        "direction": 1,
+        "children": [
+          { "id": "discuss1", "topic": "Interpretation of Results" },
+          { "id": "discuss2", "topic": "Comparison with Previous Work" },
+          { "id": "discuss3", "topic": "Implications" },
+          { "id": "discuss4", "topic": "Limitations" }
+        ]
+      },
+      {
+        "id": "concl",
+        "topic": "Conclusion",
+        "direction": 1,
+        "children": [
+          { "id": "concl1", "topic": "Summary of Contributions" },
+          { "id": "concl2", "topic": "Future Work" },
+          { "id": "concl3", "topic": "Final Remarks" }
+        ]
+      },
+      {
+        "id": "refs",
+        "topic": "References",
+        "direction": 0,
+        "children": [
+          { "id": "refs1", "topic": "Key Papers Cited" },
+          { "id": "refs2", "topic": "Datasets / Tools" }
+        ]
+      },
+      {
+        "id": "supp",
+        "topic": "Supplementary",
+        "direction": 0,
+        "children": [
+          { "id": "supp1", "topic": "Additional Experiments" },
+          { "id": "supp2", "topic": "Appendices" },
+          { "id": "supp3", "topic": "Code / Data Availability" }
+        ]
+      }
+    ]
+  }
+};
+
 // Process text with Gemini to generate mindmap data
 export const generateMindMapFromText = async (pdfText: string): Promise<any> => {
   try {
     // Store the PDF text in sessionStorage for chat functionality
     sessionStorage.setItem('pdfText', pdfText);
     
-    // Create a standard research paper template for fallback
-    const researchPaperTemplate = {
-      "nodeData": {
-        "id": "root",
-        "topic": "Research Paper Title",
-        "root": true,
-        "children": [
-          {
-            "id": "summary",
-            "topic": "Paper Summary",
-            "direction": 0,
-            "children": [
-              { "id": "summary1", "topic": "Key Points" },
-              { "id": "summary2", "topic": "Main Contributions" },
-              { "id": "summary3", "topic": "Significance" }
-            ]
-          },
-          {
-            "id": "intro",
-            "topic": "Introduction",
-            "direction": 0,
-            "children": [
-              { "id": "intro1", "topic": "Background / Context" },
-              { "id": "intro2", "topic": "Motivation / Problem Statement" },
-              { "id": "intro3", "topic": "Research Gap" },
-              { "id": "intro4", "topic": "Objective / Hypothesis" }
-            ]
-          },
-          {
-            "id": "method",
-            "topic": "Methodology",
-            "direction": 0,
-            "children": [
-              { "id": "method1", "topic": "Experimental Setup / Data Collection" },
-              { "id": "method2", "topic": "Models / Theories / Frameworks" },
-              { "id": "method3", "topic": "Procedures / Algorithms" },
-              { "id": "method4", "topic": "Variables / Parameters" }
-            ]
-          },
-          {
-            "id": "results",
-            "topic": "Results",
-            "direction": 1,
-            "children": [
-              { "id": "results1", "topic": "Key Findings" },
-              { "id": "results2", "topic": "Figures / Tables / Visualizations" },
-              { "id": "results3", "topic": "Statistical Analysis" },
-              { "id": "results4", "topic": "Observations" }
-            ]
-          },
-          {
-            "id": "discuss",
-            "topic": "Discussion",
-            "direction": 1,
-            "children": [
-              { "id": "discuss1", "topic": "Interpretation of Results" },
-              { "id": "discuss2", "topic": "Comparison with Previous Work" },
-              { "id": "discuss3", "topic": "Implications" },
-              { "id": "discuss4", "topic": "Limitations" }
-            ]
-          },
-          {
-            "id": "concl",
-            "topic": "Conclusion",
-            "direction": 1,
-            "children": [
-              { "id": "concl1", "topic": "Summary of Contributions" },
-              { "id": "concl2", "topic": "Future Work" },
-              { "id": "concl3", "topic": "Final Remarks" }
-            ]
-          },
-          {
-            "id": "refs",
-            "topic": "References",
-            "direction": 0,
-            "children": [
-              { "id": "refs1", "topic": "Key Papers Cited" },
-              { "id": "refs2", "topic": "Datasets / Tools" }
-            ]
-          },
-          {
-            "id": "supp",
-            "topic": "Supplementary",
-            "direction": 0,
-            "children": [
-              { "id": "supp1", "topic": "Additional Experiments" },
-              { "id": "supp2", "topic": "Appendices" },
-              { "id": "supp3", "topic": "Code / Data Availability" }
-            ]
-          }
-        ]
-      }
-    };
-
     // Extract title from PDF for minimal customization
     let paperTitle = "Research Paper";
     const firstLine = pdfText.split('\n')[0]?.trim();
