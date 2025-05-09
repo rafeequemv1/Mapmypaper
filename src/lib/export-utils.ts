@@ -8,9 +8,10 @@ import { downloadBlob } from "@/utils/downloadUtils";
  */
 export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
   try {
-    const canvas = instance.exportPng(4); // Higher quality export with scale factor 4
+    // The exportPng method returns an HTMLCanvasElement, not a promise
+    const canvas = instance.exportPng(true); // Use 'true' for high quality
     
-    // Convert to blob
+    // Convert canvas to blob
     const blob = await new Promise<Blob>((resolve) => {
       canvas.toBlob((blob) => {
         if (blob) resolve(blob);
