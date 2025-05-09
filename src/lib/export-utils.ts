@@ -1,4 +1,3 @@
-
 import { MindElixirInstance } from "mind-elixir";
 import html2canvas from "html2canvas";
 
@@ -13,15 +12,14 @@ export const getSvg = (mindMap: MindElixirInstance): string => {
   if (typeof mindMap.exportSvg === 'function') {
     const svgData = mindMap.exportSvg();
     // Make sure we're returning a string, not a Blob
-    // If it's a Blob, we can't use XMLSerializer directly, so we need a different approach
     if (typeof svgData === 'string') {
       return svgData;
     } else if (svgData instanceof Blob) {
       // We can't directly serialize a Blob, so we'll need to use the container's SVG instead
       return getSvgFromContainer(mindMap);
-    } else if (svgData instanceof Node) {
+    } else if (svgData && typeof svgData === 'object' && 'nodeType' in svgData) {
       // If it's a DOM node, we can serialize it
-      return new XMLSerializer().serializeToString(svgData);
+      return new XMLSerializer().serializeToString(svgData as Node);
     } else {
       // Fallback to container method if type is unknown
       return getSvgFromContainer(mindMap);

@@ -14,10 +14,10 @@ import MindMap from "./pages/MindMap";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Pricing from "./pages/Pricing";
+import Features from "./pages/Features";
 import Contact from "./pages/Contact";
 import Policy from "./pages/Policy";
 import Refund from "./pages/Refund";
-import Features from "./pages/Features";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -56,10 +56,10 @@ const App = () => (
               <Route element={<Layout />}>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/features" element={<Features />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/policy" element={<Policy />} />
                 <Route path="/refund" element={<Refund />} />
-                <Route path="/features" element={<Features />} />
                 <Route path="/" element={<PdfUpload />} />
               </Route>
               
