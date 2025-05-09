@@ -18,6 +18,8 @@ import Contact from "./pages/Contact";
 import Policy from "./pages/Policy";
 import Refund from "./pages/Refund";
 import Features from "./pages/Features";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -61,6 +63,12 @@ const App = () => (
                 <Route path="/refund" element={<Refund />} />
                 <Route path="/features" element={<Features />} />
                 <Route path="/" element={<PdfUpload />} />
+                
+                {/* Protected routes that need authentication */}
+                <Route element={<RequireAuth />}>
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
               </Route>
               
               {/* Routes without any wrappers */}

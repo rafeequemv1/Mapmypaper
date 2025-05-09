@@ -13,7 +13,12 @@ export const getSvg = (mindMap: MindElixirInstance): string => {
   if (typeof mindMap.exportSvg === 'function') {
     const svgData = mindMap.exportSvg();
     // Make sure we're returning a string, not a Blob
-    return typeof svgData === 'string' ? svgData : new XMLSerializer().serializeToString(svgData);
+    if (typeof svgData === 'string') {
+      return svgData;
+    } else if (svgData) {
+      // Handle the case where svgData is not a string but something else like a document or element
+      return new XMLSerializer().serializeToString(svgData as Node);
+    }
   }
   
   // Fallback: Get the SVG element and serialize it
