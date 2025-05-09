@@ -18,6 +18,10 @@ import Contact from "./pages/Contact";
 import Policy from "./pages/Policy";
 import Refund from "./pages/Refund";
 import Features from "./pages/Features";
+import Admin from "./pages/Admin";
+
+// Admin email constant for route protection
+const ADMIN_EMAIL = "rafeequemavoor@gmal.com";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -43,6 +47,28 @@ const Layout = () => (
 // Layout without TopBar and Footer for the editor
 const EditorLayout = () => <Outlet />;
 
+// Admin Route Protection Component
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && (!user || user.email !== ADMIN_EMAIL)) {
+      navigate("/");
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  return user?.email === ADMIN_EMAIL ? <>{children}</> : null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -61,6 +87,18 @@ const App = () => (
                 <Route path="/refund" element={<Refund />} />
                 <Route path="/features" element={<Features />} />
                 <Route path="/" element={<PdfUpload />} />
+                
+                {/* Admin routes */}
+                <Route path="/admin" element={
+                  <RequireAuth>
+                    <Admin />
+                  </RequireAuth>
+                } />
+                <Route path="/admin/:section" element={
+                  <RequireAuth>
+                    <Admin />
+                  </RequireAuth>
+                } />
               </Route>
               
               {/* Routes without any wrappers */}

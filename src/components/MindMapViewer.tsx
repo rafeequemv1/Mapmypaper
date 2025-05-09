@@ -1,736 +1,641 @@
-import { useEffect, useRef, useState } from "react";
-import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
-import nodeMenu from "@mind-elixir/node-menu-neo";
-import "../styles/node-menu.css";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { FileText, LoaderCircle } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useToast } from '@/hooks/use-toast'
+import { useMutation } from '@tanstack/react-query'
+import { v4 as uuidv4 } from 'uuid'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/integrations/supabase/client'
+import { useDebounce } from '@/hooks/use-debounce'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
+import { format } from 'date-fns'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  MoreVertical,
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Edit,
+  Trash,
+  File,
+  Download,
+  Share2,
+  Image,
+  Code,
+  HelpCircle,
+  Copy,
+  Save,
+  Undo,
+  Redo,
+  ZoomIn,
+  ZoomOut,
+  Layout,
+  Search,
+  X,
+} from 'lucide-react'
+import {
+  ResizablePanel,
+  ResizablePanelGroup,
+  ResizableHandle,
+} from '@/components/ui/resizable'
+import { useTheme } from '@/components/ThemeProvider'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { Slider } from '@/components/ui/slider'
+import { Progress } from '@/components/ui/progress'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useHotkeys } from 'react-hotkeys-hook'
+import { useEventListener } from 'usehooks-ts'
+import { isMacOs } from 'react-device-detect'
+import {
+  ResizableHandleDirection,
+  ResizablePanelResizeEvent,
+} from 'react-resizable-panels'
+import {
+  DEFAULT_NODE_CONFIG,
+  DEFAULT_LINK_CONFIG,
+  DEFAULT_MINDMAP_CONFIG,
+  DEFAULT_PLUGIN_CONFIG,
+  DEFAULT_HISTORY_CONFIG,
+  DEFAULT_DRAG_CONFIG,
+  DEFAULT_KEYBOARD_CONFIG,
+  DEFAULT_SELECTION_CONFIG,
+  DEFAULT_UI_CONFIG,
+  DEFAULT_LAYOUT_CONFIG,
+  DEFAULT_CONTEXTMENU_CONFIG,
+  DEFAULT_SEARCH_CONFIG,
+  DEFAULT_NODE_STYLE,
+  DEFAULT_LINK_STYLE,
+  DEFAULT_MINDMAP_STYLE,
+  DEFAULT_THEME,
+  DEFAULT_I18N,
+  DEFAULT_EVENTS,
+  DEFAULT_DATA,
+} from './defaultConfig'
+import {
+  getTheme,
+  getThemeVariables,
+  getThemeRules,
+  getThemeUtils,
+} from './theme'
+import {
+  getLayout,
+  getLayoutVariables,
+  getLayoutRules,
+  getLayoutUtils,
+} from './layout'
+import {
+  getNode,
+  getNodeVariables,
+  getNodeRules,
+  getNodeUtils,
+} from './node'
+import {
+  getLink,
+  getLinkVariables,
+  getLinkRules,
+  getLinkUtils,
+} from './link'
+import {
+  getMindmap,
+  getMindmapVariables,
+  getMindmapRules,
+  getMindmapUtils,
+} from './mindmap'
+import {
+  getPlugin,
+  getPluginVariables,
+  getPluginRules,
+  getPluginUtils,
+} from './plugin'
+import {
+  getHistory,
+  getHistoryVariables,
+  getHistoryRules,
+  getHistoryUtils,
+} from './history'
+import {
+  getDrag,
+  getDragVariables,
+  getDragRules,
+  getDragUtils,
+} from './drag'
+import {
+  getKeyboard,
+  getKeyboardVariables,
+  getKeyboardRules,
+  getKeyboardUtils,
+} from './keyboard'
+import {
+  getSelection,
+  getSelectionVariables,
+  getSelectionRules,
+  getSelectionUtils,
+} from './selection'
+import {
+  getUI,
+  getUIVariables,
+  getUIRules,
+  getUIUtils,
+} from './ui'
+import {
+  getLayoutConfig,
+  getLayoutConfigVariables,
+  getLayoutConfigRules,
+  getLayoutConfigUtils,
+} from './layoutConfig'
+import {
+  getContextMenu,
+  getContextMenuVariables,
+  getContextMenuRules,
+  getContextMenuUtils,
+} from './contextMenu'
+import {
+  getSearch,
+  getSearchVariables,
+  getSearchRules,
+  getSearchUtils,
+} from './search'
+import {
+  getNodeStyle,
+  getNodeStyleVariables,
+  getNodeStyleRules,
+  getNodeStyleUtils,
+} from './nodeStyle'
+import {
+  getLinkStyle,
+  getLinkStyleVariables,
+  getLinkStyleRules,
+  getLinkStyleUtils,
+} from './linkStyle'
+import {
+  getMindmapStyle,
+  getMindmapStyleVariables,
+  getMindmapStyleRules,
+  getMindmapStyleUtils,
+} from './mindmapStyle'
+import {
+  getI18n,
+  getI18nVariables,
+  getI18nRules,
+  getI18nUtils,
+} from './i18n'
+import {
+  getEvents,
+  getEventsVariables,
+  getEventsRules,
+  getEventsUtils,
+} from './events'
+import {
+  getData,
+  getDataVariables,
+  getDataRules,
+  getDataUtils,
+} from './data'
+import {
+  useMindElixir,
+  MindElixir,
+  MindElixirCtx,
+  MindElixirMethods,
+  MindElixirProps,
+  MindElixirRef,
+  MindElixirData,
+  MindElixirNode,
+  MindElixirLink,
+  MindElixirEvent,
+  MindElixirOptions,
+  MindElixirConfig,
+  MindElixirStyle,
+  MindElixirTheme,
+  MindElixirI18n,
+  MindElixirEvents,
+  MindElixirLocale,
+  MindElixirThemeVariables,
+  MindElixirLayoutVariables,
+  MindElixirNodeVariables,
+  MindElixirLinkVariables,
+  MindElixirMindmapVariables,
+  MindElixirPluginVariables,
+  MindElixirHistoryVariables,
+  MindElixirDragVariables,
+  MindElixirKeyboardVariables,
+  MindElixirSelectionVariables,
+  MindElixirUIVariables,
+  MindElixirLayoutConfigVariables,
+  MindElixirContextMenuVariables,
+  MindElixirSearchVariables,
+  MindElixirNodeStyleVariables,
+  MindElixirLinkStyleVariables,
+  MindElixirMindmapStyleVariables,
+  MindElixirI18nVariables,
+  MindElixirEventsVariables,
+  MindElixirDataVariables,
+  MindElixirThemeRules,
+  MindElixirLayoutRules,
+  MindElixirNodeRules,
+  MindElixirLinkRules,
+  MindElixirMindmapRules,
+  MindElixirPluginRules,
+  MindElixirHistoryRules,
+  MindElixirDragRules,
+  MindElixirKeyboardRules,
+  MindElixirSelectionRules,
+  MindElixirUIRules,
+  MindElixirLayoutConfigRules,
+  MindElixirContextMenuRules,
+  MindElixirSearchRules,
+  MindElixirNodeStyleRules,
+  MindElixirLinkStyleRules,
+  MindElixirMindmapStyleRules,
+  MindElixirI18nRules,
+  MindElixirEventsRules,
+  MindElixirDataRules,
+  MindElixirThemeUtils,
+  MindElixirLayoutUtils,
+  MindElixirNodeUtils,
+  MindElixirLinkUtils,
+  MindElixirMindmapUtils,
+  MindElixirPluginUtils,
+  MindElixirHistoryUtils,
+  MindElixirDragUtils,
+  MindElixirKeyboardUtils,
+  MindElixirSelectionUtils,
+  MindElixirUIUtils,
+  MindElixirLayoutConfigUtils,
+  MindElixirContextMenuUtils,
+  MindElixirSearchUtils,
+  MindElixirNodeStyleUtils,
+  MindElixirLinkStyleUtils,
+  MindElixirMindmapStyleUtils,
+  MindElixirI18nUtils,
+  MindElixirEventsUtils,
+  MindElixirDataUtils,
+} from 'mind-elixir-react'
 
 interface MindMapViewerProps {
-  isMapGenerated: boolean;
-  onMindMapReady?: (mindMap: MindElixirInstance) => void;
-  onExplainText?: (text: string) => void;
-  onRequestOpenChat?: () => void;
-  pdfKey?: string | null;
-  isLoading?: boolean; // New prop for loading state
+  initialData?: MindElixirData
+  options?: MindElixirOptions
+  config?: MindElixirConfig
+  style?: MindElixirStyle
+  theme?: MindElixirTheme
+  i18n?: MindElixirI18n
+  events?: MindElixirEvents
+  locale?: MindElixirLocale
+  onChange?: (data: MindElixirData) => void
+  onNodeCreate?: (node: MindElixirNode) => void
+  onNodeUpdate?: (node: MindElixirNode) => void
+  onNodeDelete?: (node: MindElixirNode) => void
+  onLinkCreate?: (link: MindElixirLink) => void
+  onLinkUpdate?: (link: MindElixirLink) => void
+  onLinkDelete?: (link: MindElixirLink) => void
+  onEvent?: (event: MindElixirEvent) => void
+  onReady?: (mindElixir: MindElixirMethods) => void
+  onError?: (error: Error) => void
 }
 
-// Enhanced helper function to format node text with line breaks and add emojis
-const formatNodeText = (text: string, wordsPerLine: number = 4, isRoot: boolean = false): string => {
-  if (!text) return '';
-  
-  // Use fewer words per line for root node
-  const effectiveWordsPerLine = isRoot ? 3 : Math.min(wordsPerLine, 6);
-  
-  // For root nodes, extract just the title part (first sentence or phrase)
-  let processedText = text;
-  if (isRoot) {
-    // Extract the title - take first sentence, or first part before a comma/semicolon
-    const titleMatch = text.match(/^(?:\p{Emoji}\s*)?(.*?)(?:[.,:;]|$)/u);
-    if (titleMatch && titleMatch[1]) {
-      processedText = titleMatch[1].trim();
-      // Add emoji if it was present
-      if (/^\p{Emoji}/u.test(text)) {
-        const emojiMatch = text.match(/^(\p{Emoji})/u);
-        if (emojiMatch) {
-          processedText = emojiMatch[1] + ' ' + processedText;
-        }
-      }
-    }
-  } else {
-    // Add emoji based on topic content if one doesn't exist already
-    processedText = addEmoji(text);
-    // Ensure the topic text is a complete sentence
-    processedText = ensureCompleteSentence(processedText);
-  }
-  
-  // Apply line breaks for better readability - strictly limit to max 6 words per line
-  const words = processedText.split(' ');
-  
-  // Truncate to maximum 6 words per node if longer
-  const maxTotalWords = 6;
-  const truncatedWords = words.length > maxTotalWords ? words.slice(0, maxTotalWords) : words;
-  
-  // If words were truncated, add ellipsis
-  if (truncatedWords.length < words.length) {
-    truncatedWords[truncatedWords.length - 1] += '...';
-  }
-  
-  // Apply line breaks based on words per line limit
-  if (truncatedWords.length <= effectiveWordsPerLine) return truncatedWords.join(' ');
-  
-  let result = '';
-  for (let i = 0; i < truncatedWords.length; i += effectiveWordsPerLine) {
-    const chunk = truncatedWords.slice(i, i + effectiveWordsPerLine).join(' ');
-    result += chunk + (i + effectiveWordsPerLine < truncatedWords.length ? '\n' : '');
-  }
-  
-  return result;
-};
-
-// Add emoji based on topic content
-const addEmoji = (topic: string): string => {
-  // Check if the topic already starts with an emoji
-  if (/^\p{Emoji}/u.test(topic)) {
-    return topic; // Already has an emoji
-  }
-  
-  const topicLower = topic.toLowerCase();
-  
-  // Main sections
-  if (topicLower.includes('introduction')) return '🔍 ' + topic;
-  if (topicLower.includes('methodology')) return '⚙️ ' + topic;
-  if (topicLower.includes('results')) return '📊 ' + topic;
-  if (topicLower.includes('discussion')) return '💭 ' + topic;
-  if (topicLower.includes('conclusion')) return '🎯 ' + topic;
-  if (topicLower.includes('references')) return '📚 ' + topic;
-  if (topicLower.includes('supplementary')) return '📎 ' + topic;
-  
-  // Introduction subsections
-  if (topicLower.includes('background') || topicLower.includes('context')) return '📘 ' + topic;
-  if (topicLower.includes('motivation') || topicLower.includes('problem')) return '⚠️ ' + topic;
-  if (topicLower.includes('gap')) return '🧩 ' + topic;
-  if (topicLower.includes('objective') || topicLower.includes('hypothesis')) return '🎯 ' + topic;
-  
-  // Methodology subsections
-  if (topicLower.includes('experimental') || topicLower.includes('data collection')) return '🧪 ' + topic;
-  if (topicLower.includes('model') || topicLower.includes('theory') || topicLower.includes('framework')) return '🔬 ' + topic;
-  if (topicLower.includes('procedure') || topicLower.includes('algorithm')) return '📋 ' + topic;
-  if (topicLower.includes('variable') || topicLower.includes('parameter')) return '🔢 ' + topic;
-  
-  // Results subsections
-  if (topicLower.includes('key finding')) return '✨ ' + topic;
-  if (topicLower.includes('figure') || topicLower.includes('table') || topicLower.includes('visualization')) return '📈 ' + topic;
-  if (topicLower.includes('statistical') || topicLower.includes('analysis')) return '📏 ' + topic;
-  if (topicLower.includes('observation')) return '👁️ ' + topic;
-  
-  // Discussion subsections
-  if (topicLower.includes('interpretation')) return '🔎 ' + topic;
-  if (topicLower.includes('comparison') || topicLower.includes('previous work')) return '🔄 ' + topic;
-  if (topicLower.includes('implication')) return '💡 ' + topic;
-  if (topicLower.includes('limitation')) return '🛑 ' + topic;
-  
-  // Conclusion subsections
-  if (topicLower.includes('summary') || topicLower.includes('contribution')) return '✅ ' + topic;
-  if (topicLower.includes('future work')) return '🔮 ' + topic;
-  if (topicLower.includes('final') || topicLower.includes('remark')) return '🏁 ' + topic;
-  
-  // References subsections
-  if (topicLower.includes('key paper') || topicLower.includes('cited')) return '📄 ' + topic;
-  if (topicLower.includes('dataset') || topicLower.includes('tool')) return '🛠️ ' + topic;
-  
-  // Supplementary subsections
-  if (topicLower.includes('additional') || topicLower.includes('experiment')) return '🧮 ' + topic;
-  if (topicLower.includes('appendix') || topicLower.includes('appendices')) return '📑 ' + topic;
-  if (topicLower.includes('code') || topicLower.includes('data availability')) return '💾 ' + topic;
-  
-  // Generic topics
-  if (topicLower.includes('start') || topicLower.includes('begin')) return '🚀 ' + topic;
-  if (topicLower.includes('organization') || topicLower.includes('structure')) return '📊 ' + topic;
-  if (topicLower.includes('learn') || topicLower.includes('study')) return '📚 ' + topic;
-  if (topicLower.includes('habit')) return '⏰ ' + topic;
-  if (topicLower.includes('goal')) return '🎯 ' + topic;
-  if (topicLower.includes('motivation')) return '💪 ' + topic;
-  if (topicLower.includes('review')) return '✅ ' + topic;
-  if (topicLower.includes('research')) return '🔍 ' + topic;
-  if (topicLower.includes('read')) return '📖 ' + topic;
-  if (topicLower.includes('write') || topicLower.includes('note')) return '✏️ ' + topic;
-  if (topicLower.includes('discuss') || topicLower.includes('talk')) return '💬 ' + topic;
-  if (topicLower.includes('listen')) return '👂 ' + topic;
-  if (topicLower.includes('present')) return '🎤 ' + topic;
-  if (topicLower.includes('plan')) return '📝 ' + topic;
-  if (topicLower.includes('time')) return '⏱️ ' + topic;
-  if (topicLower.includes('break')) return '☕ ' + topic;
-  if (topicLower.includes('focus')) return '🧠 ' + topic;
-  if (topicLower.includes('idea')) return '💡 ' + topic;
-  if (topicLower.includes('question')) return '❓ ' + topic;
-  if (topicLower.includes('answer')) return '✓ ' + topic;
-  if (topicLower.includes('problem')) return '⚠️ ' + topic;
-  if (topicLower.includes('solution')) return '🔧 ' + topic;
-  
-  // Default emoji for unmatched topics
-  return '📌 ' + topic;
-};
-
-// Ensure the topic text is a complete sentence 
-const ensureCompleteSentence = (topic: string): string => {
-  const trimmedTopic = topic.trim();
-  // Don't modify if it's just an emoji or very short
-  if (trimmedTopic.length <= 3) return trimmedTopic;
-  
-  // If already ends with punctuation, return as is
-  if (/[.!?;:]$/.test(trimmedTopic)) return trimmedTopic;
-  
-  // Add a period if it looks like a sentence (starts with capital letter or has spaces)
-  if (/^[A-Z]/.test(trimmedTopic) || trimmedTopic.includes(' ')) {
-    return trimmedTopic + '.';
-  }
-  
-  return trimmedTopic;
-};
-
-// Generate a color from a string (for consistent node colors based on content)
-const stringToColor = (str: string): string => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  // Define the Catppuccin-inspired color palette
-  const colors = [
-    '#dd7878', '#ea76cb', '#8839ef', '#e64553', 
-    '#fe640b', '#df8e1d', '#40a02b', '#209fb5', 
-    '#1e66f5', '#7287fd', '#ea81bb', '#dd7878', 
-    '#4699d9', '#fe640b', '#6dc7be', '#a5adcb',
-    '#fea45c', '#40a02b', '#e64553', '#8839ef'
-  ];
-  
-  // Use the hash to select a color from palette
-  return colors[Math.abs(hash) % colors.length];
-};
-
-const MindMapViewer = ({ 
-  isMapGenerated, 
-  onMindMapReady, 
-  onExplainText, 
-  onRequestOpenChat, 
-  pdfKey,
-  isLoading = false 
-}: MindMapViewerProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mindMapRef = useRef<MindElixirInstance | null>(null);
-  const [isReady, setIsReady] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
-  const [summary, setSummary] = useState<string>('');
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const { toast } = useToast();
-
-  // Simulate loading progress when isLoading is true
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isLoading) {
-      setLoadingProgress(0);
-      interval = setInterval(() => {
-        setLoadingProgress(prev => {
-          const next = prev + 10;
-          return next > 90 ? 90 : next; // Cap at 90% until actually loaded
-        });
-      }, 100);
-    } else if (loadingProgress > 0 && loadingProgress < 100) {
-      // Complete the loading when isLoading becomes false
-      setLoadingProgress(100);
-      
-      // Reset after animation completes
-      const timeout = setTimeout(() => {
-        setLoadingProgress(0);
-      }, 1000);
-      
-      return () => clearTimeout(timeout);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isLoading, loadingProgress]);
-
-  useEffect(() => {
-    if (isMapGenerated && containerRef.current && !mindMapRef.current) {
-      // Initialize the mind map only once when it's generated
-      
-      // Define a enhanced colorful theme based on the Catppuccin Theme
-      const colorfulTheme = {
-        name: 'Catppuccin',
-        type: 'light' as const,
-        background: '#F9F7FF',
-        color: '#8B5CF6',
-        // Enhanced palette with vibrant complementary colors
-        palette: [
-          '#dd7878', '#ea76cb', '#8839ef', '#e64553', 
-          '#fe640b', '#df8e1d', '#40a02b', '#209fb5', 
-          '#1e66f5', '#7287fd', '#ea81bb', '#fea45c'
-        ],
-        cssVar: {
-          '--main-color': '#333',
-          '--main-bgcolor': '#F9F7FF',
-          '--color': '#454545',
-          '--bgcolor': '#f5f5f7',
-          '--panel-color': '#444446',
-          '--panel-bgcolor': '#ffffff',
-          '--panel-border-color': '#eaeaea',
-          '--selected-color': '#8B5CF6',
-          '--selected-bgcolor': '#E5DEFF',
-          '--line-color': '#8B5CF6',
-          '--line-width': '3px',
-          '--selected-line-color': '#F97316',
-          '--selected-line-width': '3.5px',
-          '--root-color': '#8B5CF6',
-          '--root-bgcolor': '#E5DEFF',
-          '--root-border-color': '#8B5CF6',
-          '--box-shadow': '0 3px 10px rgba(0,0,0,0.05)',
-          '--hover-box-shadow': '0 5px 15px rgba(0,0,0,0.08)',
-        }
-      };
-      
-      const options = {
-        el: containerRef.current,
-        direction: 1 as const,
-        draggable: true,
-        editable: true,
-        contextMenu: true, 
-        nodeMenu: true,
-        tools: {
-          zoom: true,
-          create: true,
-          edit: true,
-          layout: true,
-        },
-        theme: colorfulTheme,
-        autoFit: true
-      };
-
-      // Add custom styles to node-menu and style-panel elements when they appear
-      const observeStylePanel = () => {
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach(mutation => {
-            if (mutation.addedNodes.length) {
-              mutation.addedNodes.forEach(node => {
-                if (node instanceof HTMLElement) {
-                  // Style panel/node menu appeared - ensure it's visible
-                  if (node.classList.contains('mind-elixir-style-panel') || 
-                      node.classList.contains('node-style-panel') ||
-                      node.classList.contains('style-wrap') ||
-                      node.classList.contains('mind-elixir-node-menu')) {
-                    
-                    node.style.display = 'block';
-                    node.style.visibility = 'visible';
-                    node.style.opacity = '1';
-                    node.style.zIndex = '9999';
-                    
-                    // Ensure the panel stays in view
-                    setTimeout(() => {
-                      const rect = node.getBoundingClientRect();
-                      if (rect.right > window.innerWidth) {
-                        node.style.left = (window.innerWidth - rect.width - 20) + 'px';
-                      }
-                      if (rect.bottom > window.innerHeight) {
-                        node.style.top = (window.innerHeight - rect.height - 20) + 'px';
-                      }
-                    }, 0);
-                  }
-                }
-              });
-            }
-          });
-        });
-        
-        // Start observing the body for any style panel additions
-        observer.observe(document.body, { 
-          childList: true, 
-          subtree: true 
-        });
-        
-        return observer;
-      };
-      
-      // Start observing for style panels
-      const styleObserver = observeStylePanel();
-      
-      // Create the mind map instance
-      const mind = new MindElixir(options);
-      
-      // Install the node menu plugin with full styling support
-      const customNodeMenu = nodeMenu;
-      
-      // Add summary option to node menu
-      const originalMenus = customNodeMenu.menus;
-      customNodeMenu.menus = (node: any, mindInstance: MindElixirInstance) => {
-        const menus = originalMenus(node, mindInstance);
-        
-        // Add summary option
-        menus.push({
-          name: '✨ Generate Summary',
-          onclick: () => {
-            // Get the node and its children
-            generateNodeSummary(node);
-          }
-        });
-        
-        return menus;
-      };
-      
-      // Install the node menu
-      mind.install(customNodeMenu);
-      
-      // Get the generated mind map data from sessionStorage or use a default structure
-      let data: MindElixirData;
-      
-      try {
-        // Try to load mindmap data for specific PDF if pdfKey is provided
-        const savedData = pdfKey 
-          ? sessionStorage.getItem(`mindMapData_${pdfKey}`)
-          : sessionStorage.getItem('mindMapData');
-          
-        if (savedData) {
-          const parsedData = JSON.parse(savedData);
-          
-          // Apply line breaks, emojis, and complete sentences to node topics
-          const formatNodes = (node: any) => {
-            if (node.topic) {
-              // Special handling for root node - only keep title with 3-4 words per line
-              if (node.id === 'root') {
-                node.topic = formatNodeText(node.topic, 3, true);
-              } else {
-                // Enforce 3-5 words per line limit for all non-root nodes
-                // Now with max 6 words total per node
-                node.topic = formatNodeText(node.topic, 4);
-              }
-            }
-            
-            if (node.children && node.children.length > 0) {
-              node.children.forEach(formatNodes);
-            }
-            
-            return node;
-          };
-          
-          // Format the root node and all children
-          if (parsedData.nodeData) {
-            formatNodes(parsedData.nodeData);
-          }
-          
-          data = parsedData;
-        } else {
-          // Default research paper structure with complete sentences and emojis
-          data = {
-            nodeData: {
-              id: 'root',
-              topic: '🧠 Research\nPaper Title',
-              children: [
-                {
-                  id: 'bd1',
-                  topic: '🔍 Introduction provides\ncontext and sets\nthe stage for\nthe research.',
-                  direction: 0 as const,
-                  children: [
-                    { id: 'bd1-1', topic: '📘 Background establishes\nthe essential context\nfor understanding the\nresearch problem.' },
-                    { id: 'bd1-2', topic: '⚠️ The problem statement\nclearly identifies the\nissue being addressed.' },
-                    { id: 'bd1-3', topic: '🧩 Research gap identifies\nwhat is missing\nin current understanding.' },
-                    { id: 'bd1-4', topic: '🎯 This study aims\nto test the\nhypothesis that addresses\nthe research gap.' }
-                  ]
-                },
-                {
-                  id: 'bd2',
-                  topic: '⚙️ Methodology describes\nhow the research\nwas conducted with\nappropriate rigor.',
-                  direction: 0 as const,
-                  children: [
-                    { id: 'bd2-1', topic: '🧪 The experimental setup\nwas carefully designed\nto collect reliable\nand valid data.' },
-                    { id: 'bd2-2', topic: '🔬 Theoretical models provide\nthe foundation for\ntesting our research\nhypotheses.' },
-                    { id: 'bd2-3', topic: '📋 Procedures were followed\nsystematically to ensure\nreproducibility of results.' },
-                    { id: 'bd2-4', topic: '🔢 Key variables were\nidentified and measured\nusing validated instruments\nand techniques.' }
-                  ]
-                },
-                {
-                  id: 'bd3',
-                  topic: '📊 Results present the\nempirical findings without\ninterpretation.',
-                  direction: 0 as const,
-                  children: [
-                    { id: 'bd3-1', topic: '✨ Key findings demonstrate\nsignificant relationships between\nthe studied variables.' },
-                    { id: 'bd3-2', topic: '📈 Visual representations of\ndata help to\nillustrate important patterns\nfound in the analysis.' },
-                    { id: 'bd3-3', topic: '📏 Statistical analyses confirm\nthe significance of\nthe observed relationships.' },
-                    { id: 'bd3-4', topic: '👁️ Careful observations reveal\nadditional patterns not\ninitially anticipated in\nthe design.' }
-                  ]
-                },
-                {
-                  id: 'bd4',
-                  topic: '💭 Discussion explores the\nmeaning and implications\nof the results.',
-                  direction: 1 as const,
-                  children: [
-                    { id: 'bd4-1', topic: '🔎 Interpretation of results\nexplains what the\nfindings mean in\nrelation to the research\nquestions.' },
-                    { id: 'bd4-2', topic: '🔄 Comparison with previous\nwork shows how\nthis research contributes\nto the field.' },
-                    { id: 'bd4-3', topic: '💡 Implications suggest how\nthese findings might\nimpact theory and\npractice.' },
-                    { id: 'bd4-4', topic: '🛑 Limitations acknowledge the\nconstraints that affect\nthe interpretation of\nthe results.' }
-                  ]
-                },
-                {
-                  id: 'bd5',
-                  topic: '🎯 Conclusion summarizes the\nkey contributions and\nfuture directions.',
-                  direction: 1 as const,
-                  children: [
-                    { id: 'bd5-1', topic: '✅ The summary of\ncontributions highlights the\nmain advancements made\nby this research.' },
-                    { id: 'bd5-2', topic: '🔮 Future work recommendations\nidentify promising directions\nfor extending this\nresearch.' },
-                    { id: 'bd5-3', topic: '🏁 Final remarks emphasize\nthe broader significance\nof this work\nto the field.' }
-                  ]
-                },
-                {
-                  id: 'bd6',
-                  topic: '📚 References provide a\ncomprehensive list of\nsources that informed\nthis work.',
-                  direction: 1 as const,
-                  children: [
-                    { id: 'bd6-1', topic: '📄 Key papers cited\nin this work\nestablish the theoretical\nfoundation for the research.' },
-                    { id: 'bd6-2', topic: '🛠️ Datasets and tools\nused in the\nanalysis are properly\ndocumented for reproducibility.' }
-                  ]
-                },
-                {
-                  id: 'bd7',
-                  topic: '📎 Supplementary materials provide\nadditional details supporting\nthe main text.',
-                  direction: 1 as const,
-                  children: [
-                    { id: 'bd7-1', topic: '🧮 Additional experiments that\ndidn\'t fit in\nthe main text\nare included here.' },
-                    { id: 'bd7-2', topic: '📑 Appendices contain detailed\nmethodological information for\ninterested readers.' },
-                    { id: 'bd7-3', topic: '💾 Code and data\nare made available\nto ensure transparency\nand reproducibility.' }
-                  ]
-                }
-              ]
-            }
-          };
-        }
-      } catch (error) {
-        console.error("Error parsing mind map data:", error);
-        data = {
-          nodeData: {
-            id: 'root',
-            topic: '⚠️ Error\nLoading\nMind Map',
-            children: [
-              { id: 'error1', topic: 'There was an error loading the mind map data. Please try refreshing the page.', direction: 0 as const }
-            ]
-          }
-        };
-      }
-
-      // Initialize the mind map with data
-      mind.init(data);
-      
-      // Enable debug mode for better troubleshooting
-      (window as any).mind = mind;
-      
-      // Enhanced clickability for nodes with style panel support
-      if (containerRef.current) {
-        const topicElements = containerRef.current.querySelectorAll('.mind-elixir-topic');
-        topicElements.forEach((element) => {
-          element.addEventListener('click', (e) => {
-            // Node is clicked - no need to call any additional methods
-            if (mind.currentNode && mind.currentNode.nodeObj) {
-              console.log('Node clicked:', mind.currentNode.nodeObj.topic);
-              
-              // Force style panel visibility after a short delay
-              setTimeout(() => {
-                const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
-                if (stylePanel && stylePanel instanceof HTMLElement) {
-                  stylePanel.style.display = 'block';
-                  stylePanel.style.visibility = 'visible';
-                  stylePanel.style.opacity = '1';
-                }
-              }, 100);
-            }
-          });
-        });
-      }
-      
-      // Add event listeners for node selection to ensure style panel visibility
-      mind.bus.addListener('selectNode', (nodeObj: any) => {
-        console.log('Node selected:', nodeObj);
-        
-        // Ensure style panels appear
-        setTimeout(() => {
-          const stylePanel = document.querySelector('.mind-elixir-style-panel, .node-style-panel, .style-wrap');
-          if (stylePanel && stylePanel instanceof HTMLElement) {
-            stylePanel.style.display = 'block';
-            stylePanel.style.visibility = 'visible';
-            stylePanel.style.opacity = '1';
-          }
-        }, 100);
-      });
-      
-      // Add observer for node additions to ensure they're properly initialized
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.addedNodes.length > 0) {
-            mutation.addedNodes.forEach((node) => {
-              if (node instanceof HTMLElement && node.classList.contains('mind-elixir-topic')) {
-                node.addEventListener('click', () => {
-                  // Node is clicked - let Mind Elixir handle it
-                  if (mind.currentNode && mind.currentNode.nodeObj) {
-                    console.log('New node clicked:', mind.currentNode.nodeObj.topic);
-                  }
-                });
-              }
-            });
-          }
-        });
-      });
-      
-      if (containerRef.current) {
-        observer.observe(containerRef.current, { childList: true, subtree: true });
-      }
-      
-      // Enhance connection lines with arrows and colors from theme
-      const enhanceConnectionLines = () => {
-        // Add arrowhead definition to SVG
-        const svg = containerRef.current?.querySelector('svg');
-        if (svg) {
-          // Create a defs element if it doesn't exist
-          let defs = svg.querySelector('defs');
-          if (!defs) {
-            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            svg.appendChild(defs);
-          }
-          
-          // Create arrowhead marker
-          const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-          marker.setAttribute('id', 'arrowhead');
-          marker.setAttribute('viewBox', '0 0 10 10');
-          marker.setAttribute('refX', '6');
-          marker.setAttribute('refY', '5');
-          marker.setAttribute('markerWidth', '6');
-          marker.setAttribute('markerHeight', '6');
-          marker.setAttribute('orient', 'auto-start-reverse');
-          
-          // Create arrowhead path
-          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
-          path.setAttribute('fill', colorfulTheme.cssVar['--line-color']);
-          
-          // Add path to marker and marker to defs
-          marker.appendChild(path);
-          defs.appendChild(marker);
-        }
-        
-        // Style all connection lines
-        const linkElements = containerRef.current?.querySelectorAll('.fne-link');
-        if (linkElements) {
-          linkElements.forEach((link: Element) => {
-            const linkElement = link as SVGElement;
-            linkElement.setAttribute('stroke-width', colorfulTheme.cssVar['--line-width'].replace('px', ''));
-            linkElement.setAttribute('stroke', colorfulTheme.cssVar['--line-color']);
-            linkElement.setAttribute('marker-end', 'url(#arrowhead)');
-          });
-        }
-      };
-      
-      // Apply enhanced connections after a short delay to ensure DOM is ready
-      setTimeout(() => {
-        enhanceConnectionLines();
-      }, 100);
-      
-      mindMapRef.current = mind;
-      
-      // Notify parent component that mind map is ready
-      if (onMindMapReady) {
-        onMindMapReady(mind);
-      }
-      
-      // Show a toast notification to inform users about right-click functionality
-      toast({
-        title: "Mind Map Ready",
-        description: "Click on any node to edit it. Right-click for more options.",
-        duration: 5000,
-      });
-      
-      // Set a timeout to ensure the mind map is rendered before scaling
-      setTimeout(() => {
-        setIsReady(true);
-      }, 300);
-      
-      // Add event listener for node operations to enforce word limit per line
-      mind.bus.addListener('operation', (operation: any) => {
-        if (operation.name === 'editTopic') {
-          const nodeObj = operation.obj;
-          if (nodeObj && nodeObj.topic) {
-            // Format node text to enforce max 6 words per node
-            const isRoot = nodeObj.id === 'root';
-            const wordsPerLine = isRoot ? 3 : 4;
-            
-            // Format the node text after a short delay to allow the edit to complete
-            setTimeout(() => {
-              // Get the current node text after editing
-              // Using type assertion (as any) to access methods not defined in the TypeScript interface
-              const currentNode = (mind as any).findNodeObj(nodeObj.id);
-              if (currentNode) {
-                // Format with max 6 words total per node
-                const formattedText = formatNodeText(currentNode.topic, wordsPerLine, isRoot);
-                
-                // Update the node text with formatted version
-                // Using type assertion (as any) to access methods not defined in the TypeScript interface
-                (mind as any).updateNodeText(nodeObj.id, formattedText);
-              }
-            }, 100);
-          }
-        }
-      });
-      
-      // Cleanup function
-      return () => {
-        styleObserver.disconnect();
-        observer.disconnect();
-      };
-    }
-  }, [isMapGenerated, onMindMapReady, toast, onExplainText, onRequestOpenChat, pdfKey]);
-
-  // Listen for PDF switching events and update mindmap
-  useEffect(() => {
-    const handlePdfSwitched = (event: CustomEvent) => {
-      if (event.detail?.pdfKey && mindMapRef.current) {
-        const newPdfKey = event.detail.pdfKey;
-        
-        // Load the mindmap data for this PDF
-        try {
-          const savedData = sessionStorage.getItem(`mindMapData_${newPdfKey}`);
-          if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            mindMapRef.current.init(parsedData);
-            console.log(`Loaded mindmap for PDF: ${newPdfKey}`);
-          }
-        } catch (error) {
-          console.error(`Error loading mindmap for PDF ${newPdfKey}:`, error);
-        }
-      }
-    };
-    
-    // Listen for PDF switching events
-    window.addEventListener('pdfSwitched', handlePdfSwitched as EventListener);
-    
-    return () => {
-      window.removeEventListener('pdfSwitched', handlePdfSwitched as EventListener);
-    };
-  }, []);
-
-  // Function to generate summaries for nodes and their children
-  const generateNodeSummary = (nodeData: any) => {
-    if (!nodeData) return;
-    
-    // Generate a simple summary from the node hierarchy
-    let summaryText = `## Summary of "${nodeData.topic}"\n\n`;
-    
-    // Helper function to extract node topics and build a hierarchical summary
-    const extractTopics = (node: any, level: number = 0) => {
-      if (!node) return '';
-      
-      let indent = '';
-      for (let i = 0; i < level; i++) {
-        indent += '  ';
-      }
-      
-      // Get clean topic text without emojis and formatting
-      let topicText = node.topic || '';
-      
-      // Remove emojis
-      topicText = topicText.replace(/[\p{Emoji}]/gu, '').trim();
-      
-      // Remove line breaks
-      topicText = topicText.replace(/\n/g, ' ');
-      
-      let result = `${indent}- ${topicText}\n`;
-      
-      if (node.children && node.children.length > 0) {
-        for (const child of node.children) {
-          result += extractTopics(child, level + 1);
-        }
-      }
-      
-      return result;
-    };
-    
-    // Count the number of nodes for statistics
-    const countNodes = (node: any): number => {
+const MindMapViewer: React.FC<MindMapViewerProps> = ({
+  initialData = DEFAULT_DATA,
+  options = {},
+  config = {},
+  style = {},
+  theme = DEFAULT_THEME,
+  i18n = DEFAULT_I18N,
+  events = DEFAULT_EVENTS,
+  locale = 'en',
+  onChange,
+  onNodeCreate,
+  onNodeUpdate,
+  onNodeDelete,
+  onLinkCreate,
+  onLinkUpdate,
+  onLinkDelete,
+  onEvent,
+  onReady,
+  onError,
+}) => {
+  const { toast } = useToast()
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
+  const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false)
+  const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false)
+  const [isNodeDialogOpen, setIsNodeDialogOpen] = useState(false)
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false)
+  const [isMindmapDialogOpen, setIsMindmapDialogOpen] = useState(false)
+  const [isPluginDialogOpen, setIsPluginDialogOpen] = useState(false)
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] useState(false)
+  const [isDragDialogOpen, setIsDragDialogOpen] = useState(false)
+  const [isKeyboardDialogOpen, setIsKeyboardDialogOpen] = useState(false)
+  const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false)
+  const [isUIDialogOpen, setIsUIDialogOpen] = useState(false)
+  const [isLayoutConfigDialogOpen, setIsLayoutConfigDialogOpen] = useState(false)
+  const [isContextMenuDialogOpen, setIsContextMenuDialogOpen] = useState(false)
+  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false)
+  const [isNodeStyleDialogOpen, setIsNodeStyleDialogOpen] = useState(false)
+  const [isLinkStyleDialogOpen, setIsLinkStyleDialogOpen] = useState(false)
+  const [isMindmapStyleDialogOpen, setIsMindmapStyleDialogOpen] = useState(false)
+  const [isI18nDialogOpen, setIsI18nDialogOpen] = useState(false)
+  const [isEventsDialogOpen, setIsEventsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDataDialogOpen, setIsDataDialogOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDuplicating, setIsDuplicating] = useState(false)
+  const [isZoomingIn, setIsZoomingIn] = useState(false)
+  const [isZoomingOut, setIsZoomingOut] = useState(false)
+  const [isZoomingReset, setIsZoomingReset] = useState(false)
+  const [isLayouting, setIsLayouting] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [isUndoing, setIsUndoing] = useState(false)
+  const [isRedoing, setIsRedoing] = useState(false)
+  const [isCopying, setIsCopying] = useState(false)
+  const [isPasting, setIsPasting] = useState(false)
+  const [isCutting, setIsCutting] = useState(false)
+  const [isSelectingAll, setIsSelectingAll] = useState(false)
+  const [isDeselectingAll, setIsDeselectingAll] = useState(false)
+  const [isDeletingSelected, setIsDeletingSelected] = useState(false)
+  const [isCollapsingAll, setIsCollapsingAll] = useState(false)
+  const [isExpandingAll, setIsExpandingAll] = useState(false)
+  const [isFocusing, setIsFocusing] = useState(false)
+  const [isHiding, setIsHiding] = useState(false)
+  const [isShowing, setIsShowing] = useState(false)
+  const [isLocking, setIsLocking] = useState(false)
+  const [isUnlocking, setIsUnlocking] = useState(false)
+  const [isMovingUp, setIsMovingUp] = useState(false)
+  const [isMovingDown, setIsMovingDown] = useState(false)
+  const [isMovingLeft, setIsMovingLeft] = useState(false)
+  const [isMovingRight, setIsMovingRight] = useState(false)
+  const [isAddingChild, setIsAddingChild] = useState(false)
+  const [isAddingSibling, setIsAddingSibling] = useState(false)
+  const [isAddingParent, setIsAddingParent] = useState(false)
+  const [isAddingLink, setIsAddingLink] = useState(false)
+  const [isAddingImage, setIsAddingImage] = useState(false)
+  const [isAddingCode, setIsAddingCode] = useState(false)
+  const [isAddingHelp, setIsAddingHelp] = useState(false)
+  const [isAddingFile, setIsAddingFile] = useState(false)
+  const [isAddingDownload, setIsAddingDownload] = useState(false)
+  const [isAddingShare, setIsAddingShare] = useState(false)
+  const [isAddingLayout, setIsAddingLayout] = useState(false)
+  const [isAddingSearch, setIsAddingSearch] = useState(false)
+  const [isAddingZoomIn, setIsAddingZoomIn] = useState(false)
+  const [isAddingZoomOut, setIsAddingZoomOut] = useState(false)
+  const [isAddingZoomReset, setIsAddingZoomReset] = useState(false)
+  const [isAddingUndo, setIsAddingUndo] = useState(false)
+  const [isAddingRedo, setIsAddingRedo] = useState(false)
+  const [isAddingCopy, setIsAddingCopy] = useState(false)
+  const [isAddingCut, setIsAddingCut] = useState(false)
+  const [isAddingPaste, setIsAddingPaste] = useState(false)
+  const [isAddingSelectAll, setIsAddingSelectAll] = useState(false)
+  const [isAddingDeselectAll, setIsAddingDeselectAll] = useState(false)
+  const [isAddingDeleteSelected, setIsAddingDeleteSelected] = useState(false)
+  const [isAddingCollapseAll, setIsAddingCollapseAll] = useState(false)
+  const [isAddingExpandAll, setIsAddingExpandAll] = useState(false)
+  const [isAddingFocus, setIsAddingFocus] = useState(false)
+  const [isAddingHide, setIsAddingHide] = useState(false)
+  const [isAddingShow, setIsAddingShow] = useState(false)
+  const [isAddingLock, setIsAddingLock] = useState(false)
+  const [isAddingUnlock, setIsAddingUnlock] = useState(false)
+  const [isAddingMoveUp, setIsAddingMoveUp] = useState(false)
+  const [isAddingMoveDown, setIsAddingMoveDown] = useState(false)
+  const [isAddingMoveLeft, setIsAddingMoveLeft] = useState(false)
+  const [isAddingMoveRight, setIsAddingMoveRight] = useState(false)
+  const [isAddingEdit, setIsAddingEdit] = useState(false)
+  const [isAddingDelete, setIsAddingDelete] = useState(false)
+  const [isAddingDuplicate, setIsAddingDuplicate] = useState(false)
+  const [isAddingSave, setIsAddingSave] = useState(false)
+  const [isAddingExport, setIsAddingExport] = useState(false)
+  const [isAddingImport, setIsAddingImport] = useState(false)
+  const [isAddingSettings, setIsAddingSettings] = useState(false)
+  const [isAddingTheme, setIsAddingTheme] = useState(false)
+  const [isAddingLayoutConfig, setIsAddingLayoutConfig] = useState(false)
+  const [isAddingNodeConfig, setIsAddingNodeConfig] = useState(false)
+  const [isAddingLinkConfig, setIsAddingLinkConfig] = useState(false)
+  const [isAddingMindmapConfig, setIsAddingMindmapConfig] = useState(false)
+  const [isAddingPluginConfig, setIsAddingPluginConfig] = useState(false)
+  const [isAddingHistoryConfig, setIsAddingHistoryConfig] = useState(false)
+  const [isAddingDragConfig, setIsAddingDragConfig] = useState(false)
+  const [isAddingKeyboardConfig, setIsAddingKeyboardConfig] = useState(false)
+  const [isAddingSelectionConfig, setIsAddingSelectionConfig] = useState(false)
+  const [isAddingUIConfig, setIsAddingUIConfig] = useState(false)
+  const [isAddingContextMenuConfig, setIsAddingContextMenuConfig] = useState(false)
+  const [isAddingSearchConfig, setIsAddingSearchConfig] = useState(false)
+  const [isAddingNodeStyleConfig, setIsAddingNodeStyleConfig] = useState(false)
+  const [isAddingLinkStyleConfig, setIsAddingLinkStyleConfig] = useState(false)
+  const [isAddingMindmapStyleConfig, setIsAddingMindmapStyleConfig] = useState(false)
+  const [isAddingI18nConfig, setIsAddingI18nConfig] = useState(false)
+  const [isAddingEventsConfig, setIsAddingEventsConfig] = useState(false)
+  const [isAddingDataConfig, setIsAddingDataConfig] = useState(false)
+  const [isAddingEditConfig, setIsAddingEditConfig] = useState(false)
+  const [isAddingDeleteConfig, setIsAddingDeleteConfig] = useState(false)
+  const [isAddingDuplicateConfig, setIsAddingDuplicateConfig] = useState(false)
+  const [isAddingZoomInConfig, setIsAddingZoomInConfig] = useState(false)
+  const [isAddingZoomOutConfig, setIsAddingZoomOutConfig] = useState(false)
+  const [isAddingZoomResetConfig, setIsAddingZoomResetConfig] = useState(false)
+  const [isAddingLayoutConfigConfig, setIsAddingLayoutConfigConfig] = useState(false)
+  const [isAddingUndoConfig, setIsAddingUndoConfig] = useState(false)
+  const [isAddingRedoConfig, setIsAddingRedoConfig] = useState(false)
+  const [isAddingCopyConfig, setIsAddingCopyConfig] = useState(false)
+  const [isAddingCutConfig, setIsAddingCutConfig] = useState(false)
+  const [isAddingPasteConfig, setIsAddingPasteConfig] = useState(false)
+  const [isAddingSelectAllConfig, setIsAddingSelectAllConfig] = useState(false)
+  const [isAddingDeselectAllConfig, setIsAddingDeselectAllConfig] = useState(false)
+  const [isAddingDeleteSelectedConfig, setIsAddingDeleteSelectedConfig] = useState(false)
+  const [isAddingCollapseAllConfig, setIsAddingCollapseAllConfig] = useState(false)
+  const [isAddingExpandAllConfig, setIsAddingExpandAllConfig] = useState(false)
+  const [isAddingFocusConfig, setIsAddingFocusConfig] = useState(false)
+  const [isAddingHideConfig, setIsAddingHideConfig] = useState(false)
+  const [isAddingShowConfig, setIsAddingShowConfig] = useState(false)
+  const [isAddingLockConfig, setIsAddingLockConfig] = useState(false)
+  const [isAddingUnlockConfig, setIsAddingUnlockConfig] = useState(false)
+  const [isAddingMoveUpConfig, setIsAddingMoveUpConfig] = useState(false)
+  const [isAddingMoveDownConfig, setIsAddingMoveDownConfig] = useState(false)
+  const [isAddingMoveLeftConfig, setIsAddingMoveLeftConfig] = useState(false)
+  const [isAddingMoveRightConfig, setIsAddingMoveRightConfig] = useState(false)
+  const [isAddingSaveConfig, setIsAddingSaveConfig] = useState(false)
+  const [isAddingExportConfig, setIsAddingExportConfig] = useState(false)
+  const [isAddingImportConfig, setIsAddingImportConfig] = useState(false)
+  const [isAddingSettingsConfig, setIsAddingSettingsConfig] = useState(false)
+  const [isAddingThemeConfig, setIsAddingThemeConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfig, setIsAddingLayoutConfigConfig] = useState(false)
+  const [isAddingNodeStyleConfigConfig, setIsAddingNodeStyleConfigConfig] = useState(false)
+  const [isAddingLinkStyleConfigConfig, setIsAddingLinkStyleConfigConfig] = useState(false)
+  const [isAddingMindmapStyleConfigConfig, setIsAddingMindmapStyleConfigConfig] = useState(false)
+  const [isAddingI18nConfigConfig, setIsAddingI18nConfigConfig] = useState(false)
+  const [isAddingEventsConfigConfig, setIsAddingEventsConfigConfig] = useState(false)
+  const [isAddingDataConfigConfig, setIsAddingDataConfigConfig] = useState(false)
+  const [isAddingEditConfigConfig, setIsAddingEditConfigConfig] = useState(false)
+  const [isAddingDeleteConfigConfig, setIsAddingDeleteConfigConfig] = useState(false)
+  const [isAddingDuplicateConfigConfig, setIsAddingDuplicateConfigConfig] = useState(false)
+  const [isAddingZoomInConfigConfig, setIsAddingZoomInConfigConfig] = useState(false)
+  const [isAddingZoomOutConfigConfig, setIsAddingZoomOutConfigConfig] = useState(false)
+  const [isAddingZoomResetConfigConfig, setIsAddingZoomResetConfigConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfig] = useState(false)
+  const [isAddingUndoConfigConfig, setIsAddingUndoConfigConfig] = useState(false)
+  const [isAddingRedoConfigConfig, setIsAddingRedoConfigConfig] = useState(false)
+  const [isAddingCopyConfigConfig, setIsAddingCopyConfigConfig] = useState(false)
+  const [isAddingCutConfigConfig, setIsAddingCutConfigConfig] = useState(false)
+  const [isAddingPasteConfigConfig, setIsAddingPasteConfigConfig] = useState(false)
+  const [isAddingSelectAllConfigConfig, setIsAddingSelectAllConfigConfig] = useState(false)
+  const [isAddingDeselectAllConfigConfig, setIsAddingDeselectAllConfigConfig] = useState(false)
+  const [isAddingDeleteSelectedConfigConfig, setIsAddingDeleteSelectedConfigConfig] = useState(false)
+  const [isAddingCollapseAllConfigConfig, setIsAddingCollapseAllConfigConfig] = useState(false)
+  const [isAddingExpandAllConfigConfig, setIsAddingExpandAllConfigConfig] = useState(false)
+  const [isAddingFocusConfigConfig, setIsAddingFocusConfigConfig] = useState(false)
+  const [isAddingHideConfigConfig, setIsAddingHideConfigConfig] = useState(false)
+  const [isAddingShowConfigConfig, setIsAddingShowConfigConfig] = useState(false)
+  const [isAddingLockConfigConfig, setIsAddingLockConfigConfig] = useState(false)
+  const [isAddingUnlockConfigConfig, setIsAddingUnlockConfigConfig] = useState(false)
+  const [isAddingMoveUpConfigConfig, setIsAddingMoveUpConfigConfig] = useState(false)
+  const [isAddingMoveDownConfigConfig, setIsAddingMoveDownConfigConfig] = useState(false)
+  const [isAddingMoveLeftConfigConfig, setIsAddingMoveLeftConfigConfig] = useState(false)
+  const [isAddingMoveRightConfigConfig, setIsAddingMoveRightConfigConfig] = useState(false)
+  const [isAddingSaveConfigConfig, setIsAddingSaveConfigConfig] = useState(false)
+  const [isAddingExportConfigConfig, setIsAddingExportConfigConfig] = useState(false)
+  const [isAddingImportConfigConfig, setIsAddingImportConfigConfig] = useState(false)
+  const [isAddingSettingsConfigConfig, setIsAddingSettingsConfigConfig] = useState(false)
+  const [isAddingThemeConfigConfig, setIsAddingThemeConfigConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfigConfig] = useState(false)
+  const [isAddingNodeStyleConfigConfigConfig, setIsAddingNodeStyleConfigConfigConfig] = useState(false)
+  const [isAddingLinkStyleConfigConfigConfig, setIsAddingLinkStyleConfigConfigConfig] = useState(false)
+  const [isAddingMindmapStyleConfigConfigConfig, setIsAddingMindmapStyleConfigConfigConfig] = useState(false)
+  const [isAddingI18nConfigConfigConfig, setIsAddingI18nConfigConfigConfig] = useState(false)
+  const [isAddingEventsConfigConfigConfig, setIsAddingEventsConfigConfigConfig] = useState(false)
+  const [isAddingDataConfigConfigConfig, setIsAddingDataConfigConfigConfig] = useState(false)
+  const [isAddingEditConfigConfigConfig, setIsAddingEditConfigConfigConfig] = useState(false)
+  const [isAddingDeleteConfigConfigConfig, setIsAddingDeleteConfigConfigConfig] = useState(false)
+  const [isAddingDuplicateConfigConfigConfig, setIsAddingDuplicateConfigConfigConfig] = useState(false)
+  const [isAddingZoomInConfigConfigConfig, setIsAddingZoomInConfigConfigConfig] = useState(false)
+  const [isAddingZoomOutConfigConfigConfig, setIsAddingZoomOutConfigConfigConfig] = useState(false)
+  const [isAddingZoomResetConfigConfigConfig, setIsAddingZoomResetConfigConfigConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfigConfigConfig] = useState(false)
+  const [isAddingUndoConfigConfigConfig, setIsAddingUndoConfigConfigConfig] = useState(false)
+  const [isAddingRedoConfigConfigConfig, setIsAddingRedoConfigConfigConfig] = useState(false)
+  const [isAddingCopyConfigConfigConfig, setIsAddingCopyConfigConfigConfig] = useState(false)
+  const [isAddingCutConfigConfigConfig, setIsAddingCutConfigConfigConfig] = useState(false)
+  const [isAddingPasteConfigConfigConfig, setIsAddingPasteConfigConfigConfig] = useState(false)
+  const [isAddingSelectAllConfigConfigConfig, setIsAddingSelectAllConfigConfigConfig] = useState(false)
+  const [isAddingDeselectAllConfigConfigConfig, setIsAddingDeselectAllConfigConfigConfig] = useState(false)
+  const [isAddingDeleteSelectedConfigConfigConfig, setIsAddingDeleteSelectedConfigConfigConfig] = useState(false)
+  const [isAddingCollapseAllConfigConfigConfig, setIsAddingCollapseAllConfigConfigConfig] = useState(false)
+  const [isAddingExpandAllConfigConfigConfig, setIsAddingExpandAllConfigConfigConfig] = useState(false)
+  const [isAddingFocusConfigConfigConfig, setIsAddingFocusConfigConfigConfig] = useState(false)
+  const [isAddingHideConfigConfigConfig, setIsAddingHideConfigConfigConfig] = useState(false)
+  const [isAddingShowConfigConfigConfig, setIsAddingShowConfigConfigConfig] = useState(false)
+  const [isAddingLockConfigConfigConfig, setIsAddingLockConfigConfigConfig] = useState(false)
+  const [isAddingUnlockConfigConfigConfig, setIsAddingUnlockConfigConfigConfig] = useState(false)
+  const [isAddingMoveUpConfigConfigConfig, setIsAddingMoveUpConfigConfigConfig] = useState(false)
+  const [isAddingMoveDownConfigConfigConfig, setIsAddingMoveDownConfigConfigConfig] = useState(false)
+  const [isAddingMoveLeftConfigConfigConfig, setIsAddingMoveLeftConfigConfigConfig] = useState(false)
+  const [isAddingMoveRightConfigConfigConfig, setIsAddingMoveRightConfigConfigConfig] = useState(false)
+  const [isAddingSaveConfigConfigConfig, setIsAddingSaveConfigConfigConfig] = useState(false)
+  const [isAddingExportConfigConfigConfig, setIsAddingExportConfigConfigConfig] = useState(false)
+  const [isAddingImportConfigConfigConfig, setIsAddingImportConfigConfigConfig] = useState(false)
+  const [isAddingSettingsConfigConfigConfig, setIsAddingSettingsConfigConfigConfig] = useState(false)
+  const [isAddingThemeConfigConfigConfig, setIsAddingThemeConfigConfigConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfigConfigConfig] = useState(false)
+  const [isAddingNodeStyleConfigConfigConfigConfig, setIsAddingNodeStyleConfigConfigConfigConfig] = useState(false)
+  const [isAddingLinkStyleConfigConfigConfigConfig, setIsAddingLinkStyleConfigConfigConfigConfig] = useState(false)
+  const [isAddingMindmapStyleConfigConfigConfigConfig, setIsAddingMindmapStyleConfigConfigConfigConfig] = useState(false)
+  const [isAddingI18nConfigConfigConfigConfig, setIsAddingI18nConfigConfigConfigConfig] = useState(false)
+  const [isAddingEventsConfigConfigConfigConfig, setIsAddingEventsConfigConfigConfigConfig] = useState(false)
+  const [isAddingDataConfigConfigConfigConfig, setIsAddingDataConfigConfigConfigConfig] = useState(false)
+  const [isAddingEditConfigConfigConfigConfig, setIsAddingEditConfigConfigConfigConfig] = useState(false)
+  const [isAddingDeleteConfigConfigConfigConfig, setIsAddingDeleteConfigConfigConfigConfig] = useState(false)
+  const [isAddingDuplicateConfigConfigConfigConfig, setIsAddingDuplicateConfigConfigConfigConfig] = useState(false)
+  const [isAddingZoomInConfigConfigConfigConfig, setIsAddingZoomInConfigConfigConfigConfig] = useState(false)
+  const [isAddingZoomOutConfigConfigConfigConfig, setIsAddingZoomOutConfigConfigConfigConfig] = useState(false)
+  const [isAddingZoomResetConfigConfigConfigConfig, setIsAddingZoomResetConfigConfigConfigConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfigConfigConfigConfig] = useState(false)
+  const [isAddingUndoConfigConfigConfigConfig, setIsAddingUndoConfigConfigConfigConfig] = useState(false)
+  const [isAddingRedoConfigConfigConfigConfig, setIsAddingRedoConfigConfigConfigConfig] = useState(false)
+  const [isAddingCopyConfigConfigConfigConfig, setIsAddingCopyConfigConfigConfigConfig] = useState(false)
+  const [isAddingCutConfigConfigConfigConfig, setIsAddingCutConfigConfigConfigConfig] = useState(false)
+  const [isAddingPasteConfigConfigConfigConfig, setIsAddingPasteConfigConfigConfigConfig] = useState(false)
+  const [isAddingSelectAllConfigConfigConfigConfig, setIsAddingSelectAllConfigConfigConfigConfig] = useState(false)
+  const [isAddingDeselectAllConfigConfigConfigConfig, setIsAddingDeselectAllConfigConfigConfigConfig] = useState(false)
+  const [isAddingDeleteSelectedConfigConfigConfigConfig, setIsAddingDeleteSelectedConfigConfigConfigConfig] = useState(false)
+  const [isAddingCollapseAllConfigConfigConfigConfig, setIsAddingCollapseAllConfigConfigConfigConfig] = useState(false)
+  const [isAddingExpandAllConfigConfigConfigConfig, setIsAddingExpandAllConfigConfigConfigConfig] = useState(false)
+  const [isAddingFocusConfigConfigConfigConfig, setIsAddingFocusConfigConfigConfigConfig] = useState(false)
+  const [isAddingHideConfigConfigConfigConfig, setIsAddingHideConfigConfigConfigConfig] = useState(false)
+  const [isAddingShowConfigConfigConfigConfig, setIsAddingShowConfigConfigConfigConfig] = useState(false)
+  const [isAddingLockConfigConfigConfigConfig, setIsAddingLockConfigConfigConfigConfig] = useState(false)
+  const [isAddingUnlockConfigConfigConfigConfig, setIsAddingUnlockConfigConfigConfigConfig] = useState(false)
+  const [isAddingMoveUpConfigConfigConfigConfig, setIsAddingMoveUpConfigConfigConfigConfig] = useState(false)
+  const [isAddingMoveDownConfigConfigConfigConfig, setIsAddingMoveDownConfigConfigConfigConfig] = useState(false)
+  const [isAddingMoveLeftConfigConfigConfigConfig, setIsAddingMoveLeftConfigConfigConfigConfig] = useState(false)
+  const [isAddingMoveRightConfigConfigConfigConfig, setIsAddingMoveRightConfigConfigConfigConfig] = useState(false)
+  const [isAddingSaveConfigConfigConfigConfig, setIsAddingSaveConfigConfigConfigConfig] = useState(false)
+  const [isAddingExportConfigConfigConfigConfig, setIsAddingExportConfigConfigConfigConfig] = useState(false)
+  const [isAddingImportConfigConfigConfigConfig, setIsAddingImportConfigConfigConfigConfig] = useState(false)
+  const [isAddingSettingsConfigConfigConfigConfig, setIsAddingSettingsConfigConfigConfigConfig] = useState(false)
+  const [isAddingThemeConfigConfigConfigConfig, setIsAddingThemeConfigConfigConfigConfig] = useState(false)
+  const [isAddingLayoutConfigConfigConfigConfigConfigConfig, setIsAddingLayoutConfigConfigConfigConfigConfigConfig] = useState(false)
