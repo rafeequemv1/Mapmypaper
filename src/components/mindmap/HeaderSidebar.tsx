@@ -5,7 +5,8 @@ import {
   MessageSquare,
   FileText,
   Home,
-  Network
+  Network,
+  Gallery
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
@@ -19,6 +20,7 @@ interface HeaderSidebarProps {
   toggleChat: () => void;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowGallery: React.Dispatch<React.SetStateAction<boolean>>;
   onExportSVG: () => void;
   onExportPNG: () => void;
   onExportJSON: () => void;
@@ -31,6 +33,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   toggleChat,
   setShowSummary,
   setShowFlowchart,
+  setShowGallery,
   onExportSVG,
   onExportPNG,
   onExportJSON,
@@ -78,8 +81,18 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
         onExportPNG={onExportPNG}
         onExportJSON={onExportJSON}
       />
+      
+      {/* Gallery button at the bottom (before user menu) */}
+      <div className="mt-auto">
+        <HeaderSidebarIcon
+          onClick={() => setShowGallery(true)}
+          icon={<Gallery className="h-4 w-4" />}
+          title="Image Gallery"
+        />
+      </div>
+      
       {/* User Menu at the bottom */}
-      <div className="mt-auto mb-4">
+      <div className="mb-4">
         <UserMenu />
       </div>
     </div>
