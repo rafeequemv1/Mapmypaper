@@ -2,11 +2,9 @@
 import React from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
-import { useMindElixirStore } from "@/stores/mindElixirStore";
-import { getSvg, getImage } from "@/lib/export-utils";
-import { exportJson } from "mind-elixir";
-import { saveAs } from "file-saver";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
+import { downloadBlob } from "@/utils/downloadUtils";
 
 interface HeaderProps {
   isPdfActive: boolean;
@@ -40,9 +38,8 @@ const Header: React.FC<HeaderProps> = ({
     }
     
     try {
-      const svgData = getSvg(mindMap);
-      const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-      saveAs(blob, "mindmap.svg");
+      // Using downloadMindMapAsSVG from export-utils
+      downloadMindMapAsSVG(mindMap, "mindmap");
       
       toast({
         title: "Export Successful",
@@ -74,11 +71,8 @@ const Header: React.FC<HeaderProps> = ({
         description: "Generating PNG image...",
       });
       
-      const dataUrl = await getImage(mindMap);
-      const link = document.createElement("a");
-      link.download = "mindmap.png";
-      link.href = dataUrl;
-      link.click();
+      // Using downloadMindMapAsPNG from export-utils
+      await downloadMindMapAsPNG(mindMap, "mindmap");
       
       toast({
         title: "Export Successful",
@@ -105,11 +99,11 @@ const Header: React.FC<HeaderProps> = ({
     }
     
     try {
-      // Use the exportJson function from mind-elixir
-      const jsonData = exportJson(mindMap);
+      // Export the data as JSON using the mind-elixir API
+      const jsonData = mindMap.getData();
       const jsonString = JSON.stringify(jsonData, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
-      saveAs(blob, "mindmap.json");
+      downloadBlob(blob, "mindmap.json");
       
       toast({
         title: "Export Successful",

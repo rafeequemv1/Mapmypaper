@@ -1,5 +1,5 @@
-
 import { MindElixirInstance } from "mind-elixir";
+import { downloadBlob } from "@/utils/downloadUtils";
 
 /**
  * Downloads the mind map as PNG image
@@ -8,17 +8,16 @@ import { MindElixirInstance } from "mind-elixir";
  */
 export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
   try {
-    const blob = await instance.exportPng();
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
+    const canvas = instance.exportPng(4); // Higher quality export with scale factor 4
+    
+    // Convert to blob
+    const blob = await new Promise<Blob>((resolve) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+      }, 'image/png');
+    });
+    
+    downloadBlob(blob, `${fileName}.png`);
   } catch (error) {
     console.error("Error exporting as PNG:", error);
     throw error;
@@ -32,17 +31,9 @@ export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileNam
  */
 export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: string = 'mindmap'): void => {
   try {
-    const blob = instance.exportSvg();
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.svg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
+    const svgContent = instance.exportSvg();
+    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+    downloadBlob(blob, `${fileName}.svg`);
   } catch (error) {
     console.error("Error exporting as SVG:", error);
     throw error;
@@ -88,13 +79,9 @@ export const downloadElementAsPNG = async (element: HTMLElement, fileName: strin
     
     const dataUrl = canvas.toDataURL('image/png');
     
-    // Create download link
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `${fileName}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create download link using the utility function
+    const blob = await (await fetch(dataUrl)).blob();
+    downloadBlob(blob, `${fileName}.png`);
     
     // Wait a brief moment before signaling completion to allow UI to update properly
     // This small delay helps ensure the rectangle stays visible long enough for feedback
