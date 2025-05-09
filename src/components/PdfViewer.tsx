@@ -62,6 +62,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Add a state to track whether we're currently processing an image capture
     const [isProcessingCapture, setIsProcessingCapture] = useState(false);
+    
+    // Add missing captureError state
+    const [captureError, setCaptureError] = useState<string | null>(null);
 
     // Add a ref for the search input to focus when search is opened
     const searchInputRef = useRef<HTMLInputElement>(null);
