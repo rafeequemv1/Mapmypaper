@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -595,18 +596,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.5));
     const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
     const resetZoom = () => setScale(1);
-    
-    // New function to toggle snapshot mode
-    const toggleSnapshotMode = () => {
-      setIsSnapshotMode(prev => !prev);
-      
-      if (!isSnapshotMode) {
-        toast({
-          title: "Snapshot Mode Activated",
-          description: "Click and drag to capture an area of the PDF",
-        });
-      }
-    };
 
     // Handle search input keydown event
     const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -846,8 +835,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           </div>
         )}
         
-        {/* The floating controls on the right have been removed */}
-        
         {/* Display temporary message if a capture error occurs */}
         {captureError && (
           <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md z-50">
@@ -866,3 +853,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 className="ml-auto text-red-700 hover:text-red-900"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
