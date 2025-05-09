@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+
+import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/mindmap/Header";
@@ -6,9 +7,6 @@ import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
 import { MindElixirInstance } from "mind-elixir";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PdfViewer from "@/components/PdfViewer";
-import ChatPanel from "@/components/mindmap/ChatPanel";
 
 const MindMap = () => {
   const [showPdf, setShowPdf] = useState(true);
@@ -21,10 +19,8 @@ const MindMap = () => {
   const [isMapGenerated, setIsMapGenerated] = useState(false);
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [isCapturingInPdf, setIsCapturingInPdf] = useState(false);
-  const [activeTab, setActiveTab] = useState("mindmap");
-  const pdfViewerRef = useRef(null);
+  const [isCapturing, setIsCapturing] = useState(false); // State to track capture status
+  const [isCapturingInPdf, setIsCapturingInPdf] = useState(false); // New state to track if capture is happening in PDF
 
   const handleMindMapReady = useCallback((instance: MindElixirInstance) => {
     console.log("Mind map instance is ready:", instance);
@@ -78,8 +74,7 @@ const MindMap = () => {
   // Handle text selected for explanation
   const handleExplainText = useCallback((text: string) => {
     setExplainText(text);
-    // Switch to chat tab when text is selected for explanation
-    setActiveTab("chat");
+    // Always open chat when text is selected for explanation
     if (!showChat) {
       setShowChat(true);
       toast({
@@ -197,116 +192,40 @@ const MindMap = () => {
     };
   }, []);
 
-  // Handle tab changes
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    
-    // Open chat when chat tab is selected
-    if (value === "chat" && !showChat) {
-      setShowChat(true);
-    }
-    
-    // Open summary or flowchart when respective tabs are selected
-    if (value === "summary") {
-      setShowSummary(true);
-    }
-    
-    if (value === "flowchart") {
-      setShowFlowchart(true);
-    }
-  };
-
-  // Render the right panel with tabs
-  const renderRightPanel = () => {
-    return (
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
-        <div className="border-b px-4 pt-2">
-          <TabsList className="bg-transparent">
-            <TabsTrigger value="mindmap">Mind Map</TabsTrigger>
-            <TabsTrigger value="chat">Chat</TabsTrigger>
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="flowchart">Flowchart</TabsTrigger>
-          </TabsList>
-        </div>
-        <div className="flex-1 overflow-hidden">
-          <TabsContent value="mindmap" className="h-full m-0 p-0 data-[state=active]:flex-1">
-            {/* Mind map content */}
-            <div className="h-full" id="map-container"></div>
-          </TabsContent>
-          <TabsContent value="chat" className="h-full m-0 p-0 data-[state=active]:flex-1">
-            {/* Chat content */}
-            {showChat && <ChatPanel 
-              toggleChat={() => {
-                setShowChat(false);
-                setActiveTab("mindmap");
-              }} 
-              explainText={explainText}
-            />}
-          </TabsContent>
-          <TabsContent value="summary" className="h-full m-0 p-0 data-[state=active]:flex-1">
-            {/* Summary content */}
-            <div className="h-full p-4 overflow-auto">
-              <SummaryModal 
-                open={showSummary && activeTab === "summary"}
-                onOpenChange={(isOpen) => {
-                  setShowSummary(isOpen);
-                  if (!isOpen) setActiveTab("mindmap");
-                }}
-                embedded={true}
-              />
-            </div>
-          </TabsContent>
-          <TabsContent value="flowchart" className="h-full m-0 p-0 data-[state=active]:flex-1">
-            {/* Flowchart content */}
-            <div className="h-full p-4 overflow-auto">
-              <FlowchartModal
-                open={showFlowchart && activeTab === "flowchart"}
-                onOpenChange={(isOpen) => {
-                  setShowFlowchart(isOpen);
-                  if (!isOpen) setActiveTab("mindmap");
-                }}
-                embedded={true}
-              />
-            </div>
-          </TabsContent>
-        </div>
-      </Tabs>
-    );
-  };
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header with left sidebar icons */}
       <Header 
         togglePdf={() => setShowPdf(!showPdf)}
-        toggleChat={() => {
-          setShowChat(!showChat);
-          if (!showChat) setActiveTab("chat");
-          else setActiveTab("mindmap");
-        }}
-        setShowSummary={(show) => {
-          setShowSummary(show);
-          if (show) setActiveTab("summary");
-        }}
-        setShowFlowchart={(show) => {
-          setShowFlowchart(show);
-          if (show) setActiveTab("flowchart");
-        }}
+        toggleChat={() => setShowChat(!showChat)}
+        setShowSummary={setShowSummary}
+        setShowFlowchart={setShowFlowchart}
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
       />
-      
       <PanelStructure
-        leftPanel={
-          <PdfViewer
-            ref={pdfViewerRef}
-            onTextSelected={handleExplainText}
-          />
-        }
-        rightPanel={renderRightPanel()}
+        showPdf={showPdf}
+        showChat={showChat}
+        toggleChat={() => setShowChat(!showChat)}
+        togglePdf={() => setShowPdf(!showPdf)}
+        onMindMapReady={handleMindMapReady}
+        explainText={explainText}
+        onExplainText={handleExplainText}
       />
       
+      {/* Modal for Summary */}
+      <SummaryModal 
+        open={showSummary}
+        onOpenChange={setShowSummary}
+      />
+
+      {/* Modal for Flowchart/Mindmap visualization */}
+      <FlowchartModal
+        open={showFlowchart}
+        onOpenChange={setShowFlowchart}
+      />
+
       {/* Capture in progress indicator - ONLY SHOW IF NOT IN PDF */}
       {isCapturing && !isCapturingInPdf && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
