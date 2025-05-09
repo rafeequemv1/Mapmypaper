@@ -11,7 +11,9 @@ export const getSvg = (mindMap: MindElixirInstance): string => {
   // Use a safeguard approach to handle mind-elixir's unstable API
   // First try the built-in export function if available
   if (typeof mindMap.exportSvg === 'function') {
-    return mindMap.exportSvg();
+    const svgData = mindMap.exportSvg();
+    // Make sure we're returning a string, not a Blob
+    return typeof svgData === 'string' ? svgData : new XMLSerializer().serializeToString(svgData);
   }
   
   // Fallback: Get the SVG element and serialize it
