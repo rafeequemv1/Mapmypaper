@@ -181,7 +181,6 @@ interface MindMapViewerProps {
   pdfKey?: string | null;
   isLoading?: boolean; // New prop for loading state
 }
-
 const MindMapViewer = ({
   isMapGenerated,
   onMindMapReady,
@@ -229,7 +228,6 @@ const MindMapViewer = ({
       if (interval) clearInterval(interval);
     };
   }, [isLoading, loadingProgress]);
-
   useEffect(() => {
     if (isMapGenerated && containerRef.current && !mindMapRef.current) {
       // Initialize the mind map only once when it's generated
@@ -395,123 +393,117 @@ const MindMapViewer = ({
               id: 'root',
               topic: '🧠 Research\nPaper Title',
               children: [
-                // Even indexes (0, 2, 4, 6) go to the right (direction: 0)
-                {
-                  id: 'bd1',
-                  topic: '🔍 Introduction provides\ncontext and sets\nthe stage for\nthe research.',
-                  direction: 0 as const,
-                  children: [{
-                    id: 'bd1-1',
-                    topic: '📘 Background establishes\nthe essential context\nfor understanding the\nresearch problem.'
-                  }, {
-                    id: 'bd1-2',
-                    topic: '⚠️ The problem statement\nclearly identifies the\nissue being addressed.'
-                  }, {
-                    id: 'bd1-3',
-                    topic: '🧩 Research gap identifies\nwhat is missing\nin current understanding.'
-                  }, {
-                    id: 'bd1-4',
-                    topic: '🎯 This study aims\nto test the\nhypothesis that addresses\nthe research gap.'
-                  }]
-                },
-                // Odd indexes (1, 3, 5) go to the left (direction: 1)
-                {
-                  id: 'bd2',
-                  topic: '⚙️ Methodology describes\nhow the research\nwas conducted with\nappropriate rigor.',
-                  direction: 1 as const,
-                  children: [{
-                    id: 'bd2-1',
-                    topic: '🧪 The experimental setup\nwas carefully designed\nto collect reliable\nand valid data.'
-                  }, {
-                    id: 'bd2-2',
-                    topic: '🔬 Theoretical models provide\nthe foundation for\ntesting our research\nhypotheses.'
-                  }, {
-                    id: 'bd2-3',
-                    topic: '📋 Procedures were followed\nsystematically to ensure\nreproducibility of results.'
-                  }, {
-                    id: 'bd2-4',
-                    topic: '🔢 Key variables were\nidentified and measured\nusing validated instruments\nand techniques.'
-                  }]
-                },
-                {
-                  id: 'bd3',
-                  topic: '📊 Results present the\nempirical findings without\ninterpretation.',
-                  direction: 0 as const,
-                  children: [{
-                    id: 'bd3-1',
-                    topic: '✨ Key findings demonstrate\nsignificant relationships between\nthe studied variables.'
-                  }, {
-                    id: 'bd3-2',
-                    topic: '📈 Visual representations of\ndata help to\nillustrate important patterns\nfound in the analysis.'
-                  }, {
-                    id: 'bd3-3',
-                    topic: '📏 Statistical analyses confirm\nthe significance of\nthe observed relationships.'
-                  }, {
-                    id: 'bd3-4',
-                    topic: '👁️ Careful observations reveal\nadditional patterns not\ninitially anticipated in\nthe design.'
-                  }]
-                },
-                {
-                  id: 'bd4',
-                  topic: '💭 Discussion explores the\nmeaning and implications\nof the results.',
-                  direction: 1 as const,
-                  children: [{
-                    id: 'bd4-1',
-                    topic: '🔎 Interpretation of results\nexplains what the\nfindings mean in\nrelation to the research\nquestions.'
-                  }, {
-                    id: 'bd4-2',
-                    topic: '🔄 Comparison with previous\nwork shows how\nthis research contributes\nto the field.'
-                  }, {
-                    id: 'bd4-3',
-                    topic: '💡 Implications suggest how\nthese findings might\nimpact theory and\npractice.'
-                  }, {
-                    id: 'bd4-4',
-                    topic: '🛑 Limitations acknowledge the\nconstraints that affect\nthe interpretation of\nthe results.'
-                  }]
-                },
-                {
-                  id: 'bd5',
-                  topic: '🎯 Conclusion summarizes the\nkey contributions and\nfuture directions.',
-                  direction: 0 as const,
-                  children: [{
-                    id: 'bd5-1',
-                    topic: '✅ The summary of\ncontributions highlights the\nmain advancements made\nby this research.'
-                  }, {
-                    id: 'bd5-2',
-                    topic: '🔮 Future work recommendations\nidentify promising directions\nfor extending this\nresearch.'
-                  }, {
-                    id: 'bd5-3',
-                    topic: '🏁 Final remarks emphasize\nthe broader significance\nof this work\nto the field.'
-                  }]
-                },
-                {
-                  id: 'bd6',
-                  topic: '📚 References provide a\ncomprehensive list of\nsources that informed\nthis work.',
-                  direction: 1 as const,
-                  children: [{
-                    id: 'bd6-1',
-                    topic: '📄 Key papers cited\nin this work\nestablish the theoretical\nfoundation for the research.'
-                  }, {
-                    id: 'bd6-2',
-                    topic: '🛠️ Datasets and tools\nused in the\nanalysis are properly\ndocumented for reproducibility.'
-                  }]
-                },
-                {
-                  id: 'bd7',
-                  topic: '📎 Supplementary materials provide\nadditional details supporting\nthe main text.',
-                  direction: 0 as const,
-                  children: [{
-                    id: 'bd7-1',
-                    topic: '🧮 Additional experiments that\ndidn\'t fit in\nthe main text\nare included here.'
-                  }, {
-                    id: 'bd7-2',
-                    topic: '📑 Appendices contain detailed\nmethodological information for\ninterested readers.'
-                  }, {
-                    id: 'bd7-3',
-                    topic: '💾 Code and data\nare made available\nto ensure transparency\nand reproducibility.'
-                  }]
-                }
-              ]
+              // Even indexes (0, 2, 4, 6) go to the right (direction: 0)
+              {
+                id: 'bd1',
+                topic: '🔍 Introduction provides\ncontext and sets\nthe stage for\nthe research.',
+                direction: 0 as const,
+                children: [{
+                  id: 'bd1-1',
+                  topic: '📘 Background establishes\nthe essential context\nfor understanding the\nresearch problem.'
+                }, {
+                  id: 'bd1-2',
+                  topic: '⚠️ The problem statement\nclearly identifies the\nissue being addressed.'
+                }, {
+                  id: 'bd1-3',
+                  topic: '🧩 Research gap identifies\nwhat is missing\nin current understanding.'
+                }, {
+                  id: 'bd1-4',
+                  topic: '🎯 This study aims\nto test the\nhypothesis that addresses\nthe research gap.'
+                }]
+              },
+              // Odd indexes (1, 3, 5) go to the left (direction: 1)
+              {
+                id: 'bd2',
+                topic: '⚙️ Methodology describes\nhow the research\nwas conducted with\nappropriate rigor.',
+                direction: 1 as const,
+                children: [{
+                  id: 'bd2-1',
+                  topic: '🧪 The experimental setup\nwas carefully designed\nto collect reliable\nand valid data.'
+                }, {
+                  id: 'bd2-2',
+                  topic: '🔬 Theoretical models provide\nthe foundation for\ntesting our research\nhypotheses.'
+                }, {
+                  id: 'bd2-3',
+                  topic: '📋 Procedures were followed\nsystematically to ensure\nreproducibility of results.'
+                }, {
+                  id: 'bd2-4',
+                  topic: '🔢 Key variables were\nidentified and measured\nusing validated instruments\nand techniques.'
+                }]
+              }, {
+                id: 'bd3',
+                topic: '📊 Results present the\nempirical findings without\ninterpretation.',
+                direction: 0 as const,
+                children: [{
+                  id: 'bd3-1',
+                  topic: '✨ Key findings demonstrate\nsignificant relationships between\nthe studied variables.'
+                }, {
+                  id: 'bd3-2',
+                  topic: '📈 Visual representations of\ndata help to\nillustrate important patterns\nfound in the analysis.'
+                }, {
+                  id: 'bd3-3',
+                  topic: '📏 Statistical analyses confirm\nthe significance of\nthe observed relationships.'
+                }, {
+                  id: 'bd3-4',
+                  topic: '👁️ Careful observations reveal\nadditional patterns not\ninitially anticipated in\nthe design.'
+                }]
+              }, {
+                id: 'bd4',
+                topic: '💭 Discussion explores the\nmeaning and implications\nof the results.',
+                direction: 1 as const,
+                children: [{
+                  id: 'bd4-1',
+                  topic: '🔎 Interpretation of results\nexplains what the\nfindings mean in\nrelation to the research\nquestions.'
+                }, {
+                  id: 'bd4-2',
+                  topic: '🔄 Comparison with previous\nwork shows how\nthis research contributes\nto the field.'
+                }, {
+                  id: 'bd4-3',
+                  topic: '💡 Implications suggest how\nthese findings might\nimpact theory and\npractice.'
+                }, {
+                  id: 'bd4-4',
+                  topic: '🛑 Limitations acknowledge the\nconstraints that affect\nthe interpretation of\nthe results.'
+                }]
+              }, {
+                id: 'bd5',
+                topic: '🎯 Conclusion summarizes the\nkey contributions and\nfuture directions.',
+                direction: 0 as const,
+                children: [{
+                  id: 'bd5-1',
+                  topic: '✅ The summary of\ncontributions highlights the\nmain advancements made\nby this research.'
+                }, {
+                  id: 'bd5-2',
+                  topic: '🔮 Future work recommendations\nidentify promising directions\nfor extending this\nresearch.'
+                }, {
+                  id: 'bd5-3',
+                  topic: '🏁 Final remarks emphasize\nthe broader significance\nof this work\nto the field.'
+                }]
+              }, {
+                id: 'bd6',
+                topic: '📚 References provide a\ncomprehensive list of\nsources that informed\nthis work.',
+                direction: 1 as const,
+                children: [{
+                  id: 'bd6-1',
+                  topic: '📄 Key papers cited\nin this work\nestablish the theoretical\nfoundation for the research.'
+                }, {
+                  id: 'bd6-2',
+                  topic: '🛠️ Datasets and tools\nused in the\nanalysis are properly\ndocumented for reproducibility.'
+                }]
+              }, {
+                id: 'bd7',
+                topic: '📎 Supplementary materials provide\nadditional details supporting\nthe main text.',
+                direction: 0 as const,
+                children: [{
+                  id: 'bd7-1',
+                  topic: '🧮 Additional experiments that\ndidn\'t fit in\nthe main text\nare included here.'
+                }, {
+                  id: 'bd7-2',
+                  topic: '📑 Appendices contain detailed\nmethodological information for\ninterested readers.'
+                }, {
+                  id: 'bd7-3',
+                  topic: '💾 Code and data\nare made available\nto ensure transparency\nand reproducibility.'
+                }]
+              }]
             }
           };
         }
@@ -752,7 +744,6 @@ const MindMapViewer = ({
   // Function to toggle layout direction
   const toggleDirection = (value: 'vertical' | 'horizontal' | 'both') => {
     if (!mindMapRef.current) return;
-    
     let directionValue: number;
     switch (value) {
       case 'horizontal':
@@ -766,7 +757,7 @@ const MindMapViewer = ({
         directionValue = 2;
         break;
     }
-    
+
     // Update direction in mind map instance
     if (mindMapRef.current) {
       // Access direction property using type assertion
@@ -774,29 +765,27 @@ const MindMapViewer = ({
       // Re-render the mind map with new direction
       mindMapRef.current.refresh();
     }
-    
     setDirection(value);
   };
 
   // Function to generate a node summary when requested from context menu
   const generateNodeSummary = (node: any) => {
     if (!node || !node.topic) return;
-    
+
     // Get node text and children text to provide context
     let nodeText = node.topic;
     let childrenText = '';
-    
     if (node.children && node.children.length > 0) {
       childrenText = node.children.map((child: any) => child.topic).join(', ');
     }
-    
+
     // Create a summary based on node and its children
     const nodeSummary = `Topic: ${nodeText}\n\nSubtopics: ${childrenText || 'None'}`;
-    
+
     // Set summary and show dialog
     setSummary(nodeSummary);
     setShowSummary(true);
-    
+
     // If chat panel integration is available, send to chat
     if (onExplainText) {
       const prompt = `Please explain more about this topic: ${nodeText}. Include information about these subtopics if relevant: ${childrenText}`;
@@ -804,20 +793,15 @@ const MindMapViewer = ({
       onRequestOpenChat?.();
     }
   };
-
-  return (
-    <div className="relative w-full h-full flex flex-col">
+  return <div className="relative w-full h-full flex flex-col">
       {/* Loading progress indicator */}
-      {loadingProgress > 0 && loadingProgress < 100 && (
-        <div className="absolute top-0 left-0 w-full z-10">
+      {loadingProgress > 0 && loadingProgress < 100 && <div className="absolute top-0 left-0 w-full z-10">
           <Progress value={loadingProgress} className="h-1 rounded-none" />
-        </div>
-      )}
+        </div>}
 
       {/* Main mind map container */}
       <div className="flex-1 relative overflow-hidden">
-        {isLoading ? (
-          <div className="w-full h-full flex items-center justify-center">
+        {isLoading ? <div className="w-full h-full flex items-center justify-center">
             <div className="w-3/4 max-w-3xl">
               <div className="flex items-center gap-2 mb-4">
                 <LoaderCircle className="h-5 w-5 animate-spin" />
@@ -825,53 +809,21 @@ const MindMapViewer = ({
               </div>
               <Skeleton className="h-[60vh] w-full rounded-lg" />
             </div>
-          </div>
-        ) : (
-          <div
-            ref={containerRef}
-            className="w-full h-full mind-elixir-container"
-            style={{ visibility: isMapGenerated ? 'visible' : 'hidden' }}
-          />
-        )}
+          </div> : <div ref={containerRef} className="w-full h-full mind-elixir-container" style={{
+        visibility: isMapGenerated ? 'visible' : 'hidden'
+      }} />}
       </div>
 
       {/* Controls overlay */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
         {/* Zoom controls */}
-        <div className="flex flex-col gap-1 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm p-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            onClick={handleZoomIn}
-            title="Zoom in"
-          >
-            <ZoomIn size={16} />
-          </Button>
-          <div className="text-xs text-center font-medium">
-            {zoomLevel}%
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            onClick={handleZoomOut}
-            title="Zoom out"
-          >
-            <ZoomOut size={16} />
-          </Button>
-        </div>
+        
 
         {/* Direction controls */}
         <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm p-2">
-          <ToggleGroup
-            type="single"
-            size="sm"
-            value={direction}
-            onValueChange={(value) => {
-              if (value) toggleDirection(value as 'vertical' | 'horizontal' | 'both');
-            }}
-          >
+          <ToggleGroup type="single" size="sm" value={direction} onValueChange={value => {
+          if (value) toggleDirection(value as 'vertical' | 'horizontal' | 'both');
+        }}>
             <ToggleGroupItem value="horizontal" title="Horizontal layout">
               <ArrowRight size={16} />
             </ToggleGroupItem>
@@ -901,29 +853,20 @@ const MindMapViewer = ({
             <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowSummary(false)}
-            >
+            <Button variant="outline" onClick={() => setShowSummary(false)}>
               Close
             </Button>
-            {onExplainText && (
-              <Button
-                onClick={() => {
-                  onExplainText(summary);
-                  onRequestOpenChat?.();
-                  setShowSummary(false);
-                }}
-              >
+            {onExplainText && <Button onClick={() => {
+            onExplainText(summary);
+            onRequestOpenChat?.();
+            setShowSummary(false);
+          }}>
                 <FileText className="mr-2 h-4 w-4" />
                 Explain in Chat
-              </Button>
-            )}
+              </Button>}
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export default MindMapViewer;
