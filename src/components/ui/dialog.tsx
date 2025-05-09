@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
@@ -9,25 +8,9 @@ const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
 
-// Fix the type by creating a custom props interface that extends DialogPortalProps
-// and adds the className property
-interface DialogPortalProps extends DialogPrimitive.DialogPortalProps {
-  className?: string
-}
+const DialogPortal = DialogPrimitive.Portal
 
-// Fixed version of DialogPortal that properly handles the className
-const DialogPortal = ({
-  className,
-  children,
-  ...props
-}: DialogPortalProps) => (
-  <DialogPrimitive.Portal {...props}>
-    <div className={cn(className)}>
-      {children}
-    </div>
-  </DialogPrimitive.Portal>
-)
-DialogPortal.displayName = DialogPrimitive.Portal.displayName
+const DialogClose = DialogPrimitive.Close
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
@@ -36,7 +19,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -44,70 +27,28 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
-// Enhanced DialogContent with improved cleanup handling and DOM event prevention
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
-  // Using useLayoutEffect for DOM operations to avoid timing issues
-  React.useLayoutEffect(() => {
-    // Store original body style
-    const originalOverflowY = document.body.style.overflowY;
-    const originalPaddingRight = document.body.style.paddingRight;
-    
-    // Return cleanup function
-    return () => {
-      // Use a micro-delay to avoid removeChild issues
-      setTimeout(() => {
-        document.body.style.overflowY = originalOverflowY;
-        document.body.style.paddingRight = originalPaddingRight;
-      }, 50);
-    };
-  }, []);
-
-  return (
-    <DialogPortal>
-      <DialogOverlay />
-      <DialogPrimitive.Content
-        ref={ref}
-        className={cn(
-          "fixed left-[50%] top-[50%] z-[9999] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-          className
-        )}
-        // Prevent autofocus events that may trigger DOM operations during unmount
-        onCloseAutoFocus={(e) => {
-          e.preventDefault(); // Prevent React events that could trigger node operations
-          
-          // Still call original prop if provided
-          if (props.onCloseAutoFocus) {
-            props.onCloseAutoFocus(e);
-          }
-        }}
-        // Prevent escape key causing issues during animation
-        onEscapeKeyDown={(e) => {
-          // Still call original prop if provided
-          if (props.onEscapeKeyDown) {
-            props.onEscapeKeyDown(e);
-          }
-        }}
-        // Prevent pointer down events from causing issues
-        onPointerDownOutside={(e) => {
-          // Still call original prop if provided
-          if (props.onPointerDownOutside) {
-            props.onPointerDownOutside(e);
-          }
-        }}
-        {...props}
-      >
-        {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      </DialogPrimitive.Content>
-    </DialogPortal>
-  );
-})
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPortal>
+))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({
@@ -164,8 +105,6 @@ const DialogDescription = React.forwardRef<
   />
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
-
-const DialogClose = DialogPrimitive.Close
 
 export {
   Dialog,

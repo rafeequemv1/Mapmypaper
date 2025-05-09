@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import MindElixir, { MindElixirInstance, MindElixirData } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
@@ -724,200 +723,273 @@ const MindMapViewer = ({
       const directionValue = newDirection === 'vertical' ? 1 : 0;
       
       // Apply direction change to the mind map
-      // Set direction in the MindElixir instance
-      if (mindMapRef.current.direction !== directionValue) {
-        // Update direction in mind map (this line varies depending on the MindElixir version)
-        // Some versions use setDirection, others modify the property directly
-        try {
-          // First try the standard method if available
-          if (typeof mindMapRef.current.init === 'function') {
-            // Create a new data structure with updated direction
-            const currentData = mindMapRef.current.getData();
-            mindMapRef.current.init({
-              ...currentData,
-              direction: directionValue
-            });
-          } else {
-            // Fallback to directly setting the property
-            mindMapRef.current.direction = directionValue;
-            // Force a re-render if needed
-            mindMapRef.current.refresh();
-          }
-          
-          // Update local state
-          setDirection(newDirection);
-          
-          // Show success toast
-          toast({
-            title: `Direction Changed`,
-            description: `Mind map is now in ${newDirection} layout`,
-          });
-        } catch (err) {
-          console.error("Error changing direction:", err);
-          toast({
-            title: "Direction Change Failed",
-            description: "Could not change the mind map direction",
-            variant: "destructive"
-          });
+      // Use the correct method: MindElixir has a tempDirection property but not updateDirection
+      // We need to access the mind map instance's methods differently
+      if (mindMapRef.current) {
+        // Cast to any to access extended methods that aren't in the TypeScript interface
+        const mindElixirInstance = mindMapRef.current as any;
+        if (typeof mindElixirInstance.direction === 'function') {
+          mindElixirInstance.direction(directionValue);
+        } else if (typeof mindElixirInstance.setDirection === 'function') {
+          mindElixirInstance.setDirection(directionValue);
+        } else {
+          console.warn("Could not find method to update mind map direction");
         }
       }
+      
+      // Update state
+      setDirection(newDirection);
+      
+      // Show toast notification
+      toast({
+        title: "Layout Changed",
+        description: `Mind map layout changed to ${newDirection}.`,
+        duration: 3000,
+      });
     }
   };
 
-  // Function to generate summary for a node
-  const generateNodeSummary = (node: any) => {
-    if (!node) return;
+  // Function to generate summaries for nodes and their children
+  const generateNodeSummary = (nodeData: any) => {
+    if (!nodeData) return;
     
-    // Extract the topic and any child topics
-    const nodeTopic = node.topic;
-    const childTopics = node.children?.map((child: any) => child.topic) || [];
+    // Generate a simple summary from the node hierarchy
+    let summaryText = `## Summary of "${nodeData.topic}"\n\n`;
     
-    // Construct a summary request 
-    const summaryText = `Node: ${nodeTopic}\nChildren: ${childTopics.join(', ')}`;
+    // Helper function to extract node topics and build a hierarchical summary
+    const extractTopics = (node: any, level: number = 0) => {
+      if (!node) return '';
+      
+      let indent = '';
+      for (let i = 0; i < level; i++) {
+        indent += '  ';
+      }
+      
+      // Get clean topic text without emojis and formatting
+      let topicText = node.topic || '';
+      
+      // Remove emojis
+      topicText = topicText.replace(/[\p{Emoji}]/gu, '').trim();
+      
+      // Remove line breaks
+      topicText = topicText.replace(/\n/g, ' ');
+      
+      let result = `${indent}- ${topicText}\n`;
+      
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          result += extractTopics(child, level + 1);
+        }
+      }
+      
+      return result;
+    };
     
-    // Set summary
+    // Count the number of nodes for statistics
+    const countNodes = (node: any): number => {
+      if (!node) return 0;
+      
+      let count = 1; // Count the current node
+      
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          count += countNodes(child);
+        }
+      }
+      
+      return count;
+    };
+    
+    // Add statistics to the summary
+    const totalNodes = countNodes(nodeData);
+    const directChildren = nodeData.children ? nodeData.children.length : 0;
+    summaryText += `**Statistics:** ${totalNodes} total nodes, ${directChildren} direct sub-topics\n\n`;
+    
+    // Add hierarchical summary
+    summaryText += extractTopics(nodeData);
+    
+    // Display the summary
     setSummary(summaryText);
     setShowSummary(true);
     
-    // Potentially request chat to open with this text
+    // If there's a chat request handler, send the summary there
     if (onExplainText) {
-      onExplainText(`Summarize this mind map node: ${nodeTopic}`);
+      onExplainText(`Please explain this mind map section: ${nodeData.topic}`);
     }
     
+    // Open chat if available
     if (onRequestOpenChat) {
       onRequestOpenChat();
     }
   };
 
-  // Function to open the gallery modal
-  const openGallery = () => {
-    setShowGallery(true);
-  };
+  // Render loading state or mind map
+  if (loadingProgress > 0) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8">
+        <div className="flex items-center gap-2">
+          <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
+          <span className="text-lg font-medium">Generating Mind Map...</span>
+        </div>
+        <Progress value={loadingProgress} className="w-64" />
+        <p className="text-muted-foreground text-sm">Analyzing document structure and creating visual representation</p>
+      </div>
+    );
+  }
 
-  // Placeholder images for the gallery
-  const galleryImages = [
-    { src: "/placeholder.svg", caption: "Figure 1: Research methodology diagram" },
-    { src: "/placeholder.svg", caption: "Figure 2: Key results visualization" },
-    { src: "/placeholder.svg", caption: "Figure 3: Comparison with prior work" },
-    { src: "/placeholder.svg", caption: "Figure 4: System architecture" },
-    { src: "/placeholder.svg", caption: "Figure 5: Data collection process" },
-    { src: "/placeholder.svg", caption: "Figure 6: Experimental results" }
-  ];
+  if (!isMapGenerated) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center p-8 gap-6">
+        <div className="flex flex-col items-center gap-4">
+          <FileText className="h-16 w-16 text-muted-foreground/40" />
+          <h2 className="text-xl font-semibold tracking-tight">No Mind Map Generated</h2>
+          <p className="text-center text-muted-foreground max-w-md">
+            Upload and process a PDF document to generate an interactive mind map visualization.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative h-full w-full flex flex-col">
-      {/* Loading state indicator */}
-      {loadingProgress > 0 && (
-        <div className="absolute top-0 left-0 right-0 z-10">
-          <Progress value={loadingProgress} className="h-1" />
+    <div className="relative w-full h-full">
+      {/* Mind map container */}
+      <div 
+        ref={containerRef} 
+        className="w-full h-full overflow-hidden"
+        style={{ opacity: isReady ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }}
+      />
+      
+      {/* Control tools on the right side */}
+      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-md shadow-md">
+        <button 
+          className="p-2 rounded-md hover:bg-gray-100 transition-colors" 
+          onClick={handleZoomIn}
+          title="Zoom In"
+        >
+          <ZoomIn className="h-5 w-5 text-gray-700" />
+        </button>
+        <div className="text-xs font-medium text-center">{zoomLevel}%</div>
+        <button 
+          className="p-2 rounded-md hover:bg-gray-100 transition-colors" 
+          onClick={handleZoomOut}
+          title="Zoom Out"
+        >
+          <ZoomOut className="h-5 w-5 text-gray-700" />
+        </button>
+        <div className="my-1 h-px bg-gray-200 w-full" />
+        <button 
+          className="p-2 rounded-md hover:bg-gray-100 transition-colors" 
+          onClick={toggleDirection}
+          title={direction === 'vertical' ? 'Switch to Horizontal Layout' : 'Switch to Vertical Layout'}
+        >
+          {direction === 'vertical' ? (
+            <ArrowRight className="h-5 w-5 text-gray-700" />
+          ) : (
+            <ArrowDown className="h-5 w-5 text-gray-700" />
+          )}
+        </button>
+        <div className="my-1 h-px bg-gray-200 w-full" />
+        <button 
+          className="p-2 rounded-md hover:bg-gray-100 transition-colors" 
+          onClick={() => setShowGallery(true)}
+          title="View Paper Figures"
+        >
+          <Images className="h-5 w-5 text-gray-700" />
+        </button>
+      </div>
+      
+      {/* Summary modal */}
+      {showSummary && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl max-h-[80vh] overflow-auto">
+            <h3 className="text-lg font-semibold mb-4">Mind Map Section Summary</h3>
+            <div className="whitespace-pre-wrap text-sm">
+              {summary}
+            </div>
+            <div className="flex justify-end mt-4 gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  if (onExplainText && summary) {
+                    onExplainText(`Please explain this mind map summary: ${summary.substring(0, 500)}${summary.length > 500 ? '...' : ''}`);
+                  }
+                  if (onRequestOpenChat) {
+                    onRequestOpenChat();
+                  }
+                }}
+              >
+                Ask AI to Explain
+              </Button>
+              <Button onClick={() => setShowSummary(false)}>Close</Button>
+            </div>
+          </div>
         </div>
       )}
-      
-      {/* Main container */}
-      <div className="relative flex-grow">
-        {/* Mind map container */}
-        <div 
-          ref={containerRef}
-          className={`w-full h-full transition-opacity duration-300 ${isReady ? 'opacity-100' : 'opacity-0'}`}
-          style={{
-            position: 'relative',
-            minHeight: '300px'
-          }}
-        >
-          {/* Default state or loading state */}
-          {!isReady && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              {isLoading ? (
-                <div className="flex flex-col items-center gap-3">
-                  <LoaderCircle className="h-10 w-10 animate-spin text-purple-600" />
-                  <p className="text-sm text-gray-500">Generating mind map...</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <Skeleton className="h-[40vh] w-[80%] rounded-md" />
-                  <p className="text-sm text-gray-500">Mind map loading...</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        
-        {/* Mind map control buttons - positioned at bottom right */}
-        {isReady && (
-          <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
-            {/* Zoom controls */}
-            <Button 
-              size="icon" 
-              variant="outline" 
-              onClick={handleZoomIn} 
-              className="bg-white/90 shadow-md hover:bg-white"
-            >
-              <ZoomIn className="h-5 w-5" />
-              <span className="sr-only">Zoom In</span>
-            </Button>
-            
-            <Button 
-              size="icon" 
-              variant="outline" 
-              onClick={handleZoomOut}
-              className="bg-white/90 shadow-md hover:bg-white"
-            >
-              <ZoomOut className="h-5 w-5" />
-              <span className="sr-only">Zoom Out</span>
-            </Button>
-            
-            {/* Toggle direction button */}
-            <Button 
-              size="icon" 
-              variant="outline" 
-              onClick={toggleDirection}
-              className="bg-white/90 shadow-md hover:bg-white"
-            >
-              {direction === 'vertical' ? (
-                <ArrowDown className="h-5 w-5" />
-              ) : (
-                <ArrowRight className="h-5 w-5" />
-              )}
-              <span className="sr-only">Toggle Direction</span>
-            </Button>
-            
-            {/* Open gallery button */}
-            <Button 
-              size="icon" 
-              variant="outline" 
-              onClick={openGallery}
-              className="bg-white/90 shadow-md hover:bg-white"
-            >
-              <Images className="h-5 w-5" />
-              <span className="sr-only">View Figures</span>
-            </Button>
-          </div>
-        )}
-      </div>
 
-      {/* Gallery Dialog */}
+      {/* Image Gallery Dialog */}
       <Dialog open={showGallery} onOpenChange={setShowGallery}>
-        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>Research Figures Gallery</DialogTitle>
+            <DialogTitle>Paper Figures Gallery</DialogTitle>
             <DialogDescription>
-              Key visualizations from the research paper
+              Key visualizations and figures from the research paper
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-            {galleryImages.map((image, index) => (
-              <div key={index} className="border rounded-lg overflow-hidden">
-                <img 
-                  src={image.src} 
-                  alt={`Figure ${index + 1}`} 
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-3 bg-gray-50">
-                  <p className="text-sm text-gray-700">{image.caption}</p>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {/* Demo Images */}
+            <div className="border rounded-md overflow-hidden">
+              <img 
+                src="https://via.placeholder.com/600x400?text=Figure+1" 
+                alt="Figure 1" 
+                className="w-full h-auto"
+              />
+              <div className="p-3 bg-gray-50">
+                <h4 className="font-medium text-sm">Figure 1</h4>
+                <p className="text-xs text-gray-600 mt-1">
+                  Experimental results showing the relationship between variables A and B with 95% confidence intervals
+                </p>
               </div>
-            ))}
+            </div>
+            <div className="border rounded-md overflow-hidden">
+              <img 
+                src="https://via.placeholder.com/600x400?text=Figure+2" 
+                alt="Figure 2" 
+                className="w-full h-auto"
+              />
+              <div className="p-3 bg-gray-50">
+                <h4 className="font-medium text-sm">Figure 2</h4>
+                <p className="text-xs text-gray-600 mt-1">
+                  System architecture diagram showing the components and their interactions
+                </p>
+              </div>
+            </div>
+            <div className="border rounded-md overflow-hidden">
+              <img 
+                src="https://via.placeholder.com/600x400?text=Figure+3" 
+                alt="Figure 3" 
+                className="w-full h-auto"
+              />
+              <div className="p-3 bg-gray-50">
+                <h4 className="font-medium text-sm">Figure 3</h4>
+                <p className="text-xs text-gray-600 mt-1">
+                  Comparative analysis of proposed method against baseline approaches
+                </p>
+              </div>
+            </div>
+            <div className="border rounded-md overflow-hidden">
+              <img 
+                src="https://via.placeholder.com/600x400?text=Figure+4" 
+                alt="Figure 4" 
+                className="w-full h-auto"
+              />
+              <div className="p-3 bg-gray-50">
+                <h4 className="font-medium text-sm">Figure 4</h4>
+                <p className="text-xs text-gray-600 mt-1">
+                  Timeline of experimental procedure with key measurement points
+                </p>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
