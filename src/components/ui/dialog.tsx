@@ -9,11 +9,17 @@ const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
 
+// Fix the type by creating a custom props interface that extends DialogPortalProps
+// and adds the className property
+interface DialogPortalProps extends DialogPrimitive.DialogPortalProps {
+  className?: string
+}
+
 const DialogPortal = ({
   className,
   children,
   ...props
-}: DialogPrimitive.DialogPortalProps) => (
+}: DialogPortalProps) => (
   <DialogPrimitive.Portal {...props}>
     <div className={cn(className)}>
       {children}
