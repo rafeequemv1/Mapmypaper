@@ -14,7 +14,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     // Store the PDF text in sessionStorage for chat functionality
     sessionStorage.setItem('pdfText', pdfText);
     
-    // Create a standard research paper template
+    // Create a standard research paper template for fallback
     const researchPaperTemplate = {
       "nodeData": {
         "id": "root",
@@ -108,79 +108,159 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       }
     };
 
+    // Extract title from PDF for minimal customization
+    let paperTitle = "Research Paper";
+    const firstLine = pdfText.split('\n')[0]?.trim();
+    if (firstLine && firstLine.length > 5 && firstLine.length < 200) {
+      paperTitle = firstLine;
+    }
+
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const prompt = `
-    Analyze the following academic paper/document text and extract specific information to create a detailed mind map.
-    
-    For each node, extract a SPECIFIC insight or finding from the paper, NOT just generic placeholders.
-    
-    For the root node, use the paper's actual title.
-    For each section (Introduction, Methodology, Results, etc.), include specific content from the paper.
-    For child nodes, extract actual data points, findings, arguments, or methodologies mentioned in the paper.
-    
-    IMPORTANT:
-    1. DO NOT use generic placeholders like "Key Findings" - instead, write actual findings like "40% reduction in error rate"
-    2. Extract SPECIFIC phrases from the text - use the actual content from the paper
-    3. Include actual numbers, percentages, and specific terminology used in the paper
-    4. For Results, include actual experimental outcomes mentioned in the paper
-    5. For Methodology, include specific techniques, equipment or approaches used
-    6. If certain information isn't available, make a reasonable inference based on the text
-    
-    Format the response as a JSON object with the following structure:
-    ${JSON.stringify(researchPaperTemplate, null, 2)}
+    console.log("Sending PDF text to Gemini API for mind map generation...");
+    console.log(`PDF text length: ${pdfText.length} characters`);
 
-    IMPORTANT REQUIREMENTS:
-    1. Do NOT modify the structure of the template - keep ALL nodes.
-    2. Replace the generic topic text with SPECIFIC content from the paper.
-    3. Keep all node IDs and directions as they are in the template.
-    4. Keep each topic concise (under 10-15 words) but SPECIFIC to the paper content.
-    5. For the Summary section, include actual key findings from the paper.
-    6. Only include the JSON in your response, nothing else.
-    
-    Here's the document text to analyze:
-    ${pdfText.slice(0, 15000)}
-    `;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Try to parse the JSON response
+    // First, try to get at least a title from the PDF
     try {
-      // Find and extract JSON if it's surrounded by markdown code blocks or other text
-      const jsonMatch = text.match(/```(?:json)?([\s\S]*?)```/) || text.match(/({[\s\S]*})/);
-      const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
-      const parsedResponse = JSON.parse(jsonString);
+      // Create improved prompt for better results
+      const prompt = `
+      Analyze the following academic paper/document text and extract specific information to create a detailed mind map.
+
+      IMPORTANT: You MUST extract ACTUAL content and specific insights from the document. DO NOT use generic placeholders.
+
+      For the root node, extract the paper's actual title.
+      For each section, extract specific content representing what's actually in the paper.
       
-      // Store the raw template for backup
-      sessionStorage.setItem('mindMapTemplate', JSON.stringify(researchPaperTemplate));
+      FORMAT REQUIREMENTS:
+      1. Each topic should be SPECIFIC and extracted from the text (not generic labels)
+      2. Keep topics concise (5-10 words maximum)
+      3. For each node, include actual findings, methods, or arguments from the paper
+      4. Use specific terminology from the paper to ensure accuracy
       
-      // Debug the response
-      console.log("Parsed mindmap data:", JSON.stringify(parsedResponse.nodeData, null, 2));
+      Format the response as a JSON object with this exact structure:
+      ${JSON.stringify(researchPaperTemplate, null, 2)}
+
+      CRITICAL RULES:
+      1. Do NOT change the structure of the template
+      2. Keep all node IDs and directions as they are
+      3. ONLY replace the topic text with SPECIFIC content from the paper
+      4. If you're unsure about a section, use the most relevant content you can find
+
+      Here's the document text to analyze:
+      ${pdfText.slice(0, 15000)}
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
       
-      return parsedResponse;
-    } catch (parseError) {
-      console.error("Failed to parse Gemini response as JSON:", parseError);
-      console.log("Using template instead due to parsing error");
-      
-      // If parsing fails, use the template with the paper title extracted, if possible
+      // Try to parse the JSON response
       try {
-        const titleMatch = pdfText.match(/^(.+?)(?:\n|$)/);
-        if (titleMatch && titleMatch[1]) {
-          researchPaperTemplate.nodeData.topic = titleMatch[1].trim();
+        // Extract JSON from the response
+        const jsonMatch = text.match(/```(?:json)?([\s\S]*?)```/) || text.match(/({[\s\S]*})/);
+        const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
+        const parsedResponse = JSON.parse(jsonString);
+        
+        console.log("Successfully parsed mind map data from Gemini response");
+        
+        // Store the raw template for backup
+        sessionStorage.setItem('mindMapTemplate', JSON.stringify(researchPaperTemplate));
+        
+        // Check if the response has valid structure
+        if (parsedResponse && parsedResponse.nodeData && parsedResponse.nodeData.children) {
+          console.log("Generated mind map with custom content");
+          return parsedResponse;
+        } else {
+          throw new Error("Invalid mind map structure");
         }
-      } catch (e) {
-        console.error("Error extracting title:", e);
+      } catch (parseError) {
+        console.error("Failed to parse Gemini response as JSON:", parseError);
+        throw parseError;
       }
+    } catch (error) {
+      console.error("Error in primary mind map generation:", error);
       
-      return researchPaperTemplate;
+      // Fallback approach: Try to at least populate the top-level nodes
+      try {
+        console.log("Attempting fallback mind map generation...");
+        
+        // Create a simplified template with the extracted title
+        const customTemplate = JSON.parse(JSON.stringify(researchPaperTemplate));
+        customTemplate.nodeData.topic = paperTitle;
+        
+        // Attempt to extract key sections from the PDF text
+        const sections = extractSectionsFromText(pdfText);
+        
+        // Apply extracted sections to our template
+        if (sections.summary) customTemplate.nodeData.children[0].topic = sections.summary;
+        if (sections.introduction) customTemplate.nodeData.children[1].topic = sections.introduction;
+        if (sections.methodology) customTemplate.nodeData.children[2].topic = sections.methodology;
+        if (sections.results) customTemplate.nodeData.children[3].topic = sections.results;
+        if (sections.discussion) customTemplate.nodeData.children[4].topic = sections.discussion;
+        if (sections.conclusion) customTemplate.nodeData.children[5].topic = sections.conclusion;
+        
+        console.log("Generated fallback mind map with basic customization");
+        return customTemplate;
+      } catch (fallbackError) {
+        console.error("Fallback mind map generation also failed:", fallbackError);
+        
+        // Final fallback - use template but at least customize the title
+        const basicTemplate = JSON.parse(JSON.stringify(researchPaperTemplate));
+        basicTemplate.nodeData.topic = paperTitle;
+        console.log("Using basic template with paper title");
+        return basicTemplate;
+      }
     }
   } catch (error) {
-    console.error("Gemini API error:", error);
-    throw error;
+    console.error("Critical error in mind map generation:", error);
+    
+    // Extract title from PDF and use it in the template
+    try {
+      const titleMatch = pdfText.match(/^(.+?)(?:\n|$)/);
+      const paperTitle = titleMatch && titleMatch[1] ? titleMatch[1].trim() : "Research Paper";
+      
+      const basicTemplate = JSON.parse(JSON.stringify(researchPaperTemplate));
+      basicTemplate.nodeData.topic = paperTitle;
+      
+      return basicTemplate;
+    } catch (e) {
+      console.error("Error creating basic template:", e);
+      return researchPaperTemplate;
+    }
   }
+};
+
+// Helper function to extract key sections from PDF text
+const extractSectionsFromText = (text: string): Record<string, string> => {
+  const sections: Record<string, string> = {};
+  const lowercaseText = text.toLowerCase();
+  
+  // Try to find common section headings in academic papers
+  const findSection = (sectionName: string, keywords: string[]): string | null => {
+    for (const keyword of keywords) {
+      const regex = new RegExp(`(${keyword}[\\s:.].*?)(?=\\n\\s*(?:[0-9]+\\.|[I|V|X]+\\.|[A-Z][a-z]+\\s*[:.]))`, 'i');
+      const match = lowercaseText.match(regex);
+      if (match && match[1]) {
+        // Extract a short phrase, not the entire section
+        const phrase = match[1].trim().split(/[.;:]/)[0];
+        if (phrase.length > 3 && phrase.length < 100) {
+          return phrase.charAt(0).toUpperCase() + phrase.slice(1);
+        }
+      }
+    }
+    return null;
+  };
+  
+  // Try to extract each section
+  sections.summary = findSection('summary', ['abstract', 'summary', 'overview']) || "Paper Summary";
+  sections.introduction = findSection('introduction', ['introduction', 'background']) || "Introduction";
+  sections.methodology = findSection('methodology', ['method', 'methodology', 'approach', 'experimental', 'materials']) || "Methodology";
+  sections.results = findSection('results', ['result', 'findings', 'outcomes']) || "Results";
+  sections.discussion = findSection('discussion', ['discussion', 'analysis', 'interpretation']) || "Discussion";
+  sections.conclusion = findSection('conclusion', ['conclusion', 'concluding', 'summary', 'future work']) || "Conclusion";
+  
+  return sections;
 };
 
 // Chat with Gemini about PDF content with citation support

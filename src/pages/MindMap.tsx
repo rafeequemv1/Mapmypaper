@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +25,21 @@ const MindMap = () => {
     console.log("Mind map instance is ready:", instance);
     setIsMapGenerated(true);
     setMindMapInstance(instance);
+    
+    // Check if this is a default template or actual generated content
+    try {
+      // If the root node is "Research Paper Title", it's likely the default template
+      if (instance.nodeData.topic === "Research Paper Title") {
+        toast({
+          title: "Generic Mind Map Generated",
+          description: "We couldn't create a specific mind map from your PDF. You're seeing a template that you can customize.",
+          variant: "warning",
+          duration: 8000,
+        });
+      }
+    } catch (err) {
+      console.error("Error checking mind map template:", err);
+    }
     
     // Add event listener for node operations to enforce word limit per line
     instance.bus.addListener('operation', (operation: any) => {
@@ -69,7 +83,7 @@ const MindMap = () => {
         }
       }
     });
-  }, []);
+  }, [toast]);
 
   // Handle text selected for explanation
   const handleExplainText = useCallback((text: string) => {
