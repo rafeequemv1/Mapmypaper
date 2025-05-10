@@ -20,7 +20,9 @@ interface PdfViewerProps {
   onPdfLoaded?: () => void;
   onImageCaptured?: (imageData: string) => void;
   renderTooltipContent?: () => React.ReactNode;
-  highlightByDefault?: boolean; // Added the missing prop
+  highlightByDefault?: boolean;
+  isSnapshotMode?: boolean; // Added prop for snapshot mode
+  setIsSnapshotMode?: (isActive: boolean) => void; // Added prop for setting snapshot mode
 }
 
 interface PdfViewerHandle {
@@ -28,7 +30,7 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, onImageCaptured, renderTooltipContent, highlightByDefault = false }, ref) => {
+  ({ onTextSelected, onPdfLoaded, onImageCaptured, renderTooltipContent, highlightByDefault = false, isSnapshotMode = false, setIsSnapshotMode }, ref) => {
     // Original PdfViewer component implementation with modifications
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
@@ -57,7 +59,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const tooltipTextRef = useRef<string>("");
     
     // New snapshot mode state
-    const [isSnapshotMode, setIsSnapshotMode] = useState(false);
+    const [localIsSnapshotMode, setLocalIsSnapshotMode] = useState(isSnapshotMode);
     const selectionRectRef = useRef<ReturnType<typeof createSelectionRect> | null>(null);
 
     // Add a state to track whether we're currently processing an image capture
@@ -68,6 +70,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Add a ref for the search input to focus when search is opened
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Sync local state with prop
+    useEffect(() => {
+      setLocalIsSnapshotMode(isSnapshotMode);
+    }, [isSnapshotMode]);
 
     const loadPdfData = async () => {
       try {
@@ -215,7 +222,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             if (selectionRectRef.current) {
               // Don't cancel selection yet - let the success UI remain visible
               // Instead we'll just exit snapshot mode
-              setIsSnapshotMode(false);
+              setLocalIsSnapshotMode(false);
+              if (setIsSnapshotMode) {
+                setIsSnapshotMode(false);
+              }
               setIsProcessingCapture(false);
             }
           }, 1000);
@@ -227,7 +237,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return () => {
         window.removeEventListener('captureDone', handleCaptureDone as EventListener);
       };
-    }, []);
+    }, [setIsSnapshotMode]);
 
     // Updated effect for snapshot mode with capture tooltip - modified to prevent duplicate events
     useEffect(() => {
@@ -239,7 +249,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         selectionRectRef.current = null;
       }
       
-      if (isSnapshotMode) {
+      if (localIsSnapshotMode) {
         // Disable text selection when entering snapshot mode
         toggleTextSelection(false);
         
@@ -250,27 +260,30 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const viewport = viewportRef.current;
         
         const handleMouseDown = (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current) return;
+          if (!localIsSnapshotMode || !selectionRectRef.current) return;
           selectionRectRef.current.startSelection(e.clientX, e.clientY);
         };
         
         const handleMouseMove = (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current) return;
+          if (!localIsSnapshotMode || !selectionRectRef.current) return;
           selectionRectRef.current.moveSelection(e.clientX, e.clientY);
         };
         
         const handleMouseUp = (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current) return;
+          if (!localIsSnapshotMode || !selectionRectRef.current) return;
           selectionRectRef.current.endSelection(e.clientX, e.clientY);
         };
         
         const handleKeyDown = (e: KeyboardEvent) => {
-          if (e.key === "Escape" && isSnapshotMode) {
+          if (e.key === "Escape" && localIsSnapshotMode) {
             // Cancel selection on Escape key
             if (selectionRectRef.current) {
               selectionRectRef.current.cancelSelection();
             }
-            setIsSnapshotMode(false);
+            setLocalIsSnapshotMode(false);
+            if (setIsSnapshotMode) {
+              setIsSnapshotMode(false);
+            }
             // Re-enable text selection when exiting snapshot mode
             toggleTextSelection(true);
           }
@@ -312,7 +325,10 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               selectionRectRef.current.setCapturing(false);
               selectionRectRef.current.cancelSelection();
             }
-            setIsSnapshotMode(false);
+            setLocalIsSnapshotMode(false);
+            if (setIsSnapshotMode) {
+              setIsSnapshotMode(false);
+            }
             // Re-enable text selection when capture fails
             toggleTextSelection(true);
             
@@ -356,7 +372,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         // Re-enable text selection when exiting snapshot mode
         toggleTextSelection(true);
       }
-    }, [isSnapshotMode, toast, onImageCaptured, isProcessingCapture]);
+    }, [localIsSnapshotMode, toast, onImageCaptured, isProcessingCapture, setIsSnapshotMode]);
 
     const handleExplainText = () => {
       if (selectedText && onTextSelected) {
@@ -623,6 +639,18 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
+    const handleCancelSnapshot = () => {
+      setLocalIsSnapshotMode(false);
+      if (setIsSnapshotMode) {
+        setIsSnapshotMode(false);
+      }
+      // Re-enable text selection when exiting snapshot mode
+      toggleTextSelection(true);
+      if (selectionRectRef.current) {
+        selectionRectRef.current.cancelSelection();
+      }
+    };
+
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
@@ -742,7 +770,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               className="flex flex-col items-center py-4 relative"
             >
               {/* Snapshot mode indicator */}
-              {isSnapshotMode && (
+              {localIsSnapshotMode && (
                 <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
                   <span>{isProcessingCapture ? "Processing capture..." : "Draw to capture area"}</span>
                   {!isProcessingCapture && (
@@ -750,7 +778,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                       variant="ghost" 
                       size="sm" 
                       className="ml-2 bg-blue-600 hover:bg-blue-700 p-1 h-6" 
-                      onClick={() => setIsSnapshotMode(false)}
+                      onClick={handleCancelSnapshot}
                     >
                       Cancel
                     </Button>
