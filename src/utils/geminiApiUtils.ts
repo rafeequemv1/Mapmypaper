@@ -4,15 +4,13 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Google Generative AI with an API key
 let genAI: GoogleGenerativeAI;
 
-// Initialize with API key from environment variable
+// API key provided directly as fallback
+const FALLBACK_API_KEY = "AIzaSyBDnFabw77XdMe8rlKIMriWMgV-joUqTA4";
+
+// Initialize with API key from environment variable or fallback
 function initializeGenAI() {
-  // Try to get API key from environment
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  
-  if (!apiKey) {
-    console.error("Missing Gemini API key. Please set the VITE_GEMINI_API_KEY environment variable.");
-    return false;
-  }
+  // Try to get API key from environment or use fallback
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || FALLBACK_API_KEY;
   
   try {
     genAI = new GoogleGenerativeAI(apiKey);
