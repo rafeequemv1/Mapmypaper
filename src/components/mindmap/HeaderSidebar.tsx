@@ -22,7 +22,6 @@ interface HeaderSidebarProps {
   onExportSVG: () => void;
   onExportPNG: () => void;
   onExportJSON: () => void;
-  onExportPDF: () => void; // Added this prop to match HeaderExportMenuProps
 }
 
 const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
@@ -35,7 +34,6 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   onExportSVG,
   onExportPNG,
   onExportJSON,
-  onExportPDF // Added this prop
 }) => {
   const navigate = useNavigate();
   
@@ -79,7 +77,6 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
         onExportSVG={onExportSVG}
         onExportPNG={onExportPNG}
         onExportJSON={onExportJSON}
-        onExportPDF={onExportPDF} // Pass the onExportPDF prop
       />
       {/* User Menu at the bottom */}
       <div className="mt-auto mb-4">

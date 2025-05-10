@@ -2,7 +2,8 @@
 import React from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
-import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON, downloadMindMapAsPDF } from "@/lib/export-utils";
+import { Sparkles } from "lucide-react";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -41,12 +42,6 @@ const Header = ({
       downloadMindMapAsJSON(mindMap);
     }
   };
-  
-  const handleExportPDF = () => {
-    if (mindMap) {
-      downloadMindMapAsPDF(mindMap);
-    }
-  };
 
   return (
     <>
@@ -61,7 +56,6 @@ const Header = ({
         onExportSVG={handleExportSVG}
         onExportPNG={handleExportPNG}
         onExportJSON={handleExportJSON}
-        onExportPDF={handleExportPDF}
       />
     </>
   );

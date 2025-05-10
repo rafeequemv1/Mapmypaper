@@ -77,11 +77,10 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
             <TabsTrigger
               key={getPdfKey(meta)}
               value={getPdfKey(meta)}
-              className="pr-10 pl-3 py-1.5 relative overflow-hidden text-ellipsis"
+              className="pr-4 relative"
               disabled={isLoading}
-              title={meta.name} // Add title for full name on hover
             >
-              <span className="truncate max-w-[100px] block">{meta.name}</span>
+              <span className="truncate max-w-[120px]">{meta.name}</span>
               <button
                 type="button"
                 onClick={e => {
@@ -89,7 +88,7 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
                   onRemove(getPdfKey(meta));
                 }}
                 tabIndex={-1}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                className="ml-1 absolute right-1 top-1"
                 title="Remove PDF"
                 disabled={isLoading}
               >

@@ -340,7 +340,7 @@ const MindMapViewer = ({
             generateNodeSummary(node);
           }
         });
-
+        
         // Add option to add a subbranch with predefined structure based on context
         menus.push({
           name: '➕ Add Subbranch',
@@ -348,6 +348,7 @@ const MindMapViewer = ({
             addSubbranch(node, mind);
           }
         });
+        
         return menus;
       };
 
@@ -779,74 +780,59 @@ const MindMapViewer = ({
   // Function to add a subbranch with context-appropriate structure
   const addSubbranch = (node: any, mindMap: MindElixirInstance) => {
     if (!node || !mindMap) return;
+    
     const nodeTopic = node.topic.toLowerCase();
     let childrenToAdd = [];
-
+    
     // Determine appropriate children based on parent context
     if (nodeTopic.includes('introduction') || nodeTopic.includes('background')) {
-      childrenToAdd = [{
-        topic: '📘 The background establishes historical context for the research.'
-      }, {
-        topic: '⚠️ The problem statement identifies specific challenges addressed.'
-      }, {
-        topic: '🧩 Prior research reveals an important gap in knowledge.'
-      }, {
-        topic: '🎯 This study aims to address the identified gap.'
-      }];
+      childrenToAdd = [
+        { topic: '📘 The background establishes historical context for the research.' },
+        { topic: '⚠️ The problem statement identifies specific challenges addressed.' },
+        { topic: '🧩 Prior research reveals an important gap in knowledge.' },
+        { topic: '🎯 This study aims to address the identified gap.' }
+      ];
     } else if (nodeTopic.includes('methodology') || nodeTopic.includes('method')) {
-      childrenToAdd = [{
-        topic: '🧪 The experimental setup was carefully designed for validity.'
-      }, {
-        topic: '🔬 Theoretical models provide analytical framework.'
-      }, {
-        topic: '📋 Procedures follow established scientific protocols.'
-      }, {
-        topic: '🔢 Variables were measured with standardized instruments.'
-      }];
+      childrenToAdd = [
+        { topic: '🧪 The experimental setup was carefully designed for validity.' },
+        { topic: '🔬 Theoretical models provide analytical framework.' },
+        { topic: '📋 Procedures follow established scientific protocols.' },
+        { topic: '🔢 Variables were measured with standardized instruments.' }
+      ];
     } else if (nodeTopic.includes('result')) {
-      childrenToAdd = [{
-        topic: '✨ Key findings demonstrate significant relationships.'
-      }, {
-        topic: '📈 Data visualization reveals important patterns.'
-      }, {
-        topic: '📏 Statistical analyses confirm significance of results.'
-      }, {
-        topic: '👁️ Unexpected observations suggest new research directions.'
-      }];
+      childrenToAdd = [
+        { topic: '✨ Key findings demonstrate significant relationships.' },
+        { topic: '📈 Data visualization reveals important patterns.' },
+        { topic: '📏 Statistical analyses confirm significance of results.' },
+        { topic: '👁️ Unexpected observations suggest new research directions.' }
+      ];
     } else if (nodeTopic.includes('discussion')) {
-      childrenToAdd = [{
-        topic: '🔎 Results interpretation connects findings to objectives.'
-      }, {
-        topic: '🔄 Comparison with literature establishes contributions.'
-      }, {
-        topic: '💡 Implications extend to theory and practice.'
-      }, {
-        topic: '🛑 Limitations acknowledge constraints on generalizability.'
-      }];
+      childrenToAdd = [
+        { topic: '🔎 Results interpretation connects findings to objectives.' },
+        { topic: '🔄 Comparison with literature establishes contributions.' },
+        { topic: '💡 Implications extend to theory and practice.' },
+        { topic: '🛑 Limitations acknowledge constraints on generalizability.' }
+      ];
     } else if (nodeTopic.includes('conclusion')) {
-      childrenToAdd = [{
-        topic: '✅ Summary of contributions highlights key advances.'
-      }, {
-        topic: '🔮 Future work recommendations extend this research.'
-      }, {
-        topic: '🏁 Final remarks emphasize broader significance.'
-      }];
+      childrenToAdd = [
+        { topic: '✅ Summary of contributions highlights key advances.' },
+        { topic: '🔮 Future work recommendations extend this research.' },
+        { topic: '🏁 Final remarks emphasize broader significance.' }
+      ];
     } else {
       // Generic subbranch for other topics
-      childrenToAdd = [{
-        topic: '📝 Key point 1 expands on the main concept.'
-      }, {
-        topic: '📝 Key point 2 provides additional context.'
-      }, {
-        topic: '📝 Key point 3 offers further details.'
-      }];
+      childrenToAdd = [
+        { topic: '📝 Key point 1 expands on the main concept.' },
+        { topic: '📝 Key point 2 provides additional context.' },
+        { topic: '📝 Key point 3 offers further details.' }
+      ];
     }
-
+    
     // Add children to the node
     childrenToAdd.forEach(child => {
       (mindMap as any).insertSibling(node, child.topic);
     });
-
+    
     // Show notification
     toast({
       title: "Subbranch Added",
@@ -880,6 +866,7 @@ const MindMapViewer = ({
       onRequestOpenChat?.();
     }
   };
+
   return <div className="relative w-full h-full flex flex-col">
       {/* Loading progress indicator */}
       {loadingProgress > 0 && loadingProgress < 100 && <div className="absolute top-0 left-0 w-full z-10">
@@ -904,10 +891,33 @@ const MindMapViewer = ({
       {/* Controls overlay */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
         {/* Zoom controls */}
-        
+        <div className="flex gap-1 bg-white/80 backdrop-blur-sm p-1 rounded-lg shadow">
+          <Button variant="ghost" size="icon" onClick={handleZoomOut} className="h-8 w-8">
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="flex items-center text-xs font-medium px-1">{zoomLevel}%</span>
+          <Button variant="ghost" size="icon" onClick={handleZoomIn} className="h-8 w-8">
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
         
         {/* Direction controls */}
-        
+        <div className="bg-white/80 backdrop-blur-sm p-1 rounded-lg shadow">
+          <ToggleGroup type="single" value={direction} onValueChange={(val) => val && toggleDirection(val as 'vertical' | 'horizontal' | 'both')}>
+            <ToggleGroupItem value="horizontal" size="sm" className="h-8 w-8">
+              <ArrowRight className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="vertical" size="sm" className="h-8 w-8">
+              <ArrowDown className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="both" size="sm" className="h-8 w-8">
+              <div className="relative">
+                <ArrowRight className="h-3 w-3 absolute -top-1 -left-1.5" />
+                <ArrowDown className="h-3 w-3 absolute -bottom-1 -right-1.5" />
+              </div>
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </div>
 
       {/* Summary Dialog */}
