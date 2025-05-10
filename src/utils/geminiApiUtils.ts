@@ -14,6 +14,29 @@ export async function callGeminiAPI(
     if (options.image) {
       console.log("Image provided for analysis (first 100 chars):", 
         options.image.substring(0, 100) + "...");
+      
+      // Enhanced checks for white/blank images
+      if (!options.image || options.image.length < 100) {
+        return "The provided image appears to be invalid or too small to analyze properly.";
+      }
+      
+      // Check specifically for white/blank images by checking common patterns
+      // This checks for a common small white PNG image pattern
+      if (options.image.includes("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=")) {
+        return "The image appears to be completely blank or white. This could be due to an empty canvas, failed image capture, or very light content that's difficult to see.";
+      }
+      
+      // Check for high proportion of white pixels - this is a simple check for data URLs with lots of A (white in base64)
+      const whitePixelIndicator = options.image.split(',')[1]?.match(/A{20,}/g);
+      if (whitePixelIndicator && whitePixelIndicator.length > 5) {
+        return "The image appears to be mostly white or very low contrast. This could be due to a failed capture of a white area, or content that's extremely light and difficult to distinguish.";
+      }
+      
+      // Log image type for debugging
+      const imageType = options.image.split(';')[0].split(':')[1];
+      console.log(`Processing ${imageType} image for analysis`);
+      
+      return "Image Analysis Result: The provided image shows [detailed description would be here in actual implementation]. I've identified several key elements including text content, visual objects, and the overall context of the image.";
     }
     
     // Simulate API delay
@@ -27,7 +50,7 @@ export async function callGeminiAPI(
       C --> D[Discussion]
       D --> E[Conclusion]`;
     } 
-    else if (prompt.includes("mindmap") || prompt.includes("mind map") && options.responseFormat !== "json") {
+    else if ((prompt.includes("mindmap") || prompt.includes("mind map")) && options.responseFormat !== "json") {
       return `mindmap
       root((Main Topic))
         Key Point 1
@@ -68,21 +91,6 @@ export async function callGeminiAPI(
           }
         ]
       });
-    }
-    
-    // Handle image analysis specifically
-    if (options.image) {
-      // Check if image seems valid
-      if (!options.image || options.image.length < 100) {
-        return "The provided image appears to be invalid or too small to analyze properly.";
-      }
-      
-      // Simple check to simulate detecting a blank image
-      if (options.image.includes("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=")) {
-        return "The image appears to be completely blank or white. This could be due to an empty canvas, failed image capture, or very light content that's difficult to see.";
-      }
-      
-      return "Image Analysis Result: The provided image shows [detailed description would be here in actual implementation]. I've identified several key elements including text content, visual objects, and the overall context of the image.";
     }
     
     return "This is a simulated response from the Gemini API. In a production environment, this would be the actual response from Google's Gemini API.";
