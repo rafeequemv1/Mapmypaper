@@ -1,5 +1,6 @@
 
 import { MindElixirInstance } from "mind-elixir";
+import { downloadBlob } from "@/utils/downloadUtils";
 
 /**
  * Downloads the mind map as PNG image
@@ -8,16 +9,10 @@ import { MindElixirInstance } from "mind-elixir";
  */
 export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
   try {
+    // Mind Elixir's exportPng method returns a Blob
     const blob = await instance.exportPng();
     if (blob) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${fileName}.png`);
     }
   } catch (error) {
     console.error("Error exporting as PNG:", error);
@@ -32,19 +27,29 @@ export const downloadMindMapAsPNG = async (instance: MindElixirInstance, fileNam
  */
 export const downloadMindMapAsSVG = (instance: MindElixirInstance, fileName: string = 'mindmap'): void => {
   try {
+    // Mind Elixir's exportSvg method returns a Blob
     const blob = instance.exportSvg();
     if (blob) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.svg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${fileName}.svg`);
     }
   } catch (error) {
     console.error("Error exporting as SVG:", error);
+    throw error;
+  }
+};
+
+/**
+ * Downloads the mind map data as JSON
+ * @param instance Mind Elixir instance
+ * @param fileName Name of the file without extension
+ */
+export const downloadMindMapAsJSON = (instance: MindElixirInstance, fileName: string = 'mindmap'): void => {
+  try {
+    const data = instance.getData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    downloadBlob(blob, `${fileName}.json`);
+  } catch (error) {
+    console.error("Error exporting as JSON:", error);
     throw error;
   }
 };

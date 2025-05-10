@@ -3,6 +3,7 @@ import React from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
 import { Sparkles } from "lucide-react";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -26,28 +27,19 @@ const Header = ({
   // Define export menu handlers
   const handleExportSVG = () => {
     if (mindMap) {
-      mindMap.exportSvg();
+      downloadMindMapAsSVG(mindMap);
     }
   };
 
   const handleExportPNG = () => {
     if (mindMap) {
-      mindMap.exportPng();
+      downloadMindMapAsPNG(mindMap);
     }
   };
 
   const handleExportJSON = () => {
     if (mindMap) {
-      const data = mindMap.getData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'mindmap.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url); // Clean up to avoid memory leaks
+      downloadMindMapAsJSON(mindMap);
     }
   };
 
