@@ -5,7 +5,7 @@ import {
   FileImage,
   FileCode,
   FileJson,
-  FilePdf
+  FileText // Changed from FilePdf to FileText which is available in lucide-react
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -59,7 +59,7 @@ const HeaderExportMenu: React.FC<HeaderExportMenuProps> = ({
             <span>Export as PNG</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onExportPDF} className="flex items-center gap-2 cursor-pointer">
-            <FilePdf className="h-4 w-4" />
+            <FileText className="h-4 w-4" />
             <span>Export as PDF</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onExportJSON} className="flex items-center gap-2 cursor-pointer">

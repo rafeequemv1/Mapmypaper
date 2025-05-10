@@ -2,7 +2,6 @@
 import React from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
-import { Sparkles } from "lucide-react";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON, downloadMindMapAsPDF } from "@/lib/export-utils";
 
 interface HeaderProps {
