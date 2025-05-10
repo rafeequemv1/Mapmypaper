@@ -4,6 +4,7 @@ import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
 import { Camera, Sparkles } from "lucide-react";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON } from "@/lib/export-utils";
+import SnapshotButton from "./SnapshotButton";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -58,8 +59,14 @@ const Header = ({
         onExportSVG={handleExportSVG}
         onExportPNG={handleExportPNG}
         onExportJSON={handleExportJSON}
-        enableSnapshotMode={enableSnapshotMode} // Pass the new prop
       />
+      
+      {/* Render the SnapshotButton separately with only the props it needs */}
+      {enableSnapshotMode && (
+        <div className="absolute top-4 right-4 z-10">
+          <SnapshotButton enableSnapshotMode={enableSnapshotMode} />
+        </div>
+      )}
     </>
   );
 };
