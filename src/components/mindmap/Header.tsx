@@ -1,71 +1,69 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
+import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON, downloadMindMapAsPDF } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
-  setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSummary: (show: boolean) => void;
+  setShowFlowchart: (show: boolean) => void;
   isPdfActive: boolean;
   isChatActive: boolean;
-  mindMap: any;
+  mindMap: MindElixirInstance | null;
 }
 
-const Header = ({
-  togglePdf,
-  toggleChat,
+const Header = ({ 
+  togglePdf, 
+  toggleChat, 
   setShowSummary,
   setShowFlowchart,
-  isPdfActive,
-  isChatActive,
-  mindMap,
+  isPdfActive, 
+  isChatActive, 
+  mindMap 
 }: HeaderProps) => {
-  // Get exporters from mind map instance
-  const getMindMapExporters = () => {
-    if (!mindMap) return {};
-    
-    return {
-      onExportSVG: () => {
-        mindMap?.exportSVG();
-      },
-      onExportPNG: () => {
-        mindMap?.exportPNG();
-      },
-      onExportJSON: () => {
-        mindMap?.exportJSON();
-      },
-      onExportPDF: () => {
-        // Add PDF export functionality
-        if (mindMap?.exportPDF) {
-          mindMap.exportPDF();
-        } else {
-          console.warn("PDF export not available in this mind map instance");
-        }
-      }
-    };
+  // Define export menu handlers
+  const handleExportSVG = () => {
+    if (mindMap) {
+      downloadMindMapAsSVG(mindMap);
+    }
+  };
+
+  const handleExportPNG = () => {
+    if (mindMap) {
+      downloadMindMapAsPNG(mindMap);
+    }
+  };
+
+  const handleExportJSON = () => {
+    if (mindMap) {
+      downloadMindMapAsJSON(mindMap);
+    }
   };
   
-  const exporters = getMindMapExporters();
+  const handleExportPDF = () => {
+    if (mindMap) {
+      downloadMindMapAsPDF(mindMap);
+    }
+  };
 
   return (
-    <HeaderSidebar
-      isPdfActive={isPdfActive}
-      isChatActive={isChatActive}
-      togglePdf={togglePdf}
-      toggleChat={toggleChat}
-      setShowSummary={setShowSummary}
-      setShowFlowchart={setShowFlowchart}
-      onExportSVG={exporters.onExportSVG}
-      onExportPNG={exporters.onExportPNG}
-      onExportJSON={exporters.onExportJSON}
-      onExportPDF={exporters.onExportPDF}
-      enableSnapshotMode={() => {
-        // Dispatch a custom event to enable snapshot mode
-        window.dispatchEvent(new CustomEvent('enableSnapshotMode'));
-      }}
-    />
+    <>
+      {/* Render HeaderSidebar outside of any hidden container */}
+      <HeaderSidebar 
+        isPdfActive={isPdfActive}
+        isChatActive={isChatActive}
+        togglePdf={togglePdf}
+        toggleChat={toggleChat}
+        setShowSummary={setShowSummary}
+        setShowFlowchart={setShowFlowchart}
+        onExportSVG={handleExportSVG}
+        onExportPNG={handleExportPNG}
+        onExportJSON={handleExportJSON}
+        onExportPDF={handleExportPDF}
+      />
+    </>
   );
 };
 

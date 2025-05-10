@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +22,6 @@ const MindMap = () => {
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false); // State to track capture status
-  const [isSnapshotMode, setIsSnapshotMode] = useState(false); // New state for snapshot mode
 
   // Preload PDF cache when component mounts
   useEffect(() => {
@@ -145,33 +145,6 @@ const MindMap = () => {
     };
   }, []);
 
-  // New effect to listen for snapshot mode enable requests
-  useEffect(() => {
-    const handleEnableSnapshotMode = () => {
-      setIsSnapshotMode(true);
-      
-      if (!showPdf) {
-        // If PDF panel is not visible, show it first
-        setShowPdf(true);
-        toast({
-          title: "PDF Panel Opened",
-          description: "The PDF panel is now open. Click and drag to capture an area.",
-        });
-      } else {
-        toast({
-          title: "Screenshot Mode Enabled",
-          description: "Click and drag to capture an area of the PDF.",
-        });
-      }
-    };
-    
-    window.addEventListener('enableSnapshotMode', handleEnableSnapshotMode);
-    
-    return () => {
-      window.removeEventListener('enableSnapshotMode', handleEnableSnapshotMode);
-    };
-  }, [showPdf, toast]);
-
   // Listen for text selection events that should activate chat
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
@@ -263,8 +236,6 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={handleExplainText}
-        isSnapshotMode={isSnapshotMode} // Pass snapshot mode state
-        setIsSnapshotMode={setIsSnapshotMode} // Pass setter for snapshot mode
       />
       
       {/* Modal for Summary */}
