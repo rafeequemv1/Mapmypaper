@@ -22,6 +22,7 @@ const MindMap = () => {
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false); // State to track capture status
+  const [isSnapshotMode, setIsSnapshotMode] = useState(false); // New state for snapshot mode
 
   // Preload PDF cache when component mounts
   useEffect(() => {
@@ -227,6 +228,7 @@ const MindMap = () => {
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
+        setIsSnapshotMode={setIsSnapshotMode}
       />
       <PanelStructure
         showPdf={showPdf}
@@ -236,6 +238,8 @@ const MindMap = () => {
         onMindMapReady={handleMindMapReady}
         explainText={explainText}
         onExplainText={handleExplainText}
+        isSnapshotMode={isSnapshotMode}
+        setIsSnapshotMode={setIsSnapshotMode}
       />
       
       {/* Modal for Summary */}

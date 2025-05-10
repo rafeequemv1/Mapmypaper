@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import PdfTabs, { getAllPdfs, getPdfKey, PdfMeta } from "@/components/PdfTabs";
 import PdfViewer from "@/components/PdfViewer";
@@ -18,6 +19,8 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
+  isSnapshotMode?: boolean;
+  setIsSnapshotMode?: (isActive: boolean) => void;
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -30,6 +33,8 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
+  isSnapshotMode = false,
+  setIsSnapshotMode
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -412,6 +417,8 @@ const PanelStructure = ({
                 onTextSelected={onExplainText}
                 onImageCaptured={handleImageCaptured}
                 highlightByDefault={true} // Enable text highlighting by default
+                isSnapshotMode={isSnapshotMode}
+                setIsSnapshotMode={setIsSnapshotMode}
               />
             </TooltipProvider>
           </div>
