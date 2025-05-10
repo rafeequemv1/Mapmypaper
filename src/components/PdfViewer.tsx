@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -872,4 +873,15 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 </svg>
               </div>
               <div>
-                <p className="font-
+                <p className="font-bold">Screenshot Error</p>
+                <p className="text-sm">{captureError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+export default PdfViewer;
