@@ -3,6 +3,7 @@
 const CACHE_PREFIX = "mapmypaper_diagram_cache_";
 const FLOWCHART_KEY = "flowchart_";
 const MINDMAP_KEY = "mindmap_";
+const SUMMARY_KEY = "summary_";
 
 // Cache expiration time - 1 day in milliseconds
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
@@ -17,11 +18,18 @@ interface CachedDiagram {
  */
 export const cacheDiagram = (
   pdfKey: string, 
-  diagramType: 'flowchart' | 'mindmap', 
+  diagramType: 'flowchart' | 'mindmap' | 'summary', 
   code: string
 ): void => {
   try {
-    const cacheKey = `${CACHE_PREFIX}${diagramType === 'flowchart' ? FLOWCHART_KEY : MINDMAP_KEY}${pdfKey}`;
+    const cacheKey = `${CACHE_PREFIX}${
+      diagramType === 'flowchart' 
+        ? FLOWCHART_KEY 
+        : diagramType === 'mindmap' 
+          ? MINDMAP_KEY 
+          : SUMMARY_KEY
+    }${pdfKey}`;
+    
     const cacheItem: CachedDiagram = {
       code,
       timestamp: Date.now()
@@ -39,12 +47,19 @@ export const cacheDiagram = (
  */
 export const getCachedDiagram = (
   pdfKey: string, 
-  diagramType: 'flowchart' | 'mindmap'
+  diagramType: 'flowchart' | 'mindmap' | 'summary'
 ): string | null => {
   if (!pdfKey) return null;
   
   try {
-    const cacheKey = `${CACHE_PREFIX}${diagramType === 'flowchart' ? FLOWCHART_KEY : MINDMAP_KEY}${pdfKey}`;
+    const cacheKey = `${CACHE_PREFIX}${
+      diagramType === 'flowchart' 
+        ? FLOWCHART_KEY 
+        : diagramType === 'mindmap' 
+          ? MINDMAP_KEY 
+          : SUMMARY_KEY
+    }${pdfKey}`;
+    
     const cachedItem = localStorage.getItem(cacheKey);
     
     if (!cachedItem) return null;
