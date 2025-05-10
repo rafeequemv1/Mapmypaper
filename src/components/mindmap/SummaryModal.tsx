@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,15 +10,28 @@ import { formatAIResponse, activateCitations } from "@/utils/formatAiResponse";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
+// Define document types
+type DocumentType = "research_paper" | "book" | "article" | "generic";
+
 // Define the Summary type to match the structure returned by the API
 interface Summary {
   Summary: string;
   "Key Findings": string;
-  Objectives: string;
-  Methods: string;
-  Results: string;
-  Conclusions: string;
-  "Key Concepts": string;
+  Objectives?: string;
+  Methods?: string;
+  Results?: string;
+  Conclusions?: string;
+  "Key Concepts"?: string;
+  // Book-specific fields
+  "Main Characters"?: string;
+  "Plot Summary"?: string;
+  "Key Themes"?: string;
+  "Setting"?: string;
+  "Chapter Breakdown"?: string;
+  // Generic document fields
+  "Main Points"?: string;
+  "Important Details"?: string;
+  [key: string]: string | undefined;
 }
 
 // Default empty summary
@@ -42,6 +56,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
+  const [documentType, setDocumentType] = useState<DocumentType>("research_paper");
 
   // Generate summary when the modal is opened
   useEffect(() => {
@@ -55,17 +70,60 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     setIsLoading(true);
     try {
       const result = await generateStructuredSummary();
+      
       // Cast the response to Summary type
-      setSummary(result as unknown as Summary);
+      const summaryData = result as unknown as Summary;
+      
+      // Detect document type based on returned fields
+      const detectedType = detectDocumentType(summaryData);
+      setDocumentType(detectedType);
+      
+      setSummary(summaryData);
     } catch (error) {
       console.error("Error generating summary:", error);
       toast({
         title: "Summary Generation Failed",
-        description: "Could not generate a summary from the PDF. Please try again.",
+        description: "Could not generate a summary. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Detect document type based on the returned fields and content
+  const detectDocumentType = (summaryData: Summary): DocumentType => {
+    // Check for book-specific fields
+    if (summaryData["Main Characters"] || summaryData["Plot Summary"] || 
+        summaryData["Setting"] || summaryData["Chapter Breakdown"]) {
+      return "book";
+    }
+    
+    // Check for research paper indicators
+    if (summaryData["Methods"] && summaryData["Results"] && summaryData["Conclusions"]) {
+      return "research_paper";
+    }
+    
+    // Check for article indicators
+    if (summaryData["Key Points"] && !summaryData["Methods"]) {
+      return "article";
+    }
+    
+    // Default to generic
+    return "generic";
+  };
+
+  // Get title for the summary based on document type
+  const getSummaryTitle = (): string => {
+    switch (documentType) {
+      case "book":
+        return "Book Summary";
+      case "research_paper":
+        return "Paper Summary";
+      case "article":
+        return "Article Summary";
+      default:
+        return "Document Summary";
     }
   };
 
@@ -160,6 +218,20 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
     return acc;
   }, {} as Record<string, string>);
 
+  // Get the appropriate sections to display based on document type
+  const getSectionOrder = (): string[] => {
+    switch (documentType) {
+      case "book":
+        return ["Summary", "Plot Summary", "Main Characters", "Setting", "Key Themes", "Chapter Breakdown", "Key Concepts"];
+      case "research_paper":
+        return ["Summary", "Key Findings", "Objectives", "Methods", "Results", "Conclusions", "Key Concepts"];
+      case "article":
+        return ["Summary", "Key Findings", "Main Points", "Important Details", "Key Concepts"];
+      default:
+        return ["Summary", "Key Findings", "Main Points", "Important Details", "Key Concepts"];
+    }
+  };
+
   // Download summary as PDF
   const downloadSummaryAsPDF = async () => {
     if (!summaryRef.current) return;
@@ -191,13 +263,13 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
 
       // Add title
       pdf.setFontSize(20);
-      pdf.text("Paper Summary", 105, 15, { align: 'center' });
+      pdf.text(getSummaryTitle(), 105, 15, { align: 'center' });
 
       // Add the captured content
       pdf.addImage(imgData, 'PNG', 0, 25, imgWidth, imgHeight - 25);
 
       // Save the PDF
-      pdf.save("paper_summary.pdf");
+      pdf.save(`${documentType}_summary.pdf`);
 
       toast({
         title: "PDF Generated",
@@ -222,7 +294,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
         >
           <DialogHeader className="border-b pb-3">
             <DialogTitle className="flex justify-between items-center text-xl font-semibold">
-              <span>Structured summary</span>
+              <span>{getSummaryTitle()}</span>
               <div className="flex gap-2">
                 <Button 
                   size="sm"
@@ -257,7 +329,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
             <div className="flex flex-col items-center justify-center h-full p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-center text-muted-foreground text-base">
-                Generating comprehensive summary of the paper...
+                Generating comprehensive summary of the document...
               </p>
             </div>
           ) : (
@@ -274,15 +346,18 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
                 )}
 
                 {/* Key Sections with improved styling */}
-                {Object.entries(cleanedSummary).map(([key, value]) => {
+                {getSectionOrder().map((key) => {
                   // Skip Summary as it's already shown as Snapshot
                   if (key === "Summary") return null;
+                  
+                  // Only show sections that have content
+                  if (!cleanedSummary[key]) return null;
                   
                   return (
                     <div key={key} className="summary-section bg-gray-50 rounded-lg p-5">
                       <h3 className="text-xl font-bold mb-3">{key}</h3>
                       <div className="summary-section-content text-base leading-relaxed">
-                        {value}
+                        {cleanedSummary[key]}
                       </div>
                     </div>
                   );
@@ -298,7 +373,7 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-lg">Download Summary as PDF</AlertDialogTitle>
             <AlertDialogDescription className="text-base">
-              This will create a PDF document containing the complete summary of the paper.
+              This will create a PDF document containing the complete summary of the document.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

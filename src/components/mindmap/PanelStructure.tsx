@@ -18,6 +18,8 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
+  isSnapshotMode?: boolean; // Add new prop
+  setIsSnapshotMode?: (isActive: boolean) => void; // Add new prop
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -30,6 +32,8 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
+  isSnapshotMode = false, // Default to false
+  setIsSnapshotMode = () => {}, // Default noop function
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -377,6 +381,15 @@ const PanelStructure = ({
     }
   };
 
+  useEffect(() => {
+    if (isSnapshotMode) {
+      // When snapshot mode is enabled, ensure PDF is visible
+      if (!showPdf) {
+        togglePdf();
+      }
+    }
+  }, [isSnapshotMode, showPdf, togglePdf]);
+
   if (!isRendered) {
     return <div className="h-full w-full flex justify-center items-center">
       <div className="flex items-center gap-2">
@@ -412,6 +425,8 @@ const PanelStructure = ({
                 onTextSelected={onExplainText}
                 onImageCaptured={handleImageCaptured}
                 highlightByDefault={true} // Enable text highlighting by default
+                isSnapshotMode={isSnapshotMode} // Pass snapshot mode
+                onExitSnapshotMode={() => setIsSnapshotMode(false)} // Allow exiting
               />
             </TooltipProvider>
           </div>

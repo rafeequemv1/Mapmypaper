@@ -340,6 +340,14 @@ const MindMapViewer = ({
             generateNodeSummary(node);
           }
         });
+
+        // Add option to add a subbranch with predefined structure based on context
+        menus.push({
+          name: '➕ Add Subbranch',
+          onclick: () => {
+            addSubbranch(node, mind);
+          }
+        });
         return menus;
       };
 
@@ -768,6 +776,85 @@ const MindMapViewer = ({
     setDirection(value);
   };
 
+  // Function to add a subbranch with context-appropriate structure
+  const addSubbranch = (node: any, mindMap: MindElixirInstance) => {
+    if (!node || !mindMap) return;
+    const nodeTopic = node.topic.toLowerCase();
+    let childrenToAdd = [];
+
+    // Determine appropriate children based on parent context
+    if (nodeTopic.includes('introduction') || nodeTopic.includes('background')) {
+      childrenToAdd = [{
+        topic: '📘 The background establishes historical context for the research.'
+      }, {
+        topic: '⚠️ The problem statement identifies specific challenges addressed.'
+      }, {
+        topic: '🧩 Prior research reveals an important gap in knowledge.'
+      }, {
+        topic: '🎯 This study aims to address the identified gap.'
+      }];
+    } else if (nodeTopic.includes('methodology') || nodeTopic.includes('method')) {
+      childrenToAdd = [{
+        topic: '🧪 The experimental setup was carefully designed for validity.'
+      }, {
+        topic: '🔬 Theoretical models provide analytical framework.'
+      }, {
+        topic: '📋 Procedures follow established scientific protocols.'
+      }, {
+        topic: '🔢 Variables were measured with standardized instruments.'
+      }];
+    } else if (nodeTopic.includes('result')) {
+      childrenToAdd = [{
+        topic: '✨ Key findings demonstrate significant relationships.'
+      }, {
+        topic: '📈 Data visualization reveals important patterns.'
+      }, {
+        topic: '📏 Statistical analyses confirm significance of results.'
+      }, {
+        topic: '👁️ Unexpected observations suggest new research directions.'
+      }];
+    } else if (nodeTopic.includes('discussion')) {
+      childrenToAdd = [{
+        topic: '🔎 Results interpretation connects findings to objectives.'
+      }, {
+        topic: '🔄 Comparison with literature establishes contributions.'
+      }, {
+        topic: '💡 Implications extend to theory and practice.'
+      }, {
+        topic: '🛑 Limitations acknowledge constraints on generalizability.'
+      }];
+    } else if (nodeTopic.includes('conclusion')) {
+      childrenToAdd = [{
+        topic: '✅ Summary of contributions highlights key advances.'
+      }, {
+        topic: '🔮 Future work recommendations extend this research.'
+      }, {
+        topic: '🏁 Final remarks emphasize broader significance.'
+      }];
+    } else {
+      // Generic subbranch for other topics
+      childrenToAdd = [{
+        topic: '📝 Key point 1 expands on the main concept.'
+      }, {
+        topic: '📝 Key point 2 provides additional context.'
+      }, {
+        topic: '📝 Key point 3 offers further details.'
+      }];
+    }
+
+    // Add children to the node
+    childrenToAdd.forEach(child => {
+      (mindMap as any).insertSibling(node, child.topic);
+    });
+
+    // Show notification
+    toast({
+      title: "Subbranch Added",
+      description: `Added ${childrenToAdd.length} nodes based on context`,
+      duration: 3000
+    });
+  };
+
   // Function to generate a node summary when requested from context menu
   const generateNodeSummary = (node: any) => {
     if (!node || !node.topic) return;
@@ -818,7 +905,7 @@ const MindMapViewer = ({
       <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
         {/* Zoom controls */}
         
-
+        
         {/* Direction controls */}
         
       </div>
