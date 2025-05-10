@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
@@ -677,6 +677,16 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               <RotateCw className="h-3 w-3" />
             </Button>
+            {/* Add Camera button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 text-black p-0" 
+              onClick={() => setIsSnapshotMode(true)}
+              title="Take Screenshot"
+            >
+              <Camera className="h-3 w-3" />
+            </Button>
           </div>
           
           {/* Search Section - Modified to be toggled */}
@@ -867,4 +877,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div className="flex items-center">
               <div className="py-1">
                 <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a
+                  <path d
