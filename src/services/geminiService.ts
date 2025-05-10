@@ -1,4 +1,3 @@
-
 import { callGeminiAPI } from "@/utils/geminiApiUtils";
 import PdfToText from "react-pdftotext";
 import { storePdfData, getPdfData, isMindMapReady, setCurrentPdf, clearPdfData } from "@/utils/pdfStorage";
@@ -372,18 +371,47 @@ export async function chatWithGeminiAboutPdf(prompt: string, useAllPdfs: boolean
 }
 
 export async function analyzeImageWithGemini(imageData: string): Promise<string> {
+  // Enhanced prompt for image analysis
   const prompt = `
   Analyze the following image and provide a detailed description of its content.
   Focus on identifying key elements, objects, and any relevant context.
   If the image contains text, please extract and include it in your analysis.
+  
+  If the image appears to be blank or all white, please mention this specifically and suggest possible reasons 
+  (e.g., image failed to load, image is actually blank, or there might be very light content that's hard to see).
   `;
 
   try {
-    const response = await callGeminiAPI(prompt, { image: imageData });
+    console.log("Sending image to Gemini API for analysis...");
+    
+    // Check if image data is valid
+    if (!imageData || imageData.trim() === "") {
+      console.error("Invalid image data provided");
+      return "Error: No valid image data provided for analysis.";
+    }
+    
+    // Log image data length for debugging
+    console.log(`Image data length: ${imageData.length} characters`);
+    
+    // Add a timeout to prevent hanging on API calls
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => reject(new Error("Image analysis timed out after 15 seconds")), 15000);
+    });
+    
+    // Call Gemini API with timeout
+    const responsePromise = callGeminiAPI(prompt, { image: imageData });
+    const response = await Promise.race([responsePromise, timeoutPromise]);
+    
+    console.log("Received response from Gemini API for image analysis");
+    
+    if (!response || response.trim() === "") {
+      return "The image analysis did not return any results. This might be because the image is blank, the image data is invalid, or there was an issue with the analysis service.";
+    }
+    
     return response;
   } catch (error) {
     console.error("Error analyzing image:", error);
-    throw error;
+    return `Error analyzing image: ${(error as Error).message}. Please try again with a different image or check if the image is valid.`;
   }
 }
 

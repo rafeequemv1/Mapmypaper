@@ -10,6 +10,12 @@ export async function callGeminiAPI(
     // In a real implementation, this would make an API call to Google's Gemini API
     console.log("Calling Gemini API with prompt:", prompt.substring(0, 100) + "...");
     
+    // Log if we're processing an image
+    if (options.image) {
+      console.log("Image provided for analysis (first 100 chars):", 
+        options.image.substring(0, 100) + "...");
+    }
+    
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -62,6 +68,21 @@ export async function callGeminiAPI(
           }
         ]
       });
+    }
+    
+    // Handle image analysis specifically
+    if (options.image) {
+      // Check if image seems valid
+      if (!options.image || options.image.length < 100) {
+        return "The provided image appears to be invalid or too small to analyze properly.";
+      }
+      
+      // Simple check to simulate detecting a blank image
+      if (options.image.includes("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=")) {
+        return "The image appears to be completely blank or white. This could be due to an empty canvas, failed image capture, or very light content that's difficult to see.";
+      }
+      
+      return "Image Analysis Result: The provided image shows [detailed description would be here in actual implementation]. I've identified several key elements including text content, visual objects, and the overall context of the image.";
     }
     
     return "This is a simulated response from the Gemini API. In a production environment, this would be the actual response from Google's Gemini API.";
