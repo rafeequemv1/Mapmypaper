@@ -215,8 +215,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Listen for capture complete events to update UI
     useEffect(() => {
-      const handleCaptureDone = (e: CustomEvent) => {
-        if (selectionRectRef.current && e.detail?.success) {
+      const handleCaptureDone = (e: Event) => {
+        const customEvent = e as CustomEvent;
+        if (selectionRectRef.current && customEvent.detail?.success) {
           // Update the selection rectangle UI to show completion
           selectionRectRef.current.captureComplete();
           
@@ -331,9 +332,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               setIsProcessingCapture(false);
             }, 500);
           }
-          
-          // Note: We DON'T reset here - we wait for the captureDone event
-          // which is dispatched from the handler in PanelStructure
         };
         
         // Add event listeners
@@ -638,8 +636,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       // Set the PDF.js worker source if not already set
       if (!pdfjs.GlobalWorkerOptions.workerSrc) {
         const pdfJsVersion = pdfjs.version;
-        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
-        console.log(`PdfViewer worker set to version: ${pdfJsVersion}`);
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
+        console.log(`PdfViewer worker set to version: ${pdfJsVersion} from CDN with https`);
       }
     }, []);
 
@@ -869,4 +867,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             <div className="flex items-center">
               <div className="py-1">
                 <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8
+                  <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a
