@@ -12,9 +12,6 @@ import { createSelectionRect, captureElementArea, toggleTextSelection } from "@/
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Set up the worker URL
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
@@ -623,6 +620,16 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
+    // Add useEffect to set worker
+    useEffect(() => {
+      // Set the PDF.js worker source if not already set
+      if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+        const pdfJsVersion = pdfjs.version;
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
+        console.log(`PdfViewer worker set to version: ${pdfJsVersion}`);
+      }
+    }, []);
+
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
@@ -857,21 +864,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 <p className="text-sm">{captureError}</p>
               </div>
               <button 
-                onClick={() => setCaptureError(null)} 
-                className="ml-auto text-red-700 hover:text-red-900"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+                onClick={() => setCaptureError(null)}

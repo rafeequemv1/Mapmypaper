@@ -1,12 +1,13 @@
-
 import * as pdfjs from 'pdfjs-dist';
 
 // Set up the PDF.js worker
 function setupPdfWorker() {
   // Only set the worker once
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    // Use the CDN worker that matches our installed version
+    // Get the exact version from the installed pdfjs-dist package
     const pdfJsVersion = pdfjs.version;
+    
+    // Set worker to the exact same version through CDN
     pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
     console.log(`PDF.js worker set to version: ${pdfJsVersion}`);
   }

@@ -46,6 +46,16 @@ const PdfUpload = () => {
   const mindMapKeyPrefix = "mindMapData_";
 
   useEffect(() => {
+    // Ensure PDF.js worker is set correctly for PdfToText
+    if (typeof window !== 'undefined' && !window.pdfjsWorkerSrc) {
+      // Import pdfjs to get version
+      import('pdfjs-dist').then(pdfjs => {
+        const pdfJsVersion = pdfjs.version;
+        window.pdfjsWorkerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
+        console.log(`Set PdfToText worker to version: ${pdfJsVersion}`);
+      });
+    }
+    
     // On mount, load PDFs list and last active from sessionStorage
     const keys = Object.keys(sessionStorage)
       .filter((k) => k.startsWith(mindMapKeyPrefix))
