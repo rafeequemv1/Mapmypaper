@@ -1,8 +1,9 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera, RefreshCw } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
