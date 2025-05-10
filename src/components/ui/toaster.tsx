@@ -16,9 +16,12 @@ export function Toaster() {
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, variant, ...props }) {
         // Improve the display of rate limit error messages
+        let updatedVariant = variant;
+        let updatedDescription = description;
+        
         if (typeof description === 'string' && description.includes('rate limit')) {
-          variant = 'warning';
-          description = (
+          updatedVariant = 'warning';
+          updatedDescription = (
             <>
               {description}
               <div className="mt-2 text-xs text-amber-700">
@@ -32,13 +35,13 @@ export function Toaster() {
           <Toast 
             key={id} 
             // Convert our success/warning variants to default for compatibility
-            variant={variant === "success" || variant === "warning" ? "default" : variant}
+            variant={updatedVariant === "success" || updatedVariant === "warning" ? "default" : updatedVariant}
             {...props}
           >
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
+              {updatedDescription && (
+                <ToastDescription>{updatedDescription}</ToastDescription>
               )}
             </div>
             {action}
