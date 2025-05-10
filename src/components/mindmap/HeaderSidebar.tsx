@@ -12,7 +12,6 @@ import { useNavigate } from "react-router-dom";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
 import UserMenu from "@/components/UserMenu";
-import SnapshotButton from "./SnapshotButton";
 
 interface HeaderSidebarProps {
   isPdfActive: boolean;
@@ -25,8 +24,7 @@ interface HeaderSidebarProps {
   onExportPNG: () => void;
   onExportJSON: () => void;
   onExportPDF: () => void;
-  toggleSnapshotMode?: () => void;
-  isSnapshotModeActive?: boolean;
+  enableSnapshotMode: () => void; // Add new prop
 }
 
 const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
@@ -40,8 +38,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   onExportPNG,
   onExportJSON,
   onExportPDF,
-  toggleSnapshotMode,
-  isSnapshotModeActive = false
+  enableSnapshotMode // Add the new prop
 }) => {
   const navigate = useNavigate();
   
@@ -71,13 +68,14 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
         icon={<MessageSquare className="h-4 w-4" />}
         title="Toggle Chat"
       />
-      {/* Snapshot button - only show when toggleSnapshotMode is provided */}
-      {toggleSnapshotMode && (
-        <SnapshotButton 
-          onClick={toggleSnapshotMode} 
-          active={isSnapshotModeActive}
-        />
-      )}
+      
+      {/* Camera icon for taking snapshots */}
+      <HeaderSidebarIcon
+        onClick={enableSnapshotMode}
+        icon={<Camera className="h-4 w-4" />}
+        title="Take Screenshot"
+      />
+      
       <HeaderSidebarIcon
         onClick={() => setShowSummary(true)}
         icon={<FileText className="h-4 w-4" />}
