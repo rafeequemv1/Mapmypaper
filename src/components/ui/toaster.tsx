@@ -15,22 +15,17 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, variant, ...props }) {
-        // Convert variant for compatibility
-        const toastVariant = variant === "success" || variant === "warning" ? "default" : variant;
-        
-        // Handle description that might be a React element or string
-        const toastDescription = description;
-        
         return (
           <Toast 
             key={id} 
-            variant={toastVariant}
+            // Convert our success/warning variants to default for compatibility
+            variant={variant === "success" || variant === "warning" ? "default" : variant}
             {...props}
           >
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
-                <ToastDescription>{toastDescription}</ToastDescription>
+                <ToastDescription>{description}</ToastDescription>
               )}
             </div>
             {action}
