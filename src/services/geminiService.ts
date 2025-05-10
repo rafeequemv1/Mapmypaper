@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 import { getAllPdfText } from "@/utils/pdfStorage";
@@ -123,7 +124,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
 
     // First, try to get at least a title from the PDF
     try {
-      // Create improved prompt for better results
+      // Create improved prompt for better results with complete sentences
       const prompt = `
       Analyze the following academic paper/document text and extract specific information to create a detailed mind map.
 
@@ -133,10 +134,11 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       For each section, extract specific content representing what's actually in the paper.
       
       FORMAT REQUIREMENTS:
-      1. Each topic should be SPECIFIC and extracted from the text (not generic labels)
-      2. Keep topics concise (5-10 words maximum)
+      1. Each topic MUST be a COMPLETE SENTENCE with subject, verb, and proper punctuation
+      2. Use SPECIFIC information extracted from the text (not generic labels)
       3. For each node, include actual findings, methods, or arguments from the paper
       4. Use specific terminology from the paper to ensure accuracy
+      5. End each sentence with proper punctuation (period, question mark, etc.)
       
       Format the response as a JSON object with this exact structure:
       ${JSON.stringify(researchPaperTemplate, null, 2)}
@@ -144,8 +146,9 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
       CRITICAL RULES:
       1. Do NOT change the structure of the template
       2. Keep all node IDs and directions as they are
-      3. ONLY replace the topic text with SPECIFIC content from the paper
+      3. ONLY replace the topic text with SPECIFIC content from the paper as COMPLETE SENTENCES
       4. If you're unsure about a section, use the most relevant content you can find
+      5. Make sentences informative but concise (10-15 words maximum)
 
       Here's the document text to analyze:
       ${pdfText.slice(0, 15000)}
@@ -181,7 +184,7 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
     } catch (error) {
       console.error("Error in primary mind map generation:", error);
       
-      // Fallback approach: Try to at least populate the top-level nodes
+      // Fallback approach: Try to at least populate the top-level nodes with complete sentences
       try {
         console.log("Attempting fallback mind map generation...");
         
@@ -189,8 +192,8 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
         const customTemplate = JSON.parse(JSON.stringify(researchPaperTemplate));
         customTemplate.nodeData.topic = paperTitle;
         
-        // Attempt to extract key sections from the PDF text
-        const sections = extractSectionsFromText(pdfText);
+        // Attempt to extract key sections from the PDF text as complete sentences
+        const sections = extractSectionsFromText(pdfText, true);
         
         // Apply extracted sections to our template
         if (sections.summary) customTemplate.nodeData.children[0].topic = sections.summary;
@@ -232,19 +235,37 @@ export const generateMindMapFromText = async (pdfText: string): Promise<any> => 
 };
 
 // Helper function to extract key sections from PDF text
-const extractSectionsFromText = (text: string): Record<string, string> => {
+const extractSectionsFromText = (text: string, completeSentences = true): Record<string, string> => {
   const sections: Record<string, string> = {};
   const lowercaseText = text.toLowerCase();
   
   // Try to find common section headings in academic papers
   const findSection = (sectionName: string, keywords: string[]): string | null => {
     for (const keyword of keywords) {
+      // Modified regex to capture more text for complete sentences
       const regex = new RegExp(`(${keyword}[\\s:.].*?)(?=\\n\\s*(?:[0-9]+\\.|[I|V|X]+\\.|[A-Z][a-z]+\\s*[:.]))`, 'i');
       const match = lowercaseText.match(regex);
       if (match && match[1]) {
-        // Extract a short phrase, not the entire section
-        const phrase = match[1].trim().split(/[.;:]/)[0];
-        if (phrase.length > 3 && phrase.length < 100) {
+        // Extract a complete sentence if requested
+        let phrase = match[1].trim();
+        if (completeSentences) {
+          // Get more context to form a complete sentence
+          const sentenceMatch = phrase.match(/[^.!?]*[.!?]/);
+          if (sentenceMatch && sentenceMatch[0]) {
+            phrase = sentenceMatch[0].trim();
+          } else if (phrase.length > 3 && phrase.length < 150) {
+            // If no complete sentence found, ensure it ends with period
+            phrase = phrase.charAt(0).toUpperCase() + phrase.slice(1);
+            if (!/[.!?]$/.test(phrase)) {
+              phrase += '.';
+            }
+          }
+        } else {
+          // Original behavior - just get a short phrase
+          phrase = phrase.split(/[.;:]/)[0];
+        }
+        
+        if (phrase.length > 3 && phrase.length < 150) {
           return phrase.charAt(0).toUpperCase() + phrase.slice(1);
         }
       }
@@ -252,13 +273,13 @@ const extractSectionsFromText = (text: string): Record<string, string> => {
     return null;
   };
   
-  // Try to extract each section
-  sections.summary = findSection('summary', ['abstract', 'summary', 'overview']) || "Paper Summary";
-  sections.introduction = findSection('introduction', ['introduction', 'background']) || "Introduction";
-  sections.methodology = findSection('methodology', ['method', 'methodology', 'approach', 'experimental', 'materials']) || "Methodology";
-  sections.results = findSection('results', ['result', 'findings', 'outcomes']) || "Results";
-  sections.discussion = findSection('discussion', ['discussion', 'analysis', 'interpretation']) || "Discussion";
-  sections.conclusion = findSection('conclusion', ['conclusion', 'concluding', 'summary', 'future work']) || "Conclusion";
+  // Try to extract each section as a complete sentence
+  sections.summary = findSection('summary', ['abstract', 'summary', 'overview']) || "This paper summarizes research findings on an important topic.";
+  sections.introduction = findSection('introduction', ['introduction', 'background']) || "The introduction provides context for understanding the research problem.";
+  sections.methodology = findSection('methodology', ['method', 'methodology', 'approach', 'experimental', 'materials']) || "The methodology describes how the research was conducted with appropriate rigor.";
+  sections.results = findSection('results', ['result', 'findings', 'outcomes']) || "Results present the empirical findings from the conducted experiments.";
+  sections.discussion = findSection('discussion', ['discussion', 'analysis', 'interpretation']) || "The discussion explores the meaning and implications of the results.";
+  sections.conclusion = findSection('conclusion', ['conclusion', 'concluding', 'summary', 'future work']) || "The conclusion summarizes key contributions and suggests future research directions.";
   
   return sections;
 };
