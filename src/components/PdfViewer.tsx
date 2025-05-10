@@ -885,3 +885,152 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   className="h-6 px-1 text-black"
                   onClick={() => navigateSearch('next')}
                 >
+                  →
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Main PDF Display */}
+        <div 
+          className="flex-1 relative overflow-hidden"
+          ref={pdfContainerRef}
+        >
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
+              <div className="flex flex-col items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                <p className="text-gray-500 text-sm">Loading PDF...</p>
+              </div>
+            </div>
+          )}
+          
+          {loadError && !isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+              <div className="bg-white p-6 rounded-lg shadow-lg max-w-md text-center">
+                <div className="flex justify-center mb-4">
+                  <AlertCircle className="h-12 w-12 text-red-500" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">Failed to load PDF</h3>
+                <p className="text-gray-600 mb-4">{loadError}</p>
+                <div className="flex justify-center gap-4">
+                  <Button 
+                    onClick={handleRetryLoad} 
+                    className="flex items-center gap-2"
+                    disabled={isRetrying}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
+                    {isRetrying ? "Retrying..." : "Retry"}
+                  </Button>
+                </div>
+                <p className="mt-4 text-xs text-gray-500">
+                  If the problem persists, try uploading the PDF again.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* PDF Document */}
+          <ScrollArea className="h-full">
+            {pdfData && (
+              <div className="flex justify-center p-4">
+                <Document
+                  className="pdf-document"
+                  file={pdfData}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  loading={
+                    <div className="flex justify-center p-8">
+                      <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+                    </div>
+                  }
+                  error={<div className="text-center p-4 text-red-500">Failed to load PDF</div>}
+                  options={documentOptions}
+                >
+                  {Array.from({ length: numPages }, (_, i) => (
+                    <div 
+                      key={`page_${i + 1}`}
+                      ref={setPageRef(i)}
+                      className="mb-4 shadow-md relative"
+                    >
+                      <Page
+                        className="pdf-page"
+                        pageNumber={i + 1}
+                        width={getOptimalPageWidth()}
+                        scale={scale}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={true}
+                        onRenderSuccess={onPageRenderSuccess}
+                        loading={
+                          <div className="flex justify-center items-center border h-[600px]">
+                            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                          </div>
+                        }
+                      />
+                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                        {i + 1} / {numPages}
+                      </div>
+                    </div>
+                  ))}
+                </Document>
+              </div>
+            )}
+          </ScrollArea>
+
+          {/* Text selection tooltip */}
+          {showSelectionTooltip && (
+            <PositionedTooltip
+              ref={selectionTooltipRef}
+              show={showSelectionTooltip}
+              x={tooltipPosition.x}
+              y={tooltipPosition.y}
+              className="flex items-center gap-1 z-50 bg-white"
+            >
+              {renderTooltipContent ? (
+                renderTooltipContent()
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={handleExplainText}
+                  >
+                    <MessageSquare className="h-3 w-3 mr-1" />
+                    Explain Selection
+                  </Button>
+                </>
+              )}
+            </PositionedTooltip>
+          )}
+
+          {/* Snapshot mode indicator */}
+          {isSnapshotMode && (
+            <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium z-30 shadow-md">
+              Select an area to capture
+            </div>
+          )}
+          
+          {/* Error overlay for capture errors */}
+          {captureError && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-md text-sm z-30 shadow-md">
+              {captureError}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-2 text-white hover:bg-red-600"
+                onClick={() => setCaptureError(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
