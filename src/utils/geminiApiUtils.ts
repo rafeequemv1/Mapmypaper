@@ -7,6 +7,10 @@ let genAI: GoogleGenerativeAI;
 // API key provided directly as fallback
 const FALLBACK_API_KEY = "AIzaSyBDnFabw77XdMe8rlKIMriWMgV-joUqTA4";
 
+// Current Gemini models (as of May 2025)
+const TEXT_MODEL = "gemini-1.5-pro"; // Updated from gemini-pro
+const MULTIMODAL_MODEL = "gemini-1.5-pro-vision"; // Updated from gemini-pro-vision
+
 // Initialize with API key from environment variable or fallback
 function initializeGenAI() {
   // Try to get API key from environment or use fallback
@@ -39,7 +43,7 @@ export async function callGeminiAPI(
 
   try {
     // Select the model based on whether we have an image
-    const modelName = options.image ? "gemini-pro-vision" : "gemini-pro";
+    const modelName = options.image ? MULTIMODAL_MODEL : TEXT_MODEL;
     const model = genAI.getGenerativeModel({ model: modelName });
 
     // Prepare content parts
@@ -82,6 +86,11 @@ export async function callGeminiAPI(
       (error.message.includes("429") || error.message.includes("quota") || error.message.includes("rate limit"))
     ) {
       throw new Error("Gemini API rate limit exceeded. Please try again later.");
+    }
+    
+    // Improved error message for model not found
+    if (error instanceof Error && error.message.includes("404") && error.message.includes("models")) {
+      throw new Error("The specified Gemini model is not available. This could be due to API changes or region restrictions.");
     }
     
     throw error;
