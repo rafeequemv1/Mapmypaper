@@ -1,3 +1,4 @@
+
 // PDF Storage Utility for IndexedDB with Caching
 // Manages PDF data storage, retrieval, and state management
 
@@ -58,7 +59,7 @@ const openDatabase = (): Promise<IDBDatabase> => {
   });
 };
 
-// Preload all PDF keys into cache on startup
+// Preload all PDF keys into cache on startup with improved reliability
 export const preloadPdfCache = async (): Promise<void> => {
   try {
     const db = await openDatabase();
@@ -74,14 +75,28 @@ export const preloadPdfCache = async (): Promise<void> => {
         // Filter out special keys like CURRENT_PDF_KEY
         const pdfKeys = keys.filter(k => k !== CURRENT_PDF_KEY);
         
-        // Don't load the actual PDF data yet, just mark it as available
+        // Mark as available but don't load the full data yet
         pdfKeys.forEach(key => {
           if (!key.startsWith('mindMapReady_')) {
             pdfDataCache.set(key, 'pending');
           }
         });
         
-        resolve();
+        // Also try to preload the current PDF
+        const currentKeyRequest = store.get(CURRENT_PDF_KEY);
+        currentKeyRequest.onsuccess = () => {
+          const currentKey = currentKeyRequest.result;
+          if (currentKey && typeof currentKey === 'string') {
+            // Store the current key in cache
+            pdfDataCache.set(CURRENT_PDF_KEY, currentKey);
+          }
+          resolve();
+        };
+        
+        currentKeyRequest.onerror = () => {
+          console.warn("Could not preload current PDF key");
+          resolve();
+        };
       };
       
       request.onerror = () => {
@@ -101,11 +116,16 @@ export const preloadPdfCache = async (): Promise<void> => {
 // Call preload on module init
 preloadPdfCache();
 
-// Store PDF data in IndexedDB and cache
+// Store PDF data in IndexedDB and cache with improved error handling
 export const storePdfData = async (key: string, pdfData: string): Promise<void> => {
   try {
     // Store in cache immediately for instant access
     pdfDataCache.set(key, pdfData);
+    
+    // Reset any global PDF load errors
+    if (window) {
+      window.__PDF_LOAD_ERROR__ = null;
+    }
     
     const db = await openDatabase();
     return new Promise((resolve, reject) => {

@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -13,19 +12,56 @@ import { createSelectionRect, captureElementArea, toggleTextSelection } from "@/
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Set up the PDF.js worker with proper URL - UPDATED to use CDN directly
+// Set up the PDF.js worker with proper URL - ENHANCED with multiple fallbacks and error handling
 function setupPdfWorker() {
+  // Don't try to set up again if already confirmed working
+  if (window.__PDF_WORKER_LOADED__) {
+    return true;
+  }
+  
+  if (!window.__PDF_WORKER_LOAD_ATTEMPTS__) {
+    window.__PDF_WORKER_LOAD_ATTEMPTS__ = 0;
+  }
+  window.__PDF_WORKER_LOAD_ATTEMPTS__++;
+  
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
     const pdfJsVersion = pdfjs.version;
-    // Using direct CDN URL with version to avoid local path issues
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfJsVersion}/build/pdf.worker.min.js`;
-    console.log(`PdfViewer worker set to version: ${pdfJsVersion} from unpkg CDN`);
+    
+    // Try multiple CDNs in order of reliability
+    const cdnUrls = [
+      `https://unpkg.com/pdfjs-dist@${pdfJsVersion}/build/pdf.worker.min.js`,
+      `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfJsVersion}/build/pdf.worker.min.js`,
+      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`
+    ];
+    
+    const cdnIndex = Math.min(window.__PDF_WORKER_LOAD_ATTEMPTS__ - 1, cdnUrls.length - 1);
+    const workerSrc = cdnUrls[cdnIndex];
+    
+    // Set the worker source
+    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+    console.log(`PdfViewer worker attempt ${window.__PDF_WORKER_LOAD_ATTEMPTS__} set to: ${workerSrc}`);
+    
+    // Create a test script tag to verify the CDN is accessible
+    const testScript = document.createElement('script');
+    testScript.src = workerSrc;
+    testScript.onload = () => {
+      console.log(`PDF worker successfully loaded from ${workerSrc}`);
+      window.__PDF_WORKER_LOADED__ = true;
+    };
+    testScript.onerror = () => {
+      console.error(`Failed to load PDF worker from ${workerSrc}`);
+      // If we have more CDNs to try, we'll try them on next render
+    };
+    document.head.appendChild(testScript);
   }
+  
+  return window.__PDF_WORKER_LOAD_ATTEMPTS__ <= cdnUrls.length;
 }
 
 // Initialize worker immediately
 setupPdfWorker();
 
+// Rest of interface definitions
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
@@ -83,15 +119,27 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Add these new states to handle error recovery
     const [retryCount, setRetryCount] = useState<number>(0);
     const [isRetrying, setIsRetrying] = useState<boolean>(false);
+    const [workerError, setWorkerError] = useState<boolean>(false);
     
+    // Enhanced loadPdfData function with better error handling
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
         // Clear any previous load errors
         setLoadError(null);
+        setWorkerError(false);
         
         // Ensure PDF.js worker is properly set before loading
-        setupPdfWorker();
+        const workerSetupOk = setupPdfWorker();
+        if (!workerSetupOk) {
+          setWorkerError(true);
+          setLoadError("PDF viewer worker could not be loaded. Trying alternative sources...");
+          toast({
+            title: "PDF Loading Warning",
+            description: "PDF viewer is having trouble loading. Trying alternative sources...",
+            variant: "warning",
+          });
+        }
         
         const data = await getCurrentPdfData();
         
@@ -122,10 +170,13 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Retry loading function
+    // Improved retry loading function
     const handleRetryLoad = () => {
       setIsRetrying(true);
       setRetryCount(prev => prev + 1);
+      
+      // Force reload the worker
+      window.__PDF_WORKER_LOADED__ = false;
       
       // Clear cache and try loading again
       if (window.caches) {
@@ -144,10 +195,22 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }, 500);
     };
 
+    // Effect to initialize PDF
     useEffect(() => {
       setupPdfWorker();
       loadPdfData();
     }, [retryCount]); // Add retryCount as dependency to reload when retrying
+
+    // Add effect to check if worker loaded correctly
+    useEffect(() => {
+      if (workerError) {
+        // Wait a bit and retry with a different CDN
+        const timeoutId = setTimeout(() => {
+          handleRetryLoad();
+        }, 2000);
+        return () => clearTimeout(timeoutId);
+      }
+    }, [workerError]);
     
     useEffect(() => {
       const handlePdfSwitch = (event: Event) => {
@@ -176,7 +239,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [pdfContainerRef.current]);
 
-    // Add new effect to focus search input when search is toggled
+    // Add new effect to focus search input when search is opened
     useEffect(() => {
       if (showSearch && searchInputRef.current) {
         searchInputRef.current.focus();
@@ -632,6 +695,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         onPdfLoaded();
       }
       setLoadError(null);
+      setWorkerError(false);
+      window.__PDF_WORKER_LOADED__ = true;
     };
 
     const onPageRenderSuccess = (page: any) => {
@@ -694,6 +759,16 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       
       return () => clearTimeout(timeoutId);
     }, []);
+
+    // Enhanced document options to improve PDF loading reliability
+    const documentOptions = {
+      cMapUrl: 'https://unpkg.com/pdfjs-dist/cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: 'https://unpkg.com/pdfjs-dist/standard_fonts/',
+      disableStream: false,
+      disableAutoFetch: false,
+      isEvalSupported: true
+    };
 
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
@@ -810,142 +885,3 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   className="h-6 px-1 text-black"
                   onClick={() => navigateSearch('next')}
                 >
-                  →
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* PDF Content */}
-        {pdfData ? (
-          <ScrollArea className="flex-1" ref={pdfContainerRef}>
-            <div className="flex flex-col items-center py-4 relative">
-              {/* Snapshot mode indicator */}
-              {isSnapshotMode && (
-                <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
-                  <span>{isProcessingCapture ? "Processing capture..." : "Draw to capture area"}</span>
-                  {!isProcessingCapture && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="ml-2 bg-blue-600 hover:bg-blue-700 p-1 h-6" 
-                      onClick={() => setIsSnapshotMode(false)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              )}
-              
-              {/* NEW Selection Tooltip - positioned absolutely within the PDF container */}
-              {showSelectionTooltip && (
-                <PositionedTooltip
-                  ref={selectionTooltipRef}
-                  show={showSelectionTooltip}
-                  x={tooltipPosition.x}
-                  y={tooltipPosition.y - 40} // Offset it above the text
-                  className="transform -translate-x-1/2 shadow-lg"
-                >
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    className="flex items-center gap-1 text-xs p-1 h-7"
-                    onClick={handleExplainText}
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                    <span>Explain</span>
-                  </Button>
-                </PositionedTooltip>
-              )}
-              
-              <Document
-                file={pdfData}
-                onLoadSuccess={onDocumentLoadSuccess}
-                className="w-full"
-                options={{
-                  cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
-                  cMapPacked: true,
-                  standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
-                }}
-                loading={<div className="text-center py-4">Loading PDF...</div>}
-                error={
-                  <div className="text-center py-4 text-red-500 flex flex-col items-center gap-4">
-                    <div>{loadError || "Failed to load PDF. Please try again."}</div>
-                    <Button 
-                      variant="outline" 
-                      onClick={handleRetryLoad} 
-                      disabled={isRetrying}
-                      className="flex items-center gap-2"
-                    >
-                      {isRetrying ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                          <span>Retrying...</span>
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="h-4 w-4" />
-                          <span>Retry Loading</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                }
-              >
-                {Array.from(new Array(numPages), (_, index) => (
-                  <div
-                    key={`page_${index + 1}`}
-                    className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                    ref={setPageRef(index)}
-                    style={{ width: 'fit-content', maxWidth: '100%' }}
-                    data-page-number={index + 1}
-                  >
-                    <Page
-                      pageNumber={index + 1}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={false}
-                      onRenderSuccess={onPageRenderSuccess}
-                      scale={scale}
-                      width={getOptimalPageWidth()}
-                      className="mx-auto"
-                      loading={
-                        <div className="flex items-center justify-center h-[600px] w-full">
-                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
-                        </div>
-                      }
-                    />
-                    <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
-                      Page {index + 1} of {numPages}
-                    </div>
-                  </div>
-                ))}
-              </Document>
-            </div>
-          </ScrollArea>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-8">
-            <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-              <RefreshCw className="h-12 w-12 mx-auto text-blue-500 mb-4" />
-              <h3 className="text-xl font-bold mb-2">No PDF Loaded</h3>
-              <p className="text-gray-600 mb-4">
-                {loadError || "Please upload or select a PDF document to view its contents and generate a mind map."}
-              </p>
-              {loadError && (
-                <Button 
-                  variant="outline" 
-                  onClick={handleRetryLoad} 
-                  className="mx-auto"
-                >
-                  Try Again
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-export default PdfViewer;
