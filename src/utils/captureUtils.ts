@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for capturing screenshot areas of the PDF
  */
@@ -124,12 +125,21 @@ export function createSelectionRect(containerElement: HTMLElement) {
   selectionRect.style.display = 'none';
   containerElement.appendChild(selectionRect);
   
-  // Create capture button tooltip
+  // Create improved capture button - now positioned INSIDE the rectangle
   const captureTooltip = document.createElement('div');
-  captureTooltip.className = 'absolute bg-blue-600 text-white px-2 py-1 rounded text-sm z-50 cursor-pointer shadow-md hover:bg-blue-700 transition-colors duration-150';
+  captureTooltip.className = 'absolute bg-blue-600 text-white px-3 py-1.5 rounded text-sm z-50 cursor-pointer shadow-md hover:bg-blue-700 transition-colors duration-150 flex items-center gap-2';
   captureTooltip.style.display = 'none';
-  captureTooltip.textContent = 'Capture';
   containerElement.appendChild(captureTooltip);
+  
+  // Add an icon for better visibility
+  captureTooltip.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="16"></line>
+      <line x1="8" y1="12" x2="16" y2="12"></line>
+    </svg>
+    <span>Capture</span>
+  `;
   
   // Selection state
   let isSelecting = false;
@@ -165,9 +175,9 @@ export function createSelectionRect(containerElement: HTMLElement) {
     // Store current rect
     currentRect = { x: left, y: top, width, height };
     
-    // Position the tooltip above the rectangle
+    // Position the tooltip INSIDE the rectangle - centered
     captureTooltip.style.left = `${left + width/2 - captureTooltip.offsetWidth/2}px`;
-    captureTooltip.style.top = `${top - captureTooltip.offsetHeight - 5}px`;
+    captureTooltip.style.top = `${top + height/2 - captureTooltip.offsetHeight/2}px`;
     
     // Return the current rectangle dimensions
     return currentRect;
@@ -203,7 +213,7 @@ export function createSelectionRect(containerElement: HTMLElement) {
     }
     
     // Show the capture tooltip
-    captureTooltip.style.display = 'block';
+    captureTooltip.style.display = 'flex';
     
     return rect;
   };
@@ -233,19 +243,38 @@ export function createSelectionRect(containerElement: HTMLElement) {
     isCapturing = capturing;
     
     if (capturing) {
-      // Show loading state
-      captureTooltip.innerHTML = '<div class="inline-block w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-1"></div> Capturing...';
+      // Improved capturing animation with pulse effect
+      captureTooltip.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Capturing...</span>
+      `;
       captureTooltip.classList.add('bg-blue-800');
       captureTooltip.classList.remove('hover:bg-blue-700');
       captureTooltip.style.cursor = 'default';
+      
+      // Add pulsing border animation to selection rect during capture
+      selectionRect.classList.add('animate-pulse');
     } else if (!isCaptureComplete) {
       // Reset to normal state only if not showing completion state
-      captureTooltip.textContent = 'Capture';
+      captureTooltip.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <span>Capture</span>
+      `;
       captureTooltip.classList.remove('bg-blue-800');
       captureTooltip.classList.add('hover:bg-blue-700');
       captureTooltip.style.cursor = 'pointer';
       // Re-enable text selection when capture is done
       toggleTextSelection(true);
+      
+      // Remove pulsing animation from selection rect
+      selectionRect.classList.remove('animate-pulse');
     }
   };
   
@@ -295,9 +324,18 @@ export function createSelectionRect(containerElement: HTMLElement) {
   
   // Add error handling for capture failures
   const captureError = () => {
-    // Display error message
-    captureTooltip.textContent = 'Capture failed';
+    // Display error message with improved styling
+    captureTooltip.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+      <span>Failed</span>
+    `;
+    captureTooltip.classList.remove('bg-blue-800');
     captureTooltip.classList.add('bg-red-600');
+    selectionRect.classList.remove('animate-pulse');
     
     // Reset after a delay - longer to ensure visibility
     setTimeout(() => {
@@ -309,12 +347,21 @@ export function createSelectionRect(containerElement: HTMLElement) {
   
   // Capture complete handler - Keep the tooltip shown
   const captureComplete = () => {
-    // Change tooltip to show completion
-    captureTooltip.textContent = 'Captured!';
+    // Change tooltip to show completion with success animation
+    captureTooltip.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <span>Captured!</span>
+    `;
     captureTooltip.classList.remove('bg-blue-800');
     captureTooltip.classList.add('bg-green-600');
     isCapturing = false;
     isCaptureComplete = true;
+    
+    // Remove pulsing animation from selection rect
+    selectionRect.classList.remove('animate-pulse');
     
     // After showing success, remove after longer delay
     setTimeout(() => {
