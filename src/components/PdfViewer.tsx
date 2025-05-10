@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -883,4 +884,159 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 </Button>
               </div>
             ) : (
-              <div className="flex justify-end
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 flex items-center gap-0.5 text-black px-1"
+                  onClick={toggleSearch}
+                >
+                  <Search className="h-3 w-3" />
+                  <span className="text-xs">Search</span>
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* PDF Display Area */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Selection Tooltip */}
+          <PositionedTooltip
+            ref={selectionTooltipRef}
+            show={showSelectionTooltip}
+            x={tooltipPosition.x}
+            y={tooltipPosition.y - 36}
+            className="z-50"
+          >
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 py-0 text-xs"
+                onClick={handleExplainText}
+              >
+                <MessageSquare className="h-3 w-3 mr-1" />
+                Explain
+              </Button>
+            </div>
+          </PositionedTooltip>
+          
+          {/* PDF Content */}
+          <ScrollArea
+            ref={pdfContainerRef}
+            className="h-full w-full"
+            style={{ overflowY: 'auto' }}
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full w-full">
+                <div className="text-center">
+                  <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-500">Loading PDF...</p>
+                </div>
+              </div>
+            ) : loadError ? (
+              <div className="flex flex-col items-center justify-center h-full w-full p-4">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md">
+                  <div className="flex items-center mb-2">
+                    <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                    <h3 className="font-medium text-red-800">Error Loading PDF</h3>
+                  </div>
+                  <p className="text-sm text-red-700 mb-3">{loadError}</p>
+                  <Button 
+                    onClick={handleRetryLoad} 
+                    variant="outline"
+                    disabled={isRetrying}
+                    className="w-full flex items-center justify-center"
+                  >
+                    {isRetrying ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2"></div>
+                        Retrying...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Retry Loading
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Document
+                file={pdfData}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={(error) => {
+                  console.error("Error loading PDF document:", error);
+                  setLoadError("Failed to load the PDF. The document may be corrupted or in an unsupported format.");
+                }}
+                loading={
+                  <div className="flex justify-center items-center h-40">
+                    <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                  </div>
+                }
+                error={
+                  <div className="text-center p-4">
+                    <p className="text-red-500">Failed to load PDF document.</p>
+                  </div>
+                }
+                className="flex flex-col items-center"
+                {...documentOptions}
+              >
+                {Array.from(new Array(numPages), (_, index) => (
+                  <div
+                    key={`page_${index + 1}`}
+                    className="mb-4 shadow-md"
+                    ref={setPageRef(index)}
+                  >
+                    <Page
+                      pageNumber={index + 1}
+                      width={getOptimalPageWidth()}
+                      scale={scale}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      onRenderSuccess={onPageRenderSuccess}
+                      loading={
+                        <div className="border border-gray-200 bg-gray-50 flex justify-center items-center" 
+                             style={{ height: pageHeight ? pageHeight * scale : 600 }}>
+                          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                        </div>
+                      }
+                    />
+                  </div>
+                ))}
+              </Document>
+            )}
+            {/* Add search navigation buttons when there are search results */}
+            {searchResults.length > 0 && (
+              <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 bg-white p-2 rounded-lg shadow-lg">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => navigateSearch('prev')}
+                >
+                  Previous
+                </Button>
+                <span className="py-1 px-2 text-sm">
+                  {currentSearchIndex + 1} of {searchResults.length}
+                </span>
+                <Button 
+                  size="sm"
+                  variant="outline" 
+                  onClick={() => navigateSearch('next')}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
