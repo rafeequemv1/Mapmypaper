@@ -5,11 +5,10 @@ import * as pdfjs from 'pdfjs-dist';
 function setupPdfWorker() {
   // Only set the worker once
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    // Using a regular import to avoid top-level await
-    // This will be handled by the bundler appropriately
-    import('pdfjs-dist/build/pdf.worker.entry').then(worker => {
-      pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-    });
+    // Use the CDN worker that matches our installed version
+    const pdfJsVersion = pdfjs.version;
+    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
+    console.log(`PDF.js worker set to version: ${pdfJsVersion}`);
   }
 }
 
