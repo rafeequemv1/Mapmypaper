@@ -1,6 +1,25 @@
+
 import { callGeminiAPI } from "@/utils/geminiApiUtils";
 import PdfToText from "react-pdftotext";
-import { storePdfData, getPdfData, isMindMapReady, getCurrentPdf, setCurrentPdf, getAllPdfs, deletePdfData } from "@/utils/pdfStorage";
+import { storePdfData, getPdfData, isMindMapReady, setCurrentPdf, clearPdfData } from "@/utils/pdfStorage";
+
+// Helper to get current PDF data
+async function getCurrentPdfData(): Promise<string | null> {
+  try {
+    // First, check sessionStorage for the current PDF key
+    const currentPdfKey = sessionStorage.getItem('currentPdfKey');
+    
+    if (!currentPdfKey) {
+      return null;
+    }
+    
+    // Get the PDF data using the key
+    return await getPdfData(currentPdfKey);
+  } catch (error) {
+    console.error("Error getting current PDF data:", error);
+    throw new Error("Could not get current PDF data: " + (error as Error).message);
+  }
+}
 
 // Modified function to generate structured summary based on document type detection
 export async function generateStructuredSummary(): Promise<any> {
@@ -116,7 +135,9 @@ async function extractTextFromPDF(pdfDataUrl: string): Promise<string> {
     const uint8Array = new Uint8Array(buffer);
     
     // Use react-pdftotext to extract text
-    const extractedText = await PdfToText(uint8Array);
+    // Convert Uint8Array to Blob to make it compatible
+    const blob = new Blob([uint8Array], { type: 'application/pdf' });
+    const extractedText = await PdfToText(blob);
     
     if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
       throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
@@ -152,6 +173,90 @@ function parseJSONResponse(response: string): any {
       };
     }
   }
+}
+
+// Add the missing functions for FlowchartModal.tsx
+export async function generateFlowchartFromPdf(): Promise<string> {
+  try {
+    const currentPdfData = await getCurrentPdfData();
+    if (!currentPdfData) {
+      throw new Error("No PDF found");
+    }
+
+    // Extract text from PDF
+    const pdfText = await extractTextFromPDF(currentPdfData);
+    
+    // Create prompt for flowchart generation
+    const flowchartPrompt = `
+    Create a flowchart diagram in Mermaid syntax that represents the structure and main points of this document.
+    Use the flowchart LR (left to right) format.
+    Focus on the key sections, methodologies, and conclusions.
+    Keep it clear and simple with not more than 10 nodes.
+    Only output the raw Mermaid syntax with no explanations.
+    
+    Here's the document text: ${pdfText.slice(0, 8000)}
+    `;
+    
+    // Generate the flowchart
+    const flowchartCode = await callGeminiAPI(flowchartPrompt);
+    
+    // Clean the response to ensure it only contains valid Mermaid syntax
+    const cleanedCode = cleanMermaidSyntax(flowchartCode, 'flowchart');
+    
+    return cleanedCode;
+  } catch (error) {
+    console.error("Error generating flowchart:", error);
+    throw new Error("Could not generate flowchart: " + (error as Error).message);
+  }
+}
+
+export async function generateMindmapFromPdf(): Promise<string> {
+  try {
+    const currentPdfData = await getCurrentPdfData();
+    if (!currentPdfData) {
+      throw new Error("No PDF found");
+    }
+
+    // Extract text from PDF
+    const pdfText = await extractTextFromPDF(currentPdfData);
+    
+    // Create prompt for mindmap generation
+    const mindmapPrompt = `
+    Create a mind map in Mermaid syntax that represents the main concepts and their relationships in this document.
+    Use the mindmap format.
+    Focus on hierarchical organization of ideas with a clear central topic.
+    Keep it clear with not more than 3 levels of depth.
+    Only output the raw Mermaid syntax with no explanations.
+    
+    Here's the document text: ${pdfText.slice(0, 8000)}
+    `;
+    
+    // Generate the mindmap
+    const mindmapCode = await callGeminiAPI(mindmapPrompt);
+    
+    // Clean the response to ensure it only contains valid Mermaid syntax
+    const cleanedCode = cleanMermaidSyntax(mindmapCode, 'mindmap');
+    
+    return cleanedCode;
+  } catch (error) {
+    console.error("Error generating mindmap:", error);
+    throw new Error("Could not generate mindmap: " + (error as Error).message);
+  }
+}
+
+// Helper function to clean Mermaid syntax
+function cleanMermaidSyntax(code: string, type: 'flowchart' | 'mindmap'): string {
+  // Remove any markdown code block markers
+  let cleanedCode = code.replace(/```(?:mermaid|)\n?|\n?```/g, '').trim();
+  
+  // Ensure the code starts with the correct diagram type
+  if (type === 'flowchart' && !cleanedCode.startsWith('flowchart')) {
+    cleanedCode = 'flowchart LR\n' + cleanedCode;
+  } else if (type === 'mindmap' && !cleanedCode.startsWith('mindmap')) {
+    cleanedCode = 'mindmap\n' + cleanedCode;
+  }
+  
+  return cleanedCode;
 }
 
 export async function generateMindMapFromText(text: string): Promise<any> {
@@ -199,12 +304,17 @@ export async function chatWithGeminiAboutPdf(prompt: string, useAllPdfs: boolean
     
     if (useAllPdfs) {
       // Fetch all PDFs and combine their text content
-      const allPdfs = await getAllPdfs();
-      if (!allPdfs || allPdfs.length === 0) {
+      // Get all PDF keys from sessionStorage
+      const pdfKeys = Object.keys(sessionStorage)
+        .filter(key => key.startsWith("pdfMeta_"))
+        .map(key => key.replace("pdfMeta_", ""));
+      
+      if (pdfKeys.length === 0) {
         throw new Error("No PDFs found");
       }
       
-      for (const pdfKey in allPdfs) {
+      for (const pdfKey of pdfKeys) {
+        // Get PDF data for each key
         const pdfData = await getPdfData(pdfKey);
         if (pdfData) {
           const extractedText = await extractTextFromPDF(pdfData);
