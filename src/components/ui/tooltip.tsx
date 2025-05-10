@@ -35,7 +35,7 @@ const PositionedTooltip = React.forwardRef<
     x: number;
     y: number;
   }
->(({ className, show, x, y, children, ...props }, ref) => {
+>(({ className, show, x, y, ...props }, ref) => {
   if (!show) return null;
   
   return (
@@ -52,9 +52,7 @@ const PositionedTooltip = React.forwardRef<
         pointerEvents: show ? 'auto' : 'none',
       }}
       {...props}
-    >
-      {children}
-    </div>
+    />
   );
 });
 PositionedTooltip.displayName = "PositionedTooltip";

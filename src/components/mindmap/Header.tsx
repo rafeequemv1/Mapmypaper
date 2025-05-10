@@ -1,8 +1,7 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
-import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON, downloadMindMapAsPDF } from "@/lib/export-utils";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -26,25 +25,27 @@ const Header = ({
   // Define export menu handlers
   const handleExportSVG = () => {
     if (mindMap) {
-      downloadMindMapAsSVG(mindMap);
+      mindMap.exportSvg();
     }
   };
 
   const handleExportPNG = () => {
     if (mindMap) {
-      downloadMindMapAsPNG(mindMap);
+      mindMap.exportPng();
     }
   };
 
   const handleExportJSON = () => {
     if (mindMap) {
-      downloadMindMapAsJSON(mindMap);
-    }
-  };
-  
-  const handleExportPDF = () => {
-    if (mindMap) {
-      downloadMindMapAsPDF(mindMap);
+      const data = mindMap.getData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mindmap.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   };
 
@@ -61,7 +62,6 @@ const Header = ({
         onExportSVG={handleExportSVG}
         onExportPNG={handleExportPNG}
         onExportJSON={handleExportJSON}
-        onExportPDF={handleExportPDF}
       />
     </>
   );

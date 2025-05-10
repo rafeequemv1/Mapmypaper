@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RefreshCw, AlertCircle } from "lucide-react";
+import { Loader2, Download, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateFlowchartFromPdf, generateMindmapFromPdf } from "@/services/geminiService";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
