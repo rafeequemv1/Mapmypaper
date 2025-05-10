@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -172,6 +173,7 @@ const PdfUpload = () => {
 
     setIsProcessing(true);
     setExtractionError(null);
+    setRetryAttempt(0);
 
     toast({
       title: "Processing PDF",
@@ -184,7 +186,7 @@ const PdfUpload = () => {
 
   async function processAndGenerateMindMap(selectedFile: File, pdfKey: string) {
     try {
-      // Read the PDF as DataURL for viewing
+      // Read the PDF as DataURL for viewing (same as before)
       const reader = new FileReader();
 
       const pdfDataPromise = new Promise<string>((resolve, reject) => {
@@ -215,37 +217,49 @@ const PdfUpload = () => {
         throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
       }
 
-      // Process via Gemini API with enhanced error handling
+      // Process via Gemini API
       try {
-        toast({
-          title: "Generating Mind Map",
-          description: "This may take a moment. The system will automatically retry if rate limits are encountered.",
-        });
-        
         const mindMapData = await generateMindMapFromText(extractedText);
 
         // Store generated mind map data in sessionStorage under dedicated key
-        sessionStorage.setItem(`mindMapData_${pdfKey}`, JSON.stringify(mindMapData));
+        sessionStorage.setItem(`${mindMapKeyPrefix}${pdfKey}`, JSON.stringify(mindMapData));
 
         toast({
           title: "Success",
           description: "Mind map generated successfully!",
         });
-        // Pass pdf key to mindmap page
+        // Pass pdf key to mindmap page so that it knows which PDF/mindmap to show.
         navigate("/mindmap", { state: { pdfKey } });
       } catch (error: any) {
-        console.error("Error from Gemini API:", error);
-        
-        // Show appropriate error message
-        if (error.message.includes("rate limit")) {
-          toast({
-            title: "API Rate Limit Reached",
-            description: error.message,
-            variant: "warning",
-            duration: 10000,
-          });
+        // API rate limit/retry logic
+        if (
+          error instanceof Error &&
+          (error.message.includes("quota") ||
+            error.message.includes("429") ||
+            error.message.includes("rate limit"))
+        ) {
+          if (retryAttempt < maxRetries) {
+            const nextRetry = retryAttempt + 1;
+            setRetryAttempt(nextRetry);
+
+            toast({
+              title: `API Rate Limit Exceeded (Attempt ${nextRetry}/${maxRetries})`,
+              description: `Retrying in ${retryDelay / 1000} seconds...`,
+              variant: "warning",
+              duration: retryDelay,
+            });
+
+            setTimeout(() => {
+              processAndGenerateMindMap(selectedFile, pdfKey);
+            }, retryDelay);
+            return;
+          } else {
+            throw new Error(
+              "Gemini API rate limit exceeded. Please wait a few minutes and try again. This can happen due to free tier limitations (15 requests per minute)."
+            );
+          }
         } else {
-          throw error; // Re-throw other errors
+          throw error;
         }
       }
     } catch (error: any) {
@@ -256,8 +270,11 @@ const PdfUpload = () => {
         description: error instanceof Error ? error.message : "Failed to process PDF",
         variant: "destructive",
       });
-    } finally {
       setIsProcessing(false);
+    } finally {
+      if (retryAttempt === 0 || retryAttempt >= maxRetries) {
+        setIsProcessing(false);
+      }
     }
   }
 
