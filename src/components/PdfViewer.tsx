@@ -1,9 +1,8 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
@@ -22,6 +21,8 @@ interface PdfViewerProps {
   onImageCaptured?: (imageData: string) => void;
   renderTooltipContent?: () => React.ReactNode;
   highlightByDefault?: boolean;
+  isSnapshotMode?: boolean; // Add the isSnapshotMode prop
+  onExitSnapshotMode?: () => void; // Add handler to exit snapshot mode
 }
 
 interface PdfViewerHandle {
@@ -29,7 +30,15 @@ interface PdfViewerHandle {
 }
 
 const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ onTextSelected, onPdfLoaded, onImageCaptured, renderTooltipContent, highlightByDefault = false }, ref) => {
+  ({ 
+    onTextSelected, 
+    onPdfLoaded, 
+    onImageCaptured, 
+    renderTooltipContent, 
+    highlightByDefault = false,
+    isSnapshotMode = false, // Default to false 
+    onExitSnapshotMode = () => {} // Default noop function
+  }, ref) => {
     // Original PdfViewer component implementation with modifications
     const [numPages, setNumPages] = useState<number>(0);
     const [pageHeight, setPageHeight] = useState<number>(0);
@@ -58,7 +67,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const tooltipTextRef = useRef<string>("");
     
     // New snapshot mode state
-    const [isSnapshotMode, setIsSnapshotMode] = useState(false);
+    const [isSnapshotModeInternal, setIsSnapshotModeInternal] = useState(isSnapshotMode);
     const selectionRectRef = useRef<ReturnType<typeof createSelectionRect> | null>(null);
 
     // Add a state to track whether we're currently processing an image capture
@@ -206,9 +215,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Listen for capture complete events to update UI
     useEffect(() => {
-      const handleCaptureDone = (e: Event) => {
-        const customEvent = e as CustomEvent;
-        if (selectionRectRef.current && customEvent.detail?.success) {
+      const handleCaptureDone = (e: CustomEvent) => {
+        if (selectionRectRef.current && e.detail?.success) {
           // Update the selection rectangle UI to show completion
           selectionRectRef.current.captureComplete();
           
@@ -217,7 +225,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             if (selectionRectRef.current) {
               // Don't cancel selection yet - let the success UI remain visible
               // Instead we'll just exit snapshot mode
-              setIsSnapshotMode(false);
+              setIsSnapshotModeInternal(false);
               setIsProcessingCapture(false);
             }
           }, 1000);
@@ -231,18 +239,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
-    // Enable snapshot mode function
-    const enableSnapshotMode = () => {
-      setIsSnapshotMode(true);
-      
-      // Show toast to inform user
-      toast({
-        title: "Snapshot Mode Enabled",
-        description: "Draw a rectangle around the area you want to capture.",
-      });
-    };
-
-    // Updated effect for snapshot mode with capture tooltip
+    // Updated effect for snapshot mode with capture tooltip - modified to prevent duplicate events
     useEffect(() => {
       if (!pdfContainerRef.current || !viewportRef.current) return;
       
@@ -252,7 +249,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         selectionRectRef.current = null;
       }
       
-      if (isSnapshotMode) {
+      if (isSnapshotModeInternal) {
         // Disable text selection when entering snapshot mode
         toggleTextSelection(false);
         
@@ -263,33 +260,33 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const viewport = viewportRef.current;
         
         const handleMouseDown = (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current) return;
+          if (!isSnapshotModeInternal || !selectionRectRef.current) return;
           selectionRectRef.current.startSelection(e.clientX, e.clientY);
         };
         
         const handleMouseMove = (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current) return;
+          if (!isSnapshotModeInternal || !selectionRectRef.current) return;
           selectionRectRef.current.moveSelection(e.clientX, e.clientY);
         };
         
         const handleMouseUp = (e: MouseEvent) => {
-          if (!isSnapshotMode || !selectionRectRef.current) return;
+          if (!isSnapshotModeInternal || !selectionRectRef.current) return;
           selectionRectRef.current.endSelection(e.clientX, e.clientY);
         };
         
         const handleKeyDown = (e: KeyboardEvent) => {
-          if (e.key === "Escape" && isSnapshotMode) {
+          if (e.key === "Escape" && isSnapshotModeInternal) {
             // Cancel selection on Escape key
             if (selectionRectRef.current) {
               selectionRectRef.current.cancelSelection();
             }
-            setIsSnapshotMode(false);
+            setIsSnapshotModeInternal(false);
             // Re-enable text selection when exiting snapshot mode
             toggleTextSelection(true);
           }
         };
         
-        // Add new handler for the captureArea custom event
+        // Add new handler for the captureArea custom event with safeguards against duplicate events
         const handleCaptureArea = async (e: Event) => {
           const customEvent = e as CustomEvent;
           if (!customEvent.detail?.rect || !pdfContainerRef.current || isProcessingCapture) return;
@@ -325,7 +322,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               selectionRectRef.current.setCapturing(false);
               selectionRectRef.current.cancelSelection();
             }
-            setIsSnapshotMode(false);
+            setIsSnapshotModeInternal(false);
             // Re-enable text selection when capture fails
             toggleTextSelection(true);
             
@@ -334,6 +331,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               setIsProcessingCapture(false);
             }, 500);
           }
+          
+          // Note: We DON'T reset here - we wait for the captureDone event
+          // which is dispatched from the handler in PanelStructure
         };
         
         // Add event listeners
@@ -366,7 +366,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         // Re-enable text selection when exiting snapshot mode
         toggleTextSelection(true);
       }
-    }, [isSnapshotMode, toast, onImageCaptured, isProcessingCapture]);
+    }, [isSnapshotModeInternal, toast, onImageCaptured, isProcessingCapture]);
 
     const handleExplainText = () => {
       if (selectedText && onTextSelected) {
@@ -633,6 +633,19 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return containerWidth - 16; // Just a small margin for aesthetics
     };
 
+    // Update isSnapshotMode state when prop changes
+    useEffect(() => {
+      setIsSnapshotModeInternal(isSnapshotMode);
+    }, [isSnapshotMode]);
+
+    // Modified function to handle exiting snapshot mode
+    const cancelSnapshot = () => {
+      setIsSnapshotModeInternal(false);
+      onExitSnapshotMode(); // Call the parent handler
+      // Re-enable text selection when exiting snapshot mode
+      toggleTextSelection(true);
+    };
+
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
@@ -668,16 +681,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               title="Reset Zoom"
             >
               <RotateCw className="h-3 w-3" />
-            </Button>
-            {/* Add Camera Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-black p-0 ml-2" 
-              onClick={() => enableSnapshotMode()}
-              title="Take Snapshot"
-            >
-              <Camera className="h-3 w-3" />
             </Button>
           </div>
           
@@ -762,7 +765,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               className="flex flex-col items-center py-4 relative"
             >
               {/* Snapshot mode indicator */}
-              {isSnapshotMode && (
+              {isSnapshotModeInternal && (
                 <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
                   <span>{isProcessingCapture ? "Processing capture..." : "Draw to capture area"}</span>
                   {!isProcessingCapture && (
@@ -770,7 +773,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                       variant="ghost" 
                       size="sm" 
                       className="ml-2 bg-blue-600 hover:bg-blue-700 p-1 h-6" 
-                      onClick={() => setIsSnapshotMode(false)}
+                      onClick={cancelSnapshot}
                     >
                       Cancel
                     </Button>
@@ -876,6 +879,14 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 <p className="font-bold">Screenshot Error</p>
                 <p className="text-sm">{captureError}</p>
               </div>
+              <button 
+                onClick={() => setCaptureError(null)} 
+                className="ml-auto text-red-700 hover:text-red-900"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           </div>
         )}

@@ -21,9 +21,7 @@ const MindMap = () => {
   const [mindMapInstance, setMindMapInstance] = useState<MindElixirInstance | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false); // State to track capture status
-  
-  // Add new state for snapshot mode
-  const [isSnapshotMode, setIsSnapshotMode] = useState(false);
+  const [isSnapshotMode, setIsSnapshotMode] = useState(false); // New state for snapshot mode
 
   // Preload PDF cache when component mounts
   useEffect(() => {
@@ -147,6 +145,33 @@ const MindMap = () => {
     };
   }, []);
 
+  // New effect to listen for snapshot mode enable requests
+  useEffect(() => {
+    const handleEnableSnapshotMode = () => {
+      setIsSnapshotMode(true);
+      
+      if (!showPdf) {
+        // If PDF panel is not visible, show it first
+        setShowPdf(true);
+        toast({
+          title: "PDF Panel Opened",
+          description: "The PDF panel is now open. Click and drag to capture an area.",
+        });
+      } else {
+        toast({
+          title: "Screenshot Mode Enabled",
+          description: "Click and drag to capture an area of the PDF.",
+        });
+      }
+    };
+    
+    window.addEventListener('enableSnapshotMode', handleEnableSnapshotMode);
+    
+    return () => {
+      window.removeEventListener('enableSnapshotMode', handleEnableSnapshotMode);
+    };
+  }, [showPdf, toast]);
+
   // Listen for text selection events that should activate chat
   useEffect(() => {
     const handleTextSelected = (e: CustomEvent) => {
@@ -218,18 +243,6 @@ const MindMap = () => {
     };
   }, []);
 
-  // Add snapshot mode handler
-  const enableSnapshotMode = useCallback(() => {
-    // Dispatch event to trigger snapshot mode in PdfViewer
-    window.dispatchEvent(new CustomEvent('enableSnapshotMode'));
-    
-    setIsSnapshotMode(true);
-    toast({
-      title: "Snapshot Mode Activated",
-      description: "Draw a rectangle in the PDF to capture an area.",
-    });
-  }, [toast]);
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header with left sidebar icons */}
@@ -241,7 +254,6 @@ const MindMap = () => {
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
-        enableSnapshotMode={enableSnapshotMode} // Pass the new handler
       />
       <PanelStructure
         showPdf={showPdf}
@@ -252,7 +264,7 @@ const MindMap = () => {
         explainText={explainText}
         onExplainText={handleExplainText}
         isSnapshotMode={isSnapshotMode} // Pass snapshot mode state
-        setIsSnapshotMode={setIsSnapshotMode} // Pass setter
+        setIsSnapshotMode={setIsSnapshotMode} // Pass setter for snapshot mode
       />
       
       {/* Modal for Summary */}

@@ -55,6 +55,81 @@ export const downloadMindMapAsJSON = (instance: MindElixirInstance, fileName: st
 };
 
 /**
+ * Downloads the mind map as PDF document
+ * @param instance Mind Elixir instance
+ * @param fileName Name of the file without extension
+ */
+export const downloadMindMapAsPDF = async (instance: MindElixirInstance, fileName: string = 'mindmap'): Promise<void> => {
+  try {
+    // First get the PNG data
+    const pngBlob = await instance.exportPng();
+    if (!pngBlob) throw new Error("Failed to export PNG for PDF creation");
+    
+    // Create a URL for the PNG
+    const pngUrl = URL.createObjectURL(pngBlob);
+    
+    // Dynamically import jsPDF to ensure it's available
+    const { jsPDF } = await import('jspdf');
+    
+    // Create a new PDF document
+    const pdf = new jsPDF({
+      orientation: 'landscape',  // Mindmaps are often wider than tall
+      unit: 'mm',
+      format: 'a4'
+    });
+    
+    // Create an Image object
+    const img = new Image();
+    
+    // Wait for the image to load
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Failed to load mind map image for PDF"));
+      img.src = pngUrl;
+    });
+    
+    // Calculate dimensions to fit the image within the PDF
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    // Calculate scaling factor to fit the image
+    const imgRatio = img.width / img.height;
+    const pageRatio = pageWidth / pageHeight;
+    
+    let imgWidth = pageWidth - 20; // 10mm margins on each side
+    let imgHeight = imgWidth / imgRatio;
+    
+    if (imgHeight > pageHeight - 20) { // If image is too tall
+      imgHeight = pageHeight - 20;
+      imgWidth = imgHeight * imgRatio;
+    }
+    
+    // Center the image on the page
+    const x = (pageWidth - imgWidth) / 2;
+    const y = (pageHeight - imgHeight) / 2;
+    
+    // Add the image to the PDF
+    pdf.addImage(img, 'PNG', x, y, imgWidth, imgHeight);
+    
+    // Add title
+    pdf.setFontSize(12);
+    const title = fileName || "Mind Map";
+    const titleWidth = pdf.getStringUnitWidth(title) * 12 / pdf.internal.scaleFactor;
+    pdf.text(title, (pageWidth - titleWidth) / 2, 10);
+    
+    // Save the PDF
+    pdf.save(`${fileName}.pdf`);
+    
+    // Clean up
+    URL.revokeObjectURL(pngUrl);
+    
+  } catch (error) {
+    console.error("Error exporting as PDF:", error);
+    throw error;
+  }
+};
+
+/**
  * Downloads an HTML element as PNG image using html2canvas
  * @param element Reference to the HTML element to download
  * @param fileName Name of the file without extension

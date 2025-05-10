@@ -18,8 +18,8 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
-  isSnapshotMode?: boolean; // Added prop
-  setIsSnapshotMode?: (mode: boolean) => void; // Added prop
+  isSnapshotMode?: boolean; // Add new prop
+  setIsSnapshotMode?: (isActive: boolean) => void; // Add new prop
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -32,8 +32,8 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
-  isSnapshotMode,
-  setIsSnapshotMode,
+  isSnapshotMode = false, // Default to false
+  setIsSnapshotMode = () => {}, // Default noop function
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -381,23 +381,14 @@ const PanelStructure = ({
     }
   };
 
-  // Listen for snapshot mode activation
   useEffect(() => {
-    const handleEnableSnapshotMode = () => {
-      // If PDF is not visible, show it
+    if (isSnapshotMode) {
+      // When snapshot mode is enabled, ensure PDF is visible
       if (!showPdf) {
         togglePdf();
       }
-      
-      // We don't need to set isSnapshotMode here as it's handled in the PdfViewer component
-    };
-    
-    window.addEventListener('enableSnapshotMode', handleEnableSnapshotMode);
-    
-    return () => {
-      window.removeEventListener('enableSnapshotMode', handleEnableSnapshotMode);
-    };
-  }, [showPdf, togglePdf]);
+    }
+  }, [isSnapshotMode, showPdf, togglePdf]);
 
   if (!isRendered) {
     return <div className="h-full w-full flex justify-center items-center">
@@ -434,6 +425,8 @@ const PanelStructure = ({
                 onTextSelected={onExplainText}
                 onImageCaptured={handleImageCaptured}
                 highlightByDefault={true} // Enable text highlighting by default
+                isSnapshotMode={isSnapshotMode} // Pass snapshot mode
+                onExitSnapshotMode={() => setIsSnapshotMode(false)} // Allow exiting
               />
             </TooltipProvider>
           </div>
