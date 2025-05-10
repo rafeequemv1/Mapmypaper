@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -885,4 +886,16 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             ) : (
               <div className="text-center p-8">
                 <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
-                <
+                <p className="text-gray-500">Please upload a PDF document to view it here.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
