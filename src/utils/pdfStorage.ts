@@ -59,7 +59,7 @@ const openDatabase = (): Promise<IDBDatabase> => {
   });
 };
 
-// Preload all PDF keys into cache on startup with improved reliability
+// Preload all PDF keys into cache on startup
 export const preloadPdfCache = async (): Promise<void> => {
   try {
     const db = await openDatabase();
@@ -75,28 +75,14 @@ export const preloadPdfCache = async (): Promise<void> => {
         // Filter out special keys like CURRENT_PDF_KEY
         const pdfKeys = keys.filter(k => k !== CURRENT_PDF_KEY);
         
-        // Mark as available but don't load the full data yet
+        // Don't load the actual PDF data yet, just mark it as available
         pdfKeys.forEach(key => {
           if (!key.startsWith('mindMapReady_')) {
             pdfDataCache.set(key, 'pending');
           }
         });
         
-        // Also try to preload the current PDF
-        const currentKeyRequest = store.get(CURRENT_PDF_KEY);
-        currentKeyRequest.onsuccess = () => {
-          const currentKey = currentKeyRequest.result;
-          if (currentKey && typeof currentKey === 'string') {
-            // Store the current key in cache
-            pdfDataCache.set(CURRENT_PDF_KEY, currentKey);
-          }
-          resolve();
-        };
-        
-        currentKeyRequest.onerror = () => {
-          console.warn("Could not preload current PDF key");
-          resolve();
-        };
+        resolve();
       };
       
       request.onerror = () => {
@@ -116,16 +102,11 @@ export const preloadPdfCache = async (): Promise<void> => {
 // Call preload on module init
 preloadPdfCache();
 
-// Store PDF data in IndexedDB and cache with improved error handling
+// Store PDF data in IndexedDB and cache
 export const storePdfData = async (key: string, pdfData: string): Promise<void> => {
   try {
     // Store in cache immediately for instant access
     pdfDataCache.set(key, pdfData);
-    
-    // Reset any global PDF load errors
-    if (window) {
-      window.__PDF_LOAD_ERROR__ = null;
-    }
     
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
@@ -157,11 +138,6 @@ export const storePdfData = async (key: string, pdfData: string): Promise<void> 
 // Retrieve PDF data from cache first, then IndexedDB if not cached
 export const getPdfData = async (key: string): Promise<string | null> => {
   try {
-    // Reset any previous load errors
-    if (window) {
-      window.__PDF_LOAD_ERROR__ = null;
-    }
-    
     // Check cache first for instant retrieval
     if (pdfDataCache.has(key)) {
       const cachedData = pdfDataCache.get(key);
@@ -187,28 +163,15 @@ export const getPdfData = async (key: string): Promise<string | null> => {
         // Store in cache for future fast access
         if (pdfData) {
           pdfDataCache.set(key, pdfData);
-          console.log(`PDF data retrieved from IndexedDB for key: ${key}`);
-          resolve(pdfData || null);
-        } else {
-          // Set error if PDF not found
-          if (window) {
-            window.__PDF_LOAD_ERROR__ = `PDF data not found for key: ${key}`;
-          }
-          console.error(`PDF data not found for key: ${key}`);
-          resolve(null);
         }
+        
+        console.log(`PDF data retrieved from IndexedDB for key: ${key}`);
+        resolve(pdfData || null);
       };
       
       request.onerror = () => {
-        const errorMsg = `Failed to get PDF data: ${request.error?.message || 'Unknown error'}`;
         console.error("Error retrieving PDF data:", request.error);
-        
-        // Set global error for UI to display
-        if (window) {
-          window.__PDF_LOAD_ERROR__ = errorMsg;
-        }
-        
-        reject(new Error(errorMsg));
+        reject(new Error(`Failed to get PDF data: ${request.error?.message || 'Unknown error'}`));
       };
       
       transaction.oncomplete = () => {
@@ -217,12 +180,6 @@ export const getPdfData = async (key: string): Promise<string | null> => {
     });
   } catch (error) {
     console.error("Error in getPdfData:", error);
-    
-    // Set global error for UI to display
-    if (window) {
-      window.__PDF_LOAD_ERROR__ = `Error loading PDF: ${error instanceof Error ? error.message : 'Unknown error'}`;
-    }
-    
     throw error;
   }
 };

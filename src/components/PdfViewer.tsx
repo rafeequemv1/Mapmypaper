@@ -1,9 +1,8 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera, RefreshCw, AlertCircle } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
@@ -13,62 +12,15 @@ import { createSelectionRect, captureElementArea, toggleTextSelection } from "@/
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Define the CDN URLs array for PDF.js worker
-const cdnUrls = [
-  `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`,
-  `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`,
-  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
-];
+// Set up the worker URL
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-// Set up the PDF.js worker with proper URL - ENHANCED with multiple fallbacks and error handling
-function setupPdfWorker() {
-  // Don't try to set up again if already confirmed working
-  if (window.__PDF_WORKER_LOADED__) {
-    return true;
-  }
-  
-  if (!window.__PDF_WORKER_LOAD_ATTEMPTS__) {
-    window.__PDF_WORKER_LOAD_ATTEMPTS__ = 0;
-  }
-  window.__PDF_WORKER_LOAD_ATTEMPTS__++;
-  
-  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    const pdfJsVersion = pdfjs.version;
-    
-    const cdnIndex = Math.min(window.__PDF_WORKER_LOAD_ATTEMPTS__ - 1, cdnUrls.length - 1);
-    const workerSrc = cdnUrls[cdnIndex];
-    
-    // Set the worker source
-    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
-    console.log(`PdfViewer worker attempt ${window.__PDF_WORKER_LOAD_ATTEMPTS__} set to: ${workerSrc}`);
-    
-    // Create a test script tag to verify the CDN is accessible
-    const testScript = document.createElement('script');
-    testScript.src = workerSrc;
-    testScript.onload = () => {
-      console.log(`PDF worker successfully loaded from ${workerSrc}`);
-      window.__PDF_WORKER_LOADED__ = true;
-    };
-    testScript.onerror = () => {
-      console.error(`Failed to load PDF worker from ${workerSrc}`);
-      // If we have more CDNs to try, we'll try them on next render
-    };
-    document.head.appendChild(testScript);
-  }
-  
-  return window.__PDF_WORKER_LOAD_ATTEMPTS__ <= cdnUrls.length;
-}
-
-// Initialize worker immediately
-setupPdfWorker();
-
-// Rest of interface definitions
 interface PdfViewerProps {
   onTextSelected?: (text: string) => void;
   onPdfLoaded?: () => void;
   onImageCaptured?: (imageData: string) => void;
   renderTooltipContent?: () => React.ReactNode;
-  highlightByDefault?: boolean;
+  highlightByDefault?: boolean; // Added the missing prop
 }
 
 interface PdfViewerHandle {
@@ -117,62 +69,28 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Add a ref for the search input to focus when search is opened
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Add these new states to handle error recovery
-    const [retryCount, setRetryCount] = useState<number>(0);
-    const [isRetrying, setIsRetrying] = useState<boolean>(false);
-    const [workerError, setWorkerError] = useState<boolean>(false);
-    
-    // Enhanced loadPdfData function with better memory and error handling
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
-        // Clear any previous load errors
-        setLoadError(null);
-        setWorkerError(false);
-        
-        // Ensure PDF.js worker is properly set before loading
-        const workerSetupOk = setupPdfWorker();
-        if (!workerSetupOk) {
-          setWorkerError(true);
-          setLoadError("PDF viewer worker could not be loaded. Trying alternative sources...");
-          toast({
-            title: "PDF Loading Warning",
-            description: "PDF viewer is having trouble loading. Trying alternative sources...",
-            variant: "warning",
-          });
-        }
-        
         const data = await getCurrentPdfData();
         
         if (data) {
-          // Clean up any potential memory leaks before setting new PDF data
-          if (pdfData) {
-            // Force garbage collection hint by removing references
-            setPdfData(null);
-            // Small timeout to allow React to process state update
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
-          
-          // Now set the new PDF data
           setPdfData(data);
           console.log("PDF data loaded successfully from IndexedDB");
         } else {
-          // Check for global error message
-          const errorMsg = window.__PDF_LOAD_ERROR__ || "No PDF found. Please upload a PDF document first.";
-          setLoadError(errorMsg);
+          setLoadError("No PDF found. Please upload a PDF document first.");
           toast({
-            title: "PDF Loading Error",
-            description: errorMsg,
+            title: "No PDF Found",
+            description: "Please upload a PDF document first.",
             variant: "destructive",
           });
         }
       } catch (error) {
         console.error("Error retrieving PDF data:", error);
-        const errorMessage = error instanceof Error ? error.message : "Could not load the PDF document.";
-        setLoadError(errorMessage);
+        setLoadError("Could not load the PDF document.");
         toast({
           title: "Error loading PDF",
-          description: errorMessage,
+          description: "Could not load the PDF document.",
           variant: "destructive",
         });
       } finally {
@@ -180,50 +98,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
-    // Improved retry loading function with memory cleanup
-    const handleRetryLoad = () => {
-      setIsRetrying(true);
-      setRetryCount(prev => prev + 1);
-      
-      // Force reload the worker and clear memory
-      window.__PDF_WORKER_LOADED__ = false;
-      
-      // Clean up memory by removing PDF data
-      setPdfData(null);
-      
-      // Clear cache and try loading again
-      if (window.caches) {
-        caches.keys().then(cacheNames => {
-          cacheNames.forEach(cacheName => {
-            caches.delete(cacheName);
-          });
-        });
-      }
-      
-      // Small delay to ensure any cleanup is complete
-      setTimeout(() => {
-        loadPdfData().finally(() => {
-          setIsRetrying(false);
-        });
-      }, 500);
-    };
-
-    // Effect to initialize PDF
     useEffect(() => {
-      setupPdfWorker();
       loadPdfData();
-    }, [retryCount]); // Add retryCount as dependency to reload when retrying
-
-    // Add effect to check if worker loaded correctly
-    useEffect(() => {
-      if (workerError) {
-        // Wait a bit and retry with a different CDN
-        const timeoutId = setTimeout(() => {
-          handleRetryLoad();
-        }, 2000);
-        return () => clearTimeout(timeoutId);
-      }
-    }, [workerError]);
+    }, []);
     
     useEffect(() => {
       const handlePdfSwitch = (event: Event) => {
@@ -252,7 +129,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, [pdfContainerRef.current]);
 
-    // Add new effect to focus search input when search is opened
+    // Add new effect to focus search input when search is toggled
     useEffect(() => {
       if (showSearch && searchInputRef.current) {
         searchInputRef.current.focus();
@@ -328,9 +205,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Listen for capture complete events to update UI
     useEffect(() => {
-      const handleCaptureDone = (e: Event) => {
-        const customEvent = e as CustomEvent;
-        if (selectionRectRef.current && customEvent.detail?.success) {
+      const handleCaptureDone = (e: CustomEvent) => {
+        if (selectionRectRef.current && e.detail?.success) {
           // Update the selection rectangle UI to show completion
           selectionRectRef.current.captureComplete();
           
@@ -445,6 +321,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               setIsProcessingCapture(false);
             }, 500);
           }
+          
+          // Note: We DON'T reset here - we wait for the captureDone event
+          // which is dispatched from the handler in PanelStructure
         };
         
         // Add event listeners
@@ -708,8 +587,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         onPdfLoaded();
       }
       setLoadError(null);
-      setWorkerError(false);
-      window.__PDF_WORKER_LOADED__ = true;
     };
 
     const onPageRenderSuccess = (page: any) => {
@@ -744,64 +621,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       const containerWidth = pdfContainerRef.current.clientWidth;
       // Use the full container width
       return containerWidth - 16; // Just a small margin for aesthetics
-    };
-
-    // Add useEffect to set worker
-    useEffect(() => {
-      // Set the PDF.js worker source if not already set
-      if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-        const pdfJsVersion = pdfjs.version;
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
-        console.log(`PdfViewer worker set to version: ${pdfJsVersion} from CDN with https`);
-      }
-    }, []);
-
-    // Additional effect to make sure worker is set and refresh if needed
-    useEffect(() => {
-      // Force PDF.js to use the CDN version of the worker
-      setupPdfWorker();
-      
-      // Create a timeout to verify the worker is loaded
-      const timeoutId = setTimeout(() => {
-        if (!pdfjs.GlobalWorkerOptions.workerSrc || 
-            document.querySelector('script[src*="pdf.worker"]')?.getAttribute('src') !== pdfjs.GlobalWorkerOptions.workerSrc) {
-          console.log("PDF worker might not be loaded correctly. Retrying...");
-          setupPdfWorker();
-        }
-      }, 1000);
-      
-      return () => clearTimeout(timeoutId);
-    }, []);
-
-    // Add memory cleanup on component unmount
-    useEffect(() => {
-      // Clear references to large objects
-      return () => {
-        setPdfData(null);
-        pagesRef.current = [];
-        
-        // Force hint to garbage collector
-        if (window.gc) {
-          try {
-            window.gc();
-          } catch (e) {
-            console.log("Manual garbage collection not available");
-          }
-        }
-      };
-    }, []);
-
-    // Enhanced document options to improve PDF loading reliability
-    const documentOptions = {
-      cMapUrl: 'https://unpkg.com/pdfjs-dist/cmaps/',
-      cMapPacked: true,
-      standardFontDataUrl: 'https://unpkg.com/pdfjs-dist/standard_fonts/',
-      disableStream: false,
-      disableAutoFetch: false,
-      isEvalSupported: true,
-      // Add memory optimization options
-      maxImageSize: 1024 * 1024 * 10, // 10MB max image size to prevent memory issues
-      pageViewport: { scale: scale } // Ensure scale is properly passed
     };
 
     return (
@@ -840,16 +659,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               <RotateCw className="h-3 w-3" />
             </Button>
-            {/* Add Camera button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 text-black p-0" 
-              onClick={() => setIsSnapshotMode(true)}
-              title="Take Screenshot"
-            >
-              <Camera className="h-3 w-3" />
-            </Button>
           </div>
           
           {/* Search Section - Modified to be toggled */}
@@ -885,9 +694,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             ) : (
               <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
                   className="h-6 flex items-center gap-0.5 text-black px-1"
                   onClick={toggleSearch}
                 >
@@ -897,141 +706,167 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             )}
           </div>
+          
+          {/* Search Navigation - Only show when search results exist */}
+          {searchResults.length > 0 && showSearch && (
+            <div className="flex items-center gap-1">
+              <span className="text-xs">
+                {currentSearchIndex + 1} of {searchResults.length}
+              </span>
+              <div className="flex gap-0.5">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-1 text-black"
+                  onClick={() => navigateSearch('prev')}
+                >
+                  ←
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-1 text-black"
+                  onClick={() => navigateSearch('next')}
+                >
+                  →
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* PDF Display Area */}
-        <div className="flex-1 relative overflow-hidden">
-          {/* Selection Tooltip */}
-          <PositionedTooltip
-            ref={selectionTooltipRef}
-            show={showSelectionTooltip}
-            x={tooltipPosition.x}
-            y={tooltipPosition.y - 36}
-            className="z-50"
-          >
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-7 py-0 text-xs"
-                onClick={handleExplainText}
-              >
-                <MessageSquare className="h-3 w-3 mr-1" />
-                Explain
-              </Button>
-            </div>
-          </PositionedTooltip>
-          
-          {/* PDF Content */}
-          <ScrollArea
-            ref={pdfContainerRef}
-            className="h-full w-full"
-            style={{ overflowY: 'auto' }}
-          >
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full w-full">
-                <div className="text-center">
-                  <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-500">Loading PDF...</p>
+        {/* PDF Content */}
+        {pdfData ? (
+          <ScrollArea className="flex-1" ref={pdfContainerRef}>
+            <div 
+              className="flex flex-col items-center py-4 relative"
+            >
+              {/* Snapshot mode indicator */}
+              {isSnapshotMode && (
+                <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
+                  <span>{isProcessingCapture ? "Processing capture..." : "Draw to capture area"}</span>
+                  {!isProcessingCapture && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="ml-2 bg-blue-600 hover:bg-blue-700 p-1 h-6" 
+                      onClick={() => setIsSnapshotMode(false)}
+                    >
+                      Cancel
+                    </Button>
+                  )}
                 </div>
-              </div>
-            ) : loadError ? (
-              <div className="flex flex-col items-center justify-center h-full w-full p-4">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md">
-                  <div className="flex items-center mb-2">
-                    <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                    <h3 className="font-medium text-red-800">Error Loading PDF</h3>
-                  </div>
-                  <p className="text-sm text-red-700 mb-3">{loadError}</p>
+              )}
+              
+              {/* NEW Selection Tooltip - positioned absolutely within the PDF container */}
+              {showSelectionTooltip && (
+                <PositionedTooltip
+                  ref={selectionTooltipRef}
+                  show={showSelectionTooltip}
+                  x={tooltipPosition.x}
+                  y={tooltipPosition.y - 40} // Offset it above the text
+                  className="transform -translate-x-1/2 shadow-lg"
+                >
                   <Button 
-                    onClick={handleRetryLoad} 
-                    variant="outline"
-                    disabled={isRetrying}
-                    className="w-full flex items-center justify-center"
+                    size="sm" 
+                    variant="ghost"
+                    className="flex items-center gap-1 text-xs p-1 h-7"
+                    onClick={handleExplainText}
                   >
-                    {isRetrying ? (
-                      <>
-                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2"></div>
-                        Retrying...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Retry Loading
-                      </>
-                    )}
+                    <MessageSquare className="h-3 w-3" />
+                    <span>Explain</span>
                   </Button>
-                </div>
-              </div>
-            ) : (
+                </PositionedTooltip>
+              )}
+              
               <Document
                 file={pdfData}
                 onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={(error) => {
-                  console.error("Error loading PDF document:", error);
-                  setLoadError("Failed to load the PDF. The document may be corrupted or in an unsupported format.");
-                }}
-                loading={
-                  <div className="flex justify-center items-center h-40">
-                    <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
-                  </div>
-                }
+                className="w-full"
+                loading={<div className="text-center py-4">Loading PDF...</div>}
                 error={
-                  <div className="text-center p-4">
-                    <p className="text-red-500">Failed to load PDF document.</p>
+                  <div className="text-center py-4 text-red-500">
+                    {loadError || "Failed to load PDF. Please try again."}
                   </div>
                 }
-                className="flex flex-col items-center"
-                {...documentOptions}
               >
                 {Array.from(new Array(numPages), (_, index) => (
                   <div
                     key={`page_${index + 1}`}
-                    className="mb-4 shadow-md"
+                    className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
                     ref={setPageRef(index)}
+                    style={{ width: 'fit-content', maxWidth: '100%' }}
+                    data-page-number={index + 1}
                   >
                     <Page
                       pageNumber={index + 1}
-                      width={getOptimalPageWidth()}
-                      scale={scale}
                       renderTextLayer={true}
-                      renderAnnotationLayer={true}
+                      renderAnnotationLayer={false}
                       onRenderSuccess={onPageRenderSuccess}
+                      scale={scale}
+                      width={getOptimalPageWidth()}
+                      className="mx-auto"
                       loading={
-                        <div className="border border-gray-200 bg-gray-50 flex justify-center items-center" 
-                             style={{ height: pageHeight ? pageHeight * scale : 600 }}>
-                          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                        <div className="flex items-center justify-center h-[600px] w-full">
+                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
                         </div>
                       }
                     />
+                    <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
+                      Page {index + 1} of {numPages}
+                    </div>
                   </div>
                 ))}
               </Document>
-            )}
-            {/* Add search navigation buttons when there are search results */}
-            {searchResults.length > 0 && (
-              <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 bg-white p-2 rounded-lg shadow-lg">
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="flex h-full items-center justify-center flex-col gap-4">
+            {isLoading ? (
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-500">Loading PDF...</p>
+              </div>
+            ) : (
+              <div className="text-center p-8">
+                <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
+                <p className="text-gray-500">Please return to the upload page and select a PDF document.</p>
                 <Button 
-                  size="sm" 
+                  onClick={() => window.location.href = '/'} 
                   variant="outline" 
-                  onClick={() => navigateSearch('prev')}
+                  className="mt-4"
                 >
-                  Previous
-                </Button>
-                <span className="py-1 px-2 text-sm">
-                  {currentSearchIndex + 1} of {searchResults.length}
-                </span>
-                <Button 
-                  size="sm"
-                  variant="outline" 
-                  onClick={() => navigateSearch('next')}
-                >
-                  Next
+                  Go to Upload Page
                 </Button>
               </div>
             )}
-          </ScrollArea>
-        </div>
+          </div>
+        )}
+        
+        {/* Display temporary message if a capture error occurs */}
+        {captureError && (
+          <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md z-50">
+            <div className="flex items-center">
+              <div className="py-1">
+                <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 10.32 10.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/>
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold">Screenshot Error</p>
+                <p className="text-sm">{captureError}</p>
+              </div>
+              <button 
+                onClick={() => setCaptureError(null)} 
+                className="ml-auto text-red-700 hover:text-red-900"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

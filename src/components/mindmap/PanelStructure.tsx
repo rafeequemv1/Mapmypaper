@@ -6,9 +6,7 @@ import ChatPanel from "@/components/mindmap/ChatPanel";
 import MobileChatSheet from "@/components/mindmap/MobileChatSheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import ImageGalleryModal from "@/components/mindmap/ImageGalleryModal";
 import { storePdfData, setCurrentPdf, getPdfData, clearPdfData, isMindMapReady, preloadPdfCache } from "@/utils/pdfStorage";
-import { extractImagesFromPdf, storeExtractedImages } from "@/utils/pdfImageExtractor";
 import PdfToText from "react-pdftotext";
 import { generateMindMapFromText } from "@/services/geminiService";
 
@@ -43,9 +41,6 @@ const PanelStructure = ({
   // Updated state for captured image with flag to prevent double processing
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [processingCapture, setProcessingCapture] = useState(false);
-  
-  // Add state for gallery modal
-  const [showGallery, setShowGallery] = useState(false);
 
   // PDF tab state (active key)
   const [activePdfKey, setActivePdfKey] = useState<string | null>(() => {
@@ -64,10 +59,7 @@ const PanelStructure = ({
     );
   }, []);
 
-  // Add a new state for PDF loading retries
-  const [pdfLoadRetries, setPdfLoadRetries] = useState(0);
-
-  // Handle active PDF change - improved error handling
+  // Handle active PDF change - optimized for instant loading
   const handleTabChange = async (key: string) => {
     try {
       // Update the active key immediately for UI response
@@ -109,11 +101,6 @@ const PanelStructure = ({
         return;
       }
       
-      // Reset any loading errors that might be stored in the window
-      if (window) {
-        window.__PDF_LOAD_ERROR__ = null;
-      }
-      
       // Only show loading if this is a newly added PDF without a generated mindmap yet
       if (!isMindMapReady(key)) {
         setIsLoadingMindMap(true);
@@ -129,9 +116,6 @@ const PanelStructure = ({
           description: "PDF and mindmap switched successfully.",
         });
       }
-
-      // Reset PDF load retries when switching PDFs
-      setPdfLoadRetries(0);
 
       // Give some time for the mindmap to load before removing loading state
       // Only needed for newly added PDFs
@@ -237,25 +221,6 @@ const PanelStructure = ({
         storePdfData(pdfKey, pdfData)
           .then(() => console.log(`PDF data stored for: ${file.name}`))
           .catch(err => console.error("Error storing PDF data:", err));
-        
-        // Extract images if enabled (check sessionStorage for the setting)
-        const shouldExtractImages = sessionStorage.getItem('extractImages') !== 'false';
-        if (shouldExtractImages) {
-          // Run image extraction in parallel with other processes
-          extractImagesFromPdf(pdfData)
-            .then(images => {
-              if (images.length > 0) {
-                storeExtractedImages(pdfKey, images);
-                toast({
-                  title: "Images Extracted",
-                  description: `Found ${images.length} images in the PDF`,
-                });
-              }
-            })
-            .catch(err => {
-              console.error("Error extracting images:", err);
-            });
-        }
         
         // Get the extracted text result
         const extractedText = await textExtractionPromise;
@@ -412,23 +377,6 @@ const PanelStructure = ({
     }
   };
 
-  // Add a function to force PDF reload
-  const handleForceReload = () => {
-    setPdfLoadRetries(prev => prev + 1);
-  };
-
-  // Listen for image gallery opening requests
-  useEffect(() => {
-    const handleOpenGallery = () => {
-      setShowGallery(true);
-    };
-    
-    window.addEventListener('openImageGallery', handleOpenGallery);
-    return () => {
-      window.removeEventListener('openImageGallery', handleOpenGallery);
-    };
-  }, []);
-
   if (!isRendered) {
     return <div className="h-full w-full flex justify-center items-center">
       <div className="flex items-center gap-2">
@@ -464,7 +412,6 @@ const PanelStructure = ({
                 onTextSelected={onExplainText}
                 onImageCaptured={handleImageCaptured}
                 highlightByDefault={true} // Enable text highlighting by default
-                key={`pdf-viewer-${activePdfKey}-${pdfLoadRetries}`} // Force remount on retry
               />
             </TooltipProvider>
           </div>
@@ -499,12 +446,6 @@ const PanelStructure = ({
           explainImage={capturedImage}
         />
       </div>
-
-      {/* Image Gallery Modal */}
-      <ImageGalleryModal 
-        open={showGallery} 
-        onOpenChange={setShowGallery} 
-      />
     </>
   );
 };

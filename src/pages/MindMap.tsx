@@ -6,7 +6,6 @@ import Header from "@/components/mindmap/Header";
 import PanelStructure from "@/components/mindmap/PanelStructure";
 import SummaryModal from "@/components/mindmap/SummaryModal";
 import FlowchartModal from "@/components/mindmap/FlowchartModal";
-import ImageGalleryModal from "@/components/mindmap/ImageGalleryModal";
 import { MindElixirInstance } from "mind-elixir";
 import { preloadPdfCache } from "@/utils/pdfStorage";
 
@@ -17,7 +16,6 @@ const MindMap = () => {
   const [explainText, setExplainText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
   const [showFlowchart, setShowFlowchart] = useState(false);
-  const [showGallery, setShowGallery] = useState(false); // Add state for gallery modal
   const location = useLocation();
   const { toast } = useToast();
   const [isMapGenerated, setIsMapGenerated] = useState(false);
@@ -226,7 +224,6 @@ const MindMap = () => {
         toggleChat={() => setShowChat(!showChat)}
         setShowSummary={setShowSummary}
         setShowFlowchart={setShowFlowchart}
-        setShowGallery={setShowGallery} // Pass the gallery state setter
         isPdfActive={showPdf}
         isChatActive={showChat}
         mindMap={mindMapInstance}
@@ -251,12 +248,6 @@ const MindMap = () => {
       <FlowchartModal
         open={showFlowchart}
         onOpenChange={setShowFlowchart}
-      />
-
-      {/* Modal for Image Gallery */}
-      <ImageGalleryModal 
-        open={showGallery}
-        onOpenChange={setShowGallery}
       />
 
       {/* Capture in progress indicator */}
