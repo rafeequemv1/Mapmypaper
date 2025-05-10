@@ -12,6 +12,8 @@ interface HeaderProps {
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
+  toggleSnapshotMode?: () => void;
+  isSnapshotModeActive?: boolean;
 }
 
 const Header = ({ 
@@ -21,7 +23,9 @@ const Header = ({
   setShowFlowchart,
   isPdfActive, 
   isChatActive, 
-  mindMap 
+  mindMap,
+  toggleSnapshotMode,
+  isSnapshotModeActive = false
 }: HeaderProps) => {
   // Define export menu handlers
   const handleExportSVG = () => {
@@ -62,6 +66,8 @@ const Header = ({
         onExportPNG={handleExportPNG}
         onExportJSON={handleExportJSON}
         onExportPDF={handleExportPDF}
+        toggleSnapshotMode={toggleSnapshotMode}
+        isSnapshotModeActive={isSnapshotModeActive}
       />
     </>
   );

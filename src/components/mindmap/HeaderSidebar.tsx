@@ -5,12 +5,14 @@ import {
   MessageSquare,
   FileText,
   Home,
-  Network
+  Network,
+  Camera
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
 import HeaderExportMenu from "./HeaderExportMenu";
 import UserMenu from "@/components/UserMenu";
+import SnapshotButton from "./SnapshotButton";
 
 interface HeaderSidebarProps {
   isPdfActive: boolean;
@@ -22,7 +24,9 @@ interface HeaderSidebarProps {
   onExportSVG: () => void;
   onExportPNG: () => void;
   onExportJSON: () => void;
-  onExportPDF: () => void; // Added this prop to match HeaderExportMenuProps
+  onExportPDF: () => void;
+  toggleSnapshotMode?: () => void;
+  isSnapshotModeActive?: boolean;
 }
 
 const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
@@ -35,7 +39,9 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   onExportSVG,
   onExportPNG,
   onExportJSON,
-  onExportPDF // Added this prop
+  onExportPDF,
+  toggleSnapshotMode,
+  isSnapshotModeActive = false
 }) => {
   const navigate = useNavigate();
   
@@ -65,6 +71,13 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
         icon={<MessageSquare className="h-4 w-4" />}
         title="Toggle Chat"
       />
+      {/* Snapshot button - only show when toggleSnapshotMode is provided */}
+      {toggleSnapshotMode && (
+        <SnapshotButton 
+          onClick={toggleSnapshotMode} 
+          active={isSnapshotModeActive}
+        />
+      )}
       <HeaderSidebarIcon
         onClick={() => setShowSummary(true)}
         icon={<FileText className="h-4 w-4" />}
@@ -79,7 +92,7 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
         onExportSVG={onExportSVG}
         onExportPNG={onExportPNG}
         onExportJSON={onExportJSON}
-        onExportPDF={onExportPDF} // Pass the onExportPDF prop
+        onExportPDF={onExportPDF}
       />
       {/* User Menu at the bottom */}
       <div className="mt-auto mb-4">
