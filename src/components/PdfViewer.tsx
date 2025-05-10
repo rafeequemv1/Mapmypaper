@@ -898,4 +898,48 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </Document>
             </div>
           </ScrollArea>
-        ) :
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center p-8 max-w-md">
+              <div className="mb-6 flex justify-center">
+                <div className="w-16 h-16 text-red-500">
+                  <svg className="fill-current h-16 w-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6H9V5zm0 8h2v2H9v-2z" />
+                  </svg>
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">No PDF Loaded</h2>
+              <p className="text-gray-600 mb-6">
+                {loadError || "Please upload a PDF document to view it here. You can upload a PDF using the + button in the tabs above."}
+              </p>
+              {loadError && (
+                <Button 
+                  variant="outline"
+                  onClick={handleRetryLoad}
+                  disabled={isRetrying}
+                  className="mx-auto flex items-center gap-2"
+                >
+                  {isRetrying ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span>Retrying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      <span>Retry Loading</span>
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
