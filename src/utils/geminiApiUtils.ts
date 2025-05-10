@@ -1,42 +1,91 @@
 
-// Simple utility to call Gemini API
-// This is a placeholder implementation that will be replaced with actual API calls
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function callGeminiAPI(
-  prompt: string,
-  options: { maxTokens?: number; image?: string } = {}
-): Promise<string> {
+// Initialize Google Generative AI with an API key
+let genAI: GoogleGenerativeAI;
+
+// Initialize with API key from environment variable
+function initializeGenAI() {
+  // Try to get API key from environment
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    console.error("Missing Gemini API key. Please set the VITE_GEMINI_API_KEY environment variable.");
+    return false;
+  }
+  
   try {
-    // In a real implementation, this would make an API call to Google's Gemini API
-    console.log("Calling Gemini API with prompt:", prompt.substring(0, 100) + "...");
+    genAI = new GoogleGenerativeAI(apiKey);
+    return true;
+  } catch (error) {
+    console.error("Error initializing Gemini API:", error);
+    return false;
+  }
+}
+
+// Function to call Gemini API with options
+export async function callGeminiAPI(
+  prompt: string, 
+  options: {
+    maxTokens?: number;
+    image?: string;
+  } = {}
+): Promise<string> {
+  // Initialize if not already done
+  if (!genAI) {
+    const initialized = initializeGenAI();
+    if (!initialized) {
+      throw new Error("Failed to initialize Gemini API. Check your API key.");
+    }
+  }
+
+  try {
+    // Select the model based on whether we have an image
+    const modelName = options.image ? "gemini-pro-vision" : "gemini-pro";
+    const model = genAI.getGenerativeModel({ model: modelName });
+
+    // Prepare content parts
+    const contentParts: any[] = [{ text: prompt }];
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For now, return a simulated response
-    if (prompt.includes("flowchart") || prompt.includes("Flowchart")) {
-      return `flowchart LR
-      A[Introduction] --> B[Methodology]
-      B --> C[Results]
-      C --> D[Discussion]
-      D --> E[Conclusion]`;
-    } 
-    else if (prompt.includes("mindmap") || prompt.includes("mind map")) {
-      return `mindmap
-      root((Main Topic))
-        Key Point 1
-          Detail 1.1
-          Detail 1.2
-        Key Point 2
-          Detail 2.1
-          Detail 2.2
-        Key Point 3
-          Detail 3.1`;
+    // Add image if provided
+    if (options.image) {
+      contentParts.push({
+        inlineData: {
+          data: options.image.replace(/^data:image\/\w+;base64,/, ""),
+          mimeType: "image/jpeg", // Adjust based on actual image type if needed
+        }
+      });
     }
     
-    return "This is a simulated response from the Gemini API. In a production environment, this would be the actual response from Google's Gemini API.";
+    // Configure generation options
+    const generationConfig = {
+      maxOutputTokens: options.maxTokens || 8192, // Default to 8k tokens or user specified
+      temperature: 0.4,
+      topP: 0.8,
+      topK: 40,
+    };
+
+    // Generate content
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: contentParts }],
+      generationConfig,
+    });
+
+    const response = result.response;
+    const text = response.text();
+    
+    return text;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
-    throw new Error(`Failed to call Gemini API: ${(error as Error).message}`);
+    
+    // For rate limiting errors, add specific message
+    if (
+      error instanceof Error && 
+      (error.message.includes("429") || error.message.includes("quota") || error.message.includes("rate limit"))
+    ) {
+      throw new Error("Gemini API rate limit exceeded. Please try again later.");
+    }
+    
+    throw error;
   }
 }
