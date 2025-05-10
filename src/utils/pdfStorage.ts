@@ -223,6 +223,47 @@ export const setCurrentPdf = async (key: string): Promise<void> => {
   }
 };
 
+// Get current active PDF key
+export const getCurrentPdf = async (): Promise<string | null> => {
+  try {
+    // Check if current key is in cache
+    const cachedCurrentKey = pdfDataCache.get(CURRENT_PDF_KEY);
+    if (cachedCurrentKey) {
+      return cachedCurrentKey;
+    }
+    
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([PDF_STORE], 'readonly');
+      const store = transaction.objectStore(PDF_STORE);
+      
+      const request = store.get(CURRENT_PDF_KEY);
+      
+      request.onsuccess = () => {
+        const currentKey = request.result;
+        
+        if (currentKey) {
+          pdfDataCache.set(CURRENT_PDF_KEY, currentKey);
+        }
+        
+        resolve(currentKey || null);
+      };
+      
+      request.onerror = () => {
+        console.error("Error retrieving current PDF key:", request.error);
+        reject(new Error(`Failed to get current PDF key: ${request.error?.message || 'Unknown error'}`));
+      };
+      
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error("Error in getCurrentPdf:", error);
+    return null;
+  }
+};
+
 // Get current active PDF data with caching
 export const getCurrentPdfData = async (): Promise<string | null> => {
   try {
@@ -289,8 +330,8 @@ export const getCurrentPdfData = async (): Promise<string | null> => {
   }
 };
 
-// Clear/remove PDF data for a specific key from both cache and IndexedDB
-export const clearPdfData = async (key: string): Promise<void> => {
+// Delete PDF data for a specific key from both cache and IndexedDB
+export const deletePdfData = async (key: string): Promise<void> => {
   try {
     // Remove from cache immediately
     pdfDataCache.delete(key);
@@ -303,13 +344,13 @@ export const clearPdfData = async (key: string): Promise<void> => {
       const request = store.delete(key);
       
       request.onsuccess = () => {
-        console.log(`PDF data cleared for key: ${key}`);
+        console.log(`PDF data deleted for key: ${key}`);
         resolve();
       };
       
       request.onerror = () => {
-        console.error("Error clearing PDF data:", request.error);
-        reject(new Error(`Failed to clear PDF data: ${request.error?.message || 'Unknown error'}`));
+        console.error("Error deleting PDF data:", request.error);
+        reject(new Error(`Failed to delete PDF data: ${request.error?.message || 'Unknown error'}`));
       };
       
       transaction.oncomplete = () => {
@@ -317,7 +358,7 @@ export const clearPdfData = async (key: string): Promise<void> => {
       };
     });
   } catch (error) {
-    console.error("Error in clearPdfData:", error);
+    console.error("Error in deletePdfData:", error);
     throw error;
   }
 };
@@ -330,6 +371,26 @@ export const isMindMapReady = (pdfKey: string): boolean => {
   } catch (error) {
     console.error("Error checking if mindmap is ready:", error);
     return false;
+  }
+};
+
+// Get all PDFs metadata from sessionStorage
+export const getAllPdfs = (): { name: string; size: number; lastModified: number }[] => {
+  try {
+    const keys = Object.keys(sessionStorage)
+      .filter((k) => k.startsWith("pdfMeta_"))
+      .map((k) => k.replace("pdfMeta_", ""));
+    
+    return keys.map((key) => {
+      try {
+        return JSON.parse(sessionStorage.getItem(`pdfMeta_${key}`) || "");
+      } catch {
+        return null;
+      }
+    }).filter((f): f is { name: string; size: number; lastModified: number } => !!f);
+  } catch (error) {
+    console.error("Error getting all PDFs:", error);
+    return [];
   }
 };
 

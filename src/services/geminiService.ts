@@ -125,7 +125,7 @@ async function extractTextFromPDF(pdfDataUrl: string): Promise<string> {
     const uint8Array = new Uint8Array(buffer);
     
     // Use react-pdftotext to extract text
-    const extractedText = await PdfToText(uint8Array);
+    const extractedText = await PdfToText(uint8Array as unknown as Blob);
     
     if (!extractedText || typeof extractedText !== "string" || extractedText.trim() === "") {
       throw new Error("The PDF appears to have no extractable text. It might be a scanned document or an image-based PDF.");
@@ -202,6 +202,75 @@ export async function generateMindMapFromText(text: string): Promise<any> {
   }
 }
 
+// Function to generate mindmap from PDF - required by FlowchartModal
+export async function generateMindmapFromPdf(): Promise<string> {
+  try {
+    const currentPdfData = await getCurrentPdfData();
+    if (!currentPdfData) {
+      throw new Error("No PDF found");
+    }
+
+    // Extract text from PDF
+    const pdfText = await extractTextFromPDF(currentPdfData);
+    
+    const prompt = `
+    Create a mindmap of the key concepts and their relationships from this document.
+    Format the output as a Mermaid mindmap diagram. Use this syntax:
+    
+    mindmap
+      root((Main Topic))
+        Topic 1
+          Subtopic 1.1
+          Subtopic 1.2
+        Topic 2
+          Subtopic 2.1
+            Subtopic 2.1.1
+    
+    Document text: ${pdfText}
+    `;
+    
+    const response = await callGeminiAPI(prompt);
+    return response;
+  } catch (error) {
+    console.error("Error generating mindmap from PDF:", error);
+    throw error;
+  }
+}
+
+// Function to generate flowchart from PDF - required by FlowchartModal
+export async function generateFlowchartFromPdf(): Promise<string> {
+  try {
+    const currentPdfData = await getCurrentPdfData();
+    if (!currentPdfData) {
+      throw new Error("No PDF found");
+    }
+
+    // Extract text from PDF
+    const pdfText = await extractTextFromPDF(currentPdfData);
+    
+    const prompt = `
+    Create a flowchart that represents the main processes, methods, or narrative flow from this document.
+    Format the output as a Mermaid flowchart diagram using flowchart LR syntax (left to right). Use this syntax:
+    
+    flowchart LR
+      A[Start] --> B{Decision}
+      B -->|Yes| C[Action 1]
+      B -->|No| D[Action 2]
+      C --> E[End]
+      D --> E
+    
+    Make sure to use descriptive node labels and meaningful connections between concepts.
+    Document text: ${pdfText}
+    `;
+    
+    const response = await callGeminiAPI(prompt);
+    return response;
+  } catch (error) {
+    console.error("Error generating flowchart from PDF:", error);
+    throw error;
+  }
+}
+
 export async function chatWithGeminiAboutPdf(prompt: string, useAllPdfs: boolean = false): Promise<string> {
   try {
     let pdfText = "";
@@ -213,7 +282,8 @@ export async function chatWithGeminiAboutPdf(prompt: string, useAllPdfs: boolean
         throw new Error("No PDFs found");
       }
       
-      for (const pdfKey in allPdfs) {
+      for (const pdfMeta of allPdfs) {
+        const pdfKey = `${pdfMeta.name}_${pdfMeta.size}_${pdfMeta.lastModified}`;
         const pdfData = await getPdfData(pdfKey);
         if (pdfData) {
           const extractedText = await extractTextFromPDF(pdfData);
