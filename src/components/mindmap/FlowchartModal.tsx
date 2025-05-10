@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import mermaid from "mermaid";
 import html2canvas from "html2canvas";
 import { downloadBlob } from "@/utils/downloadUtils";
+import { getCachedDiagram, cacheDiagram } from "@/utils/diagramCache";
 import PdfTabs, { getAllPdfs, getPdfKey } from "@/components/PdfTabs";
 
 // Initialize mermaid
@@ -35,6 +37,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [diagramCode, setDiagramCode] = useState<string>("");
   const [diagramType, setDiagramType] = useState<DiagramType>('flowchart');
+  const [isFreshGeneration, setIsFreshGeneration] = useState(false);
   const diagramRef = useRef<HTMLDivElement>(null);
   
   // Add state for active PDF key
@@ -44,10 +47,10 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     return getPdfKey(metas[0]);
   });
 
-  // Generate diagram when the modal is opened or type changes or PDF changes
+  // Generate or retrieve diagram when the modal is opened or type changes or PDF changes
   useEffect(() => {
-    if (open && ((!diagramCode || diagramType === 'flowchart') || activePdfKey)) {
-      generateDiagram();
+    if (open && activePdfKey) {
+      generateOrRetrieveDiagram();
     }
   }, [open, diagramType, activePdfKey]);
 
@@ -93,6 +96,32 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     return result;
   };
 
+  // Check cache first, generate if not available
+  const generateOrRetrieveDiagram = async () => {
+    if (!activePdfKey) {
+      toast({
+        title: "No PDF selected",
+        description: "Please select a PDF to generate diagrams.",
+        variant: "warning"
+      });
+      return;
+    }
+    
+    // Check cache first
+    const cachedDiagram = getCachedDiagram(activePdfKey, diagramType);
+    
+    if (cachedDiagram && !isFreshGeneration) {
+      console.log(`Retrieved ${diagramType} from cache for PDF: ${activePdfKey}`);
+      setDiagramCode(cachedDiagram);
+      return;
+    }
+    
+    // If not in cache or forced regeneration, generate it
+    await generateDiagram();
+    // Reset fresh generation flag after generating
+    setIsFreshGeneration(false);
+  };
+
   // Generate diagram based on selected type
   const generateDiagram = async () => {
     setIsLoading(true);
@@ -109,7 +138,13 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
         // Process the mind map syntax to ensure proper formatting
         mermaidCode = processMindMapText(rawMindmapCode);
       }
+      
+      // Set the code and also cache it
       setDiagramCode(mermaidCode);
+      if (activePdfKey) {
+        cacheDiagram(activePdfKey, diagramType, mermaidCode);
+      }
+      
     } catch (error) {
       console.error(`Error generating ${diagramType}:`, error);
       toast({
@@ -231,6 +266,12 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
     setDiagramCode("");
   };
 
+  // Force regenerate diagram
+  const handleRegenerateDiagram = () => {
+    setIsFreshGeneration(true);
+    setTimeout(() => generateOrRetrieveDiagram(), 0);
+  };
+
   // Download the diagram as PNG
   const downloadDiagram = async () => {
     if (!diagramRef.current) return;
@@ -290,7 +331,7 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={generateDiagram}
+                onClick={handleRegenerateDiagram}
                 disabled={isLoading}
                 className="flex gap-1 text-sm"
               >
@@ -344,10 +385,12 @@ const FlowchartModal = ({ open, onOpenChange }: FlowchartModalProps) => {
           <div className="flex flex-col items-center justify-center h-[60vh] p-8">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-6" />
             <p className="text-center text-muted-foreground text-lg">
-              Generating {diagramType} from paper content...
+              {isFreshGeneration ? "Generating" : "Getting"} {diagramType} from paper content...
             </p>
             <p className="text-center text-muted-foreground text-sm mt-2">
-              This may take a moment as we analyze the document structure.
+              {isFreshGeneration 
+                ? "This may take a moment as we analyze the document structure." 
+                : "Loading from cache if available."}
             </p>
           </div>
         ) : (
