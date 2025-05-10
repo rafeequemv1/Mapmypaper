@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
-import { X, RefreshCw } from "lucide-react";
+import { X, RefreshCw, FileText, Code, Users, FileCode, Settings, ExternalLink, BookOpen, BarChart2, Database, Layers, Zap } from "lucide-react";
+import ReactDOMServer from 'react-dom/server';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import MindElixir, { MindElixirInstance } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
-import "../../styles/node-menu.css"; // Fix the import path
+import "../../styles/node-menu.css";
 
 interface MindmapModalProps {
   isOpen: boolean;
@@ -26,23 +27,146 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
   
-  // Demo mindmap code
-  const mindmapCode = `mindmap
-  root((Mindmap))
-    Origins
-      Long history
-      Popularization
-        British psychology author Tony Buzan
-    Research
-      On effectiveness
-      On Automatic creation
-        Uses
-            Creative techniques
-            Strategic planning
-            Argument mapping
-    Tools
-      Pen and paper
-      Mermaid`;
+  // Enhanced detailed mindmap data structure
+  const detailedMindmapData = {
+    nodeData: {
+      id: 'root',
+      topic: 'Software Documentation',
+      children: [
+        { 
+          id: '1', 
+          topic: 'Written text or illustration', 
+          direction: 0,
+          style: { background: '#D3E4FD', color: '#0E63B3' },
+          children: [
+            { 
+              id: '1-1', 
+              topic: 'Explains software operation or usage',
+              style: { background: '#FEF7CD', color: '#8B6E00' }
+            }
+          ]
+        },
+        { 
+          id: '2', 
+          topic: 'Different meanings for different roles', 
+          direction: 0,
+          style: { background: '#D3E4FD', color: '#0E63B3' } 
+        },
+        { 
+          id: '3', 
+          topic: 'Accompanies software or embedded in source code', 
+          direction: 0,
+          style: { background: '#D3E4FD', color: '#0E63B3' } 
+        },
+        { 
+          id: '4', 
+          topic: 'Important part of software engineering', 
+          direction: 0,
+          style: { background: '#F2FCE2', color: '#3D7A0F' }
+        },
+        { 
+          id: '5', 
+          topic: 'Types of Documentation', 
+          direction: 1,
+          style: { background: '#E5DEFF', color: '#5E3BCE' },
+          children: [
+            { 
+              id: '5-1', 
+              topic: 'Requirements', 
+              style: { background: '#E5DEFF', color: '#5E3BCE' },
+              children: [
+                { 
+                  id: '5-1-1', 
+                  topic: 'Identify attributes, capacities, characteristics',
+                  style: { background: '#FFDEE2', color: '#B52D41' }
+                }
+              ]
+            },
+            { 
+              id: '5-2', 
+              topic: 'Architecture/Design', 
+              style: { background: '#E5DEFF', color: '#5E3BCE' },
+              children: [
+                { 
+                  id: '5-2-1', 
+                  topic: 'Overview of software',
+                  style: { background: '#FFDEE2', color: '#B52D41' }
+                },
+                { 
+                  id: '5-2-2', 
+                  topic: 'Constructive principles for components',
+                  style: { background: '#FFDEE2', color: '#B52D41' }
+                }
+              ]
+            },
+            { 
+              id: '5-3', 
+              topic: 'Technical', 
+              style: { background: '#E5DEFF', color: '#5E3BCE' },
+              children: [
+                { 
+                  id: '5-3-1', 
+                  topic: 'API reference',
+                  style: { background: '#FFDEE2', color: '#B52D41' }
+                },
+                { 
+                  id: '5-3-2', 
+                  topic: 'Code documentation',
+                  style: { background: '#FFDEE2', color: '#B52D41' }
+                }
+              ]
+            },
+            { 
+              id: '5-4', 
+              topic: 'End User', 
+              style: { background: '#E5DEFF', color: '#5E3BCE' },
+              children: [
+                { 
+                  id: '5-4-1', 
+                  topic: 'Manuals for:',
+                  style: { background: '#FFDEE2', color: '#B52D41' },
+                  children: [
+                    { 
+                      id: '5-4-1-1', 
+                      topic: 'End users',
+                      style: { background: '#FDE1D3', color: '#A94C0F' } 
+                    },
+                    { 
+                      id: '5-4-1-2', 
+                      topic: 'System administrators',
+                      style: { background: '#FDE1D3', color: '#A94C0F' } 
+                    },
+                    { 
+                      id: '5-4-1-3', 
+                      topic: 'Support staff',
+                      style: { background: '#FDE1D3', color: '#A94C0F' } 
+                    }
+                  ]
+                }
+              ]
+            },
+            { 
+              id: '5-5', 
+              topic: 'Marketing', 
+              style: { background: '#E5DEFF', color: '#5E3BCE' },
+              children: [
+                { 
+                  id: '5-5-1', 
+                  topic: 'How to market the product',
+                  style: { background: '#FFDEE2', color: '#B52D41' } 
+                },
+                { 
+                  id: '5-5-2', 
+                  topic: 'Analysis of market demand',
+                  style: { background: '#FFDEE2', color: '#B52D41' } 
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -56,14 +180,15 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
           // Clear any existing content to prevent DOM conflicts
           containerRef.current.innerHTML = '';
           
-          // Setup the mindmap for visualization
+          // Setup the mindmap for visualization with enhanced options
           const options = {
             el: containerRef.current,
-            direction: 1 as const,
+            direction: 2 as const, // 2 means both sides (left and right)
             draggable: true,
             editable: true,
             contextMenu: true,
             nodeMenu: true,
+            keypress: true,
             tools: {
               zoom: true,
               create: true,
@@ -71,55 +196,26 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
               layout: true
             },
             theme: {
-              name: 'Catppuccin',
+              name: 'Vivid Theme',
               background: '#F9F7FF',
               color: '#8B5CF6',
               palette: [
-                '#dd7878', '#ea76cb', '#8839ef', '#e64553', 
-                '#fe640b', '#df8e1d', '#40a02b', '#209fb5'
+                '#8B5CF6', '#D946EF', '#F97316', '#0EA5E9',
+                '#22C55E', '#EAB308', '#EC4899', '#F43F5E'
               ],
               // Add the required cssVar property
               cssVar: {
                 '--main-color': '#8B5CF6',
                 '--main-bgcolor': '#F9F7FF',
-                '--color1': '#dd7878',
-                '--color2': '#ea76cb',
-                '--color3': '#8839ef',
-                '--color4': '#e64553',
-                '--color5': '#fe640b',
-                '--color6': '#df8e1d',
-                '--color7': '#40a02b',
-                '--color8': '#209fb5'
+                '--color1': '#8B5CF6',
+                '--color2': '#D946EF',
+                '--color3': '#F97316',
+                '--color4': '#0EA5E9',
+                '--color5': '#22C55E',
+                '--color6': '#EAB308',
+                '--color7': '#EC4899',
+                '--color8': '#F43F5E'
               }
-            }
-          };
-          
-          const data = {
-            nodeData: {
-              id: 'root',
-              topic: 'Mindmap',
-              children: [
-                { id: '1', topic: 'Origins', children: [
-                  { id: '1-1', topic: 'Long history' },
-                  { id: '1-2', topic: 'Popularization', children: [
-                    { id: '1-2-1', topic: 'British psychology author Tony Buzan' }
-                  ]}
-                ]},
-                { id: '2', topic: 'Research', children: [
-                  { id: '2-1', topic: 'On effectiveness' },
-                  { id: '2-2', topic: 'On Automatic creation', children: [
-                    { id: '2-2-1', topic: 'Uses', children: [
-                      { id: '2-2-1-1', topic: 'Creative techniques' },
-                      { id: '2-2-1-2', topic: 'Strategic planning' },
-                      { id: '2-2-1-3', topic: 'Argument mapping' }
-                    ]}
-                  ]}
-                ]},
-                { id: '3', topic: 'Tools', children: [
-                  { id: '3-1', topic: 'Pen and paper' },
-                  { id: '3-2', topic: 'Mermaid' }
-                ]}
-              ]
             }
           };
           
@@ -130,68 +226,134 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
             // Properly install the node menu plugin
             mind.install(nodeMenu);
             
-            // Initialize with data
-            mind.init(data);
-            
+            // Initialize with more detailed data
+            mind.init(detailedMindmapData);
+
+            // Add custom styles and icons to nodes after initialization
+            setTimeout(() => {
+              try {
+                // Add icons to specific nodes based on their content
+                const rootNode = document.querySelector('.root');
+                if (rootNode) {
+                  const iconContainer = document.createElement('span');
+                  iconContainer.className = 'mindmap-icon';
+                  iconContainer.innerHTML = renderIcon(BookOpen);
+                  rootNode.querySelector('.content')?.prepend(iconContainer);
+                }
+
+                // Find and add icons to specific topic nodes
+                const allNodes = document.querySelectorAll('.map-node:not(.root)');
+                allNodes.forEach((node: Element) => {
+                  const content = node.querySelector('.content')?.textContent?.toLowerCase() || '';
+                  let iconType = null;
+
+                  if (content.includes('architecture') || content.includes('design')) {
+                    iconType = Layers;
+                  } else if (content.includes('code') || content.includes('api')) {
+                    iconType = Code;
+                  } else if (content.includes('user') || content.includes('end user')) {
+                    iconType = Users;
+                  } else if (content.includes('market') || content.includes('analysis')) {
+                    iconType = BarChart2;
+                  } else if (content.includes('technical') || content.includes('document')) {
+                    iconType = FileText;
+                  } else if (content.includes('requirements')) {
+                    iconType = FileCode;
+                  } else if (content.includes('system') || content.includes('admin')) {
+                    iconType = Settings;
+                  } else if (content.includes('support')) {
+                    iconType = Zap;
+                  } else if (content.includes('data') || content.includes('database')) {
+                    iconType = Database;
+                  }
+
+                  if (iconType) {
+                    const iconContainer = document.createElement('span');
+                    iconContainer.className = 'mindmap-icon';
+                    iconContainer.innerHTML = renderIcon(iconType);
+                    node.querySelector('.content')?.prepend(iconContainer);
+                  }
+                });
+
+                // Add styles for icons
+                const styleEl = document.createElement('style');
+                styleEl.textContent = `
+                  .mindmap-icon {
+                    display: inline-flex;
+                    margin-right: 5px;
+                    vertical-align: middle;
+                  }
+                  .mindmap-icon svg {
+                    width: 16px;
+                    height: 16px;
+                  }
+                  .root .mindmap-icon svg {
+                    width: 20px;
+                    height: 20px;
+                  }
+                `;
+                document.head.appendChild(styleEl);
+
+              } catch (iconErr) {
+                console.error("Error adding icons to mindmap:", iconErr);
+              }
+            }, 500); // Short delay to ensure nodes are rendered
+
             // Store reference for later use
             mindMapRef.current = mind;
           } catch (err) {
             console.error("Error initializing mind-elixir:", err);
             
-            // Fallback to the static visualization if mind-elixir fails
+            // Fallback to static visualization
             containerRef.current.innerHTML = `
               <div class="p-4 bg-white rounded-md">
                 <div class="text-center mb-4">
                   <h3 class="text-lg font-bold">Simple Mindmap Visualization</h3>
                 </div>
                 <div class="flex justify-center">
-                  <svg width="500" height="300" viewBox="0 0 500 300">
+                  <svg width="600" height="400" viewBox="0 0 600 400">
                     <!-- Root node -->
-                    <circle cx="250" cy="50" r="30" fill="#E5DEFF" stroke="#8B5CF6" stroke-width="2"/>
-                    <text x="250" y="55" text-anchor="middle" font-size="12">Mindmap</text>
+                    <circle cx="300" cy="200" r="35" fill="#E5DEFF" stroke="#8B5CF6" stroke-width="2"/>
+                    <text x="300" y="205" text-anchor="middle" font-size="12">Software Documentation</text>
                     
-                    <!-- Origin branch -->
-                    <line x1="250" y1="80" x2="150" y2="120" stroke="#8B5CF6" stroke-width="2"/>
-                    <circle cx="150" cy="120" r="25" fill="#D3E4FD" stroke="#0EA5E9" stroke-width="2"/>
-                    <text x="150" y="125" text-anchor="middle" font-size="10">Origins</text>
+                    <!-- Left side branches -->
+                    <line x1="300" y1="165" x2="150" y2="100" stroke="#8B5CF6" stroke-width="2"/>
+                    <rect x="50" y="80" width="200" height="40" rx="8" fill="#D3E4FD" stroke="#0E63B3"/>
+                    <text x="150" y="105" text-anchor="middle" font-size="10">Written text or illustration</text>
                     
-                    <!-- Research branch -->
-                    <line x1="250" y1="80" x2="250" y2="120" stroke="#8B5CF6" stroke-width="2"/>
-                    <circle cx="250" cy="120" r="25" fill="#FDE1D3" stroke="#F97316" stroke-width="2"/>
-                    <text x="250" y="125" text-anchor="middle" font-size="10">Research</text>
+                    <line x1="300" y1="190" x2="150" y2="160" stroke="#8B5CF6" stroke-width="2"/>
+                    <rect x="50" y="140" width="200" height="40" rx="8" fill="#D3E4FD" stroke="#0E63B3"/>
+                    <text x="150" y="165" text-anchor="middle" font-size="10">Different meanings for different roles</text>
                     
-                    <!-- Tools branch -->
-                    <line x1="250" y1="80" x2="350" y2="120" stroke="#8B5CF6" stroke-width="2"/>
-                    <circle cx="350" cy="120" r="25" fill="#F2FCE2" stroke="#22C55E" stroke-width="2"/>
-                    <text x="350" y="125" text-anchor="middle" font-size="10">Tools</text>
+                    <line x1="300" y1="215" x2="150" y2="220" stroke="#8B5CF6" stroke-width="2"/>
+                    <rect x="50" y="200" width="200" height="40" rx="8" fill="#D3E4FD" stroke="#0E63B3"/>
+                    <text x="150" y="225" text-anchor="middle" font-size="10">Accompanies software or embedded in code</text>
                     
-                    <!-- Origin subitems -->
-                    <line x1="150" y1="145" x2="100" y2="180" stroke="#0EA5E9" stroke-width="1.5"/>
-                    <rect x="70" y="170" width="60" height="20" rx="5" fill="#D3E4FD" stroke="#0EA5E9"/>
-                    <text x="100" y="185" text-anchor="middle" font-size="8">History</text>
+                    <line x1="300" y1="235" x2="150" y2="280" stroke="#8B5CF6" stroke-width="2"/>
+                    <rect x="50" y="260" width="200" height="40" rx="8" fill="#F2FCE2" stroke="#3D7A0F"/>
+                    <text x="150" y="285" text-anchor="middle" font-size="10">Important part of software engineering</text>
                     
-                    <line x1="150" y1="145" x2="150" y2="180" stroke="#0EA5E9" stroke-width="1.5"/>
-                    <rect x="120" y="170" width="60" height="20" rx="5" fill="#D3E4FD" stroke="#0EA5E9"/>
-                    <text x="150" y="185" text-anchor="middle" font-size="8">Popularization</text>
+                    <!-- Right side branch -->
+                    <line x1="335" y1="200" x2="450" y2="200" stroke="#8B5CF6" stroke-width="2"/>
+                    <rect x="450" y="180" width="120" height="40" rx="8" fill="#E5DEFF" stroke="#5E3BCE"/>
+                    <text x="510" y="205" text-anchor="middle" font-size="10">Types of Documentation</text>
                     
-                    <!-- Research subitems -->
-                    <line x1="250" y1="145" x2="200" y2="180" stroke="#F97316" stroke-width="1.5"/>
-                    <rect x="170" y="170" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
-                    <text x="200" y="185" text-anchor="middle" font-size="8">Effectiveness</text>
+                    <!-- Type branches -->
+                    <line x1="510" y1="180" x2="510" y2="140" stroke="#5E3BCE" stroke-width="1.5"/>
+                    <rect x="470" y="100" width="80" height="40" rx="8" fill="#E5DEFF" stroke="#5E3BCE"/>
+                    <text x="510" y="125" text-anchor="middle" font-size="10">Requirements</text>
                     
-                    <line x1="250" y1="145" x2="270" y2="180" stroke="#F97316" stroke-width="1.5"/>
-                    <rect x="240" y="170" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
-                    <text x="270" y="185" text-anchor="middle" font-size="8">Creation</text>
+                    <line x1="510" y1="220" x2="450" y2="260" stroke="#5E3BCE" stroke-width="1.5"/>
+                    <rect x="410" y="240" width="80" height="40" rx="8" fill="#E5DEFF" stroke="#5E3BCE"/>
+                    <text x="450" y="265" text-anchor="middle" font-size="10">Technical</text>
                     
-                    <!-- Tools subitems -->
-                    <line x1="350" y1="145" x2="330" y2="180" stroke="#22C55E" stroke-width="1.5"/>
-                    <rect x="300" y="170" width="60" height="20" rx="5" fill="#F2FCE2" stroke="#22C55E"/>
-                    <text x="330" y="185" text-anchor="middle" font-size="8">Pen & Paper</text>
+                    <line x1="510" y1="220" x2="510" y2="260" stroke="#5E3BCE" stroke-width="1.5"/>
+                    <rect x="470" y="240" width="80" height="40" rx="8" fill="#E5DEFF" stroke="#5E3BCE"/>
+                    <text x="510" y="265" text-anchor="middle" font-size="10">End User</text>
                     
-                    <!-- Creation subitems -->
-                    <line x1="270" y1="190" x2="270" y2="220" stroke="#F97316" stroke-width="1"/>
-                    <rect x="240" y="220" width="60" height="20" rx="5" fill="#FDE1D3" stroke="#F97316"/>
-                    <text x="270" y="235" text-anchor="middle" font-size="8">Uses</text>
+                    <line x1="510" y1="220" x2="570" y2="260" stroke="#5E3BCE" stroke-width="1.5"/>
+                    <rect x="530" y="240" width="80" height="40" rx="8" fill="#E5DEFF" stroke="#5E3BCE"/>
+                    <text x="570" y="265" text-anchor="middle" font-size="10">Marketing</text>
                   </svg>
                 </div>
               </div>
@@ -220,7 +382,16 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
         containerRef.current.innerHTML = '';
       }
     };
-  }, [isOpen, theme, mindmapCode]);
+  }, [isOpen, theme]);
+
+  // Helper function to render icon SVG from Lucide components
+  const renderIcon = (IconComponent: typeof FileText) => {
+    const tempContainer = document.createElement('div');
+    const icon = React.createElement(IconComponent, { size: 16 });
+    const iconString = ReactDOMServer.renderToStaticMarkup(icon);
+    tempContainer.innerHTML = iconString;
+    return tempContainer.innerHTML;
+  };
 
   // Toggle through available themes
   const toggleTheme = () => {
@@ -252,21 +423,21 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-2">
-          <DialogTitle>Interactive Mindmap</DialogTitle>
+          <DialogTitle>Interactive Software Documentation Mindmap</DialogTitle>
           <DialogDescription>
-            A visualization of mindmap concepts
+            A detailed visualization of software documentation concepts with icons
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-auto p-4">
           <div 
-            className="mindmap-container w-full min-h-[300px] max-h-[50vh] flex items-center justify-center bg-white rounded-md border overflow-auto"
+            className="mindmap-container w-full min-h-[400px] max-h-[60vh] flex items-center justify-center bg-white rounded-md border overflow-auto"
           >
             {isRendering && (
               <div className="text-gray-500 flex flex-col items-center p-8">
                 <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full mb-2"></div>
-                <div>Loading mindmap...</div>
+                <div>Loading enhanced mindmap...</div>
               </div>
             )}
             
@@ -285,7 +456,30 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
           <div className="mt-4 p-4 bg-gray-50 rounded-md">
             <h3 className="text-sm font-medium mb-2">Mindmap Structure:</h3>
             <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto max-h-[15vh] overflow-y-auto">
-              {mindmapCode}
+{`mindmap
+  root("Software Documentation")
+    Written text or illustration
+      Explains software operation or usage
+    Different meanings for different roles
+    Accompanies software or embedded in source code
+    Important part of software engineering
+    Types of Documentation
+      Requirements
+        Identify attributes, capacities, characteristics
+      Architecture/Design
+        Overview of software
+        Constructive principles for components
+      Technical
+        API reference
+        Code documentation
+      End User
+        Manuals for
+          End users
+          System administrators
+          Support staff
+      Marketing
+        How to market the product
+        Analysis of market demand`}
             </pre>
           </div>
         </div>
@@ -309,3 +503,4 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
     </Dialog>
   );
 }
+
