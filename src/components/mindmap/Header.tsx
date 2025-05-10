@@ -1,7 +1,8 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
+import { Sparkles } from "lucide-react";
 
 interface HeaderProps {
   togglePdf: () => void;
@@ -46,6 +47,7 @@ const Header = ({
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      URL.revokeObjectURL(url); // Clean up to avoid memory leaks
     }
   };
 
