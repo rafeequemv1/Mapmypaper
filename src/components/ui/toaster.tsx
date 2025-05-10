@@ -19,9 +19,7 @@ export function Toaster() {
         const toastVariant = variant === "success" || variant === "warning" ? "default" : variant;
         
         // Handle description that might be a React element or string
-        const toastDescription = typeof description === 'string' 
-          ? description 
-          : description; // Maintain the element as-is when it's not a string
+        const toastDescription = description;
         
         return (
           <Toast 
