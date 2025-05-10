@@ -1,4 +1,3 @@
-
 // PDF Storage Utility for IndexedDB with Caching
 // Manages PDF data storage, retrieval, and state management
 
@@ -361,6 +360,13 @@ export const deletePdfData = async (key: string): Promise<void> => {
     console.error("Error in deletePdfData:", error);
     throw error;
   }
+};
+
+// Add the missing clearPdfData function that's required by PanelStructure.tsx
+export const clearPdfData = async (key: string): Promise<void> => {
+  // This function is likely intended to be the same as deletePdfData
+  // For compatibility, we'll implement it as an alias to deletePdfData
+  return deletePdfData(key);
 };
 
 // Check if a mindmap is ready for a specific PDF
