@@ -1,3 +1,4 @@
+
 import * as pdfjs from 'pdfjs-dist';
 
 // Set up the PDF.js worker
@@ -9,6 +10,7 @@ function setupPdfWorker() {
     
     // Set worker to the exact same version through CDN
     pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
+    window.pdfjsWorkerSrc = pdfjs.GlobalWorkerOptions.workerSrc;
     console.log(`PDF.js worker set to version: ${pdfJsVersion}`);
   }
 }
@@ -124,6 +126,7 @@ export interface ExtractedImage {
 export function storeExtractedImages(pdfKey: string, images: ExtractedImage[]): void {
   try {
     sessionStorage.setItem(`pdfImages_${pdfKey}`, JSON.stringify(images));
+    console.log(`Stored ${images.length} extracted images for PDF ${pdfKey}`);
   } catch (error) {
     console.error('Error storing extracted images:', error);
     // If the data is too large, try storing a subset
@@ -143,7 +146,13 @@ export function storeExtractedImages(pdfKey: string, images: ExtractedImage[]): 
 export function getExtractedImages(pdfKey: string): ExtractedImage[] {
   try {
     const storedImages = sessionStorage.getItem(`pdfImages_${pdfKey}`);
-    return storedImages ? JSON.parse(storedImages) : [];
+    if (!storedImages) {
+      console.log(`No stored images found for PDF ${pdfKey}`);
+      return [];
+    }
+    const images = JSON.parse(storedImages);
+    console.log(`Retrieved ${images.length} images for PDF ${pdfKey}`);
+    return images;
   } catch (error) {
     console.error('Error retrieving extracted images:', error);
     return [];
