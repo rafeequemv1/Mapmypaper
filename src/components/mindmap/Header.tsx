@@ -1,71 +1,71 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
+import { Sparkles } from "lucide-react";
 
 interface HeaderProps {
   togglePdf: () => void;
   toggleChat: () => void;
-  setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSummary: (show: boolean) => void;
+  setShowFlowchart: (show: boolean) => void;
   isPdfActive: boolean;
   isChatActive: boolean;
-  mindMap: any;
+  mindMap: MindElixirInstance | null;
 }
 
-const Header = ({
-  togglePdf,
-  toggleChat,
+const Header = ({ 
+  togglePdf, 
+  toggleChat, 
   setShowSummary,
   setShowFlowchart,
-  isPdfActive,
-  isChatActive,
-  mindMap,
+  isPdfActive, 
+  isChatActive, 
+  mindMap 
 }: HeaderProps) => {
-  // Get exporters from mind map instance
-  const getMindMapExporters = () => {
-    if (!mindMap) return {};
-    
-    return {
-      onExportSVG: () => {
-        mindMap?.exportSVG();
-      },
-      onExportPNG: () => {
-        mindMap?.exportPNG();
-      },
-      onExportJSON: () => {
-        mindMap?.exportJSON();
-      },
-      onExportPDF: () => {
-        // Add PDF export functionality
-        if (mindMap?.exportPDF) {
-          mindMap.exportPDF();
-        } else {
-          console.warn("PDF export not available in this mind map instance");
-        }
-      }
-    };
+  // Define export menu handlers
+  const handleExportSVG = () => {
+    if (mindMap) {
+      mindMap.exportSvg();
+    }
   };
-  
-  const exporters = getMindMapExporters();
+
+  const handleExportPNG = () => {
+    if (mindMap) {
+      mindMap.exportPng();
+    }
+  };
+
+  const handleExportJSON = () => {
+    if (mindMap) {
+      const data = mindMap.getData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mindmap.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url); // Clean up to avoid memory leaks
+    }
+  };
 
   return (
-    <HeaderSidebar
-      isPdfActive={isPdfActive}
-      isChatActive={isChatActive}
-      togglePdf={togglePdf}
-      toggleChat={toggleChat}
-      setShowSummary={setShowSummary}
-      setShowFlowchart={setShowFlowchart}
-      onExportSVG={exporters.onExportSVG}
-      onExportPNG={exporters.onExportPNG}
-      onExportJSON={exporters.onExportJSON}
-      onExportPDF={exporters.onExportPDF}
-      enableSnapshotMode={() => {
-        // Dispatch a custom event to enable snapshot mode
-        window.dispatchEvent(new CustomEvent('enableSnapshotMode'));
-      }}
-    />
+    <>
+      {/* Render HeaderSidebar outside of any hidden container */}
+      <HeaderSidebar 
+        isPdfActive={isPdfActive}
+        isChatActive={isChatActive}
+        togglePdf={togglePdf}
+        toggleChat={toggleChat}
+        setShowSummary={setShowSummary}
+        setShowFlowchart={setShowFlowchart}
+        onExportSVG={handleExportSVG}
+        onExportPNG={handleExportPNG}
+        onExportJSON={handleExportJSON}
+      />
+    </>
   );
 };
 
