@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -819,9 +820,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         {/* PDF Content */}
         {pdfData ? (
           <ScrollArea className="flex-1" ref={pdfContainerRef}>
-            <div 
-              className="flex flex-col items-center py-4 relative"
-            >
+            <div className="flex flex-col items-center py-4 relative">
               {/* Snapshot mode indicator */}
               {isSnapshotMode && (
                 <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
@@ -896,4 +895,57 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               >
                 {Array.from(new Array(numPages), (_, index) => (
                   <div
-                    key={`page_${
+                    key={`page_${index + 1}`}
+                    className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
+                    ref={setPageRef(index)}
+                    style={{ width: 'fit-content', maxWidth: '100%' }}
+                    data-page-number={index + 1}
+                  >
+                    <Page
+                      pageNumber={index + 1}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={false}
+                      onRenderSuccess={onPageRenderSuccess}
+                      scale={scale}
+                      width={getOptimalPageWidth()}
+                      className="mx-auto"
+                      loading={
+                        <div className="flex items-center justify-center h-[600px] w-full">
+                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
+                        </div>
+                      }
+                    />
+                    <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
+                      Page {index + 1} of {numPages}
+                    </div>
+                  </div>
+                ))}
+              </Document>
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
+              <RefreshCw className="h-12 w-12 mx-auto text-blue-500 mb-4" />
+              <h3 className="text-xl font-bold mb-2">No PDF Loaded</h3>
+              <p className="text-gray-600 mb-4">
+                {loadError || "Please upload or select a PDF document to view its contents and generate a mind map."}
+              </p>
+              {loadError && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleRetryLoad} 
+                  className="mx-auto"
+                >
+                  Try Again
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+export default PdfViewer;
