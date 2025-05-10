@@ -49,6 +49,17 @@ export function MindmapModal({ isOpen, onClose, pdfKey }: MindmapModalProps) {
   // Convert mindmap code to MindElixir data structure
   const convertCodeToMindElixirData = (code: string) => {
     try {
+      // Check if the code is in JSON format
+      if (code.trim().startsWith('{')) {
+        try {
+          // Try to parse as JSON directly
+          return JSON.parse(code);
+        } catch (jsonError) {
+          console.error("Error parsing JSON mindmap data:", jsonError);
+        }
+      }
+      
+      // If not JSON or JSON parsing failed, process as Mermaid syntax
       const lines = code.split('\n');
       const rootLine = lines.find(line => line.includes('root(('));
       

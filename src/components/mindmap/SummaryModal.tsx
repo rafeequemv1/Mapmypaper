@@ -39,12 +39,22 @@ const SummaryModal = ({ open, onOpenChange }: SummaryModalProps) => {
       const cached = getCachedDiagram(activePdfKey, 'summary');
       if (cached) {
         try {
-          const parsedSummary = JSON.parse(cached);
+          // Try parsing as JSON first
+          let parsedSummary;
+          
+          try {
+            parsedSummary = JSON.parse(cached);
+          } catch (parseError) {
+            // If not valid JSON, use the cached string directly
+            parsedSummary = { Summary: cached };
+            console.error("Error parsing cached summary:", parseError);
+          }
+          
           setSummary(parsedSummary);
           console.log("Retrieved summary from cache");
           return;
         } catch (error) {
-          console.error("Error parsing cached summary:", error);
+          console.error("Error handling cached summary:", error);
           // If parsing fails, continue to generate a new summary
         }
       }

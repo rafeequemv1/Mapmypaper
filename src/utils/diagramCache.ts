@@ -87,6 +87,7 @@ export const clearCachedDiagrams = (pdfKey: string): void => {
   try {
     localStorage.removeItem(`${CACHE_PREFIX}${FLOWCHART_KEY}${pdfKey}`);
     localStorage.removeItem(`${CACHE_PREFIX}${MINDMAP_KEY}${pdfKey}`);
+    localStorage.removeItem(`${CACHE_PREFIX}${SUMMARY_KEY}${pdfKey}`);
     console.log(`Cleared cached diagrams for PDF: ${pdfKey}`);
   } catch (error) {
     console.error('Failed to clear cached diagrams:', error);
