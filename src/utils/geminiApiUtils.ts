@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 let genAI: GoogleGenerativeAI;
 
 // API key provided directly as fallback
-const FALLBACK_API_KEY = "AIzaSyBDnFabw77XdMe8rlKIMriWMgV-joUqTA4";
+const FALLBACK_API_KEY = "AIzaSyDAP3BAK_l68qBG9-m-Ur_Ob46HteCafJk";
 
 // Current Gemini models (as of May 2025)
 const TEXT_MODEL = "gemini-1.5-pro"; // Updated from gemini-pro
