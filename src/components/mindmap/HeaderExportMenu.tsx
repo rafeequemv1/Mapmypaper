@@ -3,7 +3,7 @@ import React from "react";
 import {
   Download,
   FileImage,
-  FileVector,
+  FileCode,
   FileJson
 } from "lucide-react";
 import {
@@ -32,35 +32,33 @@ const HeaderExportMenu: React.FC<HeaderExportMenuProps> = ({
 }) => (
   <TooltipProvider>
     <Tooltip>
-      <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="w-9 h-9 p-0 bg-transparent border-0 cursor-pointer flex items-center justify-center hover:bg-gray-100 rounded-md transition-colors"
-              aria-label="Export"
-            >
-              <Download className="h-4 w-4 text-black" />
-            </button>
-          </DropdownMenuTrigger>
+          <button
+            className="w-9 h-9 p-0 bg-transparent border-0 cursor-pointer flex items-center justify-center hover:bg-gray-100 rounded-md transition-colors"
+            aria-label="Export"
+          >
+            <Download className="h-4 w-4 text-black" />
+          </button>
         </TooltipTrigger>
-        <TooltipContent side="right">
-          Export mind map
-        </TooltipContent>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem onClick={onExportSVG} className="flex items-center gap-2 cursor-pointer">
-            <FileVector className="h-4 w-4" />
-            <span>Export as SVG</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onExportPNG} className="flex items-center gap-2 cursor-pointer">
-            <FileImage className="h-4 w-4" />
-            <span>Export as PNG</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onExportJSON} className="flex items-center gap-2 cursor-pointer">
-            <FileJson className="h-4 w-4" />
-            <span>Export as JSON</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      </DropdownMenuTrigger>
+      <TooltipContent side="right">
+        Export mind map
+      </TooltipContent>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={onExportSVG} className="flex items-center gap-2 cursor-pointer">
+          <FileCode className="h-4 w-4" />
+          <span>Export as SVG</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onExportPNG} className="flex items-center gap-2 cursor-pointer">
+          <FileImage className="h-4 w-4" />
+          <span>Export as PNG</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onExportJSON} className="flex items-center gap-2 cursor-pointer">
+          <FileJson className="h-4 w-4" />
+          <span>Export as JSON</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
     </Tooltip>
   </TooltipProvider>
 );
