@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
@@ -229,7 +229,18 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       };
     }, []);
 
-    // Updated effect for snapshot mode with capture tooltip - modified to prevent duplicate events
+    // Enable snapshot mode function
+    const enableSnapshotMode = () => {
+      setIsSnapshotMode(true);
+      
+      // Show toast to inform user
+      toast({
+        title: "Snapshot Mode Enabled",
+        description: "Draw a rectangle around the area you want to capture.",
+      });
+    };
+
+    // Updated effect for snapshot mode with capture tooltip
     useEffect(() => {
       if (!pdfContainerRef.current || !viewportRef.current) return;
       
@@ -276,7 +287,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           }
         };
         
-        // Add new handler for the captureArea custom event with safeguards against duplicate events
+        // Add new handler for the captureArea custom event
         const handleCaptureArea = async (e: Event) => {
           const customEvent = e as CustomEvent;
           if (!customEvent.detail?.rect || !pdfContainerRef.current || isProcessingCapture) return;
@@ -321,9 +332,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               setIsProcessingCapture(false);
             }, 500);
           }
-          
-          // Note: We DON'T reset here - we wait for the captureDone event
-          // which is dispatched from the handler in PanelStructure
         };
         
         // Add event listeners
@@ -659,6 +667,16 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               <RotateCw className="h-3 w-3" />
             </Button>
+            {/* Add Camera Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-black p-0 ml-2" 
+              onClick={() => enableSnapshotMode()}
+              title="Take Snapshot"
+            >
+              <Camera className="h-3 w-3" />
+            </Button>
           </div>
           
           {/* Search Section - Modified to be toggled */}
@@ -853,25 +871,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 </svg>
               </div>
               <div>
-                <p className="font-bold">Screenshot Error</p>
-                <p className="text-sm">{captureError}</p>
-              </div>
-              <button 
-                onClick={() => setCaptureError(null)} 
-                className="ml-auto text-red-700 hover:text-red-900"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+                <p className="font-bold">Screenshot Error</p

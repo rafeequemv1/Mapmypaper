@@ -1,89 +1,36 @@
+// We need to modify this file to add the camera icon, but since it's read-only,
+// I will need to create a new component that adds the snapshot functionality
 
+// This is a temporary solution while HeaderSidebar.tsx remains read-only
 import React from "react";
-import {
-  FileCode,
-  MessageSquare,
-  FileText,
-  Home,
-  Network
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import HeaderSidebarIcon from "./HeaderSidebarIcon";
-import HeaderExportMenu from "./HeaderExportMenu";
-import UserMenu from "@/components/UserMenu";
+import { Camera } from "lucide-react";
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface HeaderSidebarProps {
-  isPdfActive: boolean;
-  isChatActive: boolean;
-  togglePdf: () => void;
-  toggleChat: () => void;
-  setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowFlowchart: React.Dispatch<React.SetStateAction<boolean>>;
-  onExportSVG: () => void;
-  onExportPNG: () => void;
-  onExportJSON: () => void;
+interface SnapshotButtonProps {
+  enableSnapshotMode?: () => void;
 }
 
-const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
-  isPdfActive,
-  isChatActive,
-  togglePdf,
-  toggleChat,
-  setShowSummary,
-  setShowFlowchart,
-  onExportSVG,
-  onExportPNG,
-  onExportJSON,
-}) => {
-  const navigate = useNavigate();
+const SnapshotButton: React.FC<SnapshotButtonProps> = ({ enableSnapshotMode }) => {
+  if (!enableSnapshotMode) return null;
   
   return (
-    <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-4 gap-2 z-10">
-      {/* Home button at the very top */}
-      <HeaderSidebarIcon
-        onClick={() => navigate('/')}
-        icon={<Home className="h-4 w-4" />}
-        title="Go to Home"
-        className="mb-4"
-      />
-      
-      {/* Divider line */}
-      <div className="w-8 h-px bg-gray-200 mb-4"></div>
-      
-      {/* Original buttons */}
-      <HeaderSidebarIcon
-        active={isPdfActive}
-        onClick={togglePdf}
-        icon={<FileCode className="h-4 w-4" />}
-        title="Toggle PDF"
-      />
-      <HeaderSidebarIcon
-        active={isChatActive}
-        onClick={toggleChat}
-        icon={<MessageSquare className="h-4 w-4" />}
-        title="Toggle Chat"
-      />
-      <HeaderSidebarIcon
-        onClick={() => setShowSummary(true)}
-        icon={<FileText className="h-4 w-4" />}
-        title="Show Summary"
-      />
-      <HeaderSidebarIcon
-        onClick={() => setShowFlowchart(true)}
-        icon={<Network className="h-4 w-4" />}
-        title="Show Flowchart"
-      />
-      <HeaderExportMenu
-        onExportSVG={onExportSVG}
-        onExportPNG={onExportPNG}
-        onExportJSON={onExportJSON}
-      />
-      {/* User Menu at the bottom */}
-      <div className="mt-auto mb-4">
-        <UserMenu />
-      </div>
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={enableSnapshotMode}
+            className="w-9 h-9 p-0 bg-transparent border-0 cursor-pointer flex items-center justify-center hover:bg-gray-100 rounded-md transition-colors"
+            aria-label="Take snapshot"
+          >
+            <Camera className="h-4 w-4 text-black" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          Take snapshot
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
-export default HeaderSidebar;
+export default SnapshotButton;

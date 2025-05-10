@@ -18,6 +18,8 @@ interface PanelStructureProps {
   onMindMapReady: any;
   explainText: string;
   onExplainText: (text: string) => void;
+  isSnapshotMode?: boolean; // Added prop
+  setIsSnapshotMode?: (mode: boolean) => void; // Added prop
 }
 
 const mindMapKeyPrefix = "mindMapData_";
@@ -30,6 +32,8 @@ const PanelStructure = ({
   onMindMapReady,
   explainText,
   onExplainText,
+  isSnapshotMode,
+  setIsSnapshotMode,
 }: PanelStructureProps) => {
   const isMapGenerated = true;
   const pdfViewerRef = useRef(null);
@@ -376,6 +380,24 @@ const PanelStructure = ({
       }
     }
   };
+
+  // Listen for snapshot mode activation
+  useEffect(() => {
+    const handleEnableSnapshotMode = () => {
+      // If PDF is not visible, show it
+      if (!showPdf) {
+        togglePdf();
+      }
+      
+      // We don't need to set isSnapshotMode here as it's handled in the PdfViewer component
+    };
+    
+    window.addEventListener('enableSnapshotMode', handleEnableSnapshotMode);
+    
+    return () => {
+      window.removeEventListener('enableSnapshotMode', handleEnableSnapshotMode);
+    };
+  }, [showPdf, togglePdf]);
 
   if (!isRendered) {
     return <div className="h-full w-full flex justify-center items-center">

@@ -2,7 +2,7 @@
 import React from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
-import { Sparkles } from "lucide-react";
+import { Camera, Sparkles } from "lucide-react";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON } from "@/lib/export-utils";
 
 interface HeaderProps {
@@ -13,6 +13,7 @@ interface HeaderProps {
   isPdfActive: boolean;
   isChatActive: boolean;
   mindMap: MindElixirInstance | null;
+  enableSnapshotMode?: () => void; // Added prop for snapshot mode
 }
 
 const Header = ({ 
@@ -22,7 +23,8 @@ const Header = ({
   setShowFlowchart,
   isPdfActive, 
   isChatActive, 
-  mindMap 
+  mindMap,
+  enableSnapshotMode // New prop
 }: HeaderProps) => {
   // Define export menu handlers
   const handleExportSVG = () => {
@@ -56,6 +58,7 @@ const Header = ({
         onExportSVG={handleExportSVG}
         onExportPNG={handleExportPNG}
         onExportJSON={handleExportJSON}
+        enableSnapshotMode={enableSnapshotMode} // Pass the new prop
       />
     </>
   );
