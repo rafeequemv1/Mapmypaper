@@ -1,4 +1,3 @@
-
 // PDF Storage Utility for IndexedDB with Caching
 // Manages PDF data storage, retrieval, and state management
 
@@ -138,6 +137,11 @@ export const storePdfData = async (key: string, pdfData: string): Promise<void> 
 // Retrieve PDF data from cache first, then IndexedDB if not cached
 export const getPdfData = async (key: string): Promise<string | null> => {
   try {
+    // Reset any previous load errors
+    if (window) {
+      window.__PDF_LOAD_ERROR__ = null;
+    }
+    
     // Check cache first for instant retrieval
     if (pdfDataCache.has(key)) {
       const cachedData = pdfDataCache.get(key);
@@ -163,15 +167,28 @@ export const getPdfData = async (key: string): Promise<string | null> => {
         // Store in cache for future fast access
         if (pdfData) {
           pdfDataCache.set(key, pdfData);
+          console.log(`PDF data retrieved from IndexedDB for key: ${key}`);
+          resolve(pdfData || null);
+        } else {
+          // Set error if PDF not found
+          if (window) {
+            window.__PDF_LOAD_ERROR__ = `PDF data not found for key: ${key}`;
+          }
+          console.error(`PDF data not found for key: ${key}`);
+          resolve(null);
         }
-        
-        console.log(`PDF data retrieved from IndexedDB for key: ${key}`);
-        resolve(pdfData || null);
       };
       
       request.onerror = () => {
+        const errorMsg = `Failed to get PDF data: ${request.error?.message || 'Unknown error'}`;
         console.error("Error retrieving PDF data:", request.error);
-        reject(new Error(`Failed to get PDF data: ${request.error?.message || 'Unknown error'}`));
+        
+        // Set global error for UI to display
+        if (window) {
+          window.__PDF_LOAD_ERROR__ = errorMsg;
+        }
+        
+        reject(new Error(errorMsg));
       };
       
       transaction.oncomplete = () => {
@@ -180,6 +197,12 @@ export const getPdfData = async (key: string): Promise<string | null> => {
     });
   } catch (error) {
     console.error("Error in getPdfData:", error);
+    
+    // Set global error for UI to display
+    if (window) {
+      window.__PDF_LOAD_ERROR__ = `Error loading PDF: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+    
     throw error;
   }
 };

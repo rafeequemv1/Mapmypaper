@@ -64,7 +64,10 @@ const PanelStructure = ({
     );
   }, []);
 
-  // Handle active PDF change - optimized for instant loading
+  // Add a new state for PDF loading retries
+  const [pdfLoadRetries, setPdfLoadRetries] = useState(0);
+
+  // Handle active PDF change - improved error handling
   const handleTabChange = async (key: string) => {
     try {
       // Update the active key immediately for UI response
@@ -106,6 +109,11 @@ const PanelStructure = ({
         return;
       }
       
+      // Reset any loading errors that might be stored in the window
+      if (window) {
+        window.__PDF_LOAD_ERROR__ = null;
+      }
+      
       // Only show loading if this is a newly added PDF without a generated mindmap yet
       if (!isMindMapReady(key)) {
         setIsLoadingMindMap(true);
@@ -121,6 +129,9 @@ const PanelStructure = ({
           description: "PDF and mindmap switched successfully.",
         });
       }
+
+      // Reset PDF load retries when switching PDFs
+      setPdfLoadRetries(0);
 
       // Give some time for the mindmap to load before removing loading state
       // Only needed for newly added PDFs
@@ -401,6 +412,11 @@ const PanelStructure = ({
     }
   };
 
+  // Add a function to force PDF reload
+  const handleForceReload = () => {
+    setPdfLoadRetries(prev => prev + 1);
+  };
+
   // Listen for image gallery opening requests
   useEffect(() => {
     const handleOpenGallery = () => {
@@ -448,6 +464,7 @@ const PanelStructure = ({
                 onTextSelected={onExplainText}
                 onImageCaptured={handleImageCaptured}
                 highlightByDefault={true} // Enable text highlighting by default
+                key={`pdf-viewer-${activePdfKey}-${pdfLoadRetries}`} // Force remount on retry
               />
             </TooltipProvider>
           </div>

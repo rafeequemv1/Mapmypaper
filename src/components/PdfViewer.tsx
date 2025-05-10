@@ -1,9 +1,8 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
@@ -30,7 +29,7 @@ interface PdfViewerProps {
   onPdfLoaded?: () => void;
   onImageCaptured?: (imageData: string) => void;
   renderTooltipContent?: () => React.ReactNode;
-  highlightByDefault?: boolean; // Added the missing prop
+  highlightByDefault?: boolean;
 }
 
 interface PdfViewerHandle {
@@ -79,28 +78,38 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     // Add a ref for the search input to focus when search is opened
     const searchInputRef = useRef<HTMLInputElement>(null);
 
+    // Add these new states to handle error recovery
+    const [retryCount, setRetryCount] = useState<number>(0);
+    const [isRetrying, setIsRetrying] = useState<boolean>(false);
+    
     const loadPdfData = async () => {
       try {
         setIsLoading(true);
+        // Clear any previous load errors
+        setLoadError(null);
+        
         const data = await getCurrentPdfData();
         
         if (data) {
           setPdfData(data);
           console.log("PDF data loaded successfully from IndexedDB");
         } else {
-          setLoadError("No PDF found. Please upload a PDF document first.");
+          // Check for global error message
+          const errorMsg = window.__PDF_LOAD_ERROR__ || "No PDF found. Please upload a PDF document first.";
+          setLoadError(errorMsg);
           toast({
-            title: "No PDF Found",
-            description: "Please upload a PDF document first.",
+            title: "PDF Loading Error",
+            description: errorMsg,
             variant: "destructive",
           });
         }
       } catch (error) {
         console.error("Error retrieving PDF data:", error);
-        setLoadError("Could not load the PDF document.");
+        const errorMessage = error instanceof Error ? error.message : "Could not load the PDF document.";
+        setLoadError(errorMessage);
         toast({
           title: "Error loading PDF",
-          description: "Could not load the PDF document.",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {
@@ -108,10 +117,32 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     };
 
+    // Retry loading function
+    const handleRetryLoad = () => {
+      setIsRetrying(true);
+      setRetryCount(prev => prev + 1);
+      
+      // Clear cache and try loading again
+      if (window.caches) {
+        caches.keys().then(cacheNames => {
+          cacheNames.forEach(cacheName => {
+            caches.delete(cacheName);
+          });
+        });
+      }
+      
+      // Small delay to ensure any cleanup is complete
+      setTimeout(() => {
+        loadPdfData().finally(() => {
+          setIsRetrying(false);
+        });
+      }, 500);
+    };
+
     useEffect(() => {
       setupPdfWorker();
       loadPdfData();
-    }, []);
+    }, [retryCount]); // Add retryCount as dependency to reload when retrying
     
     useEffect(() => {
       const handlePdfSwitch = (event: Event) => {
@@ -814,8 +845,26 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 className="w-full"
                 loading={<div className="text-center py-4">Loading PDF...</div>}
                 error={
-                  <div className="text-center py-4 text-red-500">
-                    {loadError || "Failed to load PDF. Please try again."}
+                  <div className="text-center py-4 text-red-500 flex flex-col items-center gap-4">
+                    <div>{loadError || "Failed to load PDF. Please try again."}</div>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleRetryLoad} 
+                      disabled={isRetrying}
+                      className="flex items-center gap-2"
+                    >
+                      {isRetrying ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <span>Retrying...</span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4" />
+                          <span>Retry Loading</span>
+                        </>
+                      )}
+                    </Button>
                   </div>
                 }
               >
@@ -850,48 +899,3 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             </div>
           </ScrollArea>
         ) : (
-          <div className="flex h-full items-center justify-center flex-col gap-4">
-            {isLoading ? (
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-500">Loading PDF...</p>
-              </div>
-            ) : (
-              <div className="text-center p-8">
-                <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
-                <p className="text-gray-500">Please return to the upload page and select a PDF document.</p>
-                <Button 
-                  onClick={() => window.location.href = '/'} 
-                  variant="outline" 
-                  className="mt-4"
-                >
-                  Go to Upload Page
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Display temporary message if a capture error occurs */}
-        {captureError && (
-          <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md z-50">
-            <div className="flex items-center">
-              <div className="py-1">
-                <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-bold">{captureError}</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
