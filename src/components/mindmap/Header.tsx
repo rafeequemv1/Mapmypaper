@@ -2,7 +2,6 @@
 import React from "react";
 import { MindElixirInstance } from "mind-elixir";
 import HeaderSidebar from "./HeaderSidebar";
-import { Camera, Sparkles } from "lucide-react";
 import { downloadMindMapAsPNG, downloadMindMapAsSVG, downloadMindMapAsJSON } from "@/lib/export-utils";
 import SnapshotButton from "./SnapshotButton";
 
