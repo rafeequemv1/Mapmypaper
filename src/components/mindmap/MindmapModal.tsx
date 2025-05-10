@@ -12,24 +12,22 @@ import {
 import { Button } from "@/components/ui/button";
 import MindElixir, { MindElixirInstance } from "mind-elixir";
 import nodeMenu from "@mind-elixir/node-menu-neo";
-import { getCachedDiagram, cacheDiagram } from "@/utils/diagramCache";
-import "../../styles/node-menu.css";
+import "../../styles/node-menu.css"; // Fix the import path
 
 interface MindmapModalProps {
   isOpen: boolean;
   onClose: () => void;
-  pdfKey?: string; // Add pdfKey prop to enable caching
 }
 
-export function MindmapModal({ isOpen, onClose, pdfKey }: MindmapModalProps) {
+export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
   
-  // Demo mindmap code - this will be used when there's no cached data
-  const defaultMindmapCode = `mindmap
+  // Demo mindmap code
+  const mindmapCode = `mindmap
   root((Mindmap))
     Origins
       Long history
@@ -46,92 +44,6 @@ export function MindmapModal({ isOpen, onClose, pdfKey }: MindmapModalProps) {
       Pen and paper
       Mermaid`;
 
-  // Convert mindmap code to MindElixir data structure
-  const convertCodeToMindElixirData = (code: string) => {
-    try {
-      // Check if the code is in JSON format
-      if (code.trim().startsWith('{')) {
-        try {
-          // Try to parse as JSON directly
-          return JSON.parse(code);
-        } catch (jsonError) {
-          console.error("Error parsing JSON mindmap data:", jsonError);
-        }
-      }
-      
-      // If not JSON or JSON parsing failed, process as Mermaid syntax
-      const lines = code.split('\n');
-      const rootLine = lines.find(line => line.includes('root(('));
-      
-      const rootTopic = rootLine 
-        ? rootLine.match(/root\(\((.*?)\)\)/)?.[1] || 'Mindmap'
-        : 'Mindmap';
-      
-      const data = {
-        nodeData: {
-          id: 'root',
-          topic: rootTopic,
-          children: []
-        }
-      };
-      
-      // Track the current parent at each indent level
-      const parents: any[] = [data.nodeData];
-      const indentLevels: number[] = [0];
-      
-      let lastId = 0;
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line || line.startsWith('mindmap') || line.includes('root((')) continue;
-        
-        // Calculate indent level based on spaces
-        let indentLevel = 0;
-        for (let j = 0; j < lines[i].length; j++) {
-          if (lines[i][j] === ' ') indentLevel++;
-          else break;
-        }
-        indentLevel = Math.floor(indentLevel / 2);
-        
-        // Create a new node
-        const node = {
-          id: `${++lastId}`,
-          topic: line.trim(),
-          children: []
-        };
-        
-        // Find appropriate parent for this indent level
-        while (indentLevels.length > 0 && indentLevel <= indentLevels[indentLevels.length - 1]) {
-          parents.pop();
-          indentLevels.pop();
-        }
-        
-        // Add to parent and update tracking arrays
-        if (parents.length > 0) {
-          const parent = parents[parents.length - 1];
-          if (!parent.children) parent.children = [];
-          parent.children.push(node);
-          parents.push(node);
-          indentLevels.push(indentLevel);
-        }
-      }
-      
-      return data;
-    } catch (error) {
-      console.error("Error converting mindmap code to data structure:", error);
-      // Return default structure on error
-      return {
-        nodeData: {
-          id: 'root',
-          topic: 'Mindmap',
-          children: [
-            { id: '1', topic: 'Error converting data', children: [] }
-          ]
-        }
-      };
-    }
-  };
-
   useEffect(() => {
     if (!isOpen) return;
     
@@ -143,21 +55,6 @@ export function MindmapModal({ isOpen, onClose, pdfKey }: MindmapModalProps) {
         if (containerRef.current) {
           // Clear any existing content to prevent DOM conflicts
           containerRef.current.innerHTML = '';
-          
-          // Check for cached mindmap data if pdfKey is provided
-          let mindmapCode = defaultMindmapCode;
-          let data;
-          
-          if (pdfKey) {
-            const cached = getCachedDiagram(pdfKey, 'mindmap');
-            if (cached) {
-              mindmapCode = cached;
-              console.log("Using cached mindmap data");
-            }
-          }
-          
-          // Convert the mindmap code to MindElixir data structure
-          data = convertCodeToMindElixirData(mindmapCode);
           
           // Setup the mindmap for visualization
           const options = {
@@ -197,6 +94,35 @@ export function MindmapModal({ isOpen, onClose, pdfKey }: MindmapModalProps) {
             }
           };
           
+          const data = {
+            nodeData: {
+              id: 'root',
+              topic: 'Mindmap',
+              children: [
+                { id: '1', topic: 'Origins', children: [
+                  { id: '1-1', topic: 'Long history' },
+                  { id: '1-2', topic: 'Popularization', children: [
+                    { id: '1-2-1', topic: 'British psychology author Tony Buzan' }
+                  ]}
+                ]},
+                { id: '2', topic: 'Research', children: [
+                  { id: '2-1', topic: 'On effectiveness' },
+                  { id: '2-2', topic: 'On Automatic creation', children: [
+                    { id: '2-2-1', topic: 'Uses', children: [
+                      { id: '2-2-1-1', topic: 'Creative techniques' },
+                      { id: '2-2-1-2', topic: 'Strategic planning' },
+                      { id: '2-2-1-3', topic: 'Argument mapping' }
+                    ]}
+                  ]}
+                ]},
+                { id: '3', topic: 'Tools', children: [
+                  { id: '3-1', topic: 'Pen and paper' },
+                  { id: '3-2', topic: 'Mermaid' }
+                ]}
+              ]
+            }
+          };
+          
           // Try to create the mindmap with proper node menu integration
           try {
             const mind = new MindElixir(options);
@@ -206,16 +132,6 @@ export function MindmapModal({ isOpen, onClose, pdfKey }: MindmapModalProps) {
             
             // Initialize with data
             mind.init(data);
-            
-            // Attach change listener to save changes to cache if pdfKey is provided
-            if (pdfKey) {
-              mind.bus.addListener('operation', () => {
-                // Save the mind map data to cache when it's modified
-                const mindmapCode = `mindmap\n  root((${mind.nodeData.topic}))\n` + 
-                  serializeMindElixirData(mind.nodeData.children, 2);
-                cacheDiagram(pdfKey, 'mindmap', mindmapCode);
-              });
-            }
             
             // Store reference for later use
             mindMapRef.current = mind;
@@ -304,24 +220,7 @@ export function MindmapModal({ isOpen, onClose, pdfKey }: MindmapModalProps) {
         containerRef.current.innerHTML = '';
       }
     };
-  }, [isOpen, theme, pdfKey]);
-
-  // Helper function to serialize the mind map data back to a string format
-  const serializeMindElixirData = (children: any[], indentLevel: number): string => {
-    if (!children || !Array.isArray(children) || children.length === 0) return '';
-    
-    let result = '';
-    const indent = '  '.repeat(indentLevel);
-    
-    for (const child of children) {
-      result += `${indent}${child.topic}\n`;
-      if (child.children && child.children.length > 0) {
-        result += serializeMindElixirData(child.children, indentLevel + 1);
-      }
-    }
-    
-    return result;
-  };
+  }, [isOpen, theme, mindmapCode]);
 
   // Toggle through available themes
   const toggleTheme = () => {
@@ -386,7 +285,7 @@ export function MindmapModal({ isOpen, onClose, pdfKey }: MindmapModalProps) {
           <div className="mt-4 p-4 bg-gray-50 rounded-md">
             <h3 className="text-sm font-medium mb-2">Mindmap Structure:</h3>
             <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto max-h-[15vh] overflow-y-auto">
-              {defaultMindmapCode}
+              {mindmapCode}
             </pre>
           </div>
         </div>
