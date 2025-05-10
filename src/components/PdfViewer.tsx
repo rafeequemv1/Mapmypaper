@@ -12,6 +12,13 @@ import { createSelectionRect, captureElementArea, toggleTextSelection } from "@/
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
+// Define the CDN URLs array for PDF.js worker
+const cdnUrls = [
+  `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`,
+  `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`,
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
+];
+
 // Set up the PDF.js worker with proper URL - ENHANCED with multiple fallbacks and error handling
 function setupPdfWorker() {
   // Don't try to set up again if already confirmed working
@@ -26,13 +33,6 @@ function setupPdfWorker() {
   
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
     const pdfJsVersion = pdfjs.version;
-    
-    // Try multiple CDNs in order of reliability
-    const cdnUrls = [
-      `https://unpkg.com/pdfjs-dist@${pdfJsVersion}/build/pdf.worker.min.js`,
-      `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfJsVersion}/build/pdf.worker.min.js`,
-      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`
-    ];
     
     const cdnIndex = Math.min(window.__PDF_WORKER_LOAD_ATTEMPTS__ - 1, cdnUrls.length - 1);
     const workerSrc = cdnUrls[cdnIndex];
@@ -885,166 +885,3 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                   className="h-6 px-1 text-black"
                   onClick={() => navigateSearch('next')}
                 >
-                  →
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {/* PDF Content Area */}
-        <ScrollArea className="flex-1 overflow-auto relative" data-pdf-scroll-area>
-          <div 
-            ref={pdfContainerRef}
-            className="flex flex-col items-center px-2 py-4 min-h-full"
-            style={{
-              position: 'relative',
-              // Add some extra space at bottom for comfortable viewing
-              paddingBottom: '2rem',
-              minHeight: pdfData ? undefined : '100%',
-            }}
-          >
-            {/* Loading State */}
-            {isLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white bg-opacity-80 z-10">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-sm font-medium">{isRetrying ? "Retrying..." : "Loading PDF..."}</p>
-              </div>
-            )}
-
-            {/* Error State - Enhanced with retry button */}
-            {!isLoading && loadError && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white">
-                <div className="bg-red-50 border border-red-200 rounded-md p-4 max-w-md">
-                  <h3 className="text-lg font-semibold text-red-800">PDF Loading Error</h3>
-                  <p className="text-sm text-red-700 mt-1">{loadError}</p>
-                  <p className="text-xs text-gray-600 mt-4">Troubleshooting tips:</p>
-                  <ul className="text-xs text-gray-600 list-disc pl-4 mt-1 space-y-1">
-                    <li>Make sure you have uploaded a PDF document</li>
-                    <li>Check if your PDF is valid and not password protected</li>
-                    <li>Try clearing your browser cache and reloading</li>
-                    <li>If using a mobile device, try on desktop</li>
-                  </ul>
-                  <div className="mt-4 flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={handleRetryLoad}
-                      disabled={isRetrying}
-                    >
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      {isRetrying ? "Retrying..." : "Retry Loading"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Empty State - No PDF uploaded yet */}
-            {!isLoading && !loadError && !pdfData && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white">
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 max-w-md text-center">
-                  <h3 className="text-lg font-semibold text-blue-800">No PDF Document</h3>
-                  <p className="text-sm text-blue-700 mt-1">Please upload a PDF document to view it here.</p>
-                  <div className="mt-4">
-                    <Button onClick={() => window.location.href = "/upload"}>
-                      Upload PDF
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* PDF Document */}
-            {!isLoading && pdfData && (
-              <Document
-                file={pdfData}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={(error: Error) => {
-                  console.error("Error loading PDF:", error);
-                  setLoadError(error.message);
-                  toast({
-                    title: "Error loading PDF",
-                    description: error.message,
-                    variant: "destructive"
-                  });
-                }}
-                className="max-w-full"
-                loading={(
-                  <div className="flex flex-col items-center justify-center w-full py-12">
-                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-sm font-medium mt-2">Rendering document...</p>
-                  </div>
-                )}
-                noData={(
-                  <div className="flex flex-col items-center justify-center w-full py-12">
-                    <p className="text-sm font-medium">No PDF data found.</p>
-                  </div>
-                )}
-                error={(
-                  <div className="flex flex-col items-center justify-center w-full py-12">
-                    <p className="text-sm font-medium text-red-500">Error loading PDF.</p>
-                  </div>
-                )}
-                options={documentOptions}
-              >
-                {Array.from(new Array(numPages), (_, index) => (
-                  <div 
-                    key={`page_${index + 1}`}
-                    ref={setPageRef(index)}
-                    className="border border-gray-200 shadow-sm mb-4 relative bg-white"
-                    data-page-number={index + 1}
-                  >
-                    <Page
-                      key={`page_${index + 1}_content`}
-                      pageNumber={index + 1}
-                      width={getOptimalPageWidth()}
-                      scale={scale}
-                      onRenderSuccess={onPageRenderSuccess}
-                      className="max-w-full"
-                      renderTextLayer={true}
-                      renderAnnotationLayer={true}
-                      loading={(
-                        <div className="flex flex-col items-center justify-center w-full py-12">
-                          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                      )}
-                    />
-                    <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-sm">
-                      {index + 1} / {numPages}
-                    </div>
-                  </div>
-                ))}
-              </Document>
-            )}
-            
-            {/* Text selection tooltip */}
-            {showSelectionTooltip && selectedText && (
-              <PositionedTooltip
-                ref={selectionTooltipRef}
-                xPos={tooltipPosition.x}
-                yPos={tooltipPosition.y}
-                onClose={() => setShowSelectionTooltip(false)}
-              >
-                <div className="flex space-x-1">
-                  <Button
-                    size="sm"
-                    className="text-xs"
-                    onClick={handleExplainText}
-                  >
-                    <MessageSquare className="h-3 w-3 mr-1" />
-                    Ask in Chat
-                  </Button>
-                  {renderTooltipContent && renderTooltipContent()}
-                </div>
-              </PositionedTooltip>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
