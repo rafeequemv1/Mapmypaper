@@ -1,6 +1,15 @@
+
 import { callGeminiAPI } from "@/utils/geminiApiUtils";
 import PdfToText from "react-pdftotext";
 import { storePdfData, getPdfData, isMindMapReady, getCurrentPdf, setCurrentPdf, getAllPdfs, deletePdfData } from "@/utils/pdfStorage";
+
+// Helper function to get current PDF data
+async function getCurrentPdfData(): Promise<string | null> {
+  const currentPdfKey = await getCurrentPdf();
+  if (!currentPdfKey) return null;
+  
+  return getPdfData(currentPdfKey);
+}
 
 // Modified function to generate structured summary based on document type detection
 export async function generateStructuredSummary(): Promise<any> {
