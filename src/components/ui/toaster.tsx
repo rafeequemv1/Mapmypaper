@@ -15,6 +15,19 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, variant, ...props }) {
+        // Improve the display of rate limit error messages
+        if (typeof description === 'string' && description.includes('rate limit')) {
+          variant = 'warning';
+          description = (
+            <>
+              {description}
+              <div className="mt-2 text-xs text-amber-700">
+                This is typically due to free tier limitations. The app will automatically retry.
+              </div>
+            </>
+          );
+        }
+        
         return (
           <Toast 
             key={id} 
