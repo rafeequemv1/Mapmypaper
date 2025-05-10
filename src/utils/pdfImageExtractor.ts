@@ -8,10 +8,14 @@ function setupPdfWorker() {
     // Get the exact version from the installed pdfjs-dist package
     const pdfJsVersion = pdfjs.version;
     
-    // Set worker to the exact same version through CDN
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
-    window.pdfjsWorkerSrc = pdfjs.GlobalWorkerOptions.workerSrc;
-    console.log(`PDF.js worker set to version: ${pdfJsVersion}`);
+    // Set worker with complete URL scheme to ensure proper loading
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
+    console.log(`PDF.js worker set to version: ${pdfJsVersion} from CDN`);
+    
+    // Make it available globally for debugging
+    if (window) {
+      window.pdfjsWorkerSrc = pdfjs.GlobalWorkerOptions.workerSrc;
+    }
   }
 }
 
@@ -27,7 +31,9 @@ export async function extractImagesFromPdf(pdfData: string | ArrayBuffer): Promi
   const extractedImages: ExtractedImage[] = [];
   
   try {
-    // Ensure worker is set up
+    console.log("Starting PDF image extraction process...");
+    
+    // Ensure worker is set up with proper URL
     setupPdfWorker();
     
     // If PDF data is a data URL, convert it to ArrayBuffer
@@ -41,12 +47,24 @@ export async function extractImagesFromPdf(pdfData: string | ArrayBuffer): Promi
       throw new Error('Invalid PDF data format');
     }
 
-    // Load the PDF document
-    const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
+    console.log("PDF data prepared for processing");
+
+    // Load the PDF document with proper settings
+    const loadingTask = pdfjs.getDocument({ 
+      data: pdfBuffer,
+      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + pdfjs.version + '/cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + pdfjs.version + '/standard_fonts/'
+    });
+    
+    console.log("PDF loading task created");
+    
     const pdf = await loadingTask.promise;
+    console.log(`PDF loaded successfully with ${pdf.numPages} pages`);
     
     // Iterate through all pages
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      console.log(`Processing page ${pageNum}...`);
       const page = await pdf.getPage(pageNum);
       const operatorList = await page.getOperatorList();
       
@@ -59,52 +77,58 @@ export async function extractImagesFromPdf(pdfData: string | ArrayBuffer): Promi
           const imageArgs = operatorList.argsArray[i];
           const imageId = imageArgs[0];
           
-          // Get the image data for the identified image
-          const imgData = await page.objs.get(imageId);
-          
-          if (imgData && imgData.width && imgData.height && imgData.data) {
-            // Check if image is large enough to be meaningful (skip tiny images/icons)
-            if (imgData.width >= 50 && imgData.height >= 50) {
-              try {
-                // Convert the image data to canvas and then to data URL
-                const canvas = document.createElement('canvas');
-                canvas.width = imgData.width;
-                canvas.height = imgData.height;
-                const ctx = canvas.getContext('2d');
-                
-                if (ctx) {
-                  // Create ImageData from the raw pixel data
-                  const imageData = new ImageData(
-                    new Uint8ClampedArray(imgData.data),
-                    imgData.width,
-                    imgData.height
-                  );
+          try {
+            // Get the image data for the identified image
+            const imgData = await page.objs.get(imageId);
+            
+            if (imgData && imgData.width && imgData.height && imgData.data) {
+              // Check if image is large enough to be meaningful (skip tiny images/icons)
+              if (imgData.width >= 50 && imgData.height >= 50) {
+                try {
+                  // Convert the image data to canvas and then to data URL
+                  const canvas = document.createElement('canvas');
+                  canvas.width = imgData.width;
+                  canvas.height = imgData.height;
+                  const ctx = canvas.getContext('2d');
                   
-                  ctx.putImageData(imageData, 0, 0);
-                  
-                  // Convert to data URL
-                  const dataUrl = canvas.toDataURL('image/png');
-                  
-                  // Add to extracted images
-                  extractedImages.push({
-                    id: `page${pageNum}_img${extractedImages.length}`,
-                    url: dataUrl,
-                    alt: `Image from page ${pageNum}`,
-                    pageNumber: pageNum,
-                    width: imgData.width,
-                    height: imgData.height,
-                  });
+                  if (ctx) {
+                    // Create ImageData from the raw pixel data
+                    const imageData = new ImageData(
+                      new Uint8ClampedArray(imgData.data),
+                      imgData.width,
+                      imgData.height
+                    );
+                    
+                    ctx.putImageData(imageData, 0, 0);
+                    
+                    // Convert to data URL
+                    const dataUrl = canvas.toDataURL('image/png');
+                    
+                    // Add to extracted images
+                    extractedImages.push({
+                      id: `page${pageNum}_img${extractedImages.length}`,
+                      url: dataUrl,
+                      alt: `Image from page ${pageNum}`,
+                      pageNumber: pageNum,
+                      width: imgData.width,
+                      height: imgData.height,
+                    });
+                    
+                    console.log(`Extracted image from page ${pageNum}: ${imgData.width}x${imgData.height}`);
+                  }
+                } catch (err) {
+                  console.error('Error processing specific image:', err);
                 }
-              } catch (err) {
-                console.error('Error processing image:', err);
               }
             }
+          } catch (imgErr) {
+            console.error(`Error getting image data for ID ${imageId}:`, imgErr);
           }
         }
       }
     }
 
-    console.log(`Extracted ${extractedImages.length} images from PDF`);
+    console.log(`Extracted ${extractedImages.length} total images from PDF`);
     return extractedImages;
   } catch (error) {
     console.error('Error extracting images from PDF:', error);

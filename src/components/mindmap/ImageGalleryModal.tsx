@@ -1,14 +1,16 @@
 
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Camera, Download, Loader, Settings } from "lucide-react";
+import { Camera, Download, Loader, Images, RefreshCw, AlertCircle } from "lucide-react";
 import { ExtractedImage, getExtractedImages, extractImagesFromPdf, storeExtractedImages } from "@/utils/pdfImageExtractor";
 import { Button } from "@/components/ui/button";
 import { getPdfKey } from "@/components/PdfTabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { getPdfData } from "@/utils/pdfStorage";
+import { useToast } from "@/hooks/use-toast";
 
 interface ImageGalleryModalProps {
   open: boolean;
@@ -23,11 +25,15 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
     return sessionStorage.getItem('extractImages') !== 'false';
   });
   const [extractionInProgress, setExtractionInProgress] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Load images when modal opens or when active PDF changes
   useEffect(() => {
     if (open) {
       setLoading(true);
+      setExtractionError(null);
+      
       // Listen for PDF switch events
       const handlePdfSwitched = (e: CustomEvent) => {
         if (e.detail?.pdfKey) {
@@ -94,6 +100,7 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
 
   // Load images for a specific PDF
   const loadImagesForPdf = async (pdfKey: string) => {
+    setExtractionError(null);
     setActivePdfKey(pdfKey);
     const extractedImages = getExtractedImages(pdfKey);
     setImages(extractedImages);
@@ -106,25 +113,53 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
     
     try {
       setExtractionInProgress(true);
+      setExtractionError(null);
+      
       // Get PDF data
       const pdfData = await getPdfData(activePdfKey);
       
       if (!pdfData) {
         throw new Error("Could not load PDF data");
       }
+
+      toast({
+        title: "Extracting images",
+        description: "Please wait while we extract images from the PDF...",
+      });
       
       // Extract images
+      console.log("Starting image extraction for PDF:", activePdfKey);
       const extractedImages = await extractImagesFromPdf(pdfData);
+      console.log("Image extraction complete, found:", extractedImages.length);
       
       if (extractedImages.length > 0) {
         // Store extracted images
         storeExtractedImages(activePdfKey, extractedImages);
         // Update state
         setImages(extractedImages);
+        
+        toast({
+          title: "Success",
+          description: `Extracted ${extractedImages.length} images from the PDF`,
+        });
+      } else {
+        toast({
+          title: "No images found",
+          description: "No extractable images were found in this PDF",
+          variant: "warning",
+        });
       }
       
     } catch (error) {
       console.error("Error extracting images:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      setExtractionError(`Failed to extract images: ${errorMessage}`);
+      
+      toast({
+        title: "Extraction failed",
+        description: "There was a problem extracting images from this PDF",
+        variant: "destructive",
+      });
     } finally {
       setExtractionInProgress(false);
     }
@@ -132,12 +167,26 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
 
   // Download an individual image
   const downloadImage = (image: ExtractedImage) => {
-    const link = document.createElement('a');
-    link.href = image.url;
-    link.download = `${image.alt.replace(/\s+/g, '_')}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const link = document.createElement('a');
+      link.href = image.url;
+      link.download = `${image.alt.replace(/\s+/g, '_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Download started",
+        description: "Your image is being downloaded",
+      });
+    } catch (error) {
+      console.error("Error downloading image:", error);
+      toast({
+        title: "Download failed",
+        description: "Could not download the image",
+        variant: "destructive",
+      });
+    }
   };
 
   // Render placeholder when no images are available
@@ -148,6 +197,16 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
       <p className="text-sm mt-2 text-center max-w-md">
         This PDF doesn't contain any extractable images or image extraction wasn't enabled during upload.
       </p>
+      
+      {extractionError && (
+        <Alert variant="destructive" className="mt-4 max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Extraction Error</AlertTitle>
+          <AlertDescription>
+            {extractionError}
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Button 
         variant="outline" 
@@ -163,7 +222,7 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
           </>
         ) : (
           <>
-            <Camera className="h-4 w-4" />
+            <RefreshCw className="h-4 w-4" />
             <span>Try to extract images now</span>
           </>
         )}
@@ -177,7 +236,7 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center">
-              <Camera className="mr-2 h-5 w-5" /> 
+              <Images className="mr-2 h-5 w-5" /> 
               Image Gallery
             </div>
             
@@ -200,12 +259,15 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ open, onOpenChang
                 {extractionInProgress ? (
                   <Loader className="h-4 w-4 animate-spin mr-2" />
                 ) : (
-                  <Settings className="h-4 w-4 mr-2" />
+                  <RefreshCw className="h-4 w-4 mr-2" />
                 )}
                 <span className="text-xs">Re-extract</span>
               </Button>
             </div>
           </DialogTitle>
+          <DialogDescription>
+            View and download images extracted from your PDF document
+          </DialogDescription>
         </DialogHeader>
         
         <ScrollArea className="flex-grow">

@@ -1,7 +1,7 @@
 
 /// <reference types="vite/client" />
 
-// Extend Window interface to include pdfjsWorkerSrc property
+// Extend Window interface to include PDF-related global properties
 declare global {
   interface Window {
     pdfjsWorkerSrc?: string;
