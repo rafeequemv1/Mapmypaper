@@ -12,12 +12,13 @@ import { createSelectionRect, captureElementArea, toggleTextSelection } from "@/
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Set up the PDF.js worker with proper URL
+// Set up the PDF.js worker with proper URL - UPDATED to use CDN directly
 function setupPdfWorker() {
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
     const pdfJsVersion = pdfjs.version;
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfJsVersion}/pdf.worker.min.js`;
-    console.log(`PdfViewer worker set to version: ${pdfJsVersion} from CDN with https`);
+    // Using direct CDN URL with version to avoid local path issues
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfJsVersion}/build/pdf.worker.min.js`;
+    console.log(`PdfViewer worker set to version: ${pdfJsVersion} from unpkg CDN`);
   }
 }
 
@@ -87,6 +88,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         setIsLoading(true);
         // Clear any previous load errors
         setLoadError(null);
+        
+        // Ensure PDF.js worker is properly set before loading
+        setupPdfWorker();
         
         const data = await getCurrentPdfData();
         
@@ -673,6 +677,23 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       }
     }, []);
 
+    // Additional effect to make sure worker is set and refresh if needed
+    useEffect(() => {
+      // Force PDF.js to use the CDN version of the worker
+      setupPdfWorker();
+      
+      // Create a timeout to verify the worker is loaded
+      const timeoutId = setTimeout(() => {
+        if (!pdfjs.GlobalWorkerOptions.workerSrc || 
+            document.querySelector('script[src*="pdf.worker"]')?.getAttribute('src') !== pdfjs.GlobalWorkerOptions.workerSrc) {
+          console.log("PDF worker might not be loaded correctly. Retrying...");
+          setupPdfWorker();
+        }
+      }, 1000);
+      
+      return () => clearTimeout(timeoutId);
+    }, []);
+
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
         {/* PDF Toolbar */}
@@ -843,6 +864,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 file={pdfData}
                 onLoadSuccess={onDocumentLoadSuccess}
                 className="w-full"
+                options={{
+                  cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+                  cMapPacked: true,
+                  standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
+                }}
                 loading={<div className="text-center py-4">Loading PDF...</div>}
                 error={
                   <div className="text-center py-4 text-red-500 flex flex-col items-center gap-4">
@@ -870,76 +896,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               >
                 {Array.from(new Array(numPages), (_, index) => (
                   <div
-                    key={`page_${index + 1}`}
-                    className="mb-8 shadow-lg bg-white border border-gray-300 transition-colors duration-300 mx-auto"
-                    ref={setPageRef(index)}
-                    style={{ width: 'fit-content', maxWidth: '100%' }}
-                    data-page-number={index + 1}
-                  >
-                    <Page
-                      pageNumber={index + 1}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={false}
-                      onRenderSuccess={onPageRenderSuccess}
-                      scale={scale}
-                      width={getOptimalPageWidth()}
-                      className="mx-auto"
-                      loading={
-                        <div className="flex items-center justify-center h-[600px] w-full">
-                          <div className="animate-pulse bg-gray-200 h-full w-full"></div>
-                        </div>
-                      }
-                    />
-                    <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-300">
-                      Page {index + 1} of {numPages}
-                    </div>
-                  </div>
-                ))}
-              </Document>
-            </div>
-          </ScrollArea>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center p-8 max-w-md">
-              <div className="mb-6 flex justify-center">
-                <div className="w-16 h-16 text-red-500">
-                  <svg className="fill-current h-16 w-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <path d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6H9V5zm0 8h2v2H9v-2z" />
-                  </svg>
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">No PDF Loaded</h2>
-              <p className="text-gray-600 mb-6">
-                {loadError || "Please upload a PDF document to view it here. You can upload a PDF using the + button in the tabs above."}
-              </p>
-              {loadError && (
-                <Button 
-                  variant="outline"
-                  onClick={handleRetryLoad}
-                  disabled={isRetrying}
-                  className="mx-auto flex items-center gap-2"
-                >
-                  {isRetrying ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span>Retrying...</span>
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4" />
-                      <span>Retry Loading</span>
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+                    key={`page_${

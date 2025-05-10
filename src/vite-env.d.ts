@@ -4,6 +4,7 @@
 // Extend Window interface to include PDF-related global properties
 declare global {
   interface Window {
+    pdfjsLib?: any;
     pdfjsWorkerSrc?: string;
     __PDF_FILES__?: File[];
     __ACTIVE_PDF_KEY__?: string | null;
