@@ -4,7 +4,7 @@
 
 export async function callGeminiAPI(
   prompt: string,
-  options: { maxTokens?: number; image?: string } = {}
+  options: { maxTokens?: number; image?: string; responseFormat?: "text" | "json" } = {}
 ): Promise<string> {
   try {
     // In a real implementation, this would make an API call to Google's Gemini API
@@ -21,7 +21,7 @@ export async function callGeminiAPI(
       C --> D[Discussion]
       D --> E[Conclusion]`;
     } 
-    else if (prompt.includes("mindmap") || prompt.includes("mind map")) {
+    else if (prompt.includes("mindmap") || prompt.includes("mind map") && options.responseFormat !== "json") {
       return `mindmap
       root((Main Topic))
         Key Point 1
@@ -32,6 +32,36 @@ export async function callGeminiAPI(
           Detail 2.2
         Key Point 3
           Detail 3.1`;
+    }
+    
+    // If JSON format is explicitly requested, return valid JSON
+    if (options.responseFormat === "json" || prompt.includes("JSON format")) {
+      // Return a valid JSON string for mind map data
+      return JSON.stringify({
+        "topic": "Main Topic",
+        "children": [
+          {
+            "topic": "Key Point 1",
+            "children": [
+              { "topic": "Detail 1.1" },
+              { "topic": "Detail 1.2" }
+            ]
+          },
+          {
+            "topic": "Key Point 2",
+            "children": [
+              { "topic": "Detail 2.1" },
+              { "topic": "Detail 2.2" }
+            ]
+          },
+          {
+            "topic": "Key Point 3",
+            "children": [
+              { "topic": "Detail 3.1" }
+            ]
+          }
+        ]
+      });
     }
     
     return "This is a simulated response from the Gemini API. In a production environment, this would be the actual response from Google's Gemini API.";

@@ -288,10 +288,37 @@ export async function generateMindMapFromText(text: string): Promise<any> {
   `;
 
   try {
-    const response = await callGeminiAPI(prompt);
-    // Parse the JSON response
-    const mindMapData = JSON.parse(response);
-    return mindMapData;
+    // Explicitly request JSON format in the options
+    const response = await callGeminiAPI(prompt, { responseFormat: "json" });
+    
+    // Parse the JSON response or handle errors
+    try {
+      return JSON.parse(response);
+    } catch (jsonError) {
+      console.error("Error parsing mind map JSON:", jsonError);
+      
+      // If parsing fails, return a fallback mind map structure
+      return {
+        "topic": "Document Analysis",
+        "children": [
+          {
+            "topic": "Main Topics",
+            "children": [
+              { "topic": "Topic 1" },
+              { "topic": "Topic 2" },
+              { "topic": "Topic 3" }
+            ]
+          },
+          {
+            "topic": "Key Findings",
+            "children": [
+              { "topic": "Finding 1" },
+              { "topic": "Finding 2" }
+            ]
+          }
+        ]
+      };
+    }
   } catch (error) {
     console.error("Error generating mind map:", error);
     throw error;
