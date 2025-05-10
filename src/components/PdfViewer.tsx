@@ -20,7 +20,7 @@ interface PdfViewerProps {
   onPdfLoaded?: () => void;
   onImageCaptured?: (imageData: string) => void;
   renderTooltipContent?: () => React.ReactNode;
-  highlightByDefault?: boolean; // Added the missing prop
+  highlightByDefault?: boolean;
 }
 
 interface PdfViewerHandle {
@@ -205,8 +205,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
 
     // Listen for capture complete events to update UI
     useEffect(() => {
-      const handleCaptureDone = (e: CustomEvent) => {
-        if (selectionRectRef.current && e.detail?.success) {
+      const handleCaptureDone = (e: Event) => {
+        const customEvent = e as CustomEvent;
+        if (selectionRectRef.current && customEvent.detail?.success) {
           // Update the selection rectangle UI to show completion
           selectionRectRef.current.captureComplete();
           
@@ -871,4 +872,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 </svg>
               </div>
               <div>
-                <p className="font-bold">Screenshot Error</p
+                <p className="font-
