@@ -48,7 +48,7 @@ export function usePdfNavigation() {
     
     if (targetPage) {
       // Find the scroll container - usually a parent element with scroll capability
-      let scrollContainer = targetPage;
+      let scrollContainer: HTMLElement | null = targetPage;
       while (scrollContainer && 
             !scrollContainer.querySelector('[data-radix-scroll-area-viewport]')) {
         scrollContainer = scrollContainer.parentElement;
@@ -78,9 +78,7 @@ export function usePdfNavigation() {
             // Find the first highlight on the page and make it active
             if (highlights.length > 0) {
               // Remove active class from previous active highlight
-              if (activeHighlightRef) {
-                activeHighlightRef.classList.remove('pdf-search-highlight-active');
-              }
+              activeHighlightRef.classList.remove('pdf-search-highlight-active');
               
               // Set new active highlight
               const firstHighlight = highlights[0] as HTMLElement;

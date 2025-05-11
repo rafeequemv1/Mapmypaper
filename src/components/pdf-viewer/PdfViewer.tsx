@@ -182,8 +182,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     
     // Listen for scroll to page events
     useEffect(() => {
-      const handleScrollToPdfPage = (event: any) => {
-        const { pageNumber } = event.detail;
+      const handleScrollToPdfPage = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const { pageNumber } = customEvent.detail || {};
         if (pageNumber && typeof pageNumber === 'number') {
           console.log("Custom event received to scroll to page:", pageNumber);
           scrollToPage(pageNumber, activeHighlightRef);
@@ -195,7 +196,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       return () => {
         window.removeEventListener('scrollToPdfPage', handleScrollToPdfPage);
       };
-    }, [numPages, activeHighlightRef]);
+    }, [numPages, activeHighlightRef, scrollToPage]);
 
     return (
       <div className="h-full flex flex-col bg-gray-50" data-pdf-viewer>
