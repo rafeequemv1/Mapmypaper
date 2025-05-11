@@ -20,6 +20,24 @@ interface MindmapModalProps {
   onClose: () => void;
 }
 
+// Defining correct types for MindElixir data structure
+interface NodeStyle {
+  background: string;
+  color: string;
+}
+
+interface NodeObj {
+  id: string;
+  topic: string;
+  direction?: 0 | 1;
+  style?: NodeStyle;
+  children?: NodeObj[];
+}
+
+interface MindElixirData {
+  nodeData: NodeObj;
+}
+
 export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
@@ -27,8 +45,8 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
   
-  // Enhanced detailed mindmap data structure
-  const detailedMindmapData = {
+  // Enhanced detailed mindmap data structure with correct types
+  const detailedMindmapData: MindElixirData = {
     nodeData: {
       id: 'root',
       topic: 'Software Documentation',
@@ -503,4 +521,3 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
     </Dialog>
   );
 }
-
