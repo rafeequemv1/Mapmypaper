@@ -1,9 +1,8 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X, Camera } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Search, MessageSquare, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, PositionedTooltip } from "./ui/tooltip";
@@ -338,6 +337,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               setIsProcessingCapture(false);
             }, 500);
           }
+          
+          // Note: We DON'T reset here - we wait for the captureDone event
+          // which is dispatched from the handler in PanelStructure
         };
         
         // Add event listeners
@@ -720,36 +722,6 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             ) : (
               <div className="flex justify-end">
-                {/* Add Draw to Capture Button next to Search */}
-                <Button 
-                  variant={localIsSnapshotMode ? "primary" : "ghost"}
-                  size="sm" 
-                  className={`h-6 flex items-center gap-0.5 px-1 mr-2 ${localIsSnapshotMode ? "bg-blue-500 text-white" : "text-black"}`}
-                  onClick={() => {
-                    if (localIsSnapshotMode) {
-                      // Cancel snapshot mode if active
-                      setLocalIsSnapshotMode(false);
-                      if (setIsSnapshotMode) {
-                        setIsSnapshotMode(false);
-                      }
-                      // Re-enable text selection when exiting snapshot mode
-                      toggleTextSelection(true);
-                      if (selectionRectRef.current) {
-                        selectionRectRef.current.cancelSelection();
-                      }
-                    } else {
-                      // Enable snapshot mode
-                      setLocalIsSnapshotMode(true);
-                      if (setIsSnapshotMode) {
-                        setIsSnapshotMode(true);
-                      }
-                    }
-                  }}
-                  title={localIsSnapshotMode ? "Cancel capture" : "Draw to capture"}
-                >
-                  <Camera className="h-3 w-3" />
-                  <span className="text-xs">{localIsSnapshotMode ? "Cancel" : "Capture"}</span>
-                </Button>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -799,7 +771,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               {/* Snapshot mode indicator */}
               {localIsSnapshotMode && (
-                <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2 animate-fade-in">
+                <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
                   <span>{isProcessingCapture ? "Processing capture..." : "Draw to capture area"}</span>
                   {!isProcessingCapture && (
                     <Button 
@@ -886,9 +858,41 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             ) : (
               <div className="text-center p-8">
                 <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
-                <p className="text-gray-500">Please upload a PDF document to view it here.</p>
+                <p className="text-gray-500">Please return to the upload page and select a PDF document.</p>
+                <Button 
+                  onClick={() => window.location.href = '/'} 
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Go to Upload Page
+                </Button>
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Display temporary message if a capture error occurs */}
+        {captureError && (
+          <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md z-50">
+            <div className="flex items-center">
+              <div className="py-1">
+                <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 10.32 10.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/>
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold">Screenshot Error</p>
+                <p className="text-sm">{captureError}</p>
+              </div>
+              <button 
+                onClick={() => setCaptureError(null)} 
+                className="ml-auto text-red-700 hover:text-red-900"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -5,7 +5,8 @@ import {
   MessageSquare,
   FileText,
   Home,
-  Network
+  Network,
+  Camera
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import HeaderSidebarIcon from "./HeaderSidebarIcon";
@@ -38,6 +39,13 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
   setIsSnapshotMode
 }) => {
   const navigate = useNavigate();
+  
+  // Handler for snapshot button
+  const handleSnapshotClick = () => {
+    if (setIsSnapshotMode) {
+      setIsSnapshotMode(true);
+    }
+  };
   
   return (
     <div className="fixed left-0 top-0 bottom-0 w-12 bg-white border-r flex flex-col items-center py-4 gap-2 z-10">
@@ -76,7 +84,14 @@ const HeaderSidebar: React.FC<HeaderSidebarProps> = ({
         title="Show Flowchart"
       />
       
-      {/* Camera icon removed */}
+      {/* Camera icon for snapshot functionality */}
+      {isPdfActive && setIsSnapshotMode && (
+        <HeaderSidebarIcon
+          onClick={handleSnapshotClick}
+          icon={<Camera className="h-4 w-4" />}
+          title="Take Snapshot"
+        />
+      )}
       
       <HeaderExportMenu
         onExportSVG={onExportSVG}
