@@ -5,13 +5,23 @@ import App from './App.tsx';
 import './index.css';
 import './styles/node-menu.css'; // Import the node-menu styles globally
 
-// Create root using the proper method for React 18
-const container = document.getElementById("root");
-if (!container) throw new Error('Root element not found');
+// Ensure DOM is ready before mounting
+document.addEventListener('DOMContentLoaded', () => {
+  const container = document.getElementById("root");
+  if (!container) {
+    console.error('Root element not found');
+    return;
+  }
 
-const root = ReactDOM.createRoot(container);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+  // Safely create root and render
+  try {
+    const root = ReactDOM.createRoot(container);
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+  } catch (error) {
+    console.error('Failed to render React application:', error);
+  }
+});
