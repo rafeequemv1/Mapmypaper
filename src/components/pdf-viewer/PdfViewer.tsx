@@ -1,3 +1,4 @@
+
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getCurrentPdfData } from "@/utils/pdfStorage";
@@ -49,7 +50,8 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     } = usePdfNavigation();
     
     const { 
-      searchQuery, setSearchQuery, searchResults, currentSearchIndex, 
+      searchQuery, setSearchQuery, searchResults, setSearchResults,
+      currentSearchIndex, setCurrentSearchIndex, 
       showSearch, toggleSearch, handleSearch, navigateSearch, handleSearchKeyDown,
       activeHighlightRef, setActiveHighlightRef
     } = usePdfSearch();

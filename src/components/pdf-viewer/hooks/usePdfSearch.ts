@@ -13,15 +13,15 @@ export function usePdfSearch() {
   // Toggle search visibility
   const toggleSearch = () => {
     setShowSearch(prevState => !prevState);
-    if (showSearch) {
-      // Reset search results when closing search
+    if (!showSearch) {
+      // Reset search results when opening search
       setSearchResults([]);
       setCurrentSearchIndex(-1);
     }
   };
 
   const handleSearch = () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) return null;
     
     // Get all text content from PDF pages
     const results: string[] = [];
@@ -145,7 +145,9 @@ export function usePdfSearch() {
     searchQuery,
     setSearchQuery,
     searchResults,
+    setSearchResults,
     currentSearchIndex,
+    setCurrentSearchIndex,
     showSearch,
     toggleSearch,
     handleSearch,
