@@ -5,12 +5,16 @@ import App from './App.tsx';
 import './index.css';
 import './styles/node-menu.css'; // Import the node-menu styles globally
 
-// Wait for DOM to be fully loaded
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-  // DOM already loaded, initialize immediately
-  initializeApp();
+// Make sure GPT Engineer scripts are initialized first
+if (typeof window !== 'undefined') {
+  // Wait for DOM to be fully loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+  } else {
+    // DOM already loaded, initialize immediately
+    // Add slight delay to ensure GPT Engineer script is fully loaded
+    setTimeout(initializeApp, 100);
+  }
 }
 
 function initializeApp() {
