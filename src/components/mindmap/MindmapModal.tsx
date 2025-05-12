@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { X, RefreshCw, FileText, Code, Users, FileCode, Settings, ExternalLink, BookOpen, BarChart2, Database, Layers, Zap } from "lucide-react";
 import ReactDOMServer from 'react-dom/server';
@@ -20,24 +19,6 @@ interface MindmapModalProps {
   onClose: () => void;
 }
 
-// Defining correct types for MindElixir data structure
-interface NodeStyle {
-  background: string;
-  color: string;
-}
-
-interface NodeObj {
-  id: string;
-  topic: string;
-  direction?: 0 | 1;
-  style?: NodeStyle;
-  children?: NodeObj[];
-}
-
-interface MindElixirData {
-  nodeData: NodeObj;
-}
-
 export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindMapRef = useRef<MindElixirInstance | null>(null);
@@ -45,8 +26,8 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'default' | 'forest' | 'dark' | 'neutral'>('default');
   
-  // Enhanced detailed mindmap data structure with correct types
-  const detailedMindmapData: MindElixirData = {
+  // Enhanced detailed mindmap data structure - fixed direction to use 0 | 1 explicitly
+  const detailedMindmapData = {
     nodeData: {
       id: 'root',
       topic: 'Software Documentation',
@@ -54,7 +35,7 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
         { 
           id: '1', 
           topic: 'Written text or illustration', 
-          direction: 0,
+          direction: 0 as const, // Fixed: Using const assertion to ensure it's 0 | 1
           style: { background: '#D3E4FD', color: '#0E63B3' },
           children: [
             { 
@@ -67,25 +48,25 @@ export function MindmapModal({ isOpen, onClose }: MindmapModalProps) {
         { 
           id: '2', 
           topic: 'Different meanings for different roles', 
-          direction: 0,
+          direction: 0 as const, // Fixed: Using const assertion
           style: { background: '#D3E4FD', color: '#0E63B3' } 
         },
         { 
           id: '3', 
           topic: 'Accompanies software or embedded in source code', 
-          direction: 0,
+          direction: 0 as const, // Fixed: Using const assertion
           style: { background: '#D3E4FD', color: '#0E63B3' } 
         },
         { 
           id: '4', 
           topic: 'Important part of software engineering', 
-          direction: 0,
+          direction: 0 as const, // Fixed: Using const assertion
           style: { background: '#F2FCE2', color: '#3D7A0F' }
         },
         { 
           id: '5', 
           topic: 'Types of Documentation', 
-          direction: 1,
+          direction: 1 as const, // Fixed: Using const assertion
           style: { background: '#E5DEFF', color: '#5E3BCE' },
           children: [
             { 
