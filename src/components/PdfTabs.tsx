@@ -22,6 +22,12 @@ export function getAllPdfs(): PdfMeta[] {
   }).filter((f): f is PdfMeta => !!f);
 }
 
+// Helper function to get a shortened filename
+const getShortenedName = (name: string): string => {
+  // Get the first part of the filename, up to 15 characters
+  return name.length > 15 ? name.substring(0, 15) + '...' : name;
+};
+
 interface PdfTabsProps {
   activeKey: string | null;
   onTabChange: (key: string) => void;
@@ -70,17 +76,18 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
   if (pdfMetas.length === 0 && !onAddPdf) return null;
 
   return (
-    <div className="p-0.5 bg-gray-100 border-b flex items-center">
+    <div className="p-0.5 bg-gray-100 border-b flex items-center h-8">
       <Tabs value={activeKey || undefined} onValueChange={handleTabChange} className="w-full flex-1">
-        <TabsList className="overflow-auto">
+        <TabsList className="h-7 overflow-auto">
           {pdfMetas.map((meta) => (
             <TabsTrigger
               key={getPdfKey(meta)}
               value={getPdfKey(meta)}
-              className="pr-4 relative"
+              className="h-6 py-0 pr-4 relative text-xs"
               disabled={isLoading}
+              title={meta.name}
             >
-              <span className="truncate max-w-[120px]">{meta.name}</span>
+              <span className="truncate max-w-[120px]">{getShortenedName(meta.name)}</span>
               <button
                 type="button"
                 onClick={e => {
@@ -88,7 +95,7 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
                   onRemove(getPdfKey(meta));
                 }}
                 tabIndex={-1}
-                className="ml-1 absolute right-1 top-1"
+                className="ml-1 absolute right-1 top-0.5"
                 title="Remove PDF"
                 disabled={isLoading}
               >
@@ -100,7 +107,7 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
             <TabsTrigger
               key="add-pdf"
               value="add-pdf"
-              className="px-2"
+              className="h-6 py-0 px-2 text-xs"
               onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -109,7 +116,7 @@ const PdfTabs: React.FC<PdfTabsProps> = ({ activeKey, onTabChange, onRemove, onA
               title="Add PDF"
               disabled={isLoading}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3 w-3" />
             </TabsTrigger>
           )}
         </TabsList>
