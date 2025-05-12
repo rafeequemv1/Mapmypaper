@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -338,6 +337,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               setIsProcessingCapture(false);
             }, 500);
           }
+          
+          // Note: We DON'T reset here - we wait for the captureDone event
+          // which is dispatched from the handler in PanelStructure
         };
         
         // Add event listeners
@@ -799,7 +801,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             >
               {/* Snapshot mode indicator */}
               {localIsSnapshotMode && (
-                <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2 animate-fade-in">
+                <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center gap-2">
                   <span>{isProcessingCapture ? "Processing capture..." : "Draw to capture area"}</span>
                   {!isProcessingCapture && (
                     <Button 
@@ -885,17 +887,4 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             ) : (
               <div className="text-center p-8">
-                <p className="text-red-500 font-medium mb-2">{loadError || "No PDF available"}</p>
-                <p className="text-gray-500">Please upload a PDF document to view it here.</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-PdfViewer.displayName = "PdfViewer";
-
-export default PdfViewer;
+                <p className="
