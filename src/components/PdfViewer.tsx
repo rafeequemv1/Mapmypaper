@@ -887,4 +887,17 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
               </div>
             ) : (
               <div className="text-center p-8">
-                <p className="
+                <p className="text-gray-500 mb-4">No PDF document loaded.</p>
+                {loadError && <p className="text-red-500">{loadError}</p>}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+PdfViewer.displayName = "PdfViewer";
+
+export default PdfViewer;
