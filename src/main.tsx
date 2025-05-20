@@ -12,13 +12,20 @@ if (typeof window !== 'undefined') {
     document.addEventListener('DOMContentLoaded', initializeApp);
   } else {
     // DOM already loaded, initialize immediately
-    // Add slight delay to ensure GPT Engineer script is fully loaded
-    setTimeout(initializeApp, 100);
+    // Add increased delay to ensure GPT Engineer script is fully loaded
+    setTimeout(initializeApp, 300);
   }
 }
 
 function initializeApp() {
   try {
+    // Check if the GPT Engineer script is loaded
+    if (typeof window.S === 'undefined') {
+      console.warn('GPT Engineer script not fully loaded. Retrying in 500ms...');
+      setTimeout(initializeApp, 500);
+      return;
+    }
+    
     const rootElement = document.getElementById("root");
     
     if (!rootElement) {
