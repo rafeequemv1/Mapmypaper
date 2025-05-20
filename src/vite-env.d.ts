@@ -5,4 +5,5 @@
 interface Window {
   __PDF_FILES__?: File[];
   __ACTIVE_PDF_KEY__?: string | null;
+  S?: any; // Add the S property that is provided by GPT Engineer script
 }
