@@ -9,18 +9,18 @@ import './styles/node-menu.css'; // Import the node-menu styles globally
 if (typeof window !== 'undefined') {
   // Wait for DOM to be fully loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initializeWithRetry(10));
+    document.addEventListener('DOMContentLoaded', () => initializeWithRetry(15));
   } else {
     // DOM already loaded, initialize with retry mechanism
-    initializeWithRetry(10);
+    initializeWithRetry(15);
   }
 }
 
 // Retry mechanism for initialization
-function initializeWithRetry(maxRetries: number, delay: number = 300) {
+function initializeWithRetry(maxRetries: number, delay: number = 500) {
   if (maxRetries <= 0) {
     console.error("Failed to load GPT Engineer script after maximum retries");
-    showErrorMessage("Failed to load required scripts. Please refresh the page.");
+    showErrorMessage("Failed to load required scripts. Please refresh the page or check your network connection.");
     return;
   }
   
@@ -28,7 +28,18 @@ function initializeWithRetry(maxRetries: number, delay: number = 300) {
     // Check if the GPT Engineer script is loaded
     if (typeof window.S === 'undefined') {
       console.warn(`GPT Engineer script not fully loaded. Retrying in ${delay}ms... (${maxRetries} attempts left)`);
-      setTimeout(() => initializeWithRetry(maxRetries - 1, delay * 1.5), delay);
+      
+      // Ensure the script is loaded
+      const scriptExists = document.querySelector('script[src="https://cdn.gpteng.co/gptengineer.js"]');
+      if (!scriptExists) {
+        console.warn("GPT Engineer script tag not found in the document. Attempting to add it...");
+        const script = document.createElement('script');
+        script.src = 'https://cdn.gpteng.co/gptengineer.js';
+        script.type = 'module';
+        document.head.appendChild(script);
+      }
+      
+      setTimeout(() => initializeWithRetry(maxRetries - 1, Math.min(delay * 1.5, 3000)), delay);
       return;
     }
     
@@ -36,7 +47,7 @@ function initializeWithRetry(maxRetries: number, delay: number = 300) {
     initializeApp();
   } catch (error) {
     console.error("Error during initialization:", error);
-    setTimeout(() => initializeWithRetry(maxRetries - 1, delay * 1.5), delay);
+    setTimeout(() => initializeWithRetry(maxRetries - 1, Math.min(delay * 1.5, 3000)), delay);
   }
 }
 
