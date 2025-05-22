@@ -5,54 +5,65 @@ import App from './App.tsx';
 import './index.css';
 import './styles/node-menu.css'; // Import the node-menu styles globally
 
-// Initialize the app with proper error handling and script loading checks
-if (typeof window !== 'undefined') {
-  // Wait for DOM to be fully loaded
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initializeWithRetry(15));
-  } else {
-    // DOM already loaded, initialize with retry mechanism
-    initializeWithRetry(15);
+// Create and insert GPT Engineer script if not already present
+function ensureScriptLoaded() {
+  if (!document.querySelector('script[src="https://cdn.gpteng.co/gptengineer.js"]')) {
+    console.log("GPT Engineer script not found in DOM, inserting it dynamically");
+    const script = document.createElement('script');
+    script.src = 'https://cdn.gpteng.co/gptengineer.js';
+    script.type = 'module';
+    document.head.appendChild(script);
+    return false;
   }
+  return true;
 }
 
-// Retry mechanism for initialization
-function initializeWithRetry(maxRetries: number, delay: number = 500) {
-  if (maxRetries <= 0) {
-    console.error("Failed to load GPT Engineer script after maximum retries");
-    showErrorMessage("Failed to load required scripts. Please refresh the page or check your network connection.");
-    return;
-  }
-  
-  try {
-    // Check if the GPT Engineer script is loaded
-    if (typeof window.S === 'undefined') {
-      console.warn(`GPT Engineer script not fully loaded. Retrying in ${delay}ms... (${maxRetries} attempts left)`);
-      
-      // Ensure the script is loaded
-      const scriptExists = document.querySelector('script[src="https://cdn.gpteng.co/gptengineer.js"]');
-      if (!scriptExists) {
-        console.warn("GPT Engineer script tag not found in the document. Attempting to add it...");
-        const script = document.createElement('script');
-        script.src = 'https://cdn.gpteng.co/gptengineer.js';
-        script.type = 'module';
-        document.head.appendChild(script);
-      }
-      
-      setTimeout(() => initializeWithRetry(maxRetries - 1, Math.min(delay * 1.5, 3000)), delay);
+// Check if window.S exists or wait for it
+function checkGptEngineered(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window.S !== 'undefined') {
+      console.log("GPT Engineer script loaded successfully");
+      resolve(true);
       return;
     }
     
-    // Script is loaded, initialize the app
-    initializeApp();
-  } catch (error) {
-    console.error("Error during initialization:", error);
-    setTimeout(() => initializeWithRetry(maxRetries - 1, Math.min(delay * 1.5, 3000)), delay);
-  }
+    // If script doesn't exist, ensure it's loaded
+    ensureScriptLoaded();
+    
+    // Wait a bit and try again with exponential backoff
+    let attempts = 0;
+    const maxAttempts = 20;
+    let timeout = 300;
+    
+    const checkInterval = setInterval(() => {
+      attempts++;
+      if (typeof window.S !== 'undefined') {
+        console.log(`GPT Engineer script loaded after ${attempts} attempts`);
+        clearInterval(checkInterval);
+        resolve(true);
+      } else if (attempts >= maxAttempts) {
+        console.error(`Failed to load GPT Engineer script after ${maxAttempts} attempts`);
+        clearInterval(checkInterval);
+        resolve(false);
+      } else {
+        console.warn(`Waiting for GPT Engineer script... (attempt ${attempts}/${maxAttempts})`);
+        // Ensure the script tag exists on each check
+        ensureScriptLoaded();
+      }
+    }, timeout);
+  });
 }
 
-function initializeApp() {
+// Initialize the application
+async function initializeApp() {
   try {
+    // Wait for script to be ready
+    const scriptReady = await checkGptEngineered();
+    if (!scriptReady) {
+      showErrorMessage("Failed to load required scripts. Please check your network connection and refresh the page.");
+      return;
+    }
+    
     const rootElement = document.getElementById("root");
     
     if (!rootElement) {
@@ -82,4 +93,13 @@ function initializeApp() {
 
 function showErrorMessage(message: string) {
   document.body.innerHTML = `<div style="padding: 20px; text-align: center;"><h1>Error loading application</h1><p>${message}</p></div>`;
+}
+
+// Start initialization process when DOM is ready
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => initializeApp());
+  } else {
+    initializeApp();
+  }
 }
