@@ -13,62 +13,20 @@ function ensureScriptLoaded() {
     script.src = 'https://cdn.gpteng.co/gptengineer.js';
     script.type = 'module';
     document.head.appendChild(script);
-    return false;
   }
-  return true;
 }
 
-// Check if window.S exists or wait for it
-function checkGptEngineered(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (typeof window.S !== 'undefined') {
-      console.log("GPT Engineer script loaded successfully");
-      resolve(true);
-      return;
-    }
-    
-    // If script doesn't exist, ensure it's loaded
-    ensureScriptLoaded();
-    
-    // Wait a bit and try again with exponential backoff
-    let attempts = 0;
-    const maxAttempts = 20;
-    let timeout = 300;
-    
-    const checkInterval = setInterval(() => {
-      attempts++;
-      if (typeof window.S !== 'undefined') {
-        console.log(`GPT Engineer script loaded after ${attempts} attempts`);
-        clearInterval(checkInterval);
-        resolve(true);
-      } else if (attempts >= maxAttempts) {
-        console.error(`Failed to load GPT Engineer script after ${maxAttempts} attempts`);
-        clearInterval(checkInterval);
-        resolve(false);
-      } else {
-        console.warn(`Waiting for GPT Engineer script... (attempt ${attempts}/${maxAttempts})`);
-        // Ensure the script tag exists on each check
-        ensureScriptLoaded();
-      }
-    }, timeout);
-  });
-}
-
-// Initialize the application
-async function initializeApp() {
+// Initialize the application with simplified logic
+function initializeApp() {
   try {
-    // Wait for script to be ready
-    const scriptReady = await checkGptEngineered();
-    if (!scriptReady) {
-      showErrorMessage("Failed to load required scripts. Please check your network connection and refresh the page.");
-      return;
-    }
+    // Ensure script is loaded
+    ensureScriptLoaded();
     
     const rootElement = document.getElementById("root");
     
     if (!rootElement) {
       console.error("Root element not found!");
-      document.body.innerHTML = '<div style="padding: 20px; text-align: center;"><h1>Error loading application</h1><p>Root element not found. Please refresh the page or contact support.</p></div>';
+      showErrorMessage("Error loading application: Root element not found.");
       return;
     }
     
@@ -96,10 +54,8 @@ function showErrorMessage(message: string) {
 }
 
 // Start initialization process when DOM is ready
-if (typeof window !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initializeApp());
-  } else {
-    initializeApp();
-  }
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  initializeApp();
 }
